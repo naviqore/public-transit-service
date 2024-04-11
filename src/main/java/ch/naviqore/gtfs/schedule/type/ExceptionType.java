@@ -1,4 +1,4 @@
-package ch.naviqore.gtfs.schedule;
+package ch.naviqore.gtfs.schedule.type;
 
 import lombok.AccessLevel;
 import lombok.Getter;

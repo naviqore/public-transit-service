@@ -1,5 +1,10 @@
 package ch.naviqore.gtfs.schedule;
 
+import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
+import ch.naviqore.gtfs.schedule.type.ExceptionType;
+import ch.naviqore.gtfs.schedule.type.RouteType;
+import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -53,17 +58,10 @@ public class GtfsScheduleReader {
     @RequiredArgsConstructor
     @Getter
     public enum GtfsFile {
-        AGENCY("agency.txt"),
-        CALENDAR_DATES("calendar_dates.txt"),
-        CALENDAR("calendar.txt"),
-        FARE_ATTRIBUTES("fare_attributes.txt"),
-        FARE_RULES("fare_rules.txt"),
-        FREQUENCIES("frequencies.txt"),
-        ROUTES("routes.txt"),
-        SHAPES("shapes.txt"),
-        STOP_TIMES("stop_times.txt"),
-        STOPS("stops.txt"),
-        TRIPS("trips.txt");
+        AGENCY("agency.txt"), CALENDAR_DATES("calendar_dates.txt"), CALENDAR("calendar.txt"), FARE_ATTRIBUTES(
+                "fare_attributes.txt"), FARE_RULES("fare_rules.txt"), FREQUENCIES("frequencies.txt"), ROUTES(
+                "routes.txt"), SHAPES("shapes.txt"), STOP_TIMES("stop_times.txt"), STOPS("stops.txt"), TRIPS(
+                "trips.txt");
 
         private final String fileName;
     }
@@ -116,6 +114,11 @@ public class GtfsScheduleReader {
         }
         for (CSVRecord record : records.get(GtfsFile.TRIPS)) {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"));
+        }
+        for (CSVRecord record : records.get(GtfsFile.STOP_TIMES)) {
+            builder.addStopTime(record.get("trip_id"), record.get("stop_id"),
+                    ServiceDayTime.parse(record.get("arrival_time")),
+                    ServiceDayTime.parse(record.get("departure_time")));
         }
         return builder.build();
     }

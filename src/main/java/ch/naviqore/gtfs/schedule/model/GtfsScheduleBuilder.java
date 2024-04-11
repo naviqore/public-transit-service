@@ -1,5 +1,8 @@
-package ch.naviqore.gtfs.schedule;
+package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.type.ExceptionType;
+import ch.naviqore.gtfs.schedule.type.RouteType;
+import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -55,8 +58,7 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addCalendar(String id, EnumSet<DayOfWeek> serviceDays, LocalDate startDate,
-                                           LocalDate endDate) {
+    public GtfsScheduleBuilder addCalendar(String id, EnumSet<DayOfWeek> serviceDays, LocalDate startDate, LocalDate endDate) {
         if (calendars.containsKey(id)) {
             throw new IllegalArgumentException("Calendar " + id + " already exists");
         }
@@ -71,8 +73,8 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + calendarId + " does not exist");
         }
         log.debug("Adding calendar {}-{}", calendarId, date);
-        // TODO: Handle calendar dates
-        var calendarDate = new CalendarDate(calendar, date, type);
+        CalendarDate calendarDate = new CalendarDate(calendar, date, type);
+        calendar.addCalendarDate(calendarDate);
         return this;
     }
 
@@ -89,7 +91,25 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + serviceId + " does not exist");
         }
         log.debug("Adding trip {}", id);
-        trips.put(id, new Trip(id, route, calendar));
+        Trip trip = new Trip(id, route, calendar);
+        route.addTrip(trip);
+        trips.put(id, trip);
+        return this;
+    }
+
+    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival, ServiceDayTime departure) {
+        Trip trip = trips.get(tripId);
+        if (trip == null) {
+            throw new IllegalArgumentException("Trip " + tripId + " does not exist");
+        }
+        Stop stop = stops.get(stopId);
+        if (stop == null) {
+            throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+        }
+        log.debug("Adding stop {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
+        StopTime stopTime = new StopTime(stop, trip, arrival, departure);
+        trip.addStopTime(stopTime);
+        // TODO: Add stop time to stop
         return this;
     }
 

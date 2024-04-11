@@ -1,4 +1,6 @@
-package ch.naviqore.gtfs.schedule;
+package ch.naviqore.gtfs.schedule.model;
+
+import ch.naviqore.gtfs.schedule.type.ExceptionType;
 
 import java.time.LocalDate;
 

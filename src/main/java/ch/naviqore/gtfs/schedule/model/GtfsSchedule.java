@@ -1,4 +1,4 @@
-package ch.naviqore.gtfs.schedule;
+package ch.naviqore.gtfs.schedule.model;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
