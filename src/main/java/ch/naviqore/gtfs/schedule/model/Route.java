@@ -6,12 +6,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-public final class Route {
+public final class Route implements Initializable {
     private final String id;
     private final Agency agency;
     private final String shortName;
@@ -21,6 +22,12 @@ public final class Route {
 
     void addTrip(Trip trip) {
         trips.add(trip);
+    }
+
+    @Override
+    public void initialize() {
+        Collections.sort(trips);
+
     }
 
     @Override

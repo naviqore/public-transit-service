@@ -13,14 +13,27 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * General Transit Feed Specification (GTFS) schedule builder
+ * <p>
+ * Provides a builder pattern implementation for constructing a {@link GtfsSchedule} instance. This class encapsulates
+ * the complexity of assembling a GTFS schedule by incrementally adding components such as agencies, stops, routes,
+ * trips, and calendars. The builder ensures that all components are added in a controlled manner and that the resulting
+ * schedule is consistent and ready for use.
+ *
+ * <p>Instances of this class should be obtained through the static {@code builder()} method. This class uses
+ * a private constructor to enforce the use of the builder pattern.</p>
+ *
+ * @author munterfi
+ */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Log4j2
 public class GtfsScheduleBuilder {
 
     private final Map<String, Agency> agencies = new HashMap<>();
+    private final Map<String, Calendar> calendars = new HashMap<>();
     private final Map<String, Stop> stops = new HashMap<>();
     private final Map<String, Route> routes = new HashMap<>();
-    private final Map<String, Calendar> calendars = new HashMap<>();
     private final Map<String, Trip> trips = new HashMap<>();
 
     public static GtfsScheduleBuilder builder() {
@@ -108,12 +121,16 @@ public class GtfsScheduleBuilder {
         }
         log.debug("Adding stop {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
         StopTime stopTime = new StopTime(stop, trip, arrival, departure);
+        stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
-        // TODO: Add stop time to stop
         return this;
     }
 
     public GtfsSchedule build() {
-        return new GtfsSchedule(agencies);
+        log.info("Building schedule with {} stops, {} routes and {} trips", stops.size(), routes.size(), trips.size());
+        trips.values().parallelStream().forEach(Trip::initialize);
+        stops.values().parallelStream().forEach(Stop::initialize);
+        routes.values().parallelStream().forEach(Route::initialize);
+        return new GtfsSchedule(agencies, calendars, stops, routes, trips);
     }
 }

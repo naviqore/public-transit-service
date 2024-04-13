@@ -1,5 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,24 @@ public final class Calendar {
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final Map<LocalDate, CalendarDate> calendarDates = new HashMap<>();
+
+    /**
+     * Determines if the service is operational on a specific day, considering both regular service days and
+     * exceptions.
+     *
+     * @param date the date to check for service availability
+     * @return true if the service is operational on the given date, false otherwise
+     */
+    public boolean isServiceAvailable(LocalDate date) {
+        if (date.isBefore(startDate) || date.isAfter(endDate)) {
+            return false;
+        }
+        CalendarDate exception = calendarDates.get(date);
+        if (exception != null) {
+            return exception.type() == ExceptionType.ADDED;
+        }
+        return serviceDays.contains(date.getDayOfWeek());
+    }
 
     void addCalendarDate(CalendarDate calendarDate) {
         calendarDates.put(calendarDate.date(), calendarDate);

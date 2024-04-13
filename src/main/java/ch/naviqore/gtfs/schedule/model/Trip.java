@@ -4,12 +4,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 @RequiredArgsConstructor
 @Getter
-public final class Trip implements Comparable<Trip> {
+public final class Trip implements Comparable<Trip>, Initializable {
     private final String id;
     private final Route route;
     private final Calendar calendar;
@@ -20,9 +21,13 @@ public final class Trip implements Comparable<Trip> {
     }
 
     @Override
+    public void initialize() {
+        Collections.sort(stopTimes);
+    }
+
+    @Override
     public int compareTo(Trip o) {
-        // TODO: Sort stopTimes, then return first stop.
-        return 0;
+        return this.stopTimes.getFirst().compareTo(o.stopTimes.getFirst());
     }
 
     @Override
@@ -42,4 +47,5 @@ public final class Trip implements Comparable<Trip> {
     public String toString() {
         return "Trip[" + "id=" + id + ", " + "route=" + route + ", " + "calendar=" + calendar + ']';
     }
+
 }
