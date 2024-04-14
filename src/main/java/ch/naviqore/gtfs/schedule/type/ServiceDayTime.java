@@ -3,7 +3,6 @@ package ch.naviqore.gtfs.schedule.type;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-
 /**
  * Service day time
  * <p>
@@ -14,7 +13,7 @@ import lombok.Getter;
  */
 @EqualsAndHashCode
 @Getter
-public class ServiceDayTime implements Comparable<ServiceDayTime> {
+public final class ServiceDayTime implements Comparable<ServiceDayTime> {
     private final int totalSeconds;
 
     public ServiceDayTime(int hours, int minutes, int seconds) {

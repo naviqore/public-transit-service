@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * General Transit Feed Specification (GTFS) schedule builder
@@ -30,6 +31,23 @@ import java.util.Map;
 @Log4j2
 public class GtfsScheduleBuilder {
 
+    /**
+     * Cache for value objects
+     */
+    static class Cache {
+        private final Map<LocalDate, LocalDate> localDates = new ConcurrentHashMap<>();
+        private final Map<ServiceDayTime, ServiceDayTime> serviceDayTimes = new ConcurrentHashMap<>();
+
+        public LocalDate getOrAdd(LocalDate value) {
+            return localDates.computeIfAbsent(value, k -> value);
+        }
+
+        public ServiceDayTime getOrAdd(ServiceDayTime value) {
+            return serviceDayTimes.computeIfAbsent(value, k -> value);
+        }
+    }
+
+    private final Cache cache = new Cache();
     private final Map<String, Agency> agencies = new HashMap<>();
     private final Map<String, Calendar> calendars = new HashMap<>();
     private final Map<String, Stop> stops = new HashMap<>();
@@ -71,12 +89,13 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addCalendar(String id, EnumSet<DayOfWeek> serviceDays, LocalDate startDate, LocalDate endDate) {
+    public GtfsScheduleBuilder addCalendar(String id, EnumSet<DayOfWeek> serviceDays, LocalDate startDate,
+                                           LocalDate endDate) {
         if (calendars.containsKey(id)) {
             throw new IllegalArgumentException("Calendar " + id + " already exists");
         }
         log.debug("Adding calendar {}", id);
-        calendars.put(id, new Calendar(id, serviceDays, startDate, endDate));
+        calendars.put(id, new Calendar(id, serviceDays, cache.getOrAdd(startDate), cache.getOrAdd(endDate)));
         return this;
     }
 
@@ -86,7 +105,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + calendarId + " does not exist");
         }
         log.debug("Adding calendar {}-{}", calendarId, date);
-        CalendarDate calendarDate = new CalendarDate(calendar, date, type);
+        CalendarDate calendarDate = new CalendarDate(calendar, cache.getOrAdd(date), type);
         calendar.addCalendarDate(calendarDate);
         return this;
     }
@@ -110,7 +129,8 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival, ServiceDayTime departure) {
+    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival,
+                                           ServiceDayTime departure) {
         Trip trip = trips.get(tripId);
         if (trip == null) {
             throw new IllegalArgumentException("Trip " + tripId + " does not exist");
@@ -120,7 +140,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Stop " + stopId + " does not exist");
         }
         log.debug("Adding stop {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
-        StopTime stopTime = new StopTime(stop, trip, arrival, departure);
+        StopTime stopTime = new StopTime(stop, trip, cache.getOrAdd(arrival), cache.getOrAdd(departure));
         stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
         return this;
