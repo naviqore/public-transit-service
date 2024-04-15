@@ -1,5 +1,7 @@
 package ch.naviqore.gtfs.schedule;
 
+import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -7,9 +9,11 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -60,9 +64,9 @@ public class GtfsScheduleReader {
         private final String fileName;
     }
 
-    public Map<GtfsFile, List<CSVRecord>> read(String path) throws IOException {
+    public GtfsSchedule read(String path) throws IOException {
         File file = new File(path);
-        Map<GtfsFile, List<CSVRecord>> records = new HashMap<>();
+        Map<GtfsFile, List<CSVRecord>> records;
 
         if (file.isDirectory()) {
             log.info("Reading GTFS CSV files from directory: {}", path);
@@ -73,7 +77,21 @@ public class GtfsScheduleReader {
         } else {
             throw new IllegalArgumentException("Path must be a directory or a .zip file");
         }
-        return records;
+
+        return buildSchedule(records);
+    }
+
+    private GtfsSchedule buildSchedule(Map<GtfsFile, List<CSVRecord>> records) {
+        GtfsScheduleBuilder builder = GtfsScheduleBuilder.builder();
+        GtfsScheduleParser parser = new GtfsScheduleParser(builder);
+        parser.parseAgencies(records.get(GtfsFile.AGENCY));
+        parser.parseCalendars(records.get(GtfsFile.CALENDAR));
+        parser.parseCalendarDates(records.get(GtfsFile.CALENDAR_DATES));
+        parser.parseStops(records.get(GtfsFile.STOPS));
+        parser.parseRoutes(records.get(GtfsFile.ROUTES));
+        parser.parseTrips(records.get(GtfsFile.TRIPS));
+        parser.parseStopTimes(records.get(GtfsFile.STOP_TIMES));
+        return builder.build();
     }
 
     private Map<GtfsFile, List<CSVRecord>> readFromDirectory(File directory) throws IOException {
@@ -82,7 +100,7 @@ public class GtfsScheduleReader {
         for (GtfsFile fileType : GtfsFile.values()) {
             File csvFile = new File(directory, fileType.getFileName());
             if (csvFile.exists()) {
-                log.debug("Reading GTFS CSV file: {}", csvFile.getAbsolutePath());
+                log.info("Reading GTFS CSV file: {}", csvFile.getAbsolutePath());
                 records.put(fileType, readCsvFile(csvFile));
             } else {
                 log.warn("GTFS CSV file {} not found", csvFile.getAbsolutePath());
@@ -99,8 +117,12 @@ public class GtfsScheduleReader {
             for (GtfsFile fileType : GtfsFile.values()) {
                 ZipEntry entry = zf.getEntry(fileType.getFileName());
                 if (entry != null) {
-                    log.debug("Reading GTFS file from ZIP: {}", entry.getName());
-                    try (InputStreamReader reader = new InputStreamReader(zf.getInputStream(entry), StandardCharsets.UTF_8)) {
+                    log.info("Reading GTFS file from ZIP: {}", entry.getName());
+                    try (InputStreamReader reader = new InputStreamReader(BOMInputStream.builder()
+                            .setInputStream(zf.getInputStream(entry))
+                            .setByteOrderMarks(ByteOrderMark.UTF_8)
+                            .setInclude(false)
+                            .get(), StandardCharsets.UTF_8)) {
                         records.put(fileType, readCsv(reader));
                     }
                 } else {
@@ -113,7 +135,11 @@ public class GtfsScheduleReader {
     }
 
     private List<CSVRecord> readCsvFile(File file) throws IOException {
-        try (FileReader reader = new FileReader(file)) {
+        try (FileInputStream fileInputStream = new FileInputStream(file);
+             BOMInputStream bomInputStream = BOMInputStream.builder()
+                     .setInputStream(fileInputStream)
+                     .setByteOrderMarks(ByteOrderMark.UTF_8)
+                     .get(); InputStreamReader reader = new InputStreamReader(bomInputStream, StandardCharsets.UTF_8)) {
             return readCsv(reader);
         }
     }
@@ -121,6 +147,7 @@ public class GtfsScheduleReader {
     private List<CSVRecord> readCsv(InputStreamReader reader) throws IOException {
         CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setIgnoreHeaderCase(true).setTrim(true).build();
         try (CSVParser parser = new CSVParser(reader, format)) {
+            log.debug("CSV Headers: {}", parser.getHeaderMap().keySet());
             return parser.getRecords();
         }
     }
