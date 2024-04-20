@@ -2,17 +2,21 @@ package ch.naviqore.gtfs.schedule;
 
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * Test helper class
+ * Integration test data provider
  *
  * @author munterfi
  */
-public class GtfsScheduleTestData {
+public final class GtfsScheduleTestData {
 
     public static final String SAMPLE_FEED = "sample-feed-1";
     public static final String SAMPLE_FEED_ZIP = SAMPLE_FEED + ".zip";

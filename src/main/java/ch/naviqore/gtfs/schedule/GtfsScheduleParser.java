@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * GTFS CSV Records Parser
+ * GTFS CSV records parser
  *
  * @author munterfi
  */
