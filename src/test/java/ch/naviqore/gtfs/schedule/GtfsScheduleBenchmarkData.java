@@ -23,23 +23,6 @@ import java.nio.file.Path;
 @Log4j2
 public final class GtfsScheduleBenchmarkData {
     private static final Path DATA_DIRECTORY = Path.of("benchmark/input");
-
-    /**
-     * GTFS Schedule Datasets
-     */
-    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-    @Getter
-    public enum Dataset {
-        SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"), GERMANY(
-                "https://download.gtfs.de/germany/free/latest.zip");
-
-        private final String url;
-
-        public String getFileName() {
-            return this.name().toLowerCase() + ".zip";
-        }
-    }
-
     private static final HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS)
             .build();
 
@@ -78,5 +61,21 @@ public final class GtfsScheduleBenchmarkData {
             log.info("Returning path to existing file: {}", filePath);
         }
         return filePath.toString();
+    }
+
+    /**
+     * GTFS Schedule Datasets
+     */
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    @Getter
+    public enum Dataset {
+        SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"), GERMANY(
+                "https://download.gtfs.de/germany/free/latest.zip");
+
+        private final String url;
+
+        public String getFileName() {
+            return this.name().toLowerCase() + ".zip";
+        }
     }
 }

@@ -31,22 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Log4j2
 public class GtfsScheduleBuilder {
 
-    /**
-     * Cache for value objects
-     */
-    static class Cache {
-        private final Map<LocalDate, LocalDate> localDates = new ConcurrentHashMap<>();
-        private final Map<ServiceDayTime, ServiceDayTime> serviceDayTimes = new ConcurrentHashMap<>();
-
-        public LocalDate getOrAdd(LocalDate value) {
-            return localDates.computeIfAbsent(value, k -> value);
-        }
-
-        public ServiceDayTime getOrAdd(ServiceDayTime value) {
-            return serviceDayTimes.computeIfAbsent(value, k -> value);
-        }
-    }
-
     private final Cache cache = new Cache();
     private final Map<String, Agency> agencies = new HashMap<>();
     private final Map<String, Calendar> calendars = new HashMap<>();
@@ -152,5 +136,21 @@ public class GtfsScheduleBuilder {
         stops.values().parallelStream().forEach(Stop::initialize);
         routes.values().parallelStream().forEach(Route::initialize);
         return new GtfsSchedule(agencies, calendars, stops, routes, trips);
+    }
+
+    /**
+     * Cache for value objects
+     */
+    static class Cache {
+        private final Map<LocalDate, LocalDate> localDates = new ConcurrentHashMap<>();
+        private final Map<ServiceDayTime, ServiceDayTime> serviceDayTimes = new ConcurrentHashMap<>();
+
+        public LocalDate getOrAdd(LocalDate value) {
+            return localDates.computeIfAbsent(value, k -> value);
+        }
+
+        public ServiceDayTime getOrAdd(ServiceDayTime value) {
+            return serviceDayTimes.computeIfAbsent(value, k -> value);
+        }
     }
 }
