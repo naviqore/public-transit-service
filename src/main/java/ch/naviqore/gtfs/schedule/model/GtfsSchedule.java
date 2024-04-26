@@ -24,7 +24,8 @@ public class GtfsSchedule {
      * @return GtfsScheduleDay containing only the active routes, stops, and trips for the specified date.
      */
     public GtfsScheduleDay getScheduleForDay(LocalDate date) {
-        Map<String, Trip> activeTrips = trips.entrySet().stream()
+        Map<String, Trip> activeTrips = trips.entrySet()
+                .stream()
                 .filter(entry -> entry.getValue().getCalendar().isServiceAvailable(date))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 

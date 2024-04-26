@@ -1,17 +1,13 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
@@ -25,7 +21,8 @@ public final class Calendar {
     private final List<Trip> trips = new ArrayList<>();
 
     /**
-     * Determines if the service is operational on a specific day, considering both regular service days and exceptions.
+     * Determines if the service is operational on a specific day, considering both regular service days and
+     * exceptions.
      *
      * @param date the date to check for service availability
      * @return true if the service is operational on the given date, false otherwise

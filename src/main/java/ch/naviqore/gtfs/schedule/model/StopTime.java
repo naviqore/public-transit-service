@@ -19,4 +19,3 @@ public record StopTime(Stop stop, Trip trip, ServiceDayTime arrival,
         return this.departure.compareTo(o.departure);
     }
 }
-

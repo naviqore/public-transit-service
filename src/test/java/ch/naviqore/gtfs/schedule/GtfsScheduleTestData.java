@@ -2,11 +2,7 @@ package ch.naviqore.gtfs.schedule;
 
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;

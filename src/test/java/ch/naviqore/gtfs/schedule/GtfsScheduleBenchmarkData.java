@@ -23,10 +23,12 @@ import java.nio.file.Path;
 @Log4j2
 public final class GtfsScheduleBenchmarkData {
     private static final Path DATA_DIRECTORY = Path.of("benchmark/input");
-    private static final HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS)
+    private static final HttpClient httpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.ALWAYS)
             .build();
 
-    public static void downloadFile(String fileURL, Path directory, String fileName) throws IOException, InterruptedException {
+    public static void downloadFile(String fileURL, Path directory,
+                                    String fileName) throws IOException, InterruptedException {
         Path filePath = directory.resolve(fileName);
         if (Files.notExists(filePath)) {
             log.info("Downloading file: {}", fileURL);
@@ -69,8 +71,8 @@ public final class GtfsScheduleBenchmarkData {
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     @Getter
     public enum Dataset {
-        SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"), GERMANY(
-                "https://download.gtfs.de/germany/free/latest.zip");
+        SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"),
+        GERMANY("https://download.gtfs.de/germany/free/latest.zip");
 
         private final String url;
 

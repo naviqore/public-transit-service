@@ -3,10 +3,11 @@ package ch.naviqore.gtfs.schedule;
 import ch.naviqore.gtfs.schedule.GtfsScheduleBenchmarkData.Dataset;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleDay;
-import java.io.IOException;
-import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
+import java.io.IOException;
+import java.time.LocalDate;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class GtfsScheduleBenchmark {

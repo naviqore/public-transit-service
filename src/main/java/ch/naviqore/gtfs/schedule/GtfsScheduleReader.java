@@ -56,10 +56,11 @@ public class GtfsScheduleReader {
                 ZipEntry entry = zf.getEntry(fileType.getFileName());
                 if (entry != null) {
                     log.info("Reading GTFS file from ZIP: {}", entry.getName());
-                    try (InputStreamReader reader = new InputStreamReader(
-                            BOMInputStream.builder().setInputStream(zf.getInputStream(entry))
-                                    .setByteOrderMarks(ByteOrderMark.UTF_8).setInclude(false).get(),
-                            StandardCharsets.UTF_8)) {
+                    try (InputStreamReader reader = new InputStreamReader(BOMInputStream.builder()
+                            .setInputStream(zf.getInputStream(entry))
+                            .setByteOrderMarks(ByteOrderMark.UTF_8)
+                            .setInclude(false)
+                            .get(), StandardCharsets.UTF_8)) {
                         readCsvRecords(reader, parser, fileType);
                     }
                 } else {
@@ -69,16 +70,19 @@ public class GtfsScheduleReader {
         }
     }
 
-    private static void readCsvFile(File file, GtfsScheduleParser parser, GtfsScheduleFile fileType) throws IOException {
-        try (FileInputStream fileInputStream = new FileInputStream(
-                file); BOMInputStream bomInputStream = BOMInputStream.builder().setInputStream(fileInputStream)
-                .setByteOrderMarks(ByteOrderMark.UTF_8).get(); InputStreamReader reader = new InputStreamReader(
-                bomInputStream, StandardCharsets.UTF_8)) {
+    private static void readCsvFile(File file, GtfsScheduleParser parser,
+                                    GtfsScheduleFile fileType) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(file);
+             BOMInputStream bomInputStream = BOMInputStream.builder()
+                     .setInputStream(fileInputStream)
+                     .setByteOrderMarks(ByteOrderMark.UTF_8)
+                     .get(); InputStreamReader reader = new InputStreamReader(bomInputStream, StandardCharsets.UTF_8)) {
             readCsvRecords(reader, parser, fileType);
         }
     }
 
-    private static void readCsvRecords(InputStreamReader reader, GtfsScheduleParser recordParser, GtfsScheduleFile fileType) throws IOException {
+    private static void readCsvRecords(InputStreamReader reader, GtfsScheduleParser recordParser,
+                                       GtfsScheduleFile fileType) throws IOException {
         CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setIgnoreHeaderCase(true).setTrim(true).build();
         try (CSVParser csvParser = new CSVParser(reader, format)) {
             log.debug("CSV Headers: {}", csvParser.getHeaderMap().keySet());

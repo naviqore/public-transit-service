@@ -1,11 +1,10 @@
 package ch.naviqore.raptor.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 public class RouteTraversalBuilder {
@@ -29,7 +28,7 @@ public class RouteTraversalBuilder {
         return this;
     }
 
-    public RouteTraversalBuilder addRouteStop(String id, String routeid) {
+    public RouteTraversalBuilder addRouteStop(String id, String routeId) {
         if (routes.containsKey(id)) {
             throw new IllegalArgumentException("Route " + id + " already exists");
         }
