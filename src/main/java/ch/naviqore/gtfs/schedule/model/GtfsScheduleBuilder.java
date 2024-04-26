@@ -110,6 +110,7 @@ public class GtfsScheduleBuilder {
         Trip trip = new Trip(id, route, calendar);
         route.addTrip(trip);
         trips.put(id, trip);
+        calendar.addTrip(trip);
         return this;
     }
 

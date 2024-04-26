@@ -4,16 +4,16 @@ import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.csv.CSVRecord;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.csv.CSVRecord;
 
 /**
  * GTFS CSV records parser
@@ -37,7 +37,14 @@ class GtfsScheduleParser {
     }
 
     public void parse(CSVRecord record, GtfsScheduleFile fileType) {
-        parsers.getOrDefault(fileType, r -> log.warn("Unsupported GTFS file type for parsing: {}", fileType))
+        Set<GtfsScheduleFile> warnings = EnumSet.noneOf(GtfsScheduleFile.class);
+        parsers.getOrDefault(fileType, r -> {
+                    if (!warnings.contains(fileType)) {
+                        log.warn("Unsupported GTFS file type for parsing: {}", fileType);
+                    } else {
+                        warnings.add(fileType);
+                    }
+                })
                 .accept(record);
     }
 
@@ -67,7 +74,6 @@ class GtfsScheduleParser {
                 LocalDate.parse(record.get("start_date"), DATE_FORMATTER),
                 LocalDate.parse(record.get("end_date"), DATE_FORMATTER));
     }
-
 
     private void parseCalendarDate(CSVRecord record) {
         builder.addCalendarDate(record.get("service_id"), LocalDate.parse(record.get("date"), DATE_FORMATTER),
