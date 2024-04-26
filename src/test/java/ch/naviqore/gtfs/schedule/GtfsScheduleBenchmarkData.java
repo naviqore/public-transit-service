@@ -21,7 +21,7 @@ import java.nio.file.Path;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Log4j2
-public final class GtfsScheduleBenchmarkData {
+final class GtfsScheduleBenchmarkData {
     private static final Path DATA_DIRECTORY = Path.of("benchmark/input");
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)

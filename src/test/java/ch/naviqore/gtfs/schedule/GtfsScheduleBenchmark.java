@@ -2,22 +2,23 @@ package ch.naviqore.gtfs.schedule;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleBenchmarkData.Dataset;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.model.GtfsScheduleDay;
+import ch.naviqore.gtfs.schedule.model.Trip;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class GtfsScheduleBenchmark {
+final class GtfsScheduleBenchmark {
 
-    private static final Dataset DATASET = Dataset.GERMANY;
+    private static final Dataset DATASET = Dataset.SWITZERLAND;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         String path = GtfsScheduleBenchmarkData.get(DATASET);
         GtfsSchedule schedule = new GtfsScheduleReader().read(path);
-        GtfsScheduleDay scheduleDay = schedule.getScheduleForDay(LocalDate.now());
+        List<Trip> activeTrips = schedule.getActiveTrips(LocalDate.now());
         // clean heap from reading artifacts
         System.gc();
         // monitor effect

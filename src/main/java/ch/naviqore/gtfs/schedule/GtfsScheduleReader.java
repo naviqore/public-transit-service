@@ -92,7 +92,7 @@ public class GtfsScheduleReader {
 
     public GtfsSchedule read(String path) throws IOException {
         File file = new File(path);
-        GtfsScheduleBuilder builder = GtfsScheduleBuilder.builder();
+        GtfsScheduleBuilder builder = GtfsSchedule.builder();
         GtfsScheduleParser parser = new GtfsScheduleParser(builder);
 
         if (file.isDirectory()) {

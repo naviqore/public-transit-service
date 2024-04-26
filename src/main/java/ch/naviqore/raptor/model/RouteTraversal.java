@@ -6,5 +6,5 @@ import lombok.RequiredArgsConstructor;
 public class RouteTraversal {
     private final StopTime[] stopTimes;
     private final Route[] routes;
-    private final Stop[] routeStops;
+    // private final Stop[] routeStops;
 }

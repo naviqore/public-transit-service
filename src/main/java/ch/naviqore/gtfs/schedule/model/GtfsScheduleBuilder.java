@@ -1,5 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.spatial.Coordinate;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
@@ -27,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author munterfi
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Log4j2
 public class GtfsScheduleBuilder {
 
@@ -37,10 +38,6 @@ public class GtfsScheduleBuilder {
     private final Map<String, Stop> stops = new HashMap<>();
     private final Map<String, Route> routes = new HashMap<>();
     private final Map<String, Trip> trips = new HashMap<>();
-
-    public static GtfsScheduleBuilder builder() {
-        return new GtfsScheduleBuilder();
-    }
 
     public GtfsScheduleBuilder addAgency(String id, String name, String url, String timezone) {
         if (agencies.containsKey(id)) {
@@ -56,7 +53,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Agency " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, lat, lon));
+        stops.put(id, new Stop(id, name, new Coordinate(lat, lon)));
         return this;
     }
 
@@ -136,6 +133,7 @@ public class GtfsScheduleBuilder {
         trips.values().parallelStream().forEach(Trip::initialize);
         stops.values().parallelStream().forEach(Stop::initialize);
         routes.values().parallelStream().forEach(Route::initialize);
+        // TODO: Build k-d tree for spatial indexing
         return new GtfsSchedule(agencies, calendars, stops, routes, trips);
     }
 

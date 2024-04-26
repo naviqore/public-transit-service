@@ -12,7 +12,7 @@ import java.util.zip.ZipInputStream;
  *
  * @author munterfi
  */
-public final class GtfsScheduleTestData {
+final class GtfsScheduleTestData {
 
     public static final String SAMPLE_FEED = "sample-feed-1";
     public static final String SAMPLE_FEED_ZIP = SAMPLE_FEED + ".zip";

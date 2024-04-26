@@ -76,9 +76,12 @@ class GtfsScheduleParser {
     }
 
     private void parseCalendarDate(CSVRecord record) {
-        builder.addCalendarDate(record.get("service_id"), LocalDate.parse(record.get("date"), DATE_FORMATTER),
-                ExceptionType.parse(record.get("exception_type")));
-
+        try {
+            builder.addCalendarDate(record.get("service_id"), LocalDate.parse(record.get("date"), DATE_FORMATTER),
+                    ExceptionType.parse(record.get("exception_type")));
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping invalid calendar date {}: {}", record.get("date"), e.getMessage());
+        }
     }
 
     private void parseStop(CSVRecord record) {
@@ -95,11 +98,21 @@ class GtfsScheduleParser {
     }
 
     private void parseTrips(CSVRecord record) {
-        builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"));
+        try {
+            builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"));
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());
+        }
     }
 
     private void parseStopTimes(CSVRecord record) {
-        builder.addStopTime(record.get("trip_id"), record.get("stop_id"),
-                ServiceDayTime.parse(record.get("arrival_time")), ServiceDayTime.parse(record.get("departure_time")));
+        try {
+            builder.addStopTime(record.get("trip_id"), record.get("stop_id"),
+                    ServiceDayTime.parse(record.get("arrival_time")),
+                    ServiceDayTime.parse(record.get("departure_time")));
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping invalid stop time {}-{}: {}", record.get("trip_id"), record.get("stop_id"),
+                    e.getMessage());
+        }
     }
 }
