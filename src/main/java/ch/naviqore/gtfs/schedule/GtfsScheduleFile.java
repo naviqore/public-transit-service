@@ -17,7 +17,7 @@ public enum GtfsScheduleFile {
     // FREQUENCIES("frequencies.txt"),
     STOPS("stops.txt"),
     ROUTES("routes.txt"),
-    SHAPES("shapes.txt"),
+    // SHAPES("shapes.txt"),
     TRIPS("trips.txt"),
     STOP_TIMES("stop_times.txt");
 
