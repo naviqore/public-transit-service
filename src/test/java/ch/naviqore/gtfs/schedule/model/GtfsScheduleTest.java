@@ -17,6 +17,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class GtfsScheduleTest {
 
+    private static final LocalDate START_DATE = LocalDate.of(2024, Month.APRIL, 1);
+    private static final LocalDate END_DATE = START_DATE.plusMonths(1);
+    private static final LocalDateTime WEEKDAY_8_AM = LocalDateTime.of(2024, Month.APRIL, 26, 8, 0);
+    private static final LocalDateTime WEEKDAY_9_AM = WEEKDAY_8_AM.plusHours(1);
+    private static final LocalDateTime SATURDAY_9_AM = LocalDateTime.of(2024, Month.APRIL, 27, 9, 0);
+
     private GtfsSchedule schedule;
 
     @BeforeEach
@@ -31,8 +37,7 @@ class GtfsScheduleTest {
                 .addRoute("route1", "agency1", "101", "Main Line", RouteType.BUS)
                 .addRoute("route2", "agency1", "102", "Cross Town", RouteType.BUS)
                 .addRoute("route3", "agency1", "103", "Circulator", RouteType.BUS)
-                .addCalendar("weekdays", EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalDate.now(),
-                        LocalDate.now().plusMonths(1))
+                .addCalendar("weekdays", EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), START_DATE, END_DATE)
                 .addCalendar("weekends", EnumSet.of(DayOfWeek.SATURDAY), LocalDate.now(), LocalDate.now().plusMonths(1))
                 .addTrip("trip1", "route1", "weekdays")
                 .addTrip("trip2", "route2", "weekdays")
@@ -96,29 +101,22 @@ class GtfsScheduleTest {
 
         @Test
         void shouldReturnNextDeparturesOnWeekday() {
-            // 8:00 AM on a weekday
-            LocalDateTime now = LocalDateTime.of(2024, Month.APRIL, 26, 8, 0);
-            assertThat(schedule.getNextDepartures("stop1", now, Integer.MAX_VALUE)).hasSize(1);
+            assertThat(schedule.getNextDepartures("stop1", WEEKDAY_8_AM, Integer.MAX_VALUE)).hasSize(1);
         }
 
         @Test
         void shouldReturnNoNextDeparturesOnWeekday() {
-            // 9:00 AM on a weekday
-            LocalDateTime now = LocalDateTime.of(2024, Month.APRIL, 26, 9, 0);
-            assertThat(schedule.getNextDepartures("stop1", now, Integer.MAX_VALUE)).isEmpty();
+            assertThat(schedule.getNextDepartures("stop1", WEEKDAY_9_AM, Integer.MAX_VALUE)).isEmpty();
         }
 
         @Test
         void shouldReturnNextDeparturesOnSaturday() {
-            // 9:00 AM on a Saturday
-            LocalDateTime now = LocalDateTime.of(2024, Month.APRIL, 27, 8, 0);
-            assertThat(schedule.getNextDepartures("stop1", now, Integer.MAX_VALUE)).hasSize(1);
+            assertThat(schedule.getNextDepartures("stop1", SATURDAY_9_AM, Integer.MAX_VALUE)).hasSize(1);
         }
 
         @Test
         void shouldReturnNoDeparturesFromUnknownStop() {
-            LocalDateTime now = LocalDateTime.of(2024, Month.APRIL, 26, 10, 0);
-            assertThatThrownBy(() -> schedule.getNextDepartures("unknown", now, 1)).isInstanceOf(
+            assertThatThrownBy(() -> schedule.getNextDepartures("unknown", LocalDateTime.now(), 1)).isInstanceOf(
                     IllegalArgumentException.class).hasMessage("Stop unknown not found");
         }
     }
@@ -128,22 +126,21 @@ class GtfsScheduleTest {
 
         @Test
         void shouldReturnActiveTripsOnWeekday() {
-            assertThat(schedule.getActiveTrips(LocalDate.now())).hasSize(2)
+            assertThat(schedule.getActiveTrips(WEEKDAY_8_AM.toLocalDate())).hasSize(2)
                     .extracting("id")
                     .containsOnly("trip1", "trip2");
         }
 
         @Test
         void shouldReturnActiveTripsOnWeekend() {
-            assertThat(schedule.getActiveTrips(LocalDate.now().with(DayOfWeek.SATURDAY))).hasSize(1)
+            assertThat(schedule.getActiveTrips(SATURDAY_9_AM.toLocalDate())).hasSize(1)
                     .extracting("id")
                     .containsOnly("trip3");
         }
 
         @Test
         void shouldReturnNoActiveTripsForNonServiceDay() {
-            LocalDate nonServiceDay = LocalDate.now().with(DayOfWeek.SUNDAY).plusWeeks(2);
-            assertThat(schedule.getActiveTrips(nonServiceDay)).isEmpty();
+            assertThat(schedule.getActiveTrips(END_DATE.plusMonths(1))).isEmpty();
         }
     }
 }
