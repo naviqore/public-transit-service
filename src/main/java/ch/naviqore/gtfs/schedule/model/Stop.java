@@ -1,5 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.spatial.Coordinate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,7 @@ import java.util.Objects;
 public final class Stop implements Initializable {
     private final String id;
     private final String name;
-    private final double lat;
-    private final double lon;
+    private final Coordinate coordinate;
     private final List<StopTime> stopTimes = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {
@@ -42,6 +42,6 @@ public final class Stop implements Initializable {
 
     @Override
     public String toString() {
-        return "Stop[" + "id=" + id + ", " + "name=" + name + ", " + "lat=" + lat + ", " + "lon=" + lon + ']';
+        return "Stop[" + "id=" + id + ", " + "name=" + name + ']';
     }
 }

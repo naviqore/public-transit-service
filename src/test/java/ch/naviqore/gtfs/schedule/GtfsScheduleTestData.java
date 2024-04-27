@@ -8,11 +8,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * Test helper class
+ * Integration test data provider
  *
  * @author munterfi
  */
-public class GtfsScheduleTestData {
+final class GtfsScheduleTestData {
 
     public static final String SAMPLE_FEED = "sample-feed-1";
     public static final String SAMPLE_FEED_ZIP = SAMPLE_FEED + ".zip";

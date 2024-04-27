@@ -27,7 +27,6 @@ public final class Route implements Initializable {
     @Override
     public void initialize() {
         Collections.sort(trips);
-
     }
 
     @Override

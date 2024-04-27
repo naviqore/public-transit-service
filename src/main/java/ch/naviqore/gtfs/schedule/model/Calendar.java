@@ -7,19 +7,18 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Calendar {
+
     private final String id;
     private final EnumSet<DayOfWeek> serviceDays;
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final Map<LocalDate, CalendarDate> calendarDates = new HashMap<>();
+    private final List<Trip> trips = new ArrayList<>();
 
     /**
      * Determines if the service is operational on a specific day, considering both regular service days and
@@ -41,6 +40,10 @@ public final class Calendar {
 
     void addCalendarDate(CalendarDate calendarDate) {
         calendarDates.put(calendarDate.date(), calendarDate);
+    }
+
+    void addTrip(Trip trip) {
+        trips.add(trip);
     }
 
     @Override

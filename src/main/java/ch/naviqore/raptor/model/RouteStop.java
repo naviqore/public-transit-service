@@ -1,4 +1,4 @@
 package ch.naviqore.raptor.model;
 
-public class RouteStop {
+public record RouteStop() {
 }
