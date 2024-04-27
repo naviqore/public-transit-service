@@ -13,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -38,13 +37,8 @@ class GtfsScheduleParser {
     }
 
     public void parse(CSVRecord record, GtfsScheduleFile fileType) {
-        Set<GtfsScheduleFile> warnings = EnumSet.noneOf(GtfsScheduleFile.class);
         parsers.getOrDefault(fileType, r -> {
-            if (!warnings.contains(fileType)) {
-                log.warn("Unsupported GTFS file type for parsing: {}", fileType);
-            } else {
-                warnings.add(fileType);
-            }
+            throw new IllegalArgumentException("Unsupported GTFS file type for parsing: " + fileType);
         }).accept(record);
     }
 
