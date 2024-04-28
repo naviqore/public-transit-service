@@ -38,7 +38,7 @@ class GtfsScheduleTest {
                 .addRoute("route2", "agency1", "102", "Cross Town", RouteType.BUS)
                 .addRoute("route3", "agency1", "103", "Circulator", RouteType.BUS)
                 .addCalendar("weekdays", EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), START_DATE, END_DATE)
-                .addCalendar("weekends", EnumSet.of(DayOfWeek.SATURDAY), LocalDate.now(), LocalDate.now().plusMonths(1))
+                .addCalendar("weekends", EnumSet.of(DayOfWeek.SATURDAY), START_DATE, END_DATE)
                 .addTrip("trip1", "route1", "weekdays")
                 .addTrip("trip2", "route2", "weekdays")
                 .addTrip("trip3", "route3", "weekends")

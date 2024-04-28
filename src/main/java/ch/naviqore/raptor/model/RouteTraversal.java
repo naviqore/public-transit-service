@@ -1,10 +1,12 @@
 package ch.naviqore.raptor.model;
 
-import lombok.RequiredArgsConstructor;
+/**
+ * Memory optimized itinerant data structure for efficient route traversal
+ *
+ * @param stopTimes  stop times
+ * @param routes     routes
+ * @param routeStops route stops
+ */
+public record RouteTraversal(StopTime[] stopTimes, Route[] routes, RouteStop[] routeStops) {
 
-@RequiredArgsConstructor
-public class RouteTraversal {
-    private final StopTime[] stopTimes;
-    private final Route[] routes;
-    // private final Stop[] routeStops;
 }
