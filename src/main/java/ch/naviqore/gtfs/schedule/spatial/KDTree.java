@@ -74,17 +74,19 @@ public class KDTree {
         return dist1 < dist2 ? node1 : node2;
     }
 
-    public static void main(String[] args)
-    {
-     System.out.println("Hello World");
+    public static void main(String[] args) {
+        System.out.println("Hello World");
         KDTree kdTree = new KDTree();
 
         kdTree.insert(new Coordinate(48.137154, 11.576124)); // Munich
         kdTree.insert(new Coordinate(52.520008, 13.404954)); // Berlin
         kdTree.insert(new Coordinate(50.110924, 8.682127));  // Frankfurt
         kdTree.insert(new Coordinate(47.3769, 8.5417)); // Zurich
+        kdTree.insert(new Coordinate(47.42100820116168, 9.35977158264066)); // St. Gallen Militärkantine
+        kdTree.insert(new Coordinate(47.41984757221546, 9.361976306041305)); // St. Gallen Sportanlage Kreuzbleiche
 
-        Coordinate location = new Coordinate(47.4245, 9.3767); // St. Gallen
+        //  Coordinate location = new Coordinate(47.4245, 9.3767); // St. Gallen
+        var location = new Coordinate(47.4202611944959, 9.362182342510467); // St. Gallen Parkgarage Kreuzbleiche
 
         Coordinate nearestNeighbour = kdTree.nearestNeighbour(location);
         if (nearestNeighbour != null) {
