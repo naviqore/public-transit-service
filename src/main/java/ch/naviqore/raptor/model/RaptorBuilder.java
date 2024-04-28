@@ -25,8 +25,8 @@ public class RaptorBuilder {
     private final Map<String, List<String>> routeStops = new HashMap<>();
     private final Map<String, List<StopTime>> stopTimes = new HashMap<>();
 
-    private int routeSize = 0;
     private int stopSize = 0;
+    private int routeSize = 0;
     private int routeStopSize = 0;
     private int stopTimeSize = 0;
 
@@ -64,7 +64,7 @@ public class RaptorBuilder {
     }
 
     public RaptorBuilder addStopTime(String stopId, String routeId, int arrival, int departure) {
-        log.info("Adding stop time: stopId={}, routeId={}, arrival={}, departure={}", stopId, routeId, arrival,
+        log.debug("Adding stop time: stopId={}, routeId={}, arrival={}, departure={}", stopId, routeId, arrival,
                 departure);
         stopTimes.computeIfAbsent(routeId, k -> new ArrayList<>()).add(new StopTime(arrival, departure));
         stopTimeSize++;

@@ -1,4 +1,4 @@
-package ch.naviqore;
+package ch.naviqore.raptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.raptor.model.Raptor;
@@ -18,21 +18,22 @@ import java.util.Set;
  */
 @RequiredArgsConstructor
 @Log4j2
-public class GtfsToRaptorMapper {
+public class GtfsToRaptorConverter {
 
     private final Set<Stop> stops = new HashSet<>();
     private final Set<Route> routes = new HashSet<>();
     private final RaptorBuilder builder;
 
-    public Raptor map(GtfsSchedule schedule, LocalDate date) {
+    public Raptor convert(GtfsSchedule schedule, LocalDate date) {
         List<Trip> activeTrips = schedule.getActiveTrips(date);
-        log.info("Mapping {} active trips from GTFS schedule to Raptor model", activeTrips.size());
+        log.info("Converting {} active trips from GTFS schedule to Raptor model", activeTrips.size());
         for (Trip trip : activeTrips) {
             Route route = trip.getRoute();
             if (!routes.contains(route)) {
                 routes.add(route);
                 builder.addRoute(route.getId());
-                // TODO: Add test for consistency of route stops
+                // TODO: Add test for consistency of route stops. Since in GTFS are defined per trip, but Raptor
+                //  builder expects them to be the same for all trips of a route.
                 for (StopTime stopTime : trip.getStopTimes()) {
                     if (!stops.contains(stopTime.stop())) {
                         stops.add(stopTime.stop());

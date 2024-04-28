@@ -1,4 +1,4 @@
-package ch.naviqore;
+package ch.naviqore.raptor;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 
-class GtfsToRaptorMapperIT {
+class GtfsToRaptorConverterIT {
 
     private static final LocalDate DATE = LocalDate.of(2009, 4, 26);
     private GtfsSchedule schedule;
@@ -26,7 +26,7 @@ class GtfsToRaptorMapperIT {
 
     @Test
     void shouldConvertGtfsScheduleToRaptor() {
-        GtfsToRaptorMapper mapper = new GtfsToRaptorMapper(Raptor.builder());
-        Raptor raptor = mapper.map(schedule, DATE);
+        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(Raptor.builder());
+        Raptor raptor = mapper.convert(schedule, DATE);
     }
 }

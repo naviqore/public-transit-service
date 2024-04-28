@@ -14,6 +14,6 @@ public class Raptor {
     }
 
     public void routeEarliestArrival(String sourceStop, String targetStop, int departureTime) {
-        log.info("Routing earliest arrival from {} to {} at {}", sourceStop, targetStop, departureTime);
+        log.debug("Routing earliest arrival from {} to {} at {}", sourceStop, targetStop, departureTime);
     }
 }
