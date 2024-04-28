@@ -1,12 +1,14 @@
 package ch.naviqore.gtfs.schedule.spatial;
 
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @RequiredArgsConstructor
 @EqualsAndHashCode
 @ToString
+@Getter
 public class Coordinate {
 
     private static final int EARTH_RADIUS = 6371000;
