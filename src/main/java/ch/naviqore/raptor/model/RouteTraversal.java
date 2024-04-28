@@ -9,8 +9,4 @@ package ch.naviqore.raptor.model;
  */
 public record RouteTraversal(StopTime[] stopTimes, Route[] routes, RouteStop[] routeStops) {
 
-    public static RouteTraversalBuilder builder() {
-        return new RouteTraversalBuilder();
-    }
-
 }

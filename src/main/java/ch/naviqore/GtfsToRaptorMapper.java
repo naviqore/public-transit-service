@@ -1,11 +1,8 @@
 package ch.naviqore;
 
-import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.model.Route;
-import ch.naviqore.gtfs.schedule.model.StopTime;
-import ch.naviqore.gtfs.schedule.model.Trip;
-import ch.naviqore.raptor.model.RouteTraversal;
-import ch.naviqore.raptor.model.RouteTraversalBuilder;
+import ch.naviqore.gtfs.schedule.model.*;
+import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.raptor.model.RaptorBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
@@ -23,10 +20,11 @@ import java.util.Set;
 @Log4j2
 public class GtfsToRaptorMapper {
 
+    private final Set<Stop> stops = new HashSet<>();
     private final Set<Route> routes = new HashSet<>();
-    private final RouteTraversalBuilder builder;
+    private final RaptorBuilder builder;
 
-    public RouteTraversal map(GtfsSchedule schedule, LocalDate date) {
+    public Raptor map(GtfsSchedule schedule, LocalDate date) {
         List<Trip> activeTrips = schedule.getActiveTrips(date);
         log.info("Mapping {} active trips from GTFS schedule to Raptor model", activeTrips.size());
         for (Trip trip : activeTrips) {
@@ -36,6 +34,10 @@ public class GtfsToRaptorMapper {
                 builder.addRoute(route.getId());
                 // TODO: Add test for consistency of route stops
                 for (StopTime stopTime : trip.getStopTimes()) {
+                    if (!stops.contains(stopTime.stop())) {
+                        stops.add(stopTime.stop());
+                        builder.addStop(stopTime.stop().getId());
+                    }
                     builder.addRouteStop(stopTime.stop().getId(), route.getId());
                 }
             }
