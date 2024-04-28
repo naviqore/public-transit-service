@@ -101,7 +101,7 @@ public class RaptorBuilder {
         RouteTraversal routeTraversal = buildRouteTraversal();
         log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers", stopSize,
                 routeSize, routeStopSize, stopTimeSize, transferSize);
-        return new Raptor(lookup, routeTraversal, stopContext);
+        return new Raptor(lookup, stopContext, routeTraversal);
     }
 
     private Lookup buildLookup() {
