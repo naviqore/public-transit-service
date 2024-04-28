@@ -3,6 +3,7 @@ package ch.naviqore.gtfs.schedule.spatial;
 /**
  * Utility class for the KDTree.
  * <p> This class contains utility methods for the KDTree. </p>
+ *
  * @author Brunner246
  */
 public class KDTreeUtils {
@@ -23,19 +24,20 @@ public class KDTreeUtils {
     /**
      * Returns the node with the smallest distance to the target location. Uses the Haversine formula to calculate the
      * distance. <a href="https://www.baeldung.com/java-find-distance-between-points#calculate-the-distance-using-the-haversine-formula">...</a>
-     * @param aLeft The left node.
+     *
+     * @param aLeft  The left node.
      * @param aRight The right node.
      * @return The distance in meters.
      * @author Brunner246
      */
     static double distance(Coordinate aLeft, Coordinate aRight) {
-        double deltaLatitude = Math.toRadians((aRight.getLatitude() - aLeft.getLatitude()));
-        double deltaLongitude = Math.toRadians((aRight.getLongitude() - aLeft.getLongitude()));
+        final var deltaLatitude = Math.toRadians((aRight.getLatitude() - aLeft.getLatitude()));
+        final var deltaLongitude = Math.toRadians((aRight.getLongitude() - aLeft.getLongitude()));
 
-        double a = Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
-                Math.cos(Math.toRadians(aLeft.getLatitude())) * Math.cos(Math.toRadians(aRight.getLatitude())) *
-                        Math.sin(deltaLongitude / 2) * Math.sin(deltaLongitude / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var a = haversine(deltaLatitude) + (Math.cos(Math.toRadians(aLeft.getLatitude()))
+                * Math.cos(Math.toRadians(aRight.getLatitude()))
+                * haversine(deltaLongitude));
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return KDTreeUtils.Metric.EARTH_RADIUS * c;
     }
