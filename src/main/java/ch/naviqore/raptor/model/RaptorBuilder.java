@@ -131,6 +131,9 @@ public class RaptorBuilder {
             }
 
             Set<String> currentStopRoutes = stopRoutes.get(stopId);
+            if (currentStopRoutes == null) {
+                throw new IllegalStateException("Stop " + stopId + " has no routes");
+            }
             for (String routeId : currentStopRoutes) {
                 stopRouteArr[stopRouteCnt++] = routes.get(routeId);
             }
@@ -155,11 +158,17 @@ public class RaptorBuilder {
             int routeIdx = entry.getValue();
 
             List<String> currentRouteStops = routeStops.get(routeId);
+            if (currentRouteStops == null) {
+                throw new IllegalStateException("Route " + routeId + " has no route stops");
+            }
             for (String routeStop : currentRouteStops) {
                 routeStopArr[routeStopCnt++] = new RouteStop(stops.get(routeStop), routeIdx);
             }
 
             List<StopTime> currentStopTimes = stopTimes.get(routeId);
+            if (currentStopTimes == null) {
+                throw new IllegalStateException("Route " + routeId + " has no stop times");
+            }
             for (StopTime stopTime : currentStopTimes) {
                 stopTimeArr[stopTimeCnt++] = stopTime;
             }
