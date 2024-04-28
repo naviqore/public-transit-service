@@ -7,7 +7,12 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Log4j2
 public class Raptor {
+
+    public final static int NO_INDEX = -1;
+
+    private final Lookup lookup;
     private final RouteTraversal routeTraversal;
+    private final StopContext stopContext;
 
     public static RaptorBuilder builder() {
         return new RaptorBuilder();

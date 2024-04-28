@@ -1,4 +1,4 @@
 package ch.naviqore.raptor.model;
 
-public record Stop(int transferIdx, int stopRouteIdx) {
+public record Stop(String id, int stopRouteIdx, int numberOfRoutes, int transferIdx, int numberOfTransfers) {
 }
