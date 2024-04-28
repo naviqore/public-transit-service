@@ -61,7 +61,8 @@ public class Raptor {
         // perform rounds
         int round = 0;
         while (!marked.isEmpty()) {
-            log.info("Processing round {} (= transfers)", round);
+            log.info("Processing round {} (= transfers), marked: {}", round,
+                    marked.stream().map(stopIdx -> stops[stopIdx].id()).toList());
             Set<Integer> nextMarked = new HashSet<>();
             for (int stopIdx : marked) {
                 log.debug("Processing marked stop {} - {}", stopIdx, stops[stopIdx].id());
