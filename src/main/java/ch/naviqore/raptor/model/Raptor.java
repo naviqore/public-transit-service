@@ -46,6 +46,11 @@ public class Raptor {
     public void routeEarliestArrival(String sourceStop, String targetStop, int departureTime) {
         log.debug("Routing earliest arrival from {} to {} at {}", sourceStop, targetStop, departureTime);
 
+        if (!stopsToIdx.containsKey(sourceStop) || !stopsToIdx.containsKey(targetStop)) {
+            log.error("Source or target stop not found in lookup {}-{}", sourceStop, targetStop);
+            return;
+        }
+
         final int sourceIdx = stopsToIdx.get(sourceStop);
         final int targetIdx = stopsToIdx.get(targetStop);
 
@@ -138,7 +143,7 @@ public class Raptor {
             System.out.println(stop.id() + ": " + earliestArrival[stopsToIdx.get(stop.id())]);
         }
 
-        log.debug("Earliest arrival at {}: {}", targetStop, earliestArrival[stopsToIdx.get(targetStop)]);
+        log.debug("Earliest arrival at {}: {}", targetStop, earliestArrival[targetIdx]);
     }
 
 }

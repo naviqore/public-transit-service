@@ -33,8 +33,8 @@ final class Benchmark {
 
     private static final int N = 10000;
     private static final Dataset DATASET = Dataset.SWITZERLAND;
-    private static final LocalDate DATE = LocalDate.of(2024, 4, 26);
-    private static final int MAX_SECONDS_IN_DAY = 86400;
+    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
+    private static final int SECONDS_IN_DAY = 86400;
     private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
 
@@ -45,7 +45,6 @@ final class Benchmark {
         RouteRequest[] requests = sampleRouteRequests(stopIds);
         RoutingResult[] results = processRequests(raptor, requests);
         writeResultsToCsv(results);
-
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
@@ -56,7 +55,7 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(Raptor.builder()).convert(schedule, DATE);
+        Raptor raptor = new GtfsToRaptorConverter(Raptor.builder()).convert(schedule, SCHEDULE_DATE);
         manageResources();
         return raptor;
     }
@@ -73,7 +72,7 @@ final class Benchmark {
             int sourceIndex = random.nextInt(stopIds.size());
             int destinationIndex = getRandomDestinationIndex(stopIds.size(), sourceIndex, random);
             requests[i] = new RouteRequest(stopIds.get(sourceIndex), stopIds.get(destinationIndex),
-                    random.nextInt(MAX_SECONDS_IN_DAY));
+                    random.nextInt(SECONDS_IN_DAY));
         }
         return requests;
     }
