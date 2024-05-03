@@ -1,54 +1,24 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.gtfs.schedule.type.DefaultRouteType;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Month;
-import java.util.EnumSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(GtfsScheduleTestExtension.class)
 class GtfsScheduleTest {
-
-    private static final LocalDate START_DATE = LocalDate.of(2024, Month.APRIL, 1);
-    private static final LocalDate END_DATE = START_DATE.plusMonths(1);
-    private static final LocalDateTime WEEKDAY_8_AM = LocalDateTime.of(2024, Month.APRIL, 26, 8, 0);
-    private static final LocalDateTime WEEKDAY_9_AM = WEEKDAY_8_AM.plusHours(1);
-    private static final LocalDateTime SATURDAY_9_AM = LocalDateTime.of(2024, Month.APRIL, 27, 9, 0);
 
     private GtfsSchedule schedule;
 
     @BeforeEach
-    void setUp() {
-        schedule = GtfsSchedule.builder()
-                .addAgency("agency1", "City Transit", "http://citytransit.example.com", "Europe/Zurich")
-                .addStop("stop1", "Main Station", 47.3769, 8.5417)
-                .addStop("stop2", "Central Park", 47.3779, 8.5407)
-                .addStop("stop3", "Hill Valley", 47.3780, 8.5390)
-                .addStop("stop4", "East Side", 47.3785, 8.5350)
-                .addStop("stop5", "West End", 47.3750, 8.5300)
-                .addRoute("route1", "agency1", "101", "Main Line", DefaultRouteType.BUS)
-                .addRoute("route2", "agency1", "102", "Cross Town", DefaultRouteType.BUS)
-                .addRoute("route3", "agency1", "103", "Circulator", DefaultRouteType.BUS)
-                .addCalendar("weekdays", EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), START_DATE, END_DATE)
-                .addCalendar("weekends", EnumSet.of(DayOfWeek.SATURDAY), START_DATE, END_DATE)
-                .addTrip("trip1", "route1", "weekdays")
-                .addTrip("trip2", "route2", "weekdays")
-                .addTrip("trip3", "route3", "weekends")
-                .addStopTime("trip1", "stop1", new ServiceDayTime(8, 0, 0), new ServiceDayTime(8, 5, 0))
-                .addStopTime("trip1", "stop2", new ServiceDayTime(8, 10, 0), new ServiceDayTime(8, 15, 0))
-                .addStopTime("trip2", "stop3", new ServiceDayTime(9, 0, 0), new ServiceDayTime(9, 5, 0))
-                .addStopTime("trip2", "stop4", new ServiceDayTime(9, 10, 0), new ServiceDayTime(9, 15, 0))
-                .addStopTime("trip3", "stop5", new ServiceDayTime(10, 0, 0), new ServiceDayTime(10, 5, 0))
-                .addStopTime("trip3", "stop1", new ServiceDayTime(10, 10, 0), new ServiceDayTime(10, 15, 0))
-                .build();
+    void setUp(GtfsScheduleTestBuilder builder) {
+        schedule = builder.withAddAgency().withAddCalendars().withAddStops().withAddRoutes().withAddTrips()
+                .withAddStopTimes().build();
     }
 
     @Nested
@@ -56,7 +26,7 @@ class GtfsScheduleTest {
 
         @Test
         void shouldCorrectlyCountAgencies() {
-            assertThat(schedule.getAgencies()).hasSize(1);
+            assertThat(schedule.getAgencies()).hasSize(2);
         }
 
         @Test
@@ -85,8 +55,7 @@ class GtfsScheduleTest {
 
         @Test
         void shouldFindStopsWithin500Meters() {
-            assertThat(schedule.getNearestStops(47.3769, 8.5417, 500)).hasSize(3)
-                    .extracting("id")
+            assertThat(schedule.getNearestStops(47.3769, 8.5417, 500)).hasSize(3).extracting("id")
                     .containsOnly("stop1", "stop2", "stop3");
         }
 
@@ -101,17 +70,20 @@ class GtfsScheduleTest {
 
         @Test
         void shouldReturnNextDeparturesOnWeekday() {
-            assertThat(schedule.getNextDepartures("stop1", WEEKDAY_8_AM, Integer.MAX_VALUE)).hasSize(1);
+            assertThat(schedule.getNextDepartures("stop1", GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM,
+                    Integer.MAX_VALUE)).hasSize(1);
         }
 
         @Test
         void shouldReturnNoNextDeparturesOnWeekday() {
-            assertThat(schedule.getNextDepartures("stop1", WEEKDAY_9_AM, Integer.MAX_VALUE)).isEmpty();
+            assertThat(schedule.getNextDepartures("stop1", GtfsScheduleTestBuilder.Moments.WEEKDAY_9_AM,
+                    Integer.MAX_VALUE)).isEmpty();
         }
 
         @Test
         void shouldReturnNextDeparturesOnSaturday() {
-            assertThat(schedule.getNextDepartures("stop1", SATURDAY_9_AM, Integer.MAX_VALUE)).hasSize(1);
+            assertThat(schedule.getNextDepartures("stop1", GtfsScheduleTestBuilder.Moments.SATURDAY_9_AM,
+                    Integer.MAX_VALUE)).hasSize(1);
         }
 
         @Test
@@ -126,21 +98,19 @@ class GtfsScheduleTest {
 
         @Test
         void shouldReturnActiveTripsOnWeekday() {
-            assertThat(schedule.getActiveTrips(WEEKDAY_8_AM.toLocalDate())).hasSize(2)
-                    .extracting("id")
-                    .containsOnly("trip1", "trip2");
+            assertThat(schedule.getActiveTrips(GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM.toLocalDate())).hasSize(2)
+                    .extracting("id").containsOnly("trip1", "trip2");
         }
 
         @Test
         void shouldReturnActiveTripsOnWeekend() {
-            assertThat(schedule.getActiveTrips(SATURDAY_9_AM.toLocalDate())).hasSize(1)
-                    .extracting("id")
-                    .containsOnly("trip3");
+            assertThat(schedule.getActiveTrips(GtfsScheduleTestBuilder.Moments.SATURDAY_9_AM.toLocalDate())).hasSize(1)
+                    .extracting("id").containsOnly("trip3");
         }
 
         @Test
         void shouldReturnNoActiveTripsForNonServiceDay() {
-            assertThat(schedule.getActiveTrips(END_DATE.plusMonths(1))).isEmpty();
+            assertThat(schedule.getActiveTrips(GtfsScheduleTestBuilder.Validity.END_DATE.plusMonths(1))).isEmpty();
         }
     }
 }
