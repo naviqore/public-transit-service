@@ -1,6 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.gtfs.schedule.type.RouteType;
+import ch.naviqore.gtfs.schedule.type.DefaultRouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -34,9 +34,9 @@ class GtfsScheduleTest {
                 .addStop("stop3", "Hill Valley", 47.3780, 8.5390)
                 .addStop("stop4", "East Side", 47.3785, 8.5350)
                 .addStop("stop5", "West End", 47.3750, 8.5300)
-                .addRoute("route1", "agency1", "101", "Main Line", RouteType.BUS)
-                .addRoute("route2", "agency1", "102", "Cross Town", RouteType.BUS)
-                .addRoute("route3", "agency1", "103", "Circulator", RouteType.BUS)
+                .addRoute("route1", "agency1", "101", "Main Line", DefaultRouteType.BUS)
+                .addRoute("route2", "agency1", "102", "Cross Town", DefaultRouteType.BUS)
+                .addRoute("route3", "agency1", "103", "Circulator", DefaultRouteType.BUS)
                 .addCalendar("weekdays", EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), START_DATE, END_DATE)
                 .addCalendar("weekends", EnumSet.of(DayOfWeek.SATURDAY), START_DATE, END_DATE)
                 .addTrip("trip1", "route1", "weekdays")

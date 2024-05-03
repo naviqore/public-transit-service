@@ -85,10 +85,8 @@ class GtfsScheduleParser {
     }
 
     private void parseRoute(CSVRecord record) {
-        // TODO: Route types are not standardized in any way.
-        // RouteType.parse(record.get("route_type"))
         builder.addRoute(record.get("route_id"), record.get("agency_id"), record.get("route_short_name"),
-                record.get("route_long_name"), RouteType.RAIL);
+                record.get("route_long_name"), RouteType.parse(record.get("route_type")));
     }
 
     private void parseTrips(CSVRecord record) {
