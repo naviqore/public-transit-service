@@ -45,7 +45,6 @@ final class Benchmark {
         RouteRequest[] requests = sampleRouteRequests(stopIds);
         RoutingResult[] results = processRequests(raptor, requests);
         writeResultsToCsv(results);
-
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {

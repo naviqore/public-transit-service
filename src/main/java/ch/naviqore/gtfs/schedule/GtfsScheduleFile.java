@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 @Getter
-public enum GtfsScheduleFile {
+enum GtfsScheduleFile {
     // FEED_INFO("feed_info.txt", Presence.OPTIONAL),
     // ATTRIBUTIONS("attributions.txt", Presence.OPTIONAL),
     AGENCY("agency.txt", Presence.REQUIRED),
