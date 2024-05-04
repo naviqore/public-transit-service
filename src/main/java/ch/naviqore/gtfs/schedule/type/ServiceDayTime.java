@@ -16,6 +16,10 @@ import lombok.Getter;
 public final class ServiceDayTime implements Comparable<ServiceDayTime> {
     private final int totalSeconds;
 
+    public ServiceDayTime(int seconds) {
+        this.totalSeconds = seconds;
+    }
+
     public ServiceDayTime(int hours, int minutes, int seconds) {
         this.totalSeconds = seconds + 60 * minutes + 3600 * hours;
     }
