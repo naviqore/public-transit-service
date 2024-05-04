@@ -55,7 +55,7 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(Raptor.builder()).convert(schedule, DATE);
+        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(DATE);
         manageResources();
         return raptor;
     }

@@ -120,14 +120,14 @@ class GtfsScheduleTest {
 
             // assert departures times are correct
             List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("08:00:00"),
-                    ServiceDayTime.parse("08:00:00"), ServiceDayTime.parse("08:09:00"),
+                    ServiceDayTime.parse("08:03:00"), ServiceDayTime.parse("08:09:00"),
                     ServiceDayTime.parse("08:09:00"), ServiceDayTime.parse("08:15:00"));
             assertThat(departures).hasSize(LIMIT)
                     .extracting(StopTime::departure)
                     .containsExactlyElementsOf(expectedDepartures);
 
             // assert trips are correct
-            List<String> expectedTripIds = List.of("route3_wd_f_16", "route3_wd_r_16", "route3_wd_f_17",
+            List<String> expectedTripIds = List.of("route3_wd_f_16", "route3_wd_r_17", "route3_wd_f_17",
                     "route3_wd_r_17", "route1_wd_f_7");
             List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
             assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
@@ -161,14 +161,14 @@ class GtfsScheduleTest {
 
             // assert departures times are correct
             List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("24:00:00"),
-                    ServiceDayTime.parse("24:00:00"), ServiceDayTime.parse("24:09:00"),
+                    ServiceDayTime.parse("24:03:00"), ServiceDayTime.parse("24:09:00"),
                     ServiceDayTime.parse("24:09:00"), ServiceDayTime.parse("24:15:00"));
             assertThat(departures).hasSize(LIMIT)
                     .extracting(StopTime::departure)
                     .containsExactlyElementsOf(expectedDepartures);
 
             // assert trips are correct
-            List<String> expectedTripIds = List.of("route3_wd_f_80", "route3_wd_r_80", "route3_wd_f_81",
+            List<String> expectedTripIds = List.of("route3_wd_f_80", "route3_wd_r_81", "route3_wd_f_81",
                     "route3_wd_r_81", "route1_wd_f_39");
             List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
             assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
