@@ -1,23 +1,13 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.gtfs.schedule.type.DefaultRouteType;
-import ch.naviqore.gtfs.schedule.type.ExceptionType;
-import ch.naviqore.gtfs.schedule.type.HierarchicalVehicleType;
-import ch.naviqore.gtfs.schedule.type.RouteType;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
+import ch.naviqore.gtfs.schedule.type.*;
 import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Test builder to set up a GTFS schedule for testing purposes.
@@ -105,7 +95,6 @@ public class GtfsScheduleTestBuilder {
         return this;
     }
 
-
     public GtfsScheduleTestBuilder withAddUnderground() {
         addRoute(ROUTES.get(1), true, false);
         return this;
@@ -119,7 +108,6 @@ public class GtfsScheduleTestBuilder {
     public GtfsSchedule build() {
         return builder.build();
     }
-
 
     private void addRoute(Route route, boolean everydayService, boolean bidirectional) {
         builder.addRoute(route.id, route.agencyId, route.name, route.name + "long", route.routeType);

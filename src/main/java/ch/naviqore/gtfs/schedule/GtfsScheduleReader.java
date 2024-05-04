@@ -10,11 +10,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.io.input.BOMInputStream;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -65,7 +61,8 @@ public class GtfsScheduleReader {
                         readCsvRecords(reader, parser, fileType);
                     }
                 } else if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
-                    throw new FileNotFoundException("Required GTFS CSV file" + fileType.getFileName() + " not found in ZIP");
+                    throw new FileNotFoundException(
+                            "Required GTFS CSV file" + fileType.getFileName() + " not found in ZIP");
                 }
             }
         }

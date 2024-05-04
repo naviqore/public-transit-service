@@ -20,8 +20,13 @@ class GtfsScheduleTest {
 
     @BeforeEach
     void setUp(GtfsScheduleTestBuilder builder) {
-        schedule = builder.withAddAgency().withAddCalendars().withAddCalendarDates().withAddInterCity()
-                .withAddUnderground().withAddBus().build();
+        schedule = builder.withAddAgency()
+                .withAddCalendars()
+                .withAddCalendarDates()
+                .withAddInterCity()
+                .withAddUnderground()
+                .withAddBus()
+                .build();
     }
 
     @Nested
@@ -63,13 +68,15 @@ class GtfsScheduleTest {
 
         @Test
         void shouldFindStopsWithin10000Meters() {
-            assertThat(schedule.getNearestStops(47.5, 8.5, 10000)).hasSize(3).extracting("id")
+            assertThat(schedule.getNearestStops(47.5, 8.5, 10000)).hasSize(3)
+                    .extracting("id")
                     .containsOnly("u6", "s2", "u3");
         }
 
         @Test
         void shouldFindAllStops() {
-            assertThat(schedule.getNearestStops(47.5, 8.5, Integer.MAX_VALUE)).hasSize(9).extracting("id")
+            assertThat(schedule.getNearestStops(47.5, 8.5, Integer.MAX_VALUE)).hasSize(9)
+                    .extracting("id")
                     .containsOnly("s1", "s2", "s3", "u1", "u2", "u3", "u4", "u5", "u6");
         }
 
@@ -90,7 +97,8 @@ class GtfsScheduleTest {
             List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("08:15:00"),
                     ServiceDayTime.parse("08:15:00"), ServiceDayTime.parse("09:15:00"),
                     ServiceDayTime.parse("09:15:00"), ServiceDayTime.parse("10:15:00"));
-            assertThat(departures).hasSize(LIMIT).extracting(StopTime::departure)
+            assertThat(departures).hasSize(LIMIT)
+                    .extracting(StopTime::departure)
                     .containsExactlyElementsOf(expectedDepartures);
 
             // assert trips are correct
@@ -114,7 +122,8 @@ class GtfsScheduleTest {
             List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("08:00:00"),
                     ServiceDayTime.parse("08:00:00"), ServiceDayTime.parse("08:09:00"),
                     ServiceDayTime.parse("08:09:00"), ServiceDayTime.parse("08:15:00"));
-            assertThat(departures).hasSize(LIMIT).extracting(StopTime::departure)
+            assertThat(departures).hasSize(LIMIT)
+                    .extracting(StopTime::departure)
                     .containsExactlyElementsOf(expectedDepartures);
 
             // assert trips are correct
@@ -154,7 +163,8 @@ class GtfsScheduleTest {
             List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("24:00:00"),
                     ServiceDayTime.parse("24:00:00"), ServiceDayTime.parse("24:09:00"),
                     ServiceDayTime.parse("24:09:00"), ServiceDayTime.parse("24:15:00"));
-            assertThat(departures).hasSize(LIMIT).extracting(StopTime::departure)
+            assertThat(departures).hasSize(LIMIT)
+                    .extracting(StopTime::departure)
                     .containsExactlyElementsOf(expectedDepartures);
 
             // assert trips are correct
@@ -186,7 +196,8 @@ class GtfsScheduleTest {
     class ActiveTrips {
 
         private static void assertWeekendAndHoliday(List<Trip> activeTrips) {
-            assertThat(activeTrips).hasSize(168).extracting(trip -> trip.getRoute().getId())
+            assertThat(activeTrips).hasSize(168)
+                    .extracting(trip -> trip.getRoute().getId())
                     .containsAll(Set.of("route1", "route2"));
         }
 
@@ -195,7 +206,8 @@ class GtfsScheduleTest {
             List<Trip> activeTrips = schedule.getActiveTrips(
                     GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM.toLocalDate());
 
-            assertThat(activeTrips).hasSize(503).extracting(trip -> trip.getRoute().getId())
+            assertThat(activeTrips).hasSize(503)
+                    .extracting(trip -> trip.getRoute().getId())
                     .containsAll(Set.of("route1", "route2", "route3"));
         }
 

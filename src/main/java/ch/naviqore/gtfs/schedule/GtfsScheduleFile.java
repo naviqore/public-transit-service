@@ -28,6 +28,10 @@ enum GtfsScheduleFile {
     private final Presence presence;
 
     public enum Presence {
-        REQUIRED, OPTIONAL, CONDITIONALLY_REQUIRED, CONDITIONALLY_FORBIDDEN, RECOMMENDED
+        REQUIRED,
+        OPTIONAL,
+        CONDITIONALLY_REQUIRED,
+        CONDITIONALLY_FORBIDDEN,
+        RECOMMENDED
     }
 }
