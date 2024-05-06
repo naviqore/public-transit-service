@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 class GtfsToRaptorConverterIT {
 
     private static final LocalDate DATE = LocalDate.of(2009, 4, 26);
@@ -26,7 +28,8 @@ class GtfsToRaptorConverterIT {
 
     @Test
     void shouldConvertGtfsScheduleToRaptor() {
-        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(Raptor.builder());
-        Raptor raptor = mapper.convert(schedule, DATE);
+        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule);
+        Raptor raptor = mapper.convert(DATE);
+        assertThat(raptor).isNotNull();
     }
 }

@@ -45,7 +45,6 @@ final class Benchmark {
         RouteRequest[] requests = sampleRouteRequests(stopIds);
         RoutingResult[] results = processRequests(raptor, requests);
         writeResultsToCsv(results);
-
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
@@ -56,7 +55,7 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(Raptor.builder()).convert(schedule, DATE);
+        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(DATE);
         manageResources();
         return raptor;
     }

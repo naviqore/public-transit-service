@@ -28,14 +28,14 @@ class GtfsScheduleReaderIT {
     }
 
     @Test
-    void readFromZipFile(@TempDir Path tempDir) throws IOException {
+    void shouldReadFromZipFile(@TempDir Path tempDir) throws IOException {
         File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
         GtfsSchedule schedule = gtfsScheduleReader.read(zipFile.getAbsolutePath());
         assertScheduleSizes(schedule);
     }
 
     @Test
-    void readFromDirectory(@TempDir Path tempDir) throws IOException {
+    void shouldReadFromDirectory(@TempDir Path tempDir) throws IOException {
         File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
         GtfsSchedule schedule = gtfsScheduleReader.read(unzippedDir.getAbsolutePath());
         assertScheduleSizes(schedule);
