@@ -4,9 +4,11 @@ import ch.naviqore.gtfs.schedule.spatial.Coordinate;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
+import ch.naviqore.gtfs.schedule.type.TransferType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -125,6 +127,22 @@ public class GtfsScheduleBuilder {
         StopTime stopTime = new StopTime(stop, trip, cache.getOrAdd(arrival), cache.getOrAdd(departure));
         stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
+        return this;
+    }
+
+    public GtfsScheduleBuilder addTransfer(String fromStopId, String toStopId, TransferType transferType,
+                                           @Nullable Integer minTransferTime) {
+        Stop fromStop = stops.get(fromStopId);
+        if (fromStop == null) {
+            throw new IllegalArgumentException("Stop " + fromStopId + " does not exist");
+        }
+        Stop toStop = stops.get(toStopId);
+        if (toStop == null) {
+            throw new IllegalArgumentException("Stop " + toStopId + " does not exist");
+        }
+        log.debug("Adding transfer {}-{} of type {} {}", fromStopId, toStopId, transferType, minTransferTime);
+        // TODO: Handle case when minTransferTime is missing, add transfers.txt to test data.
+        fromStop.addTransfer(new Transfer(fromStop, toStop, transferType, minTransferTime));
         return this;
     }
 

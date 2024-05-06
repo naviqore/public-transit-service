@@ -17,9 +17,14 @@ public final class Stop implements Initializable {
     private final String name;
     private final Coordinate coordinate;
     private final List<StopTime> stopTimes = new ArrayList<>();
+    private final List<Transfer> transfers = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {
         stopTimes.add(stopTime);
+    }
+
+    void addTransfer(Transfer transfer) {
+        transfers.add(transfer);
     }
 
     @Override
