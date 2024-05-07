@@ -13,6 +13,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Stop implements Initializable {
+
     private final String id;
     private final String name;
     private final Coordinate coordinate;

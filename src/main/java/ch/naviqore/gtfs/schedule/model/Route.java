@@ -13,6 +13,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Route implements Initializable {
+
     private final String id;
     private final Agency agency;
     private final String shortName;

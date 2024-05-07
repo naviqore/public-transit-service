@@ -17,7 +17,6 @@ public interface RouteType {
      * @throws NumberFormatException    if the code is not a valid integer
      * @throws IllegalArgumentException if the code is negative or invalid
      */
-
     static RouteType parse(String code) {
         return parse(Integer.parseInt(code));
     }

@@ -11,6 +11,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Getter
 public final class Trip implements Comparable<Trip>, Initializable {
+
     private final String id;
     private final Route route;
     private final Calendar calendar;

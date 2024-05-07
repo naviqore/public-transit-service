@@ -12,6 +12,7 @@ import java.util.Optional;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public class Transfer {
+
     private final Stop fromStop;
     private final Stop toStop;
     private final TransferType transferType;
