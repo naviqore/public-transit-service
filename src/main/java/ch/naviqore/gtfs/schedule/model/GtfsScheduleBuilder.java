@@ -23,10 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Provides a builder pattern implementation for constructing a {@link GtfsSchedule} instance. This class encapsulates
  * the complexity of assembling a GTFS schedule by incrementally adding components such as agencies, stops, routes,
  * trips, and calendars. The builder ensures that all components are added in a controlled manner and that the resulting
- * schedule is consistent and ready for use.
+ * schedule is consistent.
  *
- * <p>Instances of this class should be obtained through the static {@code builder()} method. This class uses
- * a private constructor to enforce the use of the builder pattern.</p>
+ * <p>Instances of this class should be obtained through the static {@code GtfsSchedule.builder()} method. This class
+ * uses a private constructor to enforce the use of the builder pattern.</p>
  *
  * @author munterfi
  */
@@ -141,7 +141,6 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Stop " + toStopId + " does not exist");
         }
         log.debug("Adding transfer {}-{} of type {} {}", fromStopId, toStopId, transferType, minTransferTime);
-        // TODO: Handle case when minTransferTime is missing, add transfers.txt to test data.
         fromStop.addTransfer(new Transfer(fromStop, toStop, transferType, minTransferTime));
         return this;
     }
