@@ -26,6 +26,7 @@ class GtfsScheduleTest {
                 .withAddInterCity()
                 .withAddUnderground()
                 .withAddBus()
+                .withAddTransfers()
                 .build();
     }
 
