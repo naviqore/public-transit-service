@@ -111,7 +111,9 @@ class GtfsScheduleParser {
     }
 
     private void parseTransfers(CSVRecord record) {
+        String minTransferTime = record.get("min_transfer_time");
         builder.addTransfer(record.get("from_stop_id"), record.get("to_stop_id"),
-                TransferType.parse(record.get("transfer_type")), Integer.parseInt(record.get("min_transfer_time")));
+                TransferType.parse(record.get("transfer_type")),
+                minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time")));
     }
 }
