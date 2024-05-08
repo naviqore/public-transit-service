@@ -11,14 +11,14 @@ import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-public final class Calendar {
+public final class Calendar implements Initializable {
 
     private final String id;
     private final EnumSet<DayOfWeek> serviceDays;
     private final LocalDate startDate;
     private final LocalDate endDate;
-    private final Map<LocalDate, CalendarDate> calendarDates = new HashMap<>();
-    private final List<Trip> trips = new ArrayList<>();
+    private Map<LocalDate, CalendarDate> calendarDates = new HashMap<>();
+    private List<Trip> trips = new ArrayList<>();
 
     /**
      * Determines if the service is operational on a specific day, considering both regular service days and
@@ -36,6 +36,13 @@ public final class Calendar {
             return exception.type() == ExceptionType.ADDED;
         }
         return serviceDays.contains(date.getDayOfWeek());
+    }
+
+    @Override
+    public void initialize() {
+        Collections.sort(trips);
+        trips = List.copyOf(trips);
+        calendarDates = Map.copyOf(calendarDates);
     }
 
     void addCalendarDate(CalendarDate calendarDate) {

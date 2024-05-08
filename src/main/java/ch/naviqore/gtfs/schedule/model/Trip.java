@@ -15,7 +15,7 @@ public final class Trip implements Comparable<Trip>, Initializable {
     private final String id;
     private final Route route;
     private final Calendar calendar;
-    private final List<StopTime> stopTimes = new ArrayList<>();
+    private List<StopTime> stopTimes = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {
         stopTimes.add(stopTime);
@@ -24,6 +24,7 @@ public final class Trip implements Comparable<Trip>, Initializable {
     @Override
     public void initialize() {
         Collections.sort(stopTimes);
+        stopTimes = List.copyOf(stopTimes);
     }
 
     @Override

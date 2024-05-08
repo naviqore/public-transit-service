@@ -17,8 +17,8 @@ public final class Stop implements Initializable {
     private final String id;
     private final String name;
     private final Coordinate coordinate;
-    private final List<StopTime> stopTimes = new ArrayList<>();
-    private final List<Transfer> transfers = new ArrayList<>();
+    private List<StopTime> stopTimes = new ArrayList<>();
+    private List<Transfer> transfers = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {
         stopTimes.add(stopTime);
@@ -31,6 +31,8 @@ public final class Stop implements Initializable {
     @Override
     public void initialize() {
         Collections.sort(stopTimes);
+        stopTimes = List.copyOf(stopTimes);
+        transfers = List.copyOf(transfers);
     }
 
     @Override

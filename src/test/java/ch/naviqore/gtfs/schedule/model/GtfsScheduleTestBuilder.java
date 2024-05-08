@@ -1,6 +1,7 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.gtfs.schedule.type.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
@@ -72,6 +73,7 @@ public class GtfsScheduleTestBuilder {
             new Route("route3", "agency2", "BUS", DefaultRouteType.BUS, 15, NO_HEADWAY, 3, 5, 1,
                     List.of("u5", "s2", "s2")));
     private final Set<String> addedStops = new HashSet<>();
+    @Getter
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
     public GtfsScheduleTestBuilder withAddAgency() {

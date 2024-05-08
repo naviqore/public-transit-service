@@ -105,12 +105,12 @@ public class RaptorBuilder {
     }
 
     private Lookup buildLookup() {
-        log.info("Building lookup with {} stops and {} routes", stopSize, routeSize);
+        log.debug("Building lookup with {} stops and {} routes", stopSize, routeSize);
         return new Lookup(new HashMap<>(stops), new HashMap<>(routes));
     }
 
     private StopContext buildStopContext() {
-        log.info("Building stop context with {} stops and {} transfers", stopSize, transferSize);
+        log.debug("Building stop context with {} stops and {} transfers", stopSize, transferSize);
         Stop[] stopArr = new Stop[stopSize];
         int[] stopRouteArr = new int[stopRoutes.values().stream().mapToInt(Set::size).sum()];
         Transfer[] transferArr = new Transfer[transferSize];
@@ -145,7 +145,7 @@ public class RaptorBuilder {
     }
 
     private RouteTraversal buildRouteTraversal() {
-        log.info("Building route traversal with {} routes, {} route stops, {} stop times", routeSize, routeStopSize,
+        log.debug("Building route traversal with {} routes, {} route stops, {} stop times", routeSize, routeStopSize,
                 stopTimeSize);
         Route[] routeArr = new Route[routeSize];
         RouteStop[] routeStopArr = new RouteStop[routeStopSize];
