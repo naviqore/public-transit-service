@@ -10,7 +10,7 @@ public class KDTreeUtils {
         static final double EARTH_RADIUS = 6_371;
     }
 
-    static KDNode getNextNodeBasedOnAxisDirection(KDNode node, Coordinate location, CoordinatesType axis) {
+    static KDNode getNextNodeBasedOnAxisDirection(KDNode node, HasCoordinate location, CoordinatesType axis) {
         return (axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude())
                 < (axis == CoordinatesType.X ? node.getLocation().getLatitude() : node.getLocation().getLongitude())
                 ? node.getLeft()
@@ -29,7 +29,7 @@ public class KDTreeUtils {
      * @param aRight The right node.
      * @return The distance in meters.
      */
-    static double distance(Coordinate aLeft, Coordinate aRight) {
+    static double distance(HasCoordinate aLeft, HasCoordinate aRight) {
         final var deltaLatitude = Math.toRadians((aRight.getLatitude() - aLeft.getLatitude()));
         final var deltaLongitude = Math.toRadians((aRight.getLongitude() - aLeft.getLongitude()));
 

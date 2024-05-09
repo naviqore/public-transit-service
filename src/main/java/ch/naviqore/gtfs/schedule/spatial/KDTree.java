@@ -4,7 +4,7 @@ public class KDTree {
 
     private KDNode root;
 
-    public void insert(Coordinate location) {
+    public void insert(HasCoordinate location) {
         int startDepth = 0;
         root = insert(root, location, startDepth);
     }
@@ -14,7 +14,7 @@ public class KDTree {
         return depth % kDimensions == 0 ? CoordinatesType.X : CoordinatesType.Y;
     }
 
-    private KDNode insert(KDNode node, Coordinate location, int depth) {
+    private KDNode insert(KDNode node, HasCoordinate location, int depth) {
         if (node == null) {
             return new KDNode(location);
         }
@@ -22,7 +22,7 @@ public class KDTree {
         // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
         var axis = getAxis(depth);
         if ((axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude())
-                < (axis == CoordinatesType.X ? node.getLocation() .getLatitude() : node.getLocation().getLongitude())) {
+                < (axis == CoordinatesType.X ? node.getLocation().getLatitude() : node.getLocation().getLongitude())) {
             // build KDTree left side
             node.setLeft(insert(node.getLeft(), location, depth + 1));
         } else {
@@ -33,11 +33,11 @@ public class KDTree {
         return node;
     }
 
-    public Coordinate nearestNeighbour(Coordinate location) {
+    public HasCoordinate nearestNeighbour(HasCoordinate location) {
         return nearestNeighbour(root, location, 0).getLocation();
     }
 
-    private KDNode nearestNeighbour(KDNode node, Coordinate location, int depth) {
+    private KDNode nearestNeighbour(KDNode node, HasCoordinate location, int depth) {
         if (node == null) {
             return null;
         }
@@ -56,13 +56,13 @@ public class KDTree {
         return best;
     }
 
-    private static boolean isDistanceGreaterThanCoordinateDifference(KDNode node, Coordinate location, CoordinatesType axis) {
+    private static boolean isDistanceGreaterThanCoordinateDifference(KDNode node, HasCoordinate location, CoordinatesType axis) {
         return KDTreeUtils.distance(node.getLocation(), location) > Math.abs(
                 (axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude()) - (axis == CoordinatesType.X ? node.getLocation()
                         .getLatitude() : node.getLocation().getLongitude()));
     }
 
-    private KDNode getNodeWithClosestDistance(KDNode node1, KDNode node2, Coordinate location) {
+    private KDNode getNodeWithClosestDistance(KDNode node1, KDNode node2, HasCoordinate location) {
         if (node1 == null) {
             return node2;
         }

@@ -5,11 +5,11 @@ import lombok.Setter;
 
 @Getter @Setter
 public class KDNode {
-    private Coordinate location;
+    private HasCoordinate location;
     private KDNode left;
     private KDNode right;
 
-    public KDNode(Coordinate location) {
+    public KDNode(HasCoordinate location) {
         this.location = location;
     }
 
