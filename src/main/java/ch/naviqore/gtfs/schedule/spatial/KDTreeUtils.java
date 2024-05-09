@@ -3,8 +3,6 @@ package ch.naviqore.gtfs.schedule.spatial;
 /**
  * Utility class for the KDTree.
  * <p> This class contains utility methods for the KDTree. </p>
- *
- * @author Brunner246
  */
 public class KDTreeUtils {
 
@@ -12,9 +10,11 @@ public class KDTreeUtils {
         static final double EARTH_RADIUS = 6_371;
     }
 
-    static KDNode getNextNodeBasedOnAxis(KDNode node, Coordinate location, int axis) {
-        return (axis == 0 ? location.getLatitude() : location.getLongitude())
-                < (axis == 0 ? node.getLocation().getLatitude() : node.getLocation().getLongitude()) ? node.getLeft() : node.getRight();
+    static KDNode getNextNodeBasedOnAxisDirection(KDNode node, Coordinate location, CoordinatesType axis) {
+        return (axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude())
+                < (axis == CoordinatesType.X ? node.getLocation().getLatitude() : node.getLocation().getLongitude())
+                ? node.getLeft()
+                : node.getRight();
     }
 
     static double haversine(double val) {
@@ -28,7 +28,6 @@ public class KDTreeUtils {
      * @param aLeft  The left node.
      * @param aRight The right node.
      * @return The distance in meters.
-     * @author Brunner246
      */
     static double distance(Coordinate aLeft, Coordinate aRight) {
         final var deltaLatitude = Math.toRadians((aRight.getLatitude() - aLeft.getLatitude()));

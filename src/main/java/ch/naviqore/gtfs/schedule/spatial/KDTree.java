@@ -3,21 +3,30 @@ package ch.naviqore.gtfs.schedule.spatial;
 public class KDTree {
 
     private KDNode root;
-    private final int kDimensions = 2;
 
     public void insert(Coordinate location) {
-        root = insert(root, location, 0);
+        int startDepth = 0;
+        root = insert(root, location, startDepth);
+    }
+
+    private CoordinatesType getAxis(int depth) {
+        final int kDimensions = 2;
+        return depth % kDimensions == 0 ? CoordinatesType.X : CoordinatesType.Y;
     }
 
     private KDNode insert(KDNode node, Coordinate location, int depth) {
         if (node == null) {
             return new KDNode(location);
         }
-
-        int axis = depth % kDimensions;
-        if ((axis == 0 ? location.getLatitude() : location.getLongitude()) < (axis == 0 ? node.getLocation().getLatitude() : node.getLocation().getLongitude())) {
+        // draw axis alternately between x and y coordinates for each depth level of the tree
+        // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
+        var axis = getAxis(depth);
+        if ((axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude())
+                < (axis == CoordinatesType.X ? node.getLocation() .getLatitude() : node.getLocation().getLongitude())) {
+            // build KDTree left side
             node.setLeft(insert(node.getLeft(), location, depth + 1));
         } else {
+            // build KDTree right side
             node.setRight(insert(node.getRight(), location, depth + 1));
         }
 
@@ -33,36 +42,27 @@ public class KDTree {
             return null;
         }
 
-        int axis = depth % kDimensions;
-        KDNode next = KDTreeUtils.getNextNodeBasedOnAxis(node, location, axis);
+        var axis = getAxis(depth);
+        KDNode next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, location, axis);
+        // get the other side (node) of the tree
         KDNode other = next == node.getLeft() ? node.getRight() : node.getLeft();
 
-        KDNode best = min(node, nearestNeighbour(next, location, depth + 1), location);
+        KDNode best = getNodeWithClosestDistance(node, nearestNeighbour(next, location, depth + 1), location);
 
         if (isDistanceGreaterThanCoordinateDifference(node, location, axis)) {
-            best = min(best, nearestNeighbour(other, location, depth + 1), location);
+            best = getNodeWithClosestDistance(best, nearestNeighbour(other, location, depth + 1), location);
         }
 
         return best;
     }
 
-    private static boolean isDistanceGreaterThanCoordinateDifference(KDNode node, Coordinate location, int axis) {
-        return KDTreeUtils.distance(node.getLocation(), location)
-                > Math.abs(
-                (axis == 0
-                        ? location.getLatitude() : location.getLongitude()) - (axis == 0 ? node.getLocation().getLatitude()
-                        : node.getLocation().getLongitude()));
+    private static boolean isDistanceGreaterThanCoordinateDifference(KDNode node, Coordinate location, CoordinatesType axis) {
+        return KDTreeUtils.distance(node.getLocation(), location) > Math.abs(
+                (axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude()) - (axis == CoordinatesType.X ? node.getLocation()
+                        .getLatitude() : node.getLocation().getLongitude()));
     }
 
-    private static boolean isCurrentNodeCloserThanBest(KDNode node, Coordinate location, KDNode best) {
-        return best == null
-                || (best.getLocation() != null
-                && KDTreeUtils.distance(node.getLocation(), location)
-                < KDTreeUtils.distance(best.getLocation(), location));
-    }
-
-
-    private KDNode min(KDNode node1, KDNode node2, Coordinate location) {
+    private KDNode getNodeWithClosestDistance(KDNode node1, KDNode node2, Coordinate location) {
         if (node1 == null) {
             return node2;
         }
@@ -90,7 +90,8 @@ public class KDTree {
 
         Coordinate nearestNeighbour = kdTree.nearestNeighbour(location);
         if (nearestNeighbour != null) {
-            System.out.println("Nearest neighbour to " + location.getLongitude() + " " + location.getLatitude() + " is " + nearestNeighbour.getLongitude() + " " + nearestNeighbour.getLatitude());
+            System.out.println(
+                    "Nearest neighbour to " + location.getLongitude() + " " + location.getLatitude() + " is " + nearestNeighbour.getLongitude() + " " + nearestNeighbour.getLatitude());
         }
     }
 }
