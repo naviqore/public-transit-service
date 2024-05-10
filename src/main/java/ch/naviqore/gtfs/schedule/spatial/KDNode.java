@@ -3,13 +3,14 @@ package ch.naviqore.gtfs.schedule.spatial;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter @Setter
-public class KDNode {
-    private HasCoordinate location;
-    private KDNode left;
-    private KDNode right;
+@Getter
+@Setter
+public class KDNode<T extends TwoDimensionalCoordinates> {
+    private T location;
+    private KDNode<T> left;
+    private KDNode<T> right;
 
-    public KDNode(HasCoordinate location) {
+    public KDNode(T location) {
         this.location = location;
     }
 

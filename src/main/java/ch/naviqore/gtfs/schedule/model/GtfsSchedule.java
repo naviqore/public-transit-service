@@ -46,6 +46,7 @@ public class GtfsSchedule {
      */
     public List<Stop> getNearestStops(double latitude, double longitude, int maxDistance) {
         // TODO: Use a spatial index for efficient nearest neighbor search, e.g. KD-tree or R-tree
+        // TODO: We need a range search in the KD-tree https://naviqore.atlassian.net/browse/NAV-32
         Coordinate origin = new Coordinate(latitude, longitude);
         return stops.values()
                 .stream()
