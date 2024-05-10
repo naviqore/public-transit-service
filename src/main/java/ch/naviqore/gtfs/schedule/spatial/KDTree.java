@@ -1,6 +1,6 @@
 package ch.naviqore.gtfs.schedule.spatial;
 
-public class KDTree<T extends TwoDimensionalCoordinates> {
+public class KDTree<T extends TwoDimensionalCoordinates>{
 
     private KDNode<T> root;
 
@@ -16,7 +16,7 @@ public class KDTree<T extends TwoDimensionalCoordinates> {
 
     private KDNode<T> insert(KDNode<T> node, T location, int depth) {
         if (node == null) {
-            return new KDNode<T>(location);
+            return new KDNode<>(location);
         }
         // draw axis alternately between x and y coordinates for each depth level of the tree
         // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
@@ -58,7 +58,7 @@ public class KDTree<T extends TwoDimensionalCoordinates> {
     }
 
 
-    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, T location) {
+    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, TwoDimensionalCoordinates location) {
         if (node1 == null) {
             return node2;
         }

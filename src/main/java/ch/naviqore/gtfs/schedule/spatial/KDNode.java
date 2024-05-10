@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class KDNode<T extends TwoDimensionalCoordinates> {
+public class KDNode <T> {
     private T location;
     private KDNode<T> left;
     private KDNode<T> right;
