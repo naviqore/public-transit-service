@@ -11,7 +11,7 @@ public class KDTree {
 
     private CoordinatesType getAxis(int depth) {
         final int kDimensions = 2;
-        return depth % kDimensions == 0 ? CoordinatesType.X : CoordinatesType.Y;
+        return depth % kDimensions == 0 ? CoordinatesType.LATITUDE : CoordinatesType.LONGITUDE;
     }
 
     private KDNode insert(KDNode node, HasCoordinate location, int depth) {
@@ -21,8 +21,8 @@ public class KDTree {
         // draw axis alternately between x and y coordinates for each depth level of the tree
         // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
         var axis = getAxis(depth);
-        if ((axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude())
-                < (axis == CoordinatesType.X ? node.getLocation().getLatitude() : node.getLocation().getLongitude())) {
+        if ((axis == CoordinatesType.LATITUDE ? location.getLatitude() : location.getLongitude())
+                < (axis == CoordinatesType.LATITUDE ? node.getLocation().getLatitude() : node.getLocation().getLongitude())) {
             // build KDTree left side
             node.setLeft(insert(node.getLeft(), location, depth + 1));
         } else {
@@ -58,7 +58,7 @@ public class KDTree {
 
     private static boolean isDistanceGreaterThanCoordinateDifference(KDNode node, HasCoordinate location, CoordinatesType axis) {
         return KDTreeUtils.distance(node.getLocation(), location) > Math.abs(
-                (axis == CoordinatesType.X ? location.getLatitude() : location.getLongitude()) - (axis == CoordinatesType.X ? node.getLocation()
+                (axis == CoordinatesType.LATITUDE ? location.getLatitude() : location.getLongitude()) - (axis == CoordinatesType.LATITUDE ? node.getLocation()
                         .getLatitude() : node.getLocation().getLongitude()));
     }
 
