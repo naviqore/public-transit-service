@@ -1,6 +1,5 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.gtfs.schedule.spatial.Coordinate;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 

@@ -1,7 +1,8 @@
-package ch.naviqore.gtfs.schedule.spatial;
+package ch.naviqore.utils.spatial;
 
-public class KDTree<T extends TwoDimensionalCoordinates>{
+public class KDTree<T extends Location<?>>{
 
+    private static final int K_DIMENSIONS = 2;
     private KDNode<T> root;
 
     public void insert(T location) {
@@ -9,21 +10,20 @@ public class KDTree<T extends TwoDimensionalCoordinates>{
         root = insert(root, location, startDepth);
     }
 
-    private CoordinatesType getAxis(int depth) {
-        final int kDimensions = 2;
-        return depth % kDimensions == 0 ? CoordinatesType.PRIMARY : CoordinatesType.SECONDARY;
+    private CoordinateComponentType getAxis(int depth) {
+        return depth % K_DIMENSIONS == 0 ? CoordinateComponentType.FIRST : CoordinateComponentType.SECOND;
     }
 
     private KDNode<T> insert(KDNode<T> node, T location, int depth) {
         if (node == null) {
             return new KDNode<>(location);
         }
-        // draw axis alternately between x and y coordinates for each depth level of the tree
-        // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
-        CoordinatesType axis = getAxis(depth);
+        // draw axis alternately between first and second component of the coordinates for each depth level of the tree
+        // (i.e. for depth 0, 2, 4, ... compare first (x, lat) component, for depth 1, 3, 5, ... compare second (y,
+        // lon) component)
+        CoordinateComponentType axis = getAxis(depth);
 
-        if ((axis == CoordinatesType.PRIMARY ? location.getPrimaryCoordinate() : location.getSecondaryCoordinate())
-                < (axis == CoordinatesType.PRIMARY ? node.getLocation().getPrimaryCoordinate() : node.getLocation().getSecondaryCoordinate())) {
+        if ((axis.getCoordinateComponent(location)) < axis.getCoordinateComponent(node.getLocation())) {
             // build KDTree left side
             node.setLeft(insert(node.getLeft(), location, depth + 1));
         } else {
@@ -43,11 +43,10 @@ public class KDTree<T extends TwoDimensionalCoordinates>{
             return null;
         }
 
-        CoordinatesType axis = getAxis(depth);
+        CoordinateComponentType axis = getAxis(depth);
         KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, location, axis);
         // get the other side (node) of the tree
         KDNode<T> other = next == node.getLeft() ? node.getRight() : node.getLeft();
-
         KDNode<T> best = getNodeWithClosestDistance(node, nearestNeighbour(next, location, depth + 1), location);
 
         if (KDTreeUtils.isDistanceGreaterThanCoordinateDifference(node, location, axis)) {
@@ -58,7 +57,7 @@ public class KDTree<T extends TwoDimensionalCoordinates>{
     }
 
 
-    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, TwoDimensionalCoordinates location) {
+    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, T location) {
         if (node1 == null) {
             return node2;
         }
@@ -66,8 +65,8 @@ public class KDTree<T extends TwoDimensionalCoordinates>{
             return node1;
         }
 
-        double dist1 = node1.getLocation().distanceTo(location);
-        double dist2 = node2.getLocation().distanceTo(location);
+        double dist1 = node1.getLocation().getCoordinate().distanceTo(location.getCoordinate());
+        double dist2 = node2.getLocation().getCoordinate().distanceTo(location.getCoordinate());
         return dist1 < dist2 ? node1 : node2;
     }
 }
