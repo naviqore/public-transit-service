@@ -35,28 +35,36 @@ public class KDTree<T extends Location<?>> {
     }
 
     public T nearestNeighbour(T location) {
-        return nearestNeighbour(root, location, 0).getLocation();
+        return nearestNeighbour(location.getCoordinate());
     }
 
-    private KDNode<T> nearestNeighbour(KDNode<T> node, T location, int depth) {
+    public T nearestNeighbour(TwoDimensionalCoordinate coordinate) {
+        return nearestNeighbour(coordinate.getFirstComponent(), coordinate.getSecondComponent());
+    }
+
+    public T nearestNeighbour(double firstComponent, double secondComponent) {
+        return nearestNeighbour(root, firstComponent, secondComponent, 0).getLocation();
+    }
+
+    private KDNode<T> nearestNeighbour(KDNode<T> node, double firstComponent, double secondComponent, int depth) {
         if (node == null) {
             return null;
         }
 
         CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
-        KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, location, axis);
+        KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, firstComponent, secondComponent, axis);
         // get the other side (node) of the tree
         KDNode<T> other = next == node.getLeft() ? node.getRight() : node.getLeft();
-        KDNode<T> best = getNodeWithClosestDistance(node, nearestNeighbour(next, location, depth + 1), location);
+        KDNode<T> best = getNodeWithClosestDistance(node, nearestNeighbour(next, firstComponent, secondComponent, depth + 1), firstComponent, secondComponent);
 
-        if (KDTreeUtils.isDistanceGreaterThanCoordinateDifference(node, location, axis)) {
-            best = getNodeWithClosestDistance(best, nearestNeighbour(other, location, depth + 1), location);
+        if (KDTreeUtils.isDistanceGreaterThanCoordinateDifference(node, firstComponent, secondComponent, axis)) {
+            best = getNodeWithClosestDistance(best, nearestNeighbour(other, firstComponent, secondComponent, depth + 1), firstComponent, secondComponent);
         }
 
         return best;
     }
 
-    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, T location) {
+    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, double firstComponent, double secondComponent) {
         if (node1 == null) {
             return node2;
         }
@@ -64,8 +72,8 @@ public class KDTree<T extends Location<?>> {
             return node1;
         }
 
-        double dist1 = node1.getLocation().getCoordinate().distanceTo(location.getCoordinate());
-        double dist2 = node2.getLocation().getCoordinate().distanceTo(location.getCoordinate());
+        double dist1 = node1.getLocation().getCoordinate().distanceTo(firstComponent, secondComponent);
+        double dist2 = node2.getLocation().getCoordinate().distanceTo(firstComponent, secondComponent);
         return dist1 < dist2 ? node1 : node2;
     }
 }

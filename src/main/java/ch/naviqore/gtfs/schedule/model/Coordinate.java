@@ -55,8 +55,13 @@ public class Coordinate implements TwoDimensionalCoordinate {
     @Override
     public double distanceTo(TwoDimensionalCoordinate other) {
         // TODO: Do we need to handle the case where the other object is null? If so, use Optional instead of Exception
-        double latDistance = getLatitudeDistance(other.getFirstComponent());
-        double lonDistance = getLongitudeDistance(other.getSecondComponent());
+        return distanceTo(other.getFirstComponent(), other.getSecondComponent());
+    }
+
+    @Override
+    public double distanceTo(double firstComponent, double secondComponent) {
+        double latDistance = getLatitudeDistance(firstComponent);
+        double lonDistance = getLongitudeDistance(secondComponent);
         double a = calculateHaversineFormulaComponent(latDistance, lonDistance);
         double c = calculateHaversineDistance(a);
         return EARTH_RADIUS * c;

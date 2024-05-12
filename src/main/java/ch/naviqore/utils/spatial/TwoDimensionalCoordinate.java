@@ -14,4 +14,5 @@ public interface TwoDimensionalCoordinate {
      */
     double getSecondComponent();
     double distanceTo(TwoDimensionalCoordinate other);
+    double distanceTo(double firstComponent, double secondComponent);
 }

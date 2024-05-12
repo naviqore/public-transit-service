@@ -24,7 +24,11 @@ public class KDTreeBuilderTest {
         }
         @Override
         public double distanceTo(TwoDimensionalCoordinate other) {
-            return Math.sqrt(Math.pow(x - other.getFirstComponent(), 2) + Math.pow(y - other.getSecondComponent(), 2));
+            return distanceTo(other.getFirstComponent(), other.getSecondComponent());
+        }
+        @Override
+        public double distanceTo(double x, double y) {
+            return Math.sqrt(Math.pow(this.x - x, 2) + Math.pow(this.y - y, 2));
         }
     }
 

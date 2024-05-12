@@ -16,4 +16,8 @@ public enum CoordinateComponentType {
         return getCoordinateComponent(location.getCoordinate());
     }
 
+    public double getCoordinateComponent(double firstComponent, double secondComponent) {
+        return this == FIRST ? firstComponent : secondComponent;
+    }
+
 }
