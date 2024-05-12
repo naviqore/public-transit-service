@@ -14,7 +14,7 @@ public class KDTreeBuilder<T extends Location<?>> {
 
     public void addLocation(T location) {
         if (location == null) {
-            throw new IllegalArgumentException("Location " + location + " must not be null");
+            throw new IllegalArgumentException("Location must not be null");
         }
         locations.add(location);
     }
