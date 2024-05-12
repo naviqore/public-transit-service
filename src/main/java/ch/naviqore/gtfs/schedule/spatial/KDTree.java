@@ -22,8 +22,7 @@ public class KDTree<T extends TwoDimensionalCoordinates>{
         // (i.e. for depth 0, 2, 4, ... compare x coordinates, for depth 1, 3, 5, ... compare y coordinates)
         CoordinatesType axis = getAxis(depth);
 
-        if ((axis == CoordinatesType.PRIMARY ? location.getPrimaryCoordinate() : location.getSecondaryCoordinate())
-                < (axis == CoordinatesType.PRIMARY ? node.getLocation().getPrimaryCoordinate() : node.getLocation().getSecondaryCoordinate())) {
+        if ((axis.getCoordinateValue(location)) < axis.getCoordinateValue(node.getLocation())) {
             // build KDTree left side
             node.setLeft(insert(node.getLeft(), location, depth + 1));
         } else {

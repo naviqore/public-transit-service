@@ -5,21 +5,11 @@ package ch.naviqore.gtfs.schedule.spatial;
  * <p> This enum is used to specify the type of coordinates in 2 Dimensions. </p>
  */
 public enum CoordinatesType {
-    PRIMARY(0),
-    SECONDARY(1);
+    PRIMARY,
+    SECONDARY;
 
-    private int value;
-
-    void setValue(int value) {
-        this.value = value;
-    }
-
-    int getValue() {
-        return value;
-    }
-
-    CoordinatesType(int value) {
-        this.value = value;
+    public double getCoordinateValue(TwoDimensionalCoordinates coordinates) {
+        return this == PRIMARY ? coordinates.getPrimaryCoordinate() : coordinates.getSecondaryCoordinate();
     }
 
 }

@@ -11,10 +11,7 @@ public class KDTreeUtils {
                                                                                                   CoordinatesType axis) {
         TwoDimensionalCoordinates nodeCoordinate = node.getLocation();
 
-        return (axis == CoordinatesType.PRIMARY ? location.getPrimaryCoordinate()
-                : location.getSecondaryCoordinate()) < (axis == CoordinatesType.PRIMARY
-                ? nodeCoordinate.getPrimaryCoordinate()
-                : nodeCoordinate.getSecondaryCoordinate())
+        return (axis.getCoordinateValue(location)) < axis.getCoordinateValue(nodeCoordinate)
                 ? node.getLeft()
                 : node.getRight();
     }
@@ -25,11 +22,7 @@ public class KDTreeUtils {
 
         double distance = nodeCoordinate.distanceTo(location);
         double coordinateDifference = Math.abs(
-                (axis == CoordinatesType.PRIMARY
-                        ? location.getPrimaryCoordinate()
-                        : location.getSecondaryCoordinate()) - (axis == CoordinatesType.PRIMARY
-                        ? nodeCoordinate.getPrimaryCoordinate()
-                        : nodeCoordinate.getSecondaryCoordinate()));
+                axis.getCoordinateValue(location) - axis.getCoordinateValue(nodeCoordinate));
 
         return distance > coordinateDifference;
     }
