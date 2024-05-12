@@ -3,7 +3,6 @@ package ch.naviqore.gtfs.schedule.model;
 import ch.naviqore.utils.spatial.TwoDimensionalCoordinate;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @EqualsAndHashCode
@@ -28,24 +27,6 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
         if (longitude < -180 || longitude > 180) {
             throw new IllegalArgumentException("Longitude must be between -180 and 180 degrees");
         }
-    }
-
-    private double getLatitudeDistance(double otherLatitude) {
-        return Math.toRadians(otherLatitude - this.getFirstComponent());
-    }
-
-    private double getLongitudeDistance(double otherLongitude) {
-        return Math.toRadians(otherLongitude - this.getSecondComponent());
-    }
-
-    private double calculateHaversineFormulaComponent(double latDistance, double lonDistance) {
-        return Math.sin(latDistance / 2) * Math.sin(latDistance / 2) + Math.cos(
-                Math.toRadians(this.getFirstComponent())) * Math.cos(
-                Math.toRadians(this.getSecondComponent())) * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-    }
-
-    private double calculateHaversineDistance(double a) {
-        return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     @Override
@@ -74,11 +55,18 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
 
     @Override
     public double distanceTo(double firstComponent, double secondComponent) {
-        double latDistance = getLatitudeDistance(firstComponent);
-        double lonDistance = getLongitudeDistance(secondComponent);
-        double a = calculateHaversineFormulaComponent(latDistance, lonDistance);
-        double c = calculateHaversineDistance(a);
         validateCoordinate(firstComponent, secondComponent);
+
+        double lat1 = Math.toRadians(this.latitude);
+        double lat2 = Math.toRadians(firstComponent);
+        double lon1 = Math.toRadians(this.longitude);
+        double lon2 = Math.toRadians(secondComponent);
+
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+
+        double a = Math.pow(Math.sin(dLat / 2), 2) + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+        double c = 2 * Math.asin(Math.sqrt(a));
         return EARTH_RADIUS * c;
     }
 
