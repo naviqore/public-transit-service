@@ -1,13 +1,29 @@
 package ch.naviqore.utils.spatial;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class KDTreeBuilder<T extends Location<?>> {
 
-    public KDTree<T> build(Collection<T> locations) {
+    private ArrayList<T> locations = new ArrayList<>();
+
+    public void addLocation(T location) {
+        locations.add(location);
+    }
+
+    public void addLocations(Collection<T> locations) {
+        for (T location : locations) {
+            addLocation(location);
+        }
+    }
+
+    public KDTree<T> build() {
         if (locations == null || locations.isEmpty()) {
             return new KDTree<>();
         }
@@ -15,7 +31,7 @@ public class KDTreeBuilder<T extends Location<?>> {
         // remove null locations
         locations.removeIf(Objects::isNull);
         // sort locations to get a balanced tree
-        locations = balanceSortLocations(locations, 0);
+        locations = new ArrayList<>( balanceSortLocations(locations, 0) );
         locations.forEach(tree::insert);
 
         return tree;
