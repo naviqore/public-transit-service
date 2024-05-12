@@ -3,7 +3,7 @@ package ch.naviqore.utils.spatial;
 public class KDTree<T extends Location<?>>{
 
     private static final int K_DIMENSIONS = 2;
-    private KDNode<T> root;
+    KDNode<T> root;
 
     public void insert(T location) {
         int startDepth = 0;
