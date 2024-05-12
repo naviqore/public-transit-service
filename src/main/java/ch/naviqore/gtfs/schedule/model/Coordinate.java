@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@RequiredArgsConstructor
 @EqualsAndHashCode
 @ToString
 @Getter
@@ -15,6 +14,21 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
     private static final int EARTH_RADIUS = 6371000;
     private final double latitude;
     private final double longitude;
+
+    public Coordinate(double latitude, double longitude) {
+        validateCoordinate(latitude, longitude);
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    private static void validateCoordinate(double latitude, double longitude) {
+        if (latitude < -90 || latitude > 90) {
+            throw new IllegalArgumentException("Latitude must be between -90 and 90 degrees");
+        }
+        if (longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Longitude must be between -180 and 180 degrees");
+        }
+    }
 
     private double getLatitudeDistance(double otherLatitude) {
         return Math.toRadians(otherLatitude - this.getFirstComponent());
@@ -64,6 +78,7 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
         double lonDistance = getLongitudeDistance(secondComponent);
         double a = calculateHaversineFormulaComponent(latDistance, lonDistance);
         double c = calculateHaversineDistance(a);
+        validateCoordinate(firstComponent, secondComponent);
         return EARTH_RADIUS * c;
     }
 
