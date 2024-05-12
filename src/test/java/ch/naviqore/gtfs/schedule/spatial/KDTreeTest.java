@@ -1,48 +1,51 @@
 package ch.naviqore.gtfs.schedule.spatial;
 
-import org.junit.jupiter.api.Test;
+import ch.naviqore.gtfs.schedule.model.Coordinate;
+import ch.naviqore.utils.spatial.KDTree;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class KDTreeTest {
-    private final Coordinate munich = new Coordinate(48.137154, 11.576124);
-    private final Coordinate berlin = new Coordinate(52.520008, 13.404954);
-    private final Coordinate frankfurt = new Coordinate(50.110924, 8.682127);
-    private final Coordinate zurich = new Coordinate(47.3769, 8.5417);
-    private final Coordinate stGallenMilitarkantine = new Coordinate(47.42100820116168, 9.35977158264066);
-    private final Coordinate stGallenSportanlageKreuzbleiche = new Coordinate(47.41984757221546, 9.361976306041305);
 
-    @Test
-    void insertAndFindNearestNeighbour() {
-        // Arrange
-        KDTree<Coordinate> kdTree = createKDTree();
-        // Act
-        insertCoordinatesIntoKDTree(kdTree);
-        // Assert
-        testNearestNeighbourWithinKreuzbleiche(kdTree);
-        testNearestNeighbourToMunich(kdTree);
-    }
+    static StopFacilityMock munich = new StopFacilityMock("3", "Munich", new Coordinate(48.137154, 11.576124));
+    static StopFacilityMock augsburg = new StopFacilityMock("2", "Augsburg", new Coordinate(48.370544, 10.89779));
+    static StopFacilityMock berlin = new StopFacilityMock("4", "Berlin", new Coordinate(52.520008, 13.404954));
+    static StopFacilityMock frankfurt = new StopFacilityMock("5", "Frankfurt", new Coordinate(50.110924, 8.682127));
+    static StopFacilityMock zurich = new StopFacilityMock("6", "Zurich", new Coordinate(47.3769, 8.5417));
+    static StopFacilityMock militarkantine = new StopFacilityMock("7", "Militarkantine", new Coordinate(47.42100820116168, 9.35977158264066));
+    static StopFacilityMock sportsFacilityKreuzbleiche = new StopFacilityMock("8", "Sportanlage Kreuzbleiche", new Coordinate(47.41984757221546, 9.361976306041305));
+    static StopFacilityMock parkingKreuzbleiche = new StopFacilityMock("9", "Pargarage Kreuzbleiche", new Coordinate(47.4202611944959, 9.362182342510467));
 
-    private KDTree<Coordinate> createKDTree() {
-        return new KDTree<>();
-    }
-
-    private void insertCoordinatesIntoKDTree(KDTree<Coordinate> kdTree) {
+    private void insertCoordinatesIntoKDTree(KDTree<StopFacilityMock> kdTree) {
+        // create some locations with near and far distances
         kdTree.insert(munich);
         kdTree.insert(berlin);
         kdTree.insert(frankfurt);
         kdTree.insert(zurich);
-        kdTree.insert(stGallenMilitarkantine);
-        kdTree.insert(stGallenSportanlageKreuzbleiche);
+        kdTree.insert(militarkantine);
+        kdTree.insert(sportsFacilityKreuzbleiche);
     }
 
-    private void testNearestNeighbourWithinKreuzbleiche(KDTree<Coordinate> kdTree) {
-        final Coordinate stGallenParkgarageKreuzbleiche = new Coordinate(47.4202611944959, 9.362182342510467);
-        assertEquals(stGallenSportanlageKreuzbleiche, kdTree.nearestNeighbour(stGallenParkgarageKreuzbleiche));
+    @ParameterizedTest
+    @MethodSource("provideTestCases")
+    void insertAndFindNearestNeighbour(StopFacilityMock location, StopFacilityMock expectedNearestLocation) {
+        // Arrange
+        KDTree<StopFacilityMock> kdTree = new KDTree<>();
+        // Act
+        insertCoordinatesIntoKDTree(kdTree);
+        // Assert
+        assertEquals(expectedNearestLocation, kdTree.nearestNeighbour(location));
     }
 
-    private  void testNearestNeighbourToMunich(KDTree<Coordinate> kdTree) {
-        final Coordinate augsburg = new Coordinate(48.371827522076615, 10.891993996832017);
-        assertEquals(munich, kdTree.nearestNeighbour(augsburg));
+    private static Stream<Object[]> provideTestCases() {
+
+        return Stream.of(
+                new Object[]{parkingKreuzbleiche, sportsFacilityKreuzbleiche},
+                new Object[]{augsburg, munich}
+        );
     }
 }
