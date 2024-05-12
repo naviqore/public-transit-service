@@ -1,6 +1,5 @@
 package ch.naviqore.utils.spatial;
 
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +17,7 @@ public class KDTreeBuilderTest {
     }
 
     @Test
-    public void test_build() {
+    public void build() {
         builder.addLocations(getTestLocations());
         KDTree<MockFacility> tree = builder.build();
         // tree should look like
@@ -37,7 +36,7 @@ public class KDTreeBuilderTest {
     }
 
     @Test
-    public void test_build_shouldReturnSingleNodeTree_givenSingleLocation() {
+    public void build_withSingleLocation() {
         builder.addLocation(new MockFacility("5,4", new MockCoordinate(5, 4)));
         KDTree<MockFacility> tree = builder.build();
 
@@ -47,12 +46,12 @@ public class KDTreeBuilderTest {
     }
 
     @Test
-    public void test_build_shouldRaiseException_whenNullLocationIsAdded() {
+    public void build_nullLocationAdded() {
         assertThrows(IllegalArgumentException.class, () -> builder.addLocation(null));
     }
 
     @Test
-    public void test_build_shouldRaiseException_whenListOfNullAndLocationValuesIsAdded() {
+    public void build_mixedNullAndLocationListAdded() {
         List<MockFacility> locations = new ArrayList<>();
         locations.add(null);
         locations.add(new MockFacility("5,4", new MockCoordinate(5, 4)));
@@ -62,31 +61,31 @@ public class KDTreeBuilderTest {
     }
 
     @Test
-    public void test_build_shouldRaiseException_whenLocationsIsEmpty() {
+    public void build_noLocationAdded() {
         assertThrows(IllegalArgumentException.class, () -> builder.build());
     }
 
     @Test
-    public void test_balanceSortLocations() {
+    public void balanceSortLocations() {
         List<MockFacility> locations = getTestLocations();
         List<MockFacility> balancedLocations = builder.balanceSortLocations(locations, 0);
 
         // make sure the locations are sorted correctly
-        List<MockCoordinate> expectedSortOrter = new ArrayList<>();
+        List<MockCoordinate> expectedSortOrder = new ArrayList<>();
         // first root
-        expectedSortOrter.add(new MockCoordinate(5, 4));
+        expectedSortOrder.add(new MockCoordinate(5, 4));
         // left tree (all to the left and filling up rights going back up)
-        expectedSortOrter.add(new MockCoordinate(2, 7));
-        expectedSortOrter.add(new MockCoordinate(4, 5));
-        expectedSortOrter.add(new MockCoordinate(3, 6));
-        expectedSortOrter.add(new MockCoordinate(1, 8));
+        expectedSortOrder.add(new MockCoordinate(2, 7));
+        expectedSortOrder.add(new MockCoordinate(4, 5));
+        expectedSortOrder.add(new MockCoordinate(3, 6));
+        expectedSortOrder.add(new MockCoordinate(1, 8));
         // right tree (first lefts then rights)
-        expectedSortOrter.add(new MockCoordinate(7, 2));
-        expectedSortOrter.add(new MockCoordinate(8, 1));
-        expectedSortOrter.add(new MockCoordinate(6, 3));
+        expectedSortOrder.add(new MockCoordinate(7, 2));
+        expectedSortOrder.add(new MockCoordinate(8, 1));
+        expectedSortOrder.add(new MockCoordinate(6, 3));
 
         for (int i = 0; i < locations.size(); i++) {
-            var expectedCoordinate = expectedSortOrter.get(i);
+            var expectedCoordinate = expectedSortOrder.get(i);
             var balancedCoordinate = balancedLocations.get(i).getCoordinate();
             assertEquals(expectedCoordinate.getFirstComponent(), balancedCoordinate.getFirstComponent());
             assertEquals(expectedCoordinate.getSecondComponent(), balancedCoordinate.getSecondComponent());
@@ -111,6 +110,5 @@ public class KDTreeBuilderTest {
         locations.add(new MockFacility("4,5", new MockCoordinate(4, 5)));
         return locations;
     }
-
 
 }
