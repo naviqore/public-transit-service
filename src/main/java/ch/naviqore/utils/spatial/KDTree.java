@@ -1,8 +1,11 @@
 package ch.naviqore.utils.spatial;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
-public class KDTree<T extends Location>{
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
+public class KDTree<T extends Location<?>>{
 
-    private static final int K_DIMENSIONS = 2;
+    static final int K_DIMENSIONS = 2;
     KDNode<T> root;
 
     public void insert(T location) {
@@ -13,10 +16,6 @@ public class KDTree<T extends Location>{
         root = insert(root, location, startDepth);
     }
 
-    private CoordinateComponentType getAxis(int depth) {
-        return depth % K_DIMENSIONS == 0 ? CoordinateComponentType.FIRST : CoordinateComponentType.SECOND;
-    }
-
     private KDNode<T> insert(KDNode<T> node, T location, int depth) {
         if (node == null) {
             return new KDNode<>(location);
@@ -24,7 +23,7 @@ public class KDTree<T extends Location>{
         // draw axis alternately between first and second component of the coordinates for each depth level of the tree
         // (i.e. for depth 0, 2, 4, ... compare first (x, lat) component, for depth 1, 3, 5, ... compare second (y,
         // lon) component)
-        CoordinateComponentType axis = getAxis(depth);
+        CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
 
         if ((axis.getCoordinateComponent(location)) < axis.getCoordinateComponent(node.getLocation())) {
             // build KDTree left side
@@ -52,7 +51,7 @@ public class KDTree<T extends Location>{
             return null;
         }
 
-        CoordinateComponentType axis = getAxis(depth);
+        CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
         KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, location, axis);
         // get the other side (node) of the tree
         KDNode<T> other = next == node.getLeft() ? node.getRight() : node.getLeft();
