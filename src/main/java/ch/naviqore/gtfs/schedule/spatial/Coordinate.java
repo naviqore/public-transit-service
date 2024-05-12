@@ -9,7 +9,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @Getter
-public class Coordinate implements TwoDimensionalCoordinates {
+public class Coordinate implements TwoDimensionalCoordinates, Comparable<Coordinate> {
 
     private static final int EARTH_RADIUS = 6371000;
     private final double latitude;
@@ -59,5 +59,22 @@ public class Coordinate implements TwoDimensionalCoordinates {
         double a = calculateHaversineFormulaComponent(latDistance, lonDistance);
         double c = calculateHaversineDistance(a);
         return EARTH_RADIUS * c;
+    }
+
+    @Override
+    public int compareTo(Coordinate other) {
+        double epsilon = 1e-5;
+
+        double diffLatitude = this.latitude - other.getLatitude();
+        if (Math.abs(diffLatitude) > epsilon) {
+            return diffLatitude > 0 ? 1 : -1;
+        }
+
+        double diffLongitude = this.longitude - other.getLongitude();
+        if (Math.abs(diffLongitude) > epsilon) {
+            return diffLongitude > 0 ? 1 : -1;
+        }
+
+        return 0;
     }
 }
