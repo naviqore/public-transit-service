@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class KDTreeBuilder<T extends Location<?>> {
@@ -14,10 +13,16 @@ public class KDTreeBuilder<T extends Location<?>> {
     private ArrayList<T> locations = new ArrayList<>();
 
     public void addLocation(T location) {
+        if (location == null) {
+            throw new IllegalArgumentException("Location " + location + " must not be null");
+        }
         locations.add(location);
     }
 
     public void addLocations(Collection<T> locations) {
+        if (locations == null) {
+            throw new IllegalArgumentException("locations must not be null");
+        }
         for (T location : locations) {
             addLocation(location);
         }
@@ -25,11 +30,9 @@ public class KDTreeBuilder<T extends Location<?>> {
 
     public KDTree<T> build() {
         if (locations == null || locations.isEmpty()) {
-            return new KDTree<>();
+            throw new IllegalArgumentException("locations must not be null or empty");
         }
         KDTree<T> tree = new KDTree<>();
-        // remove null locations
-        locations.removeIf(Objects::isNull);
         // sort locations to get a balanced tree
         locations = new ArrayList<>( balanceSortLocations(locations, 0) );
         locations.forEach(tree::insert);
