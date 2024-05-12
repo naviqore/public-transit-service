@@ -1,7 +1,6 @@
-package ch.naviqore.gtfs.schedule.spatial;
+package ch.naviqore.utils.spatial;
 
 import ch.naviqore.gtfs.schedule.model.Coordinate;
-import ch.naviqore.utils.spatial.KDTree;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
