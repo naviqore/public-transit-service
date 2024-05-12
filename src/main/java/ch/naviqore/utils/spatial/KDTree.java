@@ -45,31 +45,28 @@ public class KDTree<T extends Location<?>> {
     }
 
     public T nearestNeighbour(double firstComponent, double secondComponent) {
-        return nearestNeighbour(root, firstComponent, secondComponent, 0).getLocation();
+        return nearestNeighbour(root, new KDCoordinate(firstComponent, secondComponent), 0).getLocation();
     }
 
-    private KDNode<T> nearestNeighbour(KDNode<T> node, double firstComponent, double secondComponent, int depth) {
+    private KDNode<T> nearestNeighbour(KDNode<T> node, KDCoordinate coordinate, int depth) {
         if (node == null) {
             return null;
         }
 
         CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
-        KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, firstComponent, secondComponent, axis);
+        KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, coordinate, axis);
         // get the other side (node) of the tree
         KDNode<T> other = next == node.getLeft() ? node.getRight() : node.getLeft();
-        KDNode<T> best = getNodeWithClosestDistance(node,
-                nearestNeighbour(next, firstComponent, secondComponent, depth + 1), firstComponent, secondComponent);
+        KDNode<T> best = getNodeWithClosestDistance(node, nearestNeighbour(next, coordinate, depth + 1), coordinate);
 
-        if (KDTreeUtils.isDistanceGreaterThanCoordinateDifference(node, firstComponent, secondComponent, axis)) {
-            best = getNodeWithClosestDistance(best, nearestNeighbour(other, firstComponent, secondComponent, depth + 1),
-                    firstComponent, secondComponent);
+        if (KDTreeUtils.isDistanceGreaterThanCoordinateDifference(node, coordinate, axis)) {
+            best = getNodeWithClosestDistance(best, nearestNeighbour(other, coordinate, depth + 1), coordinate);
         }
 
         return best;
     }
 
-    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, double firstComponent,
-                                                 double secondComponent) {
+    private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, KDCoordinate coordinate) {
         if (node1 == null) {
             return node2;
         }
@@ -77,8 +74,12 @@ public class KDTree<T extends Location<?>> {
             return node1;
         }
 
-        double dist1 = node1.getLocation().getCoordinate().distanceTo(firstComponent, secondComponent);
-        double dist2 = node2.getLocation().getCoordinate().distanceTo(firstComponent, secondComponent);
+        double dist1 = node1.getLocation()
+                .getCoordinate()
+                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
+        double dist2 = node2.getLocation()
+                .getCoordinate()
+                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
         return dist1 < dist2 ? node1 : node2;
     }
 
@@ -98,17 +99,18 @@ public class KDTree<T extends Location<?>> {
 
     public ArrayList<T> rangeSearch(double firstComponent, double secondComponent, double radius) {
         ArrayList<T> result = new ArrayList<>();
-        rangeSearch(root, firstComponent, secondComponent, radius, 0, result);
+        rangeSearch(root, new KDCoordinate(firstComponent, secondComponent), radius, 0, result);
         return result;
     }
 
-    private void rangeSearch(KDNode<T> node, double firstComponent, double secondComponent, double radius, int depth,
-                             ArrayList<T> result) {
+    private void rangeSearch(KDNode<T> node, KDCoordinate coordinate, double radius, int depth, ArrayList<T> result) {
         if (node == null) {
             return;
         }
 
-        double distance = node.getLocation().getCoordinate().distanceTo(firstComponent, secondComponent);
+        double distance = node.getLocation()
+                .getCoordinate()
+                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
 
         // Check if the current node is within the range
         if (distance <= radius) {
@@ -117,17 +119,17 @@ public class KDTree<T extends Location<?>> {
 
         CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
 
-        double centerCoordinateOfInterest = axis.getCoordinateComponent(firstComponent, secondComponent);
+        double centerCoordinateOfInterest = axis.getCoordinateComponent(coordinate);
         double nodeCoordinateOfInterest = axis.getCoordinateComponent(node.getLocation());
 
         // Recursively search left subtree if necessary
         if (centerCoordinateOfInterest - radius < nodeCoordinateOfInterest) {
-            rangeSearch(node.getLeft(), firstComponent, secondComponent, radius, depth + 1, result);
+            rangeSearch(node.getLeft(), coordinate, radius, depth + 1, result);
         }
 
         // Recursively search right subtree if necessary
         if (centerCoordinateOfInterest + radius >= nodeCoordinateOfInterest) {
-            rangeSearch(node.getRight(), firstComponent, secondComponent, radius, depth + 1, result);
+            rangeSearch(node.getRight(), coordinate, radius, depth + 1, result);
         }
     }
 

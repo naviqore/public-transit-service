@@ -10,20 +10,22 @@ public class KDTreeUtils {
         return depth % KDTree.K_DIMENSIONS == 0 ? CoordinateComponentType.FIRST : CoordinateComponentType.SECOND;
     }
 
-    public static <T extends Location<?>> KDNode<T> getNextNodeBasedOnAxisDirection(KDNode<T> node, double firstComponent, double secondComponent,
-                                                                                    CoordinateComponentType axis) {
+    static <T extends Location<?>> KDNode<T> getNextNodeBasedOnAxisDirection(KDNode<T> node, KDCoordinate coordinate,
+                                                                             CoordinateComponentType axis) {
         TwoDimensionalCoordinate nodeCoordinate = node.getLocation().getCoordinate();
 
-        return axis.getCoordinateComponent(firstComponent, secondComponent) < axis.getCoordinateComponent(nodeCoordinate) ? node.getLeft() : node.getRight();
+        return axis.getCoordinateComponent(coordinate) < axis.getCoordinateComponent(
+                nodeCoordinate) ? node.getLeft() : node.getRight();
     }
 
-    public static <T extends Location<?>> boolean isDistanceGreaterThanCoordinateDifference(KDNode<T> node, double firstComponent, double secondComponent,
-                                                                                            CoordinateComponentType axis) {
+    static <T extends Location<?>> boolean isDistanceGreaterThanCoordinateDifference(KDNode<T> node,
+                                                                                     KDCoordinate coordinate,
+                                                                                     CoordinateComponentType axis) {
         TwoDimensionalCoordinate nodeCoordinate = node.getLocation().getCoordinate();
 
-        double distance = nodeCoordinate.distanceTo(firstComponent, secondComponent);
+        double distance = nodeCoordinate.distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
         double coordinateDifference = Math.abs(
-                axis.getCoordinateComponent(firstComponent, secondComponent) - axis.getCoordinateComponent(nodeCoordinate));
+                axis.getCoordinateComponent(coordinate) - axis.getCoordinateComponent(nodeCoordinate));
 
         return distance > coordinateDifference;
     }
