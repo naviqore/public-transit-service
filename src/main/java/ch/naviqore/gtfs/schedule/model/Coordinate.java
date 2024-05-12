@@ -16,8 +16,6 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
     private final double latitude;
     private final double longitude;
 
-    // TODO  how do we create the relation to the `Stop` object in the GTFS model? backref, or stop id as a private member ?
-
     private double getLatitudeDistance(double otherLatitude) {
         return Math.toRadians(otherLatitude - this.getFirstComponent());
     }
@@ -54,7 +52,9 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
      */
     @Override
     public double distanceTo(TwoDimensionalCoordinate other) {
-        // TODO: Do we need to handle the case where the other object is null? If so, use Optional instead of Exception
+        if (other == null) {
+            throw new IllegalArgumentException("Other coordinate cannot be null");
+        }
         return distanceTo(other.getFirstComponent(), other.getSecondComponent());
     }
 
