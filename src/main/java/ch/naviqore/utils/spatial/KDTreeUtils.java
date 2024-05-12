@@ -6,18 +6,20 @@ package ch.naviqore.utils.spatial;
  */
 public class KDTreeUtils {
 
-    public static <T extends Location<?>> KDNode<T> getNextNodeBasedOnAxisDirection(KDNode<T> node,
-                                                                                                  T location,
-                                                                                                  CoordinateComponentType axis) {
-        TwoDimensionalCoordinate nodeCoordinate = node.getLocation().getCoordinate();
-
-        return (axis.getCoordinateComponent(location)) < axis.getCoordinateComponent(nodeCoordinate)
-                ? node.getLeft()
-                : node.getRight();
+    public static CoordinateComponentType getAxis(int depth) {
+        return depth % KDTree.K_DIMENSIONS == 0 ? CoordinateComponentType.FIRST : CoordinateComponentType.SECOND;
     }
 
-    public static <T extends Location<?>> boolean isDistanceGreaterThanCoordinateDifference(
-            KDNode<T> node, T location, CoordinateComponentType axis) {
+    public static <T extends Location<?>> KDNode<T> getNextNodeBasedOnAxisDirection(KDNode<T> node, T location,
+                                                                                    CoordinateComponentType axis) {
+        TwoDimensionalCoordinate nodeCoordinate = node.getLocation().getCoordinate();
+
+        return (axis.getCoordinateComponent(location)) < axis.getCoordinateComponent(
+                nodeCoordinate) ? node.getLeft() : node.getRight();
+    }
+
+    public static <T extends Location<?>> boolean isDistanceGreaterThanCoordinateDifference(KDNode<T> node, T location,
+                                                                                            CoordinateComponentType axis) {
         TwoDimensionalCoordinate nodeCoordinate = node.getLocation().getCoordinate();
 
         double distance = nodeCoordinate.distanceTo(location.getCoordinate());

@@ -1,17 +1,17 @@
 package ch.naviqore.utils.spatial;
 
-public class KDTree<T extends Location<?>>{
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
-    private static final int K_DIMENSIONS = 2;
-    private KDNode<T> root;
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
+public class KDTree<T extends Location<?>> {
 
-    public void insert(T location) {
+    static final int K_DIMENSIONS = 2;
+    KDNode<T> root;
+
+    void insert(T location) {
         int startDepth = 0;
         root = insert(root, location, startDepth);
-    }
-
-    private CoordinateComponentType getAxis(int depth) {
-        return depth % K_DIMENSIONS == 0 ? CoordinateComponentType.FIRST : CoordinateComponentType.SECOND;
     }
 
     private KDNode<T> insert(KDNode<T> node, T location, int depth) {
@@ -21,7 +21,7 @@ public class KDTree<T extends Location<?>>{
         // draw axis alternately between first and second component of the coordinates for each depth level of the tree
         // (i.e. for depth 0, 2, 4, ... compare first (x, lat) component, for depth 1, 3, 5, ... compare second (y,
         // lon) component)
-        CoordinateComponentType axis = getAxis(depth);
+        CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
 
         if ((axis.getCoordinateComponent(location)) < axis.getCoordinateComponent(node.getLocation())) {
             // build KDTree left side
@@ -43,7 +43,7 @@ public class KDTree<T extends Location<?>>{
             return null;
         }
 
-        CoordinateComponentType axis = getAxis(depth);
+        CoordinateComponentType axis = KDTreeUtils.getAxis(depth);
         KDNode<T> next = KDTreeUtils.getNextNodeBasedOnAxisDirection(node, location, axis);
         // get the other side (node) of the tree
         KDNode<T> other = next == node.getLeft() ? node.getRight() : node.getLeft();
@@ -55,7 +55,6 @@ public class KDTree<T extends Location<?>>{
 
         return best;
     }
-
 
     private KDNode<T> getNodeWithClosestDistance(KDNode<T> node1, KDNode<T> node2, T location) {
         if (node1 == null) {
