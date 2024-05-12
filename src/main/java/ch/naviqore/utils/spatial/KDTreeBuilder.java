@@ -34,7 +34,7 @@ public class KDTreeBuilder<T extends Location<?>> {
         }
         KDTree<T> tree = new KDTree<>();
         // sort locations to get a balanced tree
-        locations = new ArrayList<>( balanceSortLocations(locations, 0) );
+        locations = new ArrayList<>(balanceSortLocations(locations, 0));
         locations.forEach(tree::insert);
 
         return tree;

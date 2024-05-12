@@ -10,7 +10,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @Getter
-public class Coordinate implements TwoDimensionalCoordinate {
+public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordinate> {
 
     private static final int EARTH_RADIUS = 6371000;
     private final double latitude;
@@ -28,8 +28,8 @@ public class Coordinate implements TwoDimensionalCoordinate {
 
     private double calculateHaversineFormulaComponent(double latDistance, double lonDistance) {
         return Math.sin(latDistance / 2) * Math.sin(latDistance / 2) + Math.cos(
-                Math.toRadians(this.getFirstComponent())) * Math.cos(Math.toRadians(this.getSecondComponent())) * Math.sin(
-                lonDistance / 2) * Math.sin(lonDistance / 2);
+                Math.toRadians(this.getFirstComponent())) * Math.cos(
+                Math.toRadians(this.getSecondComponent())) * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
     }
 
     private double calculateHaversineDistance(double a) {
@@ -65,5 +65,22 @@ public class Coordinate implements TwoDimensionalCoordinate {
         double a = calculateHaversineFormulaComponent(latDistance, lonDistance);
         double c = calculateHaversineDistance(a);
         return EARTH_RADIUS * c;
+    }
+
+    @Override
+    public int compareTo(Coordinate other) {
+        double epsilon = 1e-5;
+
+        double diffLatitude = this.latitude - other.getLatitude();
+        if (Math.abs(diffLatitude) > epsilon) {
+            return diffLatitude > 0 ? 1 : -1;
+        }
+
+        double diffLongitude = this.longitude - other.getLongitude();
+        if (Math.abs(diffLongitude) > epsilon) {
+            return diffLongitude > 0 ? 1 : -1;
+        }
+
+        return 0;
     }
 }

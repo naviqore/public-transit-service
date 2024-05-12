@@ -11,7 +11,10 @@ public class KDTree<T extends Location<?>> {
     static final int K_DIMENSIONS = 2;
     KDNode<T> root;
 
-    void insert(T location) {
+    public void insert(T location) {
+        if (location == null) {
+            throw new IllegalArgumentException("Location cannot be null");
+        }
         int startDepth = 0;
         root = insert(root, location, startDepth);
     }
@@ -37,14 +40,23 @@ public class KDTree<T extends Location<?>> {
     }
 
     public T nearestNeighbour(T location) {
+        if (location == null) {
+            throw new IllegalArgumentException("Location cannot be null");
+        }
         return nearestNeighbour(location.getCoordinate());
     }
 
     public T nearestNeighbour(TwoDimensionalCoordinate coordinate) {
+        if (coordinate == null) {
+            throw new IllegalArgumentException("Coordinate cannot be null");
+        }
         return nearestNeighbour(coordinate.getFirstComponent(), coordinate.getSecondComponent());
     }
 
     public T nearestNeighbour(double firstComponent, double secondComponent) {
+        if (root == null) {
+            throw new IllegalStateException("Tree is empty");
+        }
         return nearestNeighbour(root, new KDCoordinate(firstComponent, secondComponent), 0).getLocation();
     }
 
