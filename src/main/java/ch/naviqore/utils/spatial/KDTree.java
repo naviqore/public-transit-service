@@ -110,6 +110,12 @@ public class KDTree<T extends Location<?>> {
     }
 
     public ArrayList<T> rangeSearch(double firstComponent, double secondComponent, double radius) {
+        if (root == null) {
+            throw new IllegalStateException("Tree is empty");
+        }
+        if (radius <= 0) {
+            throw new IllegalArgumentException("Radius cannot be negative or zero");
+        }
         ArrayList<T> result = new ArrayList<>();
         rangeSearch(root, new KDCoordinate(firstComponent, secondComponent), radius, 0, result);
         return result;
