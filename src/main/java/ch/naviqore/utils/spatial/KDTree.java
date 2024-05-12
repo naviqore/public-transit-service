@@ -1,11 +1,14 @@
 package ch.naviqore.utils.spatial;
 
-public class KDTree<T extends Location<?>>{
+public class KDTree<T extends Location>{
 
     private static final int K_DIMENSIONS = 2;
     KDNode<T> root;
 
     public void insert(T location) {
+        if (location == null) {
+            throw new IllegalArgumentException("Location cannot be null");
+        }
         int startDepth = 0;
         root = insert(root, location, startDepth);
     }
@@ -35,6 +38,12 @@ public class KDTree<T extends Location<?>>{
     }
 
     public T nearestNeighbour(T location) {
+        if (location == null) {
+            throw new IllegalArgumentException("Location cannot be null");
+        }
+        if (root == null) {
+            throw new IllegalStateException("Tree is empty");
+        }
         return nearestNeighbour(root, location, 0).getLocation();
     }
 
