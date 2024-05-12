@@ -27,5 +27,10 @@ public class MockFacility implements Location<MockCoordinate> {
         return this.name.equals(that.name) && this.coordinate.equals(that.coordinate);
     }
 
+    @Override
+    public String toString() {
+        return "[Facility: " + name + ", " + coordinate + "]";
+    }
+
 }
 

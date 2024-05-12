@@ -39,4 +39,9 @@ public class MockCoordinate implements TwoDimensionalCoordinate {
         return this.x == that.x && this.y == that.y;
     }
 
+    @Override
+    public String toString() {
+        return "[Coordinate: " + x + ", " + y + "]";
+    }
+
 }
