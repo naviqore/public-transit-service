@@ -1,4 +1,4 @@
-package ch.naviqore.gtfs.schedule.spatial;
+package ch.naviqore.utils.spatial;
 
 import lombok.Getter;
 import lombok.Setter;
