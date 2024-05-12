@@ -1,6 +1,6 @@
 package ch.naviqore.utils.spatial;
 
-public class KDTree<T extends Location<U>, U extends TwoDimensionalCoordinate>{
+public class KDTree<T extends Location<?>>{
 
     private static final int K_DIMENSIONS = 2;
     private KDNode<T> root;
