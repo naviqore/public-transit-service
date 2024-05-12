@@ -12,4 +12,8 @@ public enum CoordinatesType {
         return this == PRIMARY ? coordinates.getPrimaryCoordinate() : coordinates.getSecondaryCoordinate();
     }
 
+    public double getCoordinateValue(Location<? extends TwoDimensionalCoordinates> location) {
+        return getCoordinateValue(location.getCoordinates());
+    }
+
 }
