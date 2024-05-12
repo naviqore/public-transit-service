@@ -46,7 +46,8 @@ public class KDTreeBuilderTest {
 
     @Test
     public void test_build() {
-        KDTree<TestLocation> tree = builder.build(getTestLocations());
+        builder.addLocations(getTestLocations());
+        KDTree<TestLocation> tree = builder.build();
         // tree should look like
         //            ---(5, 4)---
         //      (2, 7)             (7,2)
@@ -63,41 +64,33 @@ public class KDTreeBuilderTest {
     }
 
     @Test
-    public void test_build_shouldReturnSingleNodeTree_givenListOfNullAndLocationValues() {
-        List<TestLocation> locations = new ArrayList<>();
-        locations.add(null);
-        locations.add(new TestLocation(new TestCoordinate(5, 4)));
-        locations.add(new TestLocation(new TestCoordinate(2, 7)));
-
-        KDTree<TestLocation> tree = builder.build(locations);
-        assertLocationMatchesExpectedCoordinate(5, 4, tree.root);
-        assertLocationMatchesExpectedCoordinate(2, 7, tree.root.getLeft());
-        assertNull(tree.root.getRight());
-        assertNull(tree.root.getLeft().getLeft());
-        assertNull(tree.root.getLeft().getRight());
-    }
-
-    @Test
     public void test_build_shouldReturnSingleNodeTree_givenSingleLocation() {
-        ArrayList<TestLocation> locations = new ArrayList<>();
-        locations.add(new TestLocation(new TestCoordinate(5, 4)));
+        builder.addLocation(new TestLocation(new TestCoordinate(5, 4)));
+        KDTree<TestLocation> tree = builder.build();
 
-        KDTree<TestLocation> tree = builder.build(locations);
         assertLocationMatchesExpectedCoordinate(5, 4, tree.root);
         assertNull(tree.root.getLeft());
         assertNull(tree.root.getRight());
     }
 
     @Test
-    public void test_build_shouldReturnEmptyTree_whenLocationsIsNull() {
-        KDTree<TestLocation> tree = builder.build(null);
-        assertNull(tree.root);
+    public void test_build_shouldRaiseException_whenNullLocationIsAdded() {
+        assertThrows(IllegalArgumentException.class, () -> builder.addLocation(null));
     }
 
     @Test
-    public void test_build_shouldReturnEmptyTree_whenLocationsIsEmpty() {
-        KDTree<TestLocation> tree = builder.build(new ArrayList<>());
-        assertNull(tree.root);
+    public void test_build_shouldRaiseException_whenListOfNullAndLocationValuesIsAdded() {
+        List<TestLocation> locations = new ArrayList<>();
+        locations.add(null);
+        locations.add(new TestLocation(new TestCoordinate(5, 4)));
+        locations.add(new TestLocation(new TestCoordinate(2, 7)));
+
+        assertThrows(IllegalArgumentException.class, () -> builder.addLocations(locations));
+    }
+
+    @Test
+    public void test_build_shouldRaiseException_whenLocationsIsEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> builder.build());
     }
 
     @Test
