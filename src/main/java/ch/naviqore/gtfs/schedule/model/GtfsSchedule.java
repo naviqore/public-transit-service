@@ -1,5 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.utils.spatial.KDTree;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +26,7 @@ public class GtfsSchedule {
     private final Map<String, Stop> stops;
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
+    private final KDTree<Stop> spatialIndex;
 
     /**
      * Creates a new GTFS schedule builder.
@@ -44,13 +46,18 @@ public class GtfsSchedule {
      * @return A list of stops within the specified distance.
      */
     public List<Stop> getNearestStops(double latitude, double longitude, int maxDistance) {
-        // TODO: Use a spatial index for efficient nearest neighbor search, e.g. KD-tree or R-tree
-        // TODO: We need a range search in the KD-tree https://naviqore.atlassian.net/browse/NAV-32
-        Coordinate origin = new Coordinate(latitude, longitude);
-        return stops.values()
-                .stream()
-                .filter(stop -> stop.getCoordinate().distanceTo(origin) <= maxDistance)
-                .collect(Collectors.toList());
+        return spatialIndex.rangeSearch(latitude, longitude, maxDistance);
+    }
+
+    /**
+     * Retrieves the nearest stop to a given location.
+     *
+     * @param latitude  the latitude of the location.
+     * @param longitude the longitude of the location.
+     * @return The nearest stop to the specified location.
+     */
+    public Stop getNearestStop(double latitude, double longitude) {
+        return spatialIndex.nearestNeighbour(latitude, longitude);
     }
 
     /**
