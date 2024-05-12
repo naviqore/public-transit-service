@@ -27,15 +27,6 @@ public class KDTreeBuilderTest {
         public double distanceTo(TwoDimensionalCoordinate other) {
             return Math.sqrt(Math.pow(x - other.getFirstComponent(), 2) + Math.pow(y - other.getSecondComponent(), 2));
         }
-        public boolean equals(Object o) {
-            if (o == this) return true;
-            if (!(o instanceof TestCoordinate other)) return false;
-            if (Double.compare(this.x, other.x) != 0) return false;
-            return Double.compare(this.y, other.y) == 0;
-        }
-        public int hashCode() {
-            return Arrays.hashCode(new Object[] { x, y });
-        }
     }
 
     @RequiredArgsConstructor
