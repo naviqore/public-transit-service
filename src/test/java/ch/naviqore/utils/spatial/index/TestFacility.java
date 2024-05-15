@@ -1,13 +1,15 @@
-package ch.naviqore.utils.spatial;
+package ch.naviqore.utils.spatial.index;
 
+import ch.naviqore.utils.spatial.CartesianCoordinate;
+import ch.naviqore.utils.spatial.Location;
 import lombok.Getter;
 
 @Getter
-public class MockFacility implements Location<MockCoordinate> {
+public class TestFacility implements Location<CartesianCoordinate> {
     private final String name;
-    private final MockCoordinate coordinate;
+    private final CartesianCoordinate coordinate;
 
-    MockFacility(String name, MockCoordinate coordinate) {
+    TestFacility(String name, CartesianCoordinate coordinate) {
         if (name == null || coordinate == null) {
             throw new IllegalArgumentException("Arguments cannot be null");
         }
@@ -23,7 +25,7 @@ public class MockFacility implements Location<MockCoordinate> {
         if (obj == null || obj.getClass() != this.getClass()) {
             return false;
         }
-        var that = (MockFacility) obj;
+        var that = (TestFacility) obj;
         return this.name.equals(that.name) && this.coordinate.equals(that.coordinate);
     }
 

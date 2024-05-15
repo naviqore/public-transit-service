@@ -97,7 +97,7 @@ public class GtfsRoutePartitioner {
         public int hashCode() {
             return Objects.hash(id);
         }
-        
+
         public String toString() {
             return "SubRoute[" + "id=" + id + ", " + "route=" + route + ", " + "stopSequence=" + stopSequenceKey + ']';
         }
