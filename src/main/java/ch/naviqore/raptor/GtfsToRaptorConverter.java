@@ -75,12 +75,8 @@ public class GtfsToRaptorConverter {
     private void addTransfers() {
         for (Stop stop : stops) {
             for (Transfer transfer : stop.getTransfers()) {
-                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop()) {
-                    if (transfer.getMinTransferTime().isEmpty()) {
-                        throw new IllegalStateException(
-                                "Minimal transfer time is not present for transfer of type " + transfer.getTransferType() + " from stop " + stop.getId() + " to stop " + stop.getId());
-                    }
-
+                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop() && transfer.getMinTransferTime()
+                        .isPresent()) {
                     try {
                         builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
                                 transfer.getMinTransferTime().get());

@@ -146,6 +146,10 @@ public class GtfsScheduleBuilder {
         if (toStop == null) {
             throw new IllegalArgumentException("Stop " + toStopId + " does not exist");
         }
+        if (transferType == TransferType.MINIMUM_TIME && minTransferTime == null) {
+            throw new IllegalArgumentException(
+                    "Minimal transfer time is not present for transfer of type " + transferType.name() + " from stop " + fromStopId + " to stop " + toStopId);
+        }
         log.debug("Adding transfer {}-{} of type {} {}", fromStopId, toStopId, transferType, minTransferTime);
         fromStop.addTransfer(new Transfer(fromStop, toStop, transferType, minTransferTime));
         return this;
