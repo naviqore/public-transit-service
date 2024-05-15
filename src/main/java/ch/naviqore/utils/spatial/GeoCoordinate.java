@@ -15,6 +15,18 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
         if (longitude < -180 || longitude > 180) {
             throw new IllegalArgumentException("Longitude must be between -180 and 180 degrees");
         }
+        if (Double.isNaN(latitude) || Double.isNaN(longitude)) {
+            throw new IllegalArgumentException("Coordinates cannot be NaN");
+        }
+    }
+
+    private void isOfSameType(Coordinate other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Other coordinate must not be null");
+        }
+        if (other.getClass() != this.getClass()) {
+            throw new IllegalArgumentException("Other coordinate must be of type " + this.getClass().getSimpleName());
+        }
     }
 
     @Override
@@ -35,9 +47,7 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
      */
     @Override
     public double distanceTo(Coordinate other) {
-        if (other == null) {
-            throw new IllegalArgumentException("Other coordinate cannot be null");
-        }
+        isOfSameType(other);
         return distanceTo(other.getFirstComponent(), other.getSecondComponent());
     }
 
@@ -73,5 +83,10 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
         }
 
         return 0;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + this.getClass().getSimpleName() + ": " + latitude + "°, " + longitude + "°]";
     }
 }

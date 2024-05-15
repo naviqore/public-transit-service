@@ -103,7 +103,7 @@ public class GeoCoordinateTest {
     @Nested
     class CompareTo {
 
-        static Stream<Arguments> compareToArguments(){
+        static Stream<Arguments> compareToArguments() {
             // allowed discrepancy between coordinates
             double epsilon = 1e-5;
             return Stream.of(
@@ -120,8 +120,7 @@ public class GeoCoordinateTest {
                     // Smaller than cases
                     Arguments.of(new GeoCoordinate(0, 0), new GeoCoordinate(0, 1), -1),
                     Arguments.of(new GeoCoordinate(0, 0), new GeoCoordinate(1, 0), -1),
-                    Arguments.of(new GeoCoordinate(0, 0), new GeoCoordinate(1, -1), -1)
-            );
+                    Arguments.of(new GeoCoordinate(0, 0), new GeoCoordinate(1, -1), -1));
         }
 
         @ParameterizedTest(name = "compare {0} to {1}")
@@ -129,7 +128,6 @@ public class GeoCoordinateTest {
         void compareTo(GeoCoordinate c1, GeoCoordinate c2, double expected) {
             assertEquals(expected, c1.compareTo(c2));
         }
-
 
     }
 

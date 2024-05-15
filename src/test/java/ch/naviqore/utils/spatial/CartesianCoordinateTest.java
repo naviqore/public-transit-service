@@ -50,23 +50,23 @@ public class CartesianCoordinateTest {
 
         @ParameterizedTest(name = "distance from: {0} to: {1}")
         @MethodSource("distanceToProvider")
-        void distanceTo(CartesianCoordinate coordinate1, CartesianCoordinate coordinate2,
-                              double expectedDistance) {
+        void distanceTo(CartesianCoordinate coordinate1, CartesianCoordinate coordinate2, double expectedDistance) {
             assertEquals(expectedDistance, coordinate1.distanceTo(coordinate2), TOLERANCE);
         }
 
         @ParameterizedTest(name = "distance from: {0} to: {1}")
         @MethodSource("distanceToProvider")
         void distanceTo_withDoubleParameters(CartesianCoordinate coordinate1, CartesianCoordinate coordinate2,
-                                                  double expectedDistance) {
-            assertEquals(expectedDistance, coordinate1.distanceTo(coordinate2.getFirstComponent(),
-                    coordinate2.getSecondComponent()), TOLERANCE);
+                                             double expectedDistance) {
+            assertEquals(expectedDistance,
+                    coordinate1.distanceTo(coordinate2.getFirstComponent(), coordinate2.getSecondComponent()),
+                    TOLERANCE);
         }
 
         @Test
         void distanceTo_withNull() {
             CartesianCoordinate coordinate = new CartesianCoordinate(0, 0);
-            assertThrows(IllegalArgumentException.class, () -> coordinate.distanceTo((CartesianCoordinate) null));
+            assertThrows(IllegalArgumentException.class, () -> coordinate.distanceTo(null));
         }
 
         @Test

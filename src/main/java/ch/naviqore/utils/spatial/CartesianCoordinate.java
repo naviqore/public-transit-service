@@ -1,11 +1,29 @@
 package ch.naviqore.utils.spatial;
 
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 public class CartesianCoordinate implements Coordinate {
     private final double x;
     private final double y;
+
+    public CartesianCoordinate(double x, double y) {
+        validateCoordinate(x, y);
+        this.x = x;
+        this.y = y;
+    }
+
+    private static void validateCoordinate(double x, double y) {
+        if (Double.isNaN(x) || Double.isNaN(y)) {
+            throw new IllegalArgumentException("Coordinates cannot be NaN");
+        }
+    }
+
+    private void isOfSameType(Coordinate other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Other coordinate must not be null");
+        }
+        if (other.getClass() != this.getClass()) {
+            throw new IllegalArgumentException("Other coordinate must be of type " + this.getClass().getSimpleName());
+        }
+    }
 
     @Override
     public double getFirstComponent() {
@@ -19,11 +37,13 @@ public class CartesianCoordinate implements Coordinate {
 
     @Override
     public double distanceTo(Coordinate other) {
+        isOfSameType(other);
         return distanceTo(other.getFirstComponent(), other.getSecondComponent());
     }
 
     @Override
     public double distanceTo(double x, double y) {
+        validateCoordinate(x, y);
         return Math.sqrt(Math.pow(this.x - x, 2) + Math.pow(this.y - y, 2));
     }
 
@@ -41,7 +61,7 @@ public class CartesianCoordinate implements Coordinate {
 
     @Override
     public String toString() {
-        return "[Coordinate: " + x + ", " + y + "]";
+        return "[" + this.getClass().getSimpleName() + ": " + x + ", " + y + "]";
     }
 
 }
