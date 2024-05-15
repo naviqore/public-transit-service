@@ -38,6 +38,7 @@ public class GtfsScheduleReader {
     private static void readFromDirectory(File directory, GtfsScheduleParser parser) throws IOException {
         for (GtfsScheduleFile fileType : GtfsScheduleFile.values()) {
             File csvFile = new File(directory, fileType.getFileName());
+
             if (csvFile.exists()) {
                 log.info("Reading GTFS CSV file: {}", csvFile.getAbsolutePath());
                 readCsvFile(csvFile, parser, fileType);
@@ -51,6 +52,7 @@ public class GtfsScheduleReader {
         try (ZipFile zf = new ZipFile(zipFile, StandardCharsets.UTF_8)) {
             for (GtfsScheduleFile fileType : GtfsScheduleFile.values()) {
                 ZipEntry entry = zf.getEntry(fileType.getFileName());
+
                 if (entry != null) {
                     log.info("Reading GTFS file from ZIP: {}", entry.getName());
                     try (InputStreamReader reader = new InputStreamReader(BOMInputStream.builder()

@@ -25,6 +25,9 @@ import java.util.Random;
  * Benchmark for Raptor routing algorithm.
  * <p>
  * Measures the time it takes to route a number of requests using Raptor algorithm on large GTFS datasets.
+ * <p>
+ * Note: To run this benchmark, ensure that the log level is set to INFO in the
+ * {@code src/test/resources/log4j2.properties} file.
  *
  * @author munterfi
  */

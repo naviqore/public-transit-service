@@ -18,12 +18,13 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class GtfsRoutePartitioner {
+
     private final Map<Route, Map<String, SubRoute>> subRoutes = new HashMap<>();
 
     public GtfsRoutePartitioner(GtfsSchedule schedule) {
         log.info("Partitioning GTFS schedule with {} routes into sub-routes", schedule.getRoutes().size());
         schedule.getRoutes().values().forEach(this::processRoute);
-        log.info("Found {} sub-routes in schedule", subRoutes.values().stream().mapToInt(Map::size).sum());
+        log.info("Got {} sub-routes in schedule", subRoutes.values().stream().mapToInt(Map::size).sum());
     }
 
     private void processRoute(Route route) {
@@ -48,6 +49,7 @@ public class GtfsRoutePartitioner {
         for (StopTime stopTime : trip.getStopTimes()) {
             sequence.add(stopTime.stop());
         }
+
         return sequence;
     }
 
@@ -56,6 +58,7 @@ public class GtfsRoutePartitioner {
         if (currentSubRoutes == null) {
             throw new IllegalArgumentException("Route " + route.getId() + " not found in schedule");
         }
+
         return new ArrayList<>(currentSubRoutes.values());
     }
 
@@ -65,6 +68,7 @@ public class GtfsRoutePartitioner {
             throw new IllegalArgumentException("Trip " + trip.getId() + " not found in schedule");
         }
         String key = generateStopSequenceKey(trip);
+
         return currentSubRoutes.get(key);
     }
 
@@ -97,7 +101,7 @@ public class GtfsRoutePartitioner {
         public int hashCode() {
             return Objects.hash(id);
         }
-        
+
         public String toString() {
             return "SubRoute[" + "id=" + id + ", " + "route=" + route + ", " + "stopSequence=" + stopSequenceKey + ']';
         }

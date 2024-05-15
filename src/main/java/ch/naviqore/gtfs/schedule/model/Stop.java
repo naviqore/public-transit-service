@@ -13,18 +13,26 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Stop implements Initializable {
+
     private final String id;
     private final String name;
     private final Coordinate coordinate;
-    private final List<StopTime> stopTimes = new ArrayList<>();
+    private List<StopTime> stopTimes = new ArrayList<>();
+    private List<Transfer> transfers = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {
         stopTimes.add(stopTime);
     }
 
+    void addTransfer(Transfer transfer) {
+        transfers.add(transfer);
+    }
+
     @Override
     public void initialize() {
         Collections.sort(stopTimes);
+        stopTimes = List.copyOf(stopTimes);
+        transfers = List.copyOf(transfers);
     }
 
     @Override

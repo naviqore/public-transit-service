@@ -1,6 +1,7 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.gtfs.schedule.type.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.DayOfWeek;
@@ -45,6 +46,13 @@ import java.util.*;
  *   <li><b>u5</b> - South-West (47.4, 8.4)</li>
  *   <li><b>u6</b> - West (47.5, 8.4)</li>
  * </ul>
+ * Transfers:
+ * <ul>
+ *   <li><b>u6-u5</b> - Minimum time transfer requiring 540 seconds, reflecting a downhill walking path between these stations.</li>
+ *   <li><b>u5-u6</b> - Minimum time transfer requiring 600 seconds, reflecting an uphill walking path between these stations.</li>
+ *   <li><b>u6</b> - Marking transfer at u6 as not possible, emphasizing route planning around unavailable transfers.</li>
+ *   <li><b>u3</b> - Recommendation to transfer at u3 instead of u6 when traveling from East to West.</li>
+ * </ul>
  *
  * @author munterfi
  */
@@ -65,6 +73,7 @@ public class GtfsScheduleTestBuilder {
             new Route("route3", "agency2", "BUS", DefaultRouteType.BUS, 15, NO_HEADWAY, 3, 5, 1,
                     List.of("u5", "s2", "s2")));
     private final Set<String> addedStops = new HashSet<>();
+    @Getter
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
     public GtfsScheduleTestBuilder withAddAgency() {
@@ -102,6 +111,14 @@ public class GtfsScheduleTestBuilder {
 
     public GtfsScheduleTestBuilder withAddBus() {
         addRoute(ROUTES.get(2), false, true);
+        return this;
+    }
+
+    public GtfsScheduleTestBuilder withAddTransfers() {
+        builder.addTransfer("u6", "u5", TransferType.MINIMUM_TIME, 9 * 60);
+        builder.addTransfer("u5", "u6", TransferType.MINIMUM_TIME, 10 * 60);
+        builder.addTransfer("u6", "u6", TransferType.NOT_POSSIBLE, null);
+        builder.addTransfer("u3", "u6", TransferType.NOT_POSSIBLE, null);
         return this;
     }
 

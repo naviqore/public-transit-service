@@ -10,19 +10,19 @@ public enum ExceptionType {
     ADDED(1, "Service has been added for the specified date."),
     REMOVED(2, "Service has been removed for the specified date.");
 
-    private final int value;
+    private final int code;
     private final String description;
 
-    public static ExceptionType parse(String value) {
-        return parse(Integer.parseInt(value));
+    public static ExceptionType parse(String code) {
+        return parse(Integer.parseInt(code));
     }
 
-    public static ExceptionType parse(int value) {
+    public static ExceptionType parse(int code) {
         for (ExceptionType type : ExceptionType.values()) {
-            if (type.value == value) {
+            if (type.code == code) {
                 return type;
             }
         }
-        throw new IllegalArgumentException("No exception type with value " + value + " found");
+        throw new IllegalArgumentException("No exception type with code " + code + " found");
     }
 }
