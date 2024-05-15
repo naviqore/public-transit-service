@@ -3,8 +3,9 @@ package ch.naviqore.gtfs.schedule.model;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.utils.spatial.KDTree;
-import ch.naviqore.utils.spatial.KDTreeBuilder;
+import ch.naviqore.utils.spatial.GeoCoordinate;
+import ch.naviqore.utils.spatial.index.KDTree;
+import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -54,7 +55,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Agency " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, new Coordinate(lat, lon)));
+        stops.put(id, new Stop(id, name, new GeoCoordinate(lat, lon)));
         return this;
     }
 
@@ -134,10 +135,8 @@ public class GtfsScheduleBuilder {
         trips.values().parallelStream().forEach(Trip::initialize);
         stops.values().parallelStream().forEach(Stop::initialize);
         routes.values().parallelStream().forEach(Route::initialize);
-        log.info("Building spatial index for {} stops", stops.size());
-        KDTreeBuilder<Stop> builder = new KDTreeBuilder<>();
-        stops.values().forEach(builder::addLocation);
-        KDTree<Stop> spatialIndex = builder.build();
+
+        KDTree<Stop> spatialIndex = new KDTreeBuilder<Stop>().addLocations(stops.values()).build();
 
         return new GtfsSchedule(agencies, calendars, stops, routes, trips, spatialIndex);
     }

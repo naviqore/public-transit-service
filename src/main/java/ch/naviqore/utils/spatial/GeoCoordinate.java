@@ -1,23 +1,11 @@
-package ch.naviqore.gtfs.schedule.model;
+package ch.naviqore.utils.spatial;
 
-import ch.naviqore.utils.spatial.TwoDimensionalCoordinate;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
-
-@EqualsAndHashCode
-@ToString
-@Getter
-public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordinate> {
+public record GeoCoordinate(double latitude, double longitude) implements Coordinate, Comparable<GeoCoordinate> {
 
     private static final int EARTH_RADIUS = 6371000;
-    private final double latitude;
-    private final double longitude;
 
-    public Coordinate(double latitude, double longitude) {
+    public GeoCoordinate {
         validateCoordinate(latitude, longitude);
-        this.latitude = latitude;
-        this.longitude = longitude;
     }
 
     private static void validateCoordinate(double latitude, double longitude) {
@@ -46,7 +34,7 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
      * @return The distance in meters.
      */
     @Override
-    public double distanceTo(TwoDimensionalCoordinate other) {
+    public double distanceTo(Coordinate other) {
         if (other == null) {
             throw new IllegalArgumentException("Other coordinate cannot be null");
         }
@@ -71,15 +59,15 @@ public class Coordinate implements TwoDimensionalCoordinate, Comparable<Coordina
     }
 
     @Override
-    public int compareTo(Coordinate other) {
+    public int compareTo(GeoCoordinate other) {
         double epsilon = 1e-5;
 
-        double diffLatitude = this.latitude - other.getLatitude();
+        double diffLatitude = this.latitude - other.latitude();
         if (Math.abs(diffLatitude) > epsilon) {
             return diffLatitude > 0 ? 1 : -1;
         }
 
-        double diffLongitude = this.longitude - other.getLongitude();
+        double diffLongitude = this.longitude - other.longitude();
         if (Math.abs(diffLongitude) > epsilon) {
             return diffLongitude > 0 ? 1 : -1;
         }

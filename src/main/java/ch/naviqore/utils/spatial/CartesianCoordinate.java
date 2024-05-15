@@ -3,7 +3,7 @@ package ch.naviqore.utils.spatial;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class MockCoordinate implements TwoDimensionalCoordinate {
+public class CartesianCoordinate implements Coordinate {
     private final double x;
     private final double y;
 
@@ -18,7 +18,7 @@ public class MockCoordinate implements TwoDimensionalCoordinate {
     }
 
     @Override
-    public double distanceTo(TwoDimensionalCoordinate other) {
+    public double distanceTo(Coordinate other) {
         return distanceTo(other.getFirstComponent(), other.getSecondComponent());
     }
 
@@ -35,7 +35,7 @@ public class MockCoordinate implements TwoDimensionalCoordinate {
         if (obj == null || obj.getClass() != this.getClass()) {
             return false;
         }
-        var that = (MockCoordinate) obj;
+        var that = (CartesianCoordinate) obj;
         return this.x == that.x && this.y == that.y;
     }
 

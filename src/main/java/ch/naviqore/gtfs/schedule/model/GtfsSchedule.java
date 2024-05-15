@@ -1,6 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.utils.spatial.KDTree;
+import ch.naviqore.utils.spatial.index.KDTree;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
