@@ -120,7 +120,7 @@ class KDTreeTest {
         void rangeSearch() {
             KDTree<TestFacility> kdTree = buildTestKDTree();
 
-            // Note: because of x,y coordinate usage in the MockCoordinate class, the distance is calculated as
+            // Note: because of x,y coordinate usage in the CartesianCoordinate class, the distance is calculated as
             // sqrt((x1-x2)^2 + (y1-y2)^2) --> and 1° latitude/longitude are treated as 1 km
 
             // includes nothing
@@ -129,7 +129,7 @@ class KDTreeTest {
             Assertions.assertEquals(1, kdTree.rangeSearch(parkingKreuzbleiche, 0.001).size());
             // adds sportsFacilityKreuzbleiche and militarkantine
             Assertions.assertEquals(2, kdTree.rangeSearch(parkingKreuzbleiche, 0.01).size());
-            // adds Zürich
+            // adds Zurich
             Assertions.assertEquals(3, kdTree.rangeSearch(parkingKreuzbleiche, 1).size());
         }
 

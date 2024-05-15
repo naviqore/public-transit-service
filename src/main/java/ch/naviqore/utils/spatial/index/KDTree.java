@@ -13,7 +13,7 @@ import java.util.ArrayList;
  * A k-dimensional tree (k-d tree) for fast, efficient proximity searches. This implementation only supports
  * 2-dimensional spatial data.
  *
- * @param <T> The type of location stored in this KDTree.
+ * @param <T> The type of location stored in the tree.
  */
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 public class KDTree<T extends Location<?>> {

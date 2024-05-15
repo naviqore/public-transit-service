@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GeoCoordinateTest {
 
+    private static final double TOLERANCE = 0.0001;
+
     @Nested
     class Constructor {
         static Stream<Arguments> invalidCoordinatesProvider() {
@@ -65,7 +67,7 @@ public class GeoCoordinateTest {
         @MethodSource("distanceToProvider")
         void distanceTo(GeoCoordinate c1, String d1, GeoCoordinate c2, String d2, double expected) {
             String msg = String.format("distance from %s to %s should be %f", d1, d2, expected);
-            assertEquals(expected, c1.distanceTo(c2), expected * 0.0001, msg);
+            assertEquals(expected, c1.distanceTo(c2), expected * TOLERANCE, msg);
         }
 
         @Test
@@ -85,7 +87,7 @@ public class GeoCoordinateTest {
         @MethodSource("distanceToProvider")
         void withDoubleCoordinates(GeoCoordinate c1, String d1, GeoCoordinate c2, String d2, double expected) {
             String msg = String.format("distance from %s to %s should be %f", d1, d2, expected);
-            assertEquals(expected, c1.distanceTo(c2.latitude(), c2.longitude()), expected * 0.0001, msg);
+            assertEquals(expected, c1.distanceTo(c2.latitude(), c2.longitude()), expected * TOLERANCE, msg);
         }
 
     }
