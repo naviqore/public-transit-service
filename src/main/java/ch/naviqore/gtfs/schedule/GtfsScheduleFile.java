@@ -21,8 +21,8 @@ enum GtfsScheduleFile {
     ROUTES("routes.txt", Presence.REQUIRED),
     // SHAPES("shapes.txt", Presence.OPTIONAL),
     TRIPS("trips.txt", Presence.REQUIRED),
-    STOP_TIMES("stop_times.txt", Presence.REQUIRED);
-    // TRANSFERS("transfers.txt", Presence.OPTIONAL);
+    STOP_TIMES("stop_times.txt", Presence.REQUIRED),
+    TRANSFERS("transfers.txt", Presence.OPTIONAL);
 
     private final String fileName;
     private final Presence presence;

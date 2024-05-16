@@ -4,6 +4,7 @@ import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
+import ch.naviqore.gtfs.schedule.type.TransferType;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.csv.CSVRecord;
 
@@ -50,6 +51,7 @@ class GtfsScheduleParser {
         parsers.put(GtfsScheduleFile.ROUTES, this::parseRoute);
         parsers.put(GtfsScheduleFile.TRIPS, this::parseTrips);
         parsers.put(GtfsScheduleFile.STOP_TIMES, this::parseStopTimes);
+        parsers.put(GtfsScheduleFile.TRANSFERS, this::parseTransfers);
     }
 
     private void parseAgency(CSVRecord record) {
@@ -106,5 +108,12 @@ class GtfsScheduleParser {
             log.warn("Skipping invalid stop time {}-{}: {}", record.get("trip_id"), record.get("stop_id"),
                     e.getMessage());
         }
+    }
+
+    private void parseTransfers(CSVRecord record) {
+        String minTransferTime = record.get("min_transfer_time");
+        builder.addTransfer(record.get("from_stop_id"), record.get("to_stop_id"),
+                TransferType.parse(record.get("transfer_type")),
+                minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time")));
     }
 }

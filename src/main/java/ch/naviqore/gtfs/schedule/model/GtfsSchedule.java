@@ -1,8 +1,8 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.utils.spatial.index.KDTree;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
+import ch.naviqore.utils.spatial.index.KDTreeBuilder;
+import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,11 +14,12 @@ import java.util.stream.Collectors;
 /**
  * General Transit Feed Specification (GTFS) schedule
  * <p>
- * Use the {@link GtfsScheduleBuilder} to construct a GTFS schedule instance.
+ * This is an immutable class, meaning that once an instance is created, it cannot be modified. Use the
+ * {@link GtfsScheduleBuilder} to construct a GTFS schedule instance.
  *
  * @author munterfi
  */
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@Getter
 public class GtfsSchedule {
 
     private final Map<String, Agency> agencies;
@@ -27,6 +28,22 @@ public class GtfsSchedule {
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
     private final KDTree<Stop> spatialIndex;
+
+    /**
+     * Constructs an immutable GTFS schedule.
+     * <p>
+     * Each map passed to this constructor is copied into an immutable map to prevent further modification and to
+     * enhance memory efficiency and thread-safety in a concurrent environment.
+     */
+    GtfsSchedule(Map<String, Agency> agencies, Map<String, Calendar> calendars, Map<String, Stop> stops,
+                 Map<String, Route> routes, Map<String, Trip> trips) {
+        this.agencies = Map.copyOf(agencies);
+        this.calendars = Map.copyOf(calendars);
+        this.stops = Map.copyOf(stops);
+        this.routes = Map.copyOf(routes);
+        this.trips = Map.copyOf(trips);
+        this.spatialIndex = new KDTreeBuilder<Stop>().addLocations(stops.values()).build();
+    }
 
     /**
      * Creates a new GTFS schedule builder.
@@ -95,23 +112,4 @@ public class GtfsSchedule {
                 .collect(Collectors.toList());
     }
 
-    public Map<String, Agency> getAgencies() {
-        return Collections.unmodifiableMap(agencies);
-    }
-
-    public Map<String, Calendar> getCalendars() {
-        return Collections.unmodifiableMap(calendars);
-    }
-
-    public Map<String, Stop> getStops() {
-        return Collections.unmodifiableMap(stops);
-    }
-
-    public Map<String, Route> getRoutes() {
-        return Collections.unmodifiableMap(routes);
-    }
-
-    public Map<String, Trip> getTrips() {
-        return Collections.unmodifiableMap(trips);
-    }
 }

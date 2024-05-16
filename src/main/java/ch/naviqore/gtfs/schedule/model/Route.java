@@ -13,12 +13,13 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Route implements Initializable {
+
     private final String id;
     private final Agency agency;
     private final String shortName;
     private final String longName;
     private final RouteType type;
-    private final List<Trip> trips = new ArrayList<>();
+    private List<Trip> trips = new ArrayList<>();
 
     void addTrip(Trip trip) {
         trips.add(trip);
@@ -27,6 +28,7 @@ public final class Route implements Initializable {
     @Override
     public void initialize() {
         Collections.sort(trips);
+        trips = List.copyOf(trips);
     }
 
     @Override
