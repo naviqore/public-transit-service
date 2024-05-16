@@ -18,10 +18,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ExtendWith(GtfsScheduleTestExtension.class)
 class GtfsScheduleTest {
 
+    private GtfsScheduleTestBuilder testBuilder;
     private GtfsScheduleBuilder builder;
 
     @BeforeEach
     void setUp(GtfsScheduleTestBuilder testBuilder) {
+        this.testBuilder = testBuilder;
         builder = testBuilder.withAddAgency()
                 .withAddCalendars()
                 .withAddCalendarDates()
@@ -41,13 +43,23 @@ class GtfsScheduleTest {
     @Test
     void shouldAllowBuildAfterReset() {
         builder.build();
-        builder.reset();
+        // reset the test builder which internally also reset the gtfs builder, the instance / reference stays the same.
+        testBuilder.reset();
+        // add again some GTFS test data
+        testBuilder.withAddAgency()
+                .withAddCalendars()
+                .withAddCalendarDates()
+                .withAddInterCity()
+                .withAddUnderground()
+                .withAddBus()
+                .withAddTransfers();
+        // use same builder again
         GtfsSchedule schedule = builder.build();
-        assertThat(schedule.getAgencies()).isEmpty();
-        assertThat(schedule.getCalendars()).isEmpty();
-        assertThat(schedule.getStops()).isEmpty();
-        assertThat(schedule.getRoutes()).isEmpty();
-        assertThat(schedule.getTrips()).isEmpty();
+        assertThat(schedule.getAgencies()).isNotEmpty();
+        assertThat(schedule.getCalendars()).isNotEmpty();
+        assertThat(schedule.getStops()).isNotEmpty();
+        assertThat(schedule.getRoutes()).isNotEmpty();
+        assertThat(schedule.getTrips()).isNotEmpty();
     }
 
     @Nested
