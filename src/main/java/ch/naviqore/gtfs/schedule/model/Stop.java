@@ -1,6 +1,5 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.raptor.model.Transfer;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.Location;
 import lombok.AccessLevel;
@@ -15,6 +14,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 public final class Stop implements Initializable, Location<GeoCoordinate> {
+
     private final String id;
     private final String name;
     private final GeoCoordinate coordinate;

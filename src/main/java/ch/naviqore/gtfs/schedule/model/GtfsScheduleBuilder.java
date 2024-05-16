@@ -3,8 +3,8 @@ package ch.naviqore.gtfs.schedule.model;
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.model.Transfer;
 import ch.naviqore.gtfs.schedule.type.TransferType;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -55,7 +55,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Agency " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, new Coordinate(lat, lon)));
+        stops.put(id, new Stop(id, name, new GeoCoordinate(lat, lon)));
         return this;
     }
 

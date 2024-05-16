@@ -126,6 +126,11 @@ public class GtfsScheduleTestBuilder {
         return builder.build();
     }
 
+    public void reset() {
+        builder.reset();
+        addedStops.clear();
+    }
+
     private void addRoute(Route route, boolean everydayService, boolean bidirectional) {
         builder.addRoute(route.id, route.agencyId, route.name, route.name + "long", route.routeType);
         addStops(route);
