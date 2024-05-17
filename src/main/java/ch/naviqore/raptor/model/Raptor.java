@@ -2,7 +2,6 @@ package ch.naviqore.raptor.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.log4j.Log4j2;
 
@@ -29,10 +28,6 @@ public class Raptor {
     private final StopTime[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
-
-    @Setter
-    @Getter
-    private boolean quitAfterBestTimeSolution = true;
 
     Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.stopsToIdx = lookup.stops();
@@ -64,6 +59,18 @@ public class Raptor {
             return new ArrayList<>();
         }
 
+        // get pareto-optimal solutions
+        return reconstructParetoOptimalSolutions(spawnFromSourceStop(sourceStopIdx, targetStopIdx, departureTime),
+                targetStopIdx);
+    }
+
+    // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
+    private List<Arrival[]> spawnFromSourceStop(int sourceStopIdx, int departureTime) {
+        return spawnFromSourceStop(sourceStopIdx, NO_INDEX, departureTime);
+    }
+
+    // if targetStopIdx is set (>= 0), then the search will stop when target stop cannot be pareto optimized
+    private List<Arrival[]> spawnFromSourceStop(int sourceStopIdx, int targetStopIdx, int departureTime) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, Integer.MAX_VALUE);
@@ -133,7 +140,7 @@ public class Raptor {
                             continue;
                         }
 
-                        if ( stopOffset + 1 == numberOfStops ) {
+                        if (stopOffset + 1 == numberOfStops) {
                             // last stop in route, does not make sense to check for trip to enter
                             log.debug("Stop {} is last stop in route, continue", stop.id());
                             continue;
@@ -150,7 +157,7 @@ public class Raptor {
                             log.debug("Stop {} was improved", stop.id());
 
                             // check if search should be stopped after finding the best time
-                            if (quitAfterBestTimeSolution && stopTime.arrival() >= earliestArrivals[targetStopIdx]) {
+                            if (targetStopIdx >= 0 && stopTime.arrival() >= earliestArrivals[targetStopIdx]) {
                                 log.debug("Stop {} is not better than best time, continue", stop.id());
                                 continue;
                             }
@@ -192,8 +199,7 @@ public class Raptor {
             round++;
         }
 
-        // get pareto-optimal solutions
-        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdx);
+        return earliestArrivalsPerRound;
     }
 
     private List<Connection> reconstructParetoOptimalSolutions(List<Arrival[]> earliestArrivalsPerRound,
