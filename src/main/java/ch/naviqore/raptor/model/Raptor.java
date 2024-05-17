@@ -47,10 +47,17 @@ public class Raptor {
     public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopId, targetStopId, departureTime);
 
-        // TODO: Input validation, same stop, nulls, not exising stops.
+        int sourceStopIdx;
+        int targetStopIdx;
 
-        final int sourceStopIdx = stopsToIdx.get(sourceStopId);
-        final int targetStopIdx = stopsToIdx.get(targetStopId);
+        // TODO: Input validation, same stop, nulls, not exising stops.
+        try {
+            sourceStopIdx = stopsToIdx.get(sourceStopId);
+            targetStopIdx = stopsToIdx.get(targetStopId);
+        } catch (Exception e) {
+            log.error("Error routing earliest arrival from {} to {} at {}", sourceStopId, targetStopId, departureTime);
+            return new ArrayList<>();
+        }
 
         // initialization
         final List<Arrival[]> earliestArrivalsPerRound = new ArrayList<>();
