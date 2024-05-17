@@ -2,6 +2,7 @@ package ch.naviqore.raptor.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.log4j.Log4j2;
 
@@ -28,6 +29,10 @@ public class Raptor {
     private final StopTime[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
+
+    @Setter
+    @Getter
+    private boolean quitAfterBestTimeSolution = true;
 
     Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.stopsToIdx = lookup.stops();
@@ -137,6 +142,14 @@ public class Raptor {
                         StopTime stopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
                         if (stopTime.arrival() < earliestArrivalTime) {
                             log.debug("Stop {} was improved", stop.id());
+
+                            // check if search should be stopped after finding the best time
+                            if (quitAfterBestTimeSolution && stopTime.arrival() >= earliestArrivals[targetStopIdx]) {
+                                log.debug("Stop {} is not better than best time, continue", stop.id());
+                                continue;
+                            }
+
+                            earliestArrivals[stopIdx] = stopTime.arrival();
                             earliestArrivalsThisRound[stopIdx] = new Arrival(stopTime.arrival(), ArrivalType.ROUTE,
                                     currentRouteIdx, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
