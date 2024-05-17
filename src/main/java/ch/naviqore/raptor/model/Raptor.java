@@ -2,7 +2,7 @@ package ch.naviqore.raptor.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.extern.java.Log;
+import lombok.ToString;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
@@ -56,7 +56,7 @@ public class Raptor {
         final List<Arrival[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Arrival[stops.length]);
         earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Arrival(departureTime, ArrivalType.INITIAL, NO_INDEX,
-                NO_INDEX);
+                sourceStopIdx, null);
 
         Set<Integer> markedStops = new HashSet<>();
         markedStops.add(sourceStopIdx);
@@ -95,6 +95,7 @@ public class Raptor {
                 final int numberOfTrips = currentRoute.numberOfTrips();
                 int tripOffset = 0;
                 boolean enteredTrip = false;
+                Arrival enteredAtArrival = null;
 
                 // iterate over stops in route
                 for (int stopOffset = 0; stopOffset < numberOfStops; stopOffset++) {
@@ -103,7 +104,6 @@ public class Raptor {
                     Stop stop = stops[stopIdx];
 
                     Arrival currentArrivalLastRound = earliestArrivalsLastRound[routeStops[firstRouteStopIdx + stopOffset].stopIndex()];
-                    int enteredAtIndex;
                     // find first marked stop in route
                     if (!enteredTrip) {
                         if (currentArrivalLastRound == null) {
@@ -131,7 +131,7 @@ public class Raptor {
                         if (currentArrivalLastRound == null || stopTime.arrival() < currentArrivalLastRound.time) {
                             log.debug("Stop {} was improved", stop.id());
                             earliestArrivalsThisRound[stopIdx] = new Arrival(stopTime.arrival(), ArrivalType.ROUTE,
-                                    currentRouteIdx, stopIdx);
+                                    currentRouteIdx, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
                             // Because earlier trip is not possible
@@ -142,6 +142,7 @@ public class Raptor {
 
                     // find active trip, increase trip offset
                     tripOffset = 0;
+                    enteredAtArrival = currentArrivalLastRound;
                     while (tripOffset < numberOfTrips) {
                         StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
                         if (currentStopTime.departure() >= earliestDepartureTime + SAME_STOP_TRANSFER_TIME) {
@@ -180,18 +181,14 @@ public class Raptor {
 
             // iterate through arrivals starting at target stop
             Connection connection = new Connection();
-            int currentStopIdx = targetStopIdx;
 
             while (arrival.type != ArrivalType.INITIAL) {
                 if (arrival.type == ArrivalType.ROUTE) {
-                    connection.legs.add(new Leg(stops[arrival.enteredAtStopIdx].id(), stops[currentStopIdx].id(),
-                            routes[arrival.enteredArrivalIdx()].id()));
-                    currentStopIdx = arrival.enteredAtStopIdx;
-                    arrival = earliestArrivalsPerRound.get(i - 1)[arrival.enteredAtStopIdx()];
-                    if (arrival == null)
-                    {
-                        log.debug("....");
-                    }
+                    String fromStopId = stops[arrival.previous.stopIdx].id();
+                    String toStopId = stops[arrival.stopIdx].id();
+                    String routeId = routes[arrival.routeOrTransferIdx].id();
+                    connection.legs.add(new Leg(fromStopId, toStopId, routeId));
+                    arrival = arrival.previous;
                 } else if (arrival.type == ArrivalType.TRANSFER) {
                     throw new IllegalStateException("No transfers yet!");
                 }
@@ -208,8 +205,15 @@ public class Raptor {
         return connections;
     }
 
+    enum ArrivalType {
+        INITIAL,
+        ROUTE,
+        TRANSFER
+    }
+
     @NoArgsConstructor
     @Getter
+    @ToString
     public static class Connection {
         private final List<Leg> legs = new ArrayList<>();
     }
@@ -217,13 +221,7 @@ public class Raptor {
     public record Leg(String fromStopId, String toStopId, String routeId) {
     }
 
-    enum ArrivalType {
-        INITIAL,
-        ROUTE,
-        TRANSFER
-    }
-
-    record Arrival(int time, ArrivalType type, int enteredArrivalIdx, int enteredAtStopIdx) {
+    record Arrival(int time, ArrivalType type, int routeOrTransferIdx, int stopIdx, Arrival previous) {
     }
 
 }
