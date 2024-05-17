@@ -99,8 +99,8 @@ class RaptorTest {
     class EarliestArrival {
         @Test
         void testRoutingBetweenIntersectingRoutes() {
-            raptor.routeEarliestArrival("A", "Q", 8 * 60 * 60);
-
+            List<Raptor.Connection> connections = raptor.routeEarliestArrival("A", "Q", 8 * 60 * 60);
+            System.out.println(connections);
             // TODO: assertThat...
         }
     }

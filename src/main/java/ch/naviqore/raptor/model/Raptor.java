@@ -1,5 +1,8 @@
 package ch.naviqore.raptor.model;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.extern.java.Log;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
@@ -41,22 +44,22 @@ public class Raptor {
         return new RaptorBuilder();
     }
 
-    public void routeEarliestArrival(String sourceStop, String targetStop, int departureTime) {
-        log.debug("Routing earliest arrival from {} to {} at {}", sourceStop, targetStop, departureTime);
+    public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
+        log.info("Routing earliest arrival from {} to {} at {}", sourceStopId, targetStopId, departureTime);
 
         // TODO: Input validation, same stop, nulls, not exising stops.
 
-        final int sourceIdx = stopsToIdx.get(sourceStop);
-        final int targetIdx = stopsToIdx.get(targetStop);
+        final int sourceStopIdx = stopsToIdx.get(sourceStopId);
+        final int targetStopIdx = stopsToIdx.get(targetStopId);
 
         // initialization
         final List<Arrival[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Arrival[stops.length]);
-        earliestArrivalsPerRound.getFirst()[sourceIdx] = new Arrival(departureTime, ArrivalType.INITIAL, NO_INDEX,
+        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Arrival(departureTime, ArrivalType.INITIAL, NO_INDEX,
                 NO_INDEX);
 
         Set<Integer> markedStops = new HashSet<>();
-        markedStops.add(sourceIdx);
+        markedStops.add(sourceStopIdx);
 
         int round = 1;
         while (!markedStops.isEmpty()) {
@@ -70,20 +73,21 @@ public class Raptor {
             Arrival[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
 
             // get routes of marked stops
-            Set<Route> routesToScan = new HashSet<>();
+            Set<Integer> routesToScan = new HashSet<>();
             for (int stopIdx : markedStops) {
                 Stop currentStop = stops[stopIdx];
                 int stopRouteIdx = currentStop.stopRouteIdx();
                 int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
                 while (stopRouteIdx < stopRouteEndIdx) {
-                    routesToScan.add(routes[stopRoutes[stopRouteIdx]]);
+                    routesToScan.add(stopRoutes[stopRouteIdx]);
                     stopRouteIdx++;
                 }
             }
             log.debug("Routes to scan: {}", routesToScan);
 
             // scan routes
-            for (Route currentRoute : routesToScan) {
+            for (int currentRouteIdx : routesToScan) {
+                Route currentRoute = routes[currentRouteIdx];
                 log.debug("Scanning route {}", currentRoute.id());
                 final int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
                 final int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
@@ -99,7 +103,7 @@ public class Raptor {
                     Stop stop = stops[stopIdx];
 
                     Arrival currentArrivalLastRound = earliestArrivalsLastRound[routeStops[firstRouteStopIdx + stopOffset].stopIndex()];
-
+                    int enteredAtIndex;
                     // find first marked stop in route
                     if (!enteredTrip) {
                         if (currentArrivalLastRound == null) {
@@ -126,9 +130,8 @@ public class Raptor {
                         StopTime stopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
                         if (currentArrivalLastRound == null || stopTime.arrival() < currentArrivalLastRound.time) {
                             log.debug("Stop {} was improved", stop.id());
-                            // TODO: Get correct route idx
-                            earliestArrivalsThisRound[stopIdx] = new Arrival(stopTime.arrival(), ArrivalType.ROUTE, -1,
-                                    stopIdx);
+                            earliestArrivalsThisRound[stopIdx] = new Arrival(stopTime.arrival(), ArrivalType.ROUTE,
+                                    currentRouteIdx, stopIdx);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
                             // Because earlier trip is not possible
@@ -159,17 +162,59 @@ public class Raptor {
         }
 
         // get pareto-optimal solutions
-        int legs = -1;
-        for (Arrival[] earliestArrival : earliestArrivalsPerRound) {
-            Arrival targetArrival = earliestArrival[targetIdx];
-            if (targetArrival != null) {
-                log.info("Found connection with {} legs: {}", legs, targetArrival);
-            } else {
-                log.info("Found no connection with {} legs", legs);
+        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdx);
+    }
+
+    private List<Connection> reconstructParetoOptimalSolutions(List<Arrival[]> earliestArrivalsPerRound,
+                                                               int targetStopIdx) {
+        final List<Connection> connections = new ArrayList<>();
+
+        // iterate over all rounds
+        for (int i = 1; i < earliestArrivalsPerRound.size(); i++) {
+            Arrival arrival = earliestArrivalsPerRound.get(i)[targetStopIdx];
+
+            // target stop not reached in this round
+            if (arrival == null) {
+                continue;
             }
-            legs++;
+
+            // iterate through arrivals starting at target stop
+            Connection connection = new Connection();
+            int currentStopIdx = targetStopIdx;
+
+            while (arrival.type != ArrivalType.INITIAL) {
+                if (arrival.type == ArrivalType.ROUTE) {
+                    connection.legs.add(new Leg(stops[arrival.enteredAtStopIdx].id(), stops[currentStopIdx].id(),
+                            routes[arrival.enteredArrivalIdx()].id()));
+                    currentStopIdx = arrival.enteredAtStopIdx;
+                    arrival = earliestArrivalsPerRound.get(i - 1)[arrival.enteredAtStopIdx()];
+                    if (arrival == null)
+                    {
+                        log.debug("....");
+                    }
+                } else if (arrival.type == ArrivalType.TRANSFER) {
+                    throw new IllegalStateException("No transfers yet!");
+                }
+            }
+
+            // reverse order of legs and add connection
+            if (!connection.legs.isEmpty()) {
+                Collections.reverse(connection.legs);
+                connections.add(connection);
+            }
+
         }
 
+        return connections;
+    }
+
+    @NoArgsConstructor
+    @Getter
+    public static class Connection {
+        private final List<Leg> legs = new ArrayList<>();
+    }
+
+    public record Leg(String fromStopId, String toStopId, String routeId) {
     }
 
     enum ArrivalType {

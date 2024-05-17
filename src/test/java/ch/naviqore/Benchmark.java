@@ -34,11 +34,12 @@ import java.util.Random;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class Benchmark {
 
+    private static final long SEED = 1234;
     private static final int N = 10000;
     private static final Dataset DATASET = Dataset.SWITZERLAND;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
     private static final int SECONDS_IN_DAY = 86400;
-    private static final long MONITORING_INTERVAL_MS = 30000;
+    private static final long MONITORING_INTERVAL_MS = 30;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -69,7 +70,7 @@ final class Benchmark {
     }
 
     private static RouteRequest[] sampleRouteRequests(List<String> stopIds) {
-        Random random = new Random();
+        Random random = new Random(SEED);
         RouteRequest[] requests = new RouteRequest[Benchmark.N];
         for (int i = 0; i < Benchmark.N; i++) {
             int sourceIndex = random.nextInt(stopIds.size());
