@@ -133,6 +133,12 @@ public class Raptor {
                             continue;
                         }
 
+                        if ( stopOffset + 1 == numberOfStops ) {
+                            // last stop in route, does not make sense to check for trip to enter
+                            log.debug("Stop {} is last stop in route, continue", stop.id());
+                            continue;
+                        }
+
                         // got first marked stop in the route
                         log.debug("Got first entry point at stop {} at {}", stop.id(), earliestArrivalTime);
                         enteredTrip = true;
