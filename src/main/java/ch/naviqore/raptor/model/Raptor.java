@@ -65,35 +65,34 @@ public class Raptor {
     }
 
     // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
-    private List<Arrival[]> spawnFromSourceStop(int sourceStopIdx, int departureTime) {
+    private List<RaptorLeg[]> spawnFromSourceStop(int sourceStopIdx, int departureTime) {
         return spawnFromSourceStop(sourceStopIdx, NO_INDEX, departureTime);
     }
 
     // if targetStopIdx is set (>= 0), then the search will stop when target stop cannot be pareto optimized
-    private List<Arrival[]> spawnFromSourceStop(int sourceStopIdx, int targetStopIdx, int departureTime) {
+    private List<RaptorLeg[]> spawnFromSourceStop(int sourceStopIdx, int targetStopIdx, int departureTime) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, Integer.MAX_VALUE);
         earliestArrivals[sourceStopIdx] = departureTime;
 
-        final List<Arrival[]> earliestArrivalsPerRound = new ArrayList<>();
-        earliestArrivalsPerRound.add(new Arrival[stops.length]);
-        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Arrival(departureTime, ArrivalType.INITIAL, NO_INDEX,
-                sourceStopIdx, null);
+        final List<RaptorLeg[]> earliestArrivalsPerRound = new ArrayList<>();
+        earliestArrivalsPerRound.add(new RaptorLeg[stops.length]);
+        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new RaptorLeg(0, departureTime, ArrivalType.INITIAL,
+                NO_INDEX, sourceStopIdx, null);
 
         Set<Integer> markedStops = new HashSet<>();
         markedStops.add(sourceStopIdx);
 
         int round = 1;
         while (!markedStops.isEmpty()) {
-            log.debug("Scanning routes for round {} (=trips)", round);
-            log.debug("Marked stops: {}", markedStops);
+            log.debug("Scanning routes for round {}", round);
             Set<Integer> markedStopsNext = new HashSet<>();
 
             // initialize the earliest arrivals for current round
-            Arrival[] earliestArrivalsLastRound = earliestArrivalsPerRound.get(round - 1);
-            earliestArrivalsPerRound.add(new Arrival[stops.length]);
-            Arrival[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
+            RaptorLeg[] earliestArrivalsLastRound = earliestArrivalsPerRound.get(round - 1);
+            earliestArrivalsPerRound.add(new RaptorLeg[stops.length]);
+            RaptorLeg[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
 
             // get routes of marked stops
             Set<Integer> routesToScan = new HashSet<>();
@@ -118,7 +117,8 @@ public class Raptor {
                 final int numberOfTrips = currentRoute.numberOfTrips();
                 int tripOffset = 0;
                 boolean enteredTrip = false;
-                Arrival enteredAtArrival = null;
+                int tripEntryTime = 0;
+                RaptorLeg enteredAtArrival = null;
 
                 // iterate over stops in route
                 for (int stopOffset = 0; stopOffset < numberOfStops; stopOffset++) {
@@ -163,8 +163,8 @@ public class Raptor {
                             }
 
                             earliestArrivals[stopIdx] = stopTime.arrival();
-                            earliestArrivalsThisRound[stopIdx] = new Arrival(stopTime.arrival(), ArrivalType.ROUTE,
-                                    currentRouteIdx, stopIdx, enteredAtArrival);
+                            earliestArrivalsThisRound[stopIdx] = new RaptorLeg(tripEntryTime, stopTime.arrival(),
+                                    ArrivalType.ROUTE, currentRouteIdx, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
                             // Because earlier trip is not possible
@@ -179,6 +179,7 @@ public class Raptor {
                         StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
                         if (currentStopTime.departure() >= earliestArrivalTime + SAME_STOP_TRANSFER_TIME) {
                             log.debug("Found active trip ({}) on route {}", tripOffset, currentRoute.id());
+                            tripEntryTime = currentStopTime.departure();
                             break;
                         }
                         if (tripOffset < numberOfTrips - 1) {
@@ -206,10 +207,13 @@ public class Raptor {
                     int newTargetStopArrivalTime = earliestArrivals[stopIdx] + transfer.duration() - SAME_STOP_TRANSFER_TIME;
 
                     // update improved arrival time
-                    if( earliestArrivals[transfer.targetStopIdx()] > newTargetStopArrivalTime ) {
-                        log.debug("Stop {} was improved by transfer from stop {}", stops[transfer.targetStopIdx()].id(), stops[stopIdx].id());
+                    if (earliestArrivals[transfer.targetStopIdx()] > newTargetStopArrivalTime) {
+                        log.debug("Stop {} was improved by transfer from stop {}", stops[transfer.targetStopIdx()].id(),
+                                stops[stopIdx].id());
                         earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
-                        earliestArrivalsThisRound[transfer.targetStopIdx()] = new Arrival(newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(), earliestArrivalsThisRound[stopIdx]);
+                        earliestArrivalsThisRound[transfer.targetStopIdx()] = new RaptorLeg(earliestArrivals[stopIdx],
+                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                                earliestArrivalsThisRound[stopIdx]);
                         newStops.add(transfer.targetStopIdx());
                     }
                 }
@@ -224,13 +228,13 @@ public class Raptor {
         return earliestArrivalsPerRound;
     }
 
-    private List<Connection> reconstructParetoOptimalSolutions(List<Arrival[]> earliestArrivalsPerRound,
+    private List<Connection> reconstructParetoOptimalSolutions(List<RaptorLeg[]> earliestArrivalsPerRound,
                                                                int targetStopIdx) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
         for (int i = 1; i < earliestArrivalsPerRound.size(); i++) {
-            Arrival arrival = earliestArrivalsPerRound.get(i)[targetStopIdx];
+            RaptorLeg arrival = earliestArrivalsPerRound.get(i)[targetStopIdx];
 
             // target stop not reached in this round
             if (arrival == null) {
@@ -241,15 +245,19 @@ public class Raptor {
             Connection connection = new Connection();
 
             while (arrival.type != ArrivalType.INITIAL) {
+                String description;
                 String fromStopId = stops[arrival.previous.stopIdx].id();
                 String toStopId = stops[arrival.stopIdx].id();
+                int departureTime = arrival.departureTime;
+                int arrivalTime = arrival.arrivalTime;
                 if (arrival.type == ArrivalType.ROUTE) {
-                    String routeId = routes[arrival.routeOrTransferIdx].id();
-                    connection.legs.add(new Leg(fromStopId, toStopId, routeId));
+                    description = routes[arrival.routeOrTransferIdx].id();
                 } else if (arrival.type == ArrivalType.TRANSFER) {
-                    String transferId = "TRANSFER: " + fromStopId + " to " + toStopId;
-                    connection.legs.add(new Leg(fromStopId, toStopId, transferId));
+                    description = "TRANSFER: " + fromStopId + " to " + toStopId;
+                } else {
+                    throw new IllegalStateException("Unknown arrival type");
                 }
+                connection.legs.add(new ConnectionLeg(fromStopId, toStopId, description, departureTime, arrivalTime));
                 arrival = arrival.previous;
             }
 
@@ -274,13 +282,15 @@ public class Raptor {
     @Getter
     @ToString
     public static class Connection {
-        private final List<Leg> legs = new ArrayList<>();
+        private final List<ConnectionLeg> legs = new ArrayList<>();
     }
 
-    public record Leg(String fromStopId, String toStopId, String routeId) {
+    public record ConnectionLeg(String fromStopId, String toStopId, String routeId, int departureTime,
+                                int arrivalTime) {
     }
 
-    record Arrival(int time, ArrivalType type, int routeOrTransferIdx, int stopIdx, Arrival previous) {
+    record RaptorLeg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
+                     RaptorLeg previous) {
     }
 
 }
