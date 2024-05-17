@@ -192,7 +192,29 @@ public class Raptor {
                 }
             }
 
-            // TODO: Relax footpath transfers
+            // relax footpaths for all markedStops
+            // temp variable to add any new stops to markedStopsNext
+            Set<Integer> newStops = new HashSet<>();
+            for (int stopIdx : markedStopsNext) {
+                Stop currentStop = stops[stopIdx];
+                if (currentStop.numberOfTransfers() == 0) {
+                    continue;
+                }
+                for (int i = currentStop.transferIdx(); i < currentStop.numberOfTransfers(); i++) {
+                    Transfer transfer = transfers[i];
+                    // TODO: Handle variable SAME_STOP_TRANSFER_TIMEs
+                    int newTargetStopArrivalTime = earliestArrivals[stopIdx] + transfer.duration() - SAME_STOP_TRANSFER_TIME;
+
+                    // update improved arrival time
+                    if( earliestArrivals[transfer.targetStopIdx()] > newTargetStopArrivalTime ) {
+                        log.debug("Stop {} was improved by transfer from stop {}", stops[transfer.targetStopIdx()].id(), stops[stopIdx].id());
+                        earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
+                        earliestArrivalsThisRound[transfer.targetStopIdx()] = new Arrival(newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(), earliestArrivalsThisRound[stopIdx]);
+                        newStops.add(transfer.targetStopIdx());
+                    }
+                }
+            }
+            markedStopsNext.addAll(newStops);
 
             // prepare next round
             markedStops = markedStopsNext;
@@ -219,15 +241,16 @@ public class Raptor {
             Connection connection = new Connection();
 
             while (arrival.type != ArrivalType.INITIAL) {
+                String fromStopId = stops[arrival.previous.stopIdx].id();
+                String toStopId = stops[arrival.stopIdx].id();
                 if (arrival.type == ArrivalType.ROUTE) {
-                    String fromStopId = stops[arrival.previous.stopIdx].id();
-                    String toStopId = stops[arrival.stopIdx].id();
                     String routeId = routes[arrival.routeOrTransferIdx].id();
                     connection.legs.add(new Leg(fromStopId, toStopId, routeId));
-                    arrival = arrival.previous;
                 } else if (arrival.type == ArrivalType.TRANSFER) {
-                    throw new IllegalStateException("No transfers yet!");
+                    String transferId = "TRANSFER: " + fromStopId + " to " + toStopId;
+                    connection.legs.add(new Leg(fromStopId, toStopId, transferId));
                 }
+                arrival = arrival.previous;
             }
 
             // reverse order of legs and add connection
