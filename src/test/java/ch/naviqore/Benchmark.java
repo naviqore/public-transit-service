@@ -35,7 +35,7 @@ import java.util.Random;
 final class Benchmark {
 
     private static final long SEED = 1234;
-    private static final int N = 10000;
+    private static final int N = 1000;
     private static final Dataset DATASET = Dataset.SWITZERLAND;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
     private static final int SECONDS_IN_DAY = 86400;
@@ -91,18 +91,18 @@ final class Benchmark {
         RoutingResult[] responses = new RoutingResult[requests.length];
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
-            // TODO: RaptorResponse result =
-            raptor.routeEarliestArrival(requests[i].sourceStop(), requests[i].targetStop(),
-                    requests[i].departureTime());
+            List<Raptor.Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop(),
+                    requests[i].targetStop(), requests[i].departureTime());
             long endTime = System.nanoTime();
             responses[i] = new RoutingResult(requests[i].sourceStop(), requests[i].targetStop(),
-                    requests[i].departureTime(), 0, 0, 0, (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR);
+                    requests[i].departureTime(), connections, 0, 0, 0,
+                    (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR);
         }
         return responses;
     }
 
     private static void writeResultsToCsv(RoutingResult[] results) throws IOException {
-        String header = "source_stop,target_stop,requested_departure_time,departure_time,arrival_time,transfers,processing_time_ms";
+        String header = "source_stop,target_stop,requested_departure_time,connections,departure_time,arrival_time,transfers,processing_time_ms";
         String folderPath = String.format("benchmark/output/%s", DATASET.name().toLowerCase());
         String fileName = String.format("%s_raptor_results.csv",
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss")));
@@ -117,9 +117,9 @@ final class Benchmark {
             writer.println(header);
 
             for (RoutingResult result : results) {
-                writer.printf("%s,%s,%d,%d,%d,%d,%d%n", result.sourceStop(), result.targetStop(),
-                        result.requestedDepartureTime(), result.departureTime(), result.arrivalTime(),
-                        result.transfers(), result.time());
+                writer.printf("%s,%s,%d,%d,%d,%d,%d,%d%n", result.sourceStop, result.targetStop,
+                        result.requestedDepartureTime, result.connections.size(), result.departureTime,
+                        result.arrivalTime, result.transfers, result.time);
             }
         }
     }
@@ -127,7 +127,8 @@ final class Benchmark {
     record RouteRequest(String sourceStop, String targetStop, int departureTime) {
     }
 
-    record RoutingResult(String sourceStop, String targetStop, int requestedDepartureTime, int departureTime,
-                         int arrivalTime, int transfers, long time) {
+    record RoutingResult(String sourceStop, String targetStop, int requestedDepartureTime,
+                         List<Raptor.Connection> connections, int departureTime, int arrivalTime, int transfers,
+                         long time) {
     }
 }
