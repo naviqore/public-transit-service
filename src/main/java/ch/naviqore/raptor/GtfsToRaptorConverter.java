@@ -1,9 +1,9 @@
 package ch.naviqore.raptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
+import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.model.Raptor;
 import ch.naviqore.raptor.model.RaptorBuilder;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDate;
@@ -13,41 +13,82 @@ import java.util.Set;
 
 /**
  * Maps GTFS schedule to Raptor
+ * <p>
+ * For each sub-route in a GTFS route a route in Raptor is created. Only the "minimum time" transfers between different
+ * stations are considered as Raptor transfers. In the Raptor model, transfers are treated exclusively as pedestrian
+ * paths between stations, reflecting necessary walking connections. Thus, other types of GTFS transfers are omitted
+ * from the mapping process to align with Raptor's conceptual model.
  *
  * @author munterfi
  */
-@RequiredArgsConstructor
 @Log4j2
 public class GtfsToRaptorConverter {
 
+    private final Set<GtfsRoutePartitioner.SubRoute> subRoutes = new HashSet<>();
     private final Set<Stop> stops = new HashSet<>();
-    private final Set<Route> routes = new HashSet<>();
-    private final RaptorBuilder builder;
+    private final RaptorBuilder builder = Raptor.builder();
+    private final GtfsRoutePartitioner partitioner;
+    private final GtfsSchedule schedule;
 
-    public Raptor convert(GtfsSchedule schedule, LocalDate date) {
+    public GtfsToRaptorConverter(GtfsSchedule schedule) {
+        this.partitioner = new GtfsRoutePartitioner(schedule);
+        this.schedule = schedule;
+    }
+
+    public Raptor convert(LocalDate date) {
         List<Trip> activeTrips = schedule.getActiveTrips(date);
         log.info("Converting {} active trips from GTFS schedule to Raptor model", activeTrips.size());
+
         for (Trip trip : activeTrips) {
-            Route route = trip.getRoute();
-            if (!routes.contains(route)) {
-                routes.add(route);
-                builder.addRoute(route.getId());
-                // TODO: Add test for consistency of route stops. Since in GTFS are defined per trip, but Raptor
-                //  builder expects them to be the same for all trips of a route.
-                for (StopTime stopTime : trip.getStopTimes()) {
-                    if (!stops.contains(stopTime.stop())) {
-                        stops.add(stopTime.stop());
-                        builder.addStop(stopTime.stop().getId());
-                    }
-                    builder.addRouteStop(stopTime.stop().getId(), route.getId());
-                }
+            GtfsRoutePartitioner.SubRoute subRoute = partitioner.getSubRoute(trip);
+
+            if (!subRoutes.contains(subRoute)) {
+                subRoutes.add(subRoute);
+                builder.addRoute(subRoute.getId());
+                addRouteStops(trip, subRoute);
             }
+
             for (StopTime stopTime : trip.getStopTimes()) {
-                builder.addStopTime(stopTime.stop().getId(), route.getId(), stopTime.arrival().getTotalSeconds(),
+                builder.addStopTime(stopTime.stop().getId(), subRoute.getId(), stopTime.arrival().getTotalSeconds(),
                         stopTime.departure().getTotalSeconds());
             }
         }
 
+        addTransfers();
+
         return builder.build();
+    }
+
+    private void addRouteStops(Trip trip, GtfsRoutePartitioner.SubRoute subRoute) {
+        for (StopTime stopTime : trip.getStopTimes()) {
+            Stop stop = stopTime.stop();
+
+            if (!stops.contains(stop)) {
+                stops.add(stop);
+                builder.addStop(stop.getId());
+            }
+
+            builder.addRouteStop(stop.getId(), subRoute.getId());
+        }
+    }
+
+    private void addTransfers() {
+        for (Stop stop : stops) {
+            for (Transfer transfer : stop.getTransfers()) {
+                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop() && transfer.getMinTransferTime()
+                        .isPresent()) {
+                    try {
+                        builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
+                                transfer.getMinTransferTime().get());
+                    } catch (IllegalArgumentException e) {
+                        // TODO: Problem is that with active trips we already filtered some stops which have no active
+                        //  trip anymore, so they are not added. Maybe we should build the Raptor always for the
+                        //  complete schedule, and add use masking array for the stop times of when we want to create
+                        //  routes at a specific date. This would also be more efficient.
+                        log.warn("Omit adding transfer: {}", e.getMessage());
+                    }
+                }
+            }
+        }
     }
 }

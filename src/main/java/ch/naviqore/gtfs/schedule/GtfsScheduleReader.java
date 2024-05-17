@@ -10,10 +10,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.io.input.BOMInputStream;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -41,11 +38,12 @@ public class GtfsScheduleReader {
     private static void readFromDirectory(File directory, GtfsScheduleParser parser) throws IOException {
         for (GtfsScheduleFile fileType : GtfsScheduleFile.values()) {
             File csvFile = new File(directory, fileType.getFileName());
+
             if (csvFile.exists()) {
                 log.info("Reading GTFS CSV file: {}", csvFile.getAbsolutePath());
                 readCsvFile(csvFile, parser, fileType);
-            } else {
-                log.warn("GTFS CSV file {} not found", csvFile.getAbsolutePath());
+            } else if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
+                throw new FileNotFoundException("Required GTFS CSV file" + csvFile.getAbsolutePath() + " not found");
             }
         }
     }
@@ -54,6 +52,7 @@ public class GtfsScheduleReader {
         try (ZipFile zf = new ZipFile(zipFile, StandardCharsets.UTF_8)) {
             for (GtfsScheduleFile fileType : GtfsScheduleFile.values()) {
                 ZipEntry entry = zf.getEntry(fileType.getFileName());
+
                 if (entry != null) {
                     log.info("Reading GTFS file from ZIP: {}", entry.getName());
                     try (InputStreamReader reader = new InputStreamReader(BOMInputStream.builder()
@@ -63,8 +62,9 @@ public class GtfsScheduleReader {
                             .get(), StandardCharsets.UTF_8)) {
                         readCsvRecords(reader, parser, fileType);
                     }
-                } else {
-                    log.warn("GTFS file {} not found in ZIP", fileType.getFileName());
+                } else if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
+                    throw new FileNotFoundException(
+                            "Required GTFS CSV file" + fileType.getFileName() + " not found in ZIP");
                 }
             }
         }

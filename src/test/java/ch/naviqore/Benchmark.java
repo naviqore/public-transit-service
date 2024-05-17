@@ -25,6 +25,9 @@ import java.util.Random;
  * Benchmark for Raptor routing algorithm.
  * <p>
  * Measures the time it takes to route a number of requests using Raptor algorithm on large GTFS datasets.
+ * <p>
+ * Note: To run this benchmark, ensure that the log level is set to INFO in the
+ * {@code src/test/resources/log4j2.properties} file.
  *
  * @author munterfi
  */
@@ -55,7 +58,7 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(Raptor.builder()).convert(schedule, SCHEDULE_DATE);
+        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
     }
