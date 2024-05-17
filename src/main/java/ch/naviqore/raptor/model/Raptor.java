@@ -150,7 +150,13 @@ public class Raptor {
                             log.debug("Found active trip ({}) on route {}", tripOffset, currentRoute.id());
                             break;
                         }
-                        tripOffset++;
+                        if( tripOffset < numberOfTrips - 1 ){
+                            tripOffset++;
+                        } else {
+                            // no active trip found
+                            log.debug("No active trip found on route {}", currentRoute.id());
+                            break;
+                        }
                     }
                 }
             }

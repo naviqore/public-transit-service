@@ -174,7 +174,7 @@ public class RaptorBuilder {
             }
 
             routeArr[routeIdx] = new Route(routeId, routeStopCnt - currentRouteStops.size(), currentRouteStops.size(),
-                    stopTimeCnt - currentStopTimes.size(), currentStopTimes.size());
+                    stopTimeCnt - currentStopTimes.size(), currentStopTimes.size() / currentRouteStops.size());
         }
         return new RouteTraversal(stopTimeArr, routeArr, routeStopArr);
     }
