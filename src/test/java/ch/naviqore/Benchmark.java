@@ -5,6 +5,7 @@ import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.GtfsToRaptorConverter;
 import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.raptor.model.Connection;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -91,7 +92,7 @@ final class Benchmark {
         RoutingResult[] responses = new RoutingResult[requests.length];
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
-            List<Raptor.Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop(),
+            List<Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop(),
                     requests[i].targetStop(), requests[i].departureTime());
             long endTime = System.nanoTime();
             responses[i] = new RoutingResult(requests[i].sourceStop(), requests[i].targetStop(),
@@ -128,7 +129,7 @@ final class Benchmark {
     }
 
     record RoutingResult(String sourceStop, String targetStop, int requestedDepartureTime,
-                         List<Raptor.Connection> connections, int departureTime, int arrivalTime, int transfers,
+                         List<Connection> connections, int departureTime, int arrivalTime, int transfers,
                          long time) {
     }
 }
