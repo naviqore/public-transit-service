@@ -3,6 +3,7 @@ package ch.naviqore.raptor.model;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -134,7 +135,6 @@ class RaptorTest {
             String targetStop = "Q";
             int departureTime = 8 * SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
-            System.out.println(connections);
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
@@ -166,6 +166,68 @@ class RaptorTest {
                     "First connection should be slower than second connection");
             assertTrue(connection1.getNumRouteLegs() < connection2.getNumRouteLegs(),
                     "First connection should have fewer route legs than second connection");
+        }
+
+        @Test
+        void routeBetweenNotLinkedStops() {
+            // Remove route R2/R4 to make stop Q (on R3) unreachable from A (on R1)
+            List<Utilities.Route> routes = ROUTES.stream().filter(route -> !route.id.equals("R2") && !route.id.equals("R4")).toList();
+            List<Utilities.Transfer> transfers = new ArrayList<>();
+            Raptor raptor = Utilities.buildRaptor(routes, transfers, DAY_START_HOUR, DAY_END_HOUR);
+            String sourceStop = "A";
+            String targetStop = "Q";
+            int departureTime = 8 * SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            assertTrue(connections.isEmpty(), "No connection should be found");
+        }
+
+        @Test
+        void routeBetweenOnlyFootpath(){
+            List<Utilities.Transfer> transfers = List.of(new Utilities.Transfer("N", "D", 1));
+            Raptor raptor = Utilities.buildRaptor(ROUTES, transfers, DAY_START_HOUR, DAY_END_HOUR);
+            String sourceStop = "N";
+            String targetStop = "D";
+            int departureTime = 8 * SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            assertEquals(sourceStop, connection.getFromStopId());
+            assertEquals(targetStop, connection.getToStopId());
+            assertTrue(connection.getDepartureTime() >= departureTime,
+                    "Departure time should be greater equal than searched for departure time");
+            assertEquals(1, connection.getNumFootPathTransfers());
+            assertEquals(1, connection.getNumTransfers());
+            assertEquals(0, connection.getNumSameStationTransfers());
+            assertEquals(0, connection.getNumRouteLegs());
+        }
+
+        @Test
+        void routeBetweenSameStop(){
+            Raptor raptor = Utilities.buildRaptor();
+            String sourceStop = "A";
+            String targetStop = "A";
+            int departureTime = 8 * SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            assertEquals(0, connections.size());
+        }
+
+        @Test
+        void routeBetweenTwoStopsOnSameRoute(){
+            Raptor raptor = Utilities.buildRaptor();
+            String sourceStop = "A";
+            String targetStop = "B";
+            int departureTime = 8 * SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            System.out.println(connections);
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            assertEquals(sourceStop, connection.getFromStopId());
+            assertEquals(targetStop, connection.getToStopId());
+            assertTrue(connection.getDepartureTime() >= departureTime,
+                    "Departure time should be greater equal than searched for departure time");
+            assertEquals(0, connection.getNumFootPathTransfers());
+            assertEquals(0, connection.getNumTransfers());
+            assertEquals(0, connection.getNumSameStationTransfers());
         }
     }
 
