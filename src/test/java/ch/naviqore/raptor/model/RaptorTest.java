@@ -7,6 +7,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * Tests for the Raptor class.
  * <p>
@@ -116,10 +119,53 @@ class RaptorTest {
     class EarliestArrival {
         @Test
         void routingBetweenIntersectingRoutes() {
+            // Should return two pareto optimal connections:
+            // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
+            //  - Route R1-F from A to D
+            //  - Foot Transfer from D to N
+            //  - Route R3-F from N to Q
+
+            // 2. Connection (with three route legs and two transfers (same station) --> faster but more transfers)
+            //  - Route R1-F from A to F
+            //  - Route R4-R from F to P
+            //  - Route R3-F from P to Q
             Raptor raptor = Utilities.buildRaptor();
-            List<Raptor.Connection> connections = raptor.routeEarliestArrival("A", "Q", 8 * SECONDS_IN_HOUR);
+            String sourceStop = "A";
+            String targetStop = "Q";
+            int departureTime = 8 * SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             System.out.println(connections);
-            // TODO: assertThat...
+
+            // check if 2 connections were found
+            assertEquals(2, connections.size());
+
+            // check if the first connection is correct
+            Connection connection1 = connections.getFirst();
+            assertEquals(sourceStop, connection1.getFromStopId());
+            assertEquals(targetStop, connection1.getToStopId());
+            assertTrue(connection1.getDepartureTime() >= departureTime,
+                    "Departure time should be greater equal than searched for departure time");
+            // check that transfers make sense
+            assertEquals(1, connection1.getNumFootPathTransfers());
+            assertEquals(1, connection1.getNumTransfers());
+            assertEquals(0, connection1.getNumSameStationTransfers());
+
+            // check second connection
+            Connection connection2 = connections.get(1);
+            assertEquals(sourceStop, connection2.getFromStopId());
+            assertEquals(targetStop, connection2.getToStopId());
+            assertTrue(connection2.getDepartureTime() >= departureTime,
+                    "Departure time should be greater equal than searched for departure time");
+            // check that transfers make sense
+            assertEquals(0, connection2.getNumFootPathTransfers());
+            assertEquals(2, connection2.getNumTransfers());
+            assertEquals(2, connection2.getNumSameStationTransfers());
+
+            // compare two connections (make sure they are pareto optimal)
+            assertTrue(connection1.getDuration() > connection2.getDuration(),
+                    "First connection should be slower than second connection");
+            assertTrue(connection1.getNumRouteLegs() < connection2.getNumRouteLegs(),
+                    "First connection should have fewer route legs than second connection");
         }
     }
 
