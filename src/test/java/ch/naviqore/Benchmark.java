@@ -8,6 +8,7 @@ import ch.naviqore.raptor.model.Connection;
 import ch.naviqore.raptor.model.Raptor;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,6 +34,7 @@ import java.util.Random;
  * @author munterfi
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Log4j2
 final class Benchmark {
 
     private static final long SEED = 1234;
@@ -72,8 +74,8 @@ final class Benchmark {
 
     private static RouteRequest[] sampleRouteRequests(List<String> stopIds) {
         Random random = new Random(SEED);
-        RouteRequest[] requests = new RouteRequest[Benchmark.N];
-        for (int i = 0; i < Benchmark.N; i++) {
+        RouteRequest[] requests = new RouteRequest[N];
+        for (int i = 0; i < N; i++) {
             int sourceIndex = random.nextInt(stopIds.size());
             int destinationIndex = getRandomDestinationIndex(stopIds.size(), sourceIndex, random);
             requests[i] = new RouteRequest(stopIds.get(sourceIndex), stopIds.get(destinationIndex),
@@ -92,12 +94,17 @@ final class Benchmark {
         RoutingResult[] responses = new RoutingResult[requests.length];
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
-            List<Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop(),
-                    requests[i].targetStop(), requests[i].departureTime());
-            long endTime = System.nanoTime();
-            responses[i] = new RoutingResult(requests[i].sourceStop(), requests[i].targetStop(),
-                    requests[i].departureTime(), connections, 0, 0, 0,
-                    (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR);
+            try {
+                List<Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop(),
+                        requests[i].targetStop(), requests[i].departureTime());
+                long endTime = System.nanoTime();
+                responses[i] = new RoutingResult(requests[i].sourceStop(), requests[i].targetStop(),
+                        requests[i].departureTime(), connections, 0, 0, 0,
+                        (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR);
+            } catch (IllegalArgumentException e) {
+                log.error("Could not process route request: {}", e.getMessage());
+            }
+
         }
         return responses;
     }
