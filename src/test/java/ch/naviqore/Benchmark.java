@@ -4,8 +4,8 @@ import ch.naviqore.BenchmarkData.Dataset;
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.GtfsToRaptorConverter;
-import ch.naviqore.raptor.model.Raptor;
 import ch.naviqore.raptor.model.Connection;
+import ch.naviqore.raptor.model.Raptor;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -128,8 +128,7 @@ final class Benchmark {
     record RouteRequest(String sourceStop, String targetStop, int departureTime) {
     }
 
-    record RoutingResult(String sourceStop, String targetStop, int requestedDepartureTime,
-                         List<Connection> connections, int departureTime, int arrivalTime, int transfers,
-                         long time) {
+    record RoutingResult(String sourceStop, String targetStop, int requestedDepartureTime, List<Connection> connections,
+                         int departureTime, int arrivalTime, int transfers, long time) {
     }
 }

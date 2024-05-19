@@ -75,8 +75,8 @@ public class Raptor {
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Leg[stops.length]);
-        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Leg(0, departureTime, ArrivalType.INITIAL,
-                NO_INDEX, sourceStopIdx, null);
+        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Leg(0, departureTime, ArrivalType.INITIAL, NO_INDEX,
+                sourceStopIdx, null);
 
         Set<Integer> markedStops = new HashSet<>();
         markedStops.add(sourceStopIdx);
@@ -239,7 +239,7 @@ public class Raptor {
             }
 
             // iterate through arrivals starting at target stop
-            List<Connection.Leg> legs = new ArrayList<>();
+            Connection connection = new Connection();
             while (arrival.type != ArrivalType.INITIAL) {
                 String description;
                 String fromStopId = stops[arrival.previous.stopIdx].id();
@@ -252,17 +252,19 @@ public class Raptor {
                     type = Connection.LegType.ROUTE;
                 } else if (arrival.type == ArrivalType.TRANSFER) {
                     description = "TRANSFER: " + fromStopId + " to " + toStopId;
-                    type = Connection.LegType.TRANSFER;
+                    type = Connection.LegType.FOOTPATH;
                 } else {
                     throw new IllegalStateException("Unknown arrival type");
                 }
-                legs.add(new Connection.Leg(description, fromStopId, toStopId, departureTime, arrivalTime, type));
+                connection.addLeg(
+                        new Connection.Leg(description, fromStopId, toStopId, departureTime, arrivalTime, type));
                 arrival = arrival.previous;
             }
 
-            // reverse order of legs and add connection
-            if (!legs.isEmpty()) {
-                connections.add(new Connection(legs));
+            // initialize connection: Reverse order of legs and add connection
+            if (!connection.getLegs().isEmpty()) {
+                connection.initialize();
+                connections.add(connection);
             }
 
         }
@@ -270,14 +272,14 @@ public class Raptor {
         return connections;
     }
 
-    enum ArrivalType {
+    private enum ArrivalType {
         INITIAL,
         ROUTE,
         TRANSFER
     }
 
-    record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
-               Leg previous) {
+    private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
+                       Leg previous) {
     }
 
 }

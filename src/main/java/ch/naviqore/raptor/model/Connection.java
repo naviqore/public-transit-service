@@ -3,55 +3,55 @@ package ch.naviqore.raptor.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 
-@Getter
+/**
+ * A connection is a sequence of legs to travel from an origin stop to destination stop.
+ */
 @NoArgsConstructor
+@Getter
 @ToString
-public class Connection {
+public class Connection implements Comparable<Connection> {
 
-    private final List<Leg> legs = new ArrayList<>();
+    private List<Leg> legs = new ArrayList<>();
 
-    public Connection(List<Leg> legs) {
-        this.addLegs(legs);
+    private static void validateLegOrder(Leg current, Leg next) {
+        if (!current.toStopId.equals(next.fromStopId)) {
+            throw new IllegalStateException("Legs are not connected: " + current + " -> " + next);
+        }
+        if (current.arrivalTime < current.departureTime) {
+            throw new IllegalStateException("Arrival time must be after departure time: " + current);
+        }
+        if (current.arrivalTime > next.departureTime) {
+            throw new IllegalStateException(
+                    "Arrival time must be before next departure time: " + current + " -> " + next);
+        }
     }
 
-    public void addLeg(String description, String fromStopId, String toStopId, int departureTime, int arrivalTime,
-                       LegType type) {
-        addLeg(new Leg(description, fromStopId, toStopId, departureTime, arrivalTime, type));
+    void addLeg(Leg leg) {
+        this.legs.add(leg);
     }
 
-    public void addLeg(Leg leg) {
-        legs.add(leg);
-        update();
-    }
-
-    public void addLegs(List<Leg> legs) {
-        this.legs.addAll(legs);
-        update();
-    }
-
-    public void update() {
+    void initialize() {
         // sort legs by departure time
-        legs.sort(Comparator.comparingInt(l -> l.departureTime));
+        Collections.sort(legs);
         // make sure that the legs are connected and times are consistent
         for (int i = 0; i < legs.size() - 1; i++) {
             Leg current = legs.get(i);
             Leg next = legs.get(i + 1);
-            if (!current.toStopId.equals(next.fromStopId)) {
-                throw new IllegalArgumentException("Legs are not connected: " + current + " -> " + next);
-            }
-            if (current.arrivalTime < current.departureTime) {
-                throw new IllegalArgumentException("Arrival time must be after departure time: " + current);
-            }
-            if (current.arrivalTime > next.departureTime) {
-                throw new IllegalArgumentException(
-                        "Arrival time must be before next departure time: " + current + " -> " + next);
-            }
+            validateLegOrder(current, next);
         }
+        // make legs immutable and remove unnecessary allocated memory
+        this.legs = List.copyOf(legs);
+    }
+
+    @Override
+    public int compareTo(@NotNull Connection other) {
+        return Integer.compare(this.getArrivalTime(), other.getArrivalTime());
     }
 
     public int getDepartureTime() {
@@ -75,7 +75,7 @@ public class Connection {
     }
 
     public int getNumFootPathTransfers() {
-        return (int) legs.stream().filter(l -> l.type == LegType.TRANSFER).count();
+        return (int) legs.stream().filter(l -> l.type == LegType.FOOTPATH).count();
     }
 
     public int getNumSameStationTransfers() {
@@ -93,15 +93,25 @@ public class Connection {
         return (int) legs.stream().filter(l -> l.type == LegType.ROUTE).count();
     }
 
-
-
+    /**
+     * Types of legs in a connection.
+     */
     public enum LegType {
-        TRANSFER,
+        FOOTPATH,
         ROUTE
     }
 
+    /**
+     * A leg is a part of a connection that is travelled on the same route and transport mode, without a transfer.
+     */
     public record Leg(String routeId, String fromStopId, String toStopId, int departureTime, int arrivalTime,
-                      LegType type) {
+                      LegType type) implements Comparable<Leg> {
+
+        @Override
+        public int compareTo(@NotNull Connection.Leg other) {
+            return Integer.compare(this.departureTime, other.departureTime);
+        }
+
     }
 
 }

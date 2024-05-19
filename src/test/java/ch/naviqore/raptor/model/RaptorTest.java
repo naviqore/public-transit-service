@@ -48,15 +48,15 @@ class RaptorTest {
     private static final int SECONDS_IN_HOUR = 3600;
     private static final int DAY_START_HOUR = 5;
     private static final int DAY_END_HOUR = 25;
-    private static final List<Utilities.Route> ROUTES = List.of(
-            new Utilities.Route("R1", List.of("A", "B", "C", "D", "E", "F", "G")),
-            new Utilities.Route("R2", List.of("H", "B", "I", "J", "K", "L")),
-            new Utilities.Route("R3", List.of("M", "K", "N", "O", "P", "Q")),
-            new Utilities.Route("R4", List.of("R", "P", "F", "S")));
-    private static final List<Utilities.Transfer> TRANSFERS = List.of(new Utilities.Transfer("N", "D", 60),
-            new Utilities.Transfer("L", "R", 30));
+    private static final List<Utils.Route> ROUTES = List.of(
+            new Utils.Route("R1", List.of("A", "B", "C", "D", "E", "F", "G")),
+            new Utils.Route("R2", List.of("H", "B", "I", "J", "K", "L")),
+            new Utils.Route("R3", List.of("M", "K", "N", "O", "P", "Q")),
+            new Utils.Route("R4", List.of("R", "P", "F", "S")));
+    private static final List<Utils.Transfer> TRANSFERS = List.of(new Utils.Transfer("N", "D", 60),
+            new Utils.Transfer("L", "R", 30));
 
-    static class Utilities {
+    static class Utils {
 
         public static Raptor buildRaptor() {
             return buildRaptor(ROUTES, TRANSFERS, DAY_START_HOUR, DAY_END_HOUR);
@@ -119,7 +119,7 @@ class RaptorTest {
     @Nested
     class EarliestArrival {
         @Test
-        void routingBetweenIntersectingRoutes() {
+        void shouldFindConnectionsBetweenIntersectingRoutes() {
             // Should return two pareto optimal connections:
             // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
             //  - Route R1-F from A to D
@@ -130,7 +130,7 @@ class RaptorTest {
             //  - Route R1-F from A to F
             //  - Route R4-R from F to P
             //  - Route R3-F from P to Q
-            Raptor raptor = Utilities.buildRaptor();
+            Raptor raptor = Utils.buildRaptor();
             String sourceStop = "A";
             String targetStop = "Q";
             int departureTime = 8 * SECONDS_IN_HOUR;
@@ -169,11 +169,13 @@ class RaptorTest {
         }
 
         @Test
-        void routeBetweenNotLinkedStops() {
+        void shouldNotFindConnectionBetweenNotLinkedStops() {
             // Remove route R2/R4 to make stop Q (on R3) unreachable from A (on R1)
-            List<Utilities.Route> routes = ROUTES.stream().filter(route -> !route.id.equals("R2") && !route.id.equals("R4")).toList();
-            List<Utilities.Transfer> transfers = new ArrayList<>();
-            Raptor raptor = Utilities.buildRaptor(routes, transfers, DAY_START_HOUR, DAY_END_HOUR);
+            List<Utils.Route> routes = ROUTES.stream()
+                    .filter(route -> !route.id.equals("R2") && !route.id.equals("R4"))
+                    .toList();
+            List<Utils.Transfer> transfers = new ArrayList<>();
+            Raptor raptor = Utils.buildRaptor(routes, transfers, DAY_START_HOUR, DAY_END_HOUR);
             String sourceStop = "A";
             String targetStop = "Q";
             int departureTime = 8 * SECONDS_IN_HOUR;
@@ -182,9 +184,11 @@ class RaptorTest {
         }
 
         @Test
-        void routeBetweenOnlyFootpath(){
-            List<Utilities.Transfer> transfers = List.of(new Utilities.Transfer("N", "D", 1));
-            Raptor raptor = Utilities.buildRaptor(ROUTES, transfers, DAY_START_HOUR, DAY_END_HOUR);
+        void shouldFindConnectionBetweenOnlyFootpath() {
+            // TODO: Fix this test case; The connection returned is R3-R (N -> K), R2-R (K -> B) and R1-F (B -> D)
+            //  instead of a footpath (N -> D) only.
+            List<Utils.Transfer> transfers = List.of(new Utils.Transfer("N", "D", 1));
+            Raptor raptor = Utils.buildRaptor(ROUTES, transfers, DAY_START_HOUR, DAY_END_HOUR);
             String sourceStop = "N";
             String targetStop = "D";
             int departureTime = 8 * SECONDS_IN_HOUR;
@@ -202,8 +206,9 @@ class RaptorTest {
         }
 
         @Test
-        void routeBetweenSameStop(){
-            Raptor raptor = Utilities.buildRaptor();
+        void shouldThrowErrorWhenRequestBetweenSameStop() {
+            // TODO: Throw error
+            Raptor raptor = Utils.buildRaptor();
             String sourceStop = "A";
             String targetStop = "A";
             int departureTime = 8 * SECONDS_IN_HOUR;
@@ -212,8 +217,8 @@ class RaptorTest {
         }
 
         @Test
-        void routeBetweenTwoStopsOnSameRoute(){
-            Raptor raptor = Utilities.buildRaptor();
+        void routeBetweenTwoStopsOnSameRoute() {
+            Raptor raptor = Utils.buildRaptor();
             String sourceStop = "A";
             String targetStop = "B";
             int departureTime = 8 * SECONDS_IN_HOUR;
