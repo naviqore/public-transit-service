@@ -64,13 +64,28 @@ public class RaptorBuilder {
         return this;
     }
 
+    public RaptorBuilder addTrip(String tripId, String routeId, List<String> stopIds) {
+        if (!routes.containsKey(routeId)) {
+            throw new IllegalArgumentException("Route " + routeId + " does not exist");
+        }
+        for (String stopId : stopIds) {
+            if (!stops.containsKey(stopId)) {
+                throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+            }
+        }
+        // TODO: Create and track object that ensures:
+        //  - all trips of a route have the same stop sequence
+        //  - stopTimes are added to each trip in the correct order (see addStopTime)
+        //  - each stopTime of a trip has an departure which is temporally after the previous stopTime arrival
+        //  This object is not relevant for the creation of the raptor data itself, but it validates the inputs.
+        return this;
+    }
+
     public RaptorBuilder addStopTime(String stopId, String routeId, int arrival, int departure) {
         log.debug("Adding stop time: stopId={}, routeId={}, arrival={}, departure={}", stopId, routeId, arrival,
                 departure);
         if (!stops.containsKey(stopId)) {
-            log.error("Stop {} does not exist", stopId);
-            // TODO: Reactivate after test for consistency of route stops.
-            // throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+            throw new IllegalArgumentException("Stop " + stopId + " does not exist");
         }
         if (!routes.containsKey(routeId)) {
             throw new IllegalArgumentException("Route " + routeId + " does not exist");
