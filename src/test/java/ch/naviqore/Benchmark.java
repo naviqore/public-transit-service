@@ -42,7 +42,7 @@ final class Benchmark {
     private static final Dataset DATASET = Dataset.SWITZERLAND;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
     private static final int SECONDS_IN_DAY = 86400;
-    private static final long MONITORING_INTERVAL_MS = 30;
+    private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
 
     public static void main(String[] args) throws IOException, InterruptedException {
