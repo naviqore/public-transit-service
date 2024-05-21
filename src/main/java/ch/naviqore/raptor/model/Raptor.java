@@ -169,6 +169,15 @@ public class Raptor {
                             markedStopsNext.add(stopIdx);
                             // earlier trip is not possible
                             continue;
+                        } else {
+                            log.debug("Stop {} was not improved", stop.id());
+                            Leg previous = earliestArrivalsLastRound[stopIdx];
+                            if( previous == null || previous.arrivalTime >= stopTime.arrival() ) {
+                                log.debug("Stop {} has been improved in same round, earlier trip not possible within this round", stop.id());
+                                continue;
+                            } else {
+                                log.debug("Checking for earlier trips at stop {}", stop.id());
+                            }
                         }
                     }
 
