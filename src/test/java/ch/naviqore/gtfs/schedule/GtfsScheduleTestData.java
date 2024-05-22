@@ -16,7 +16,7 @@ public final class GtfsScheduleTestData {
 
     public static final String SAMPLE_FEED = "sample-feed-1";
     public static final String SAMPLE_FEED_ZIP = SAMPLE_FEED + ".zip";
-    public static final String RESOURCE_PATH = "gtfs/schedule/" + SAMPLE_FEED_ZIP;
+    public static final String RESOURCE_PATH = "ch/naviqore/gtfs/schedule/" + SAMPLE_FEED_ZIP;
 
     public static File prepareZipDataset(@TempDir Path tempDir) throws IOException {
         try (InputStream is = GtfsScheduleReaderIT.class.getClassLoader().getResourceAsStream(RESOURCE_PATH)) {
