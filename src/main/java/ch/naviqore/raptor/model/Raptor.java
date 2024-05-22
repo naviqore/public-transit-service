@@ -186,7 +186,7 @@ public class Raptor {
                     enteredAtArrival = earliestArrivalsLastRound[stopIdx];
                     while (tripOffset < numberOfTrips) {
                         StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
-                        if (currentStopTime.departure() >= earliestArrivalTime + SAME_STOP_TRANSFER_TIME) {
+                        if (currentStopTime.departure() >= enteredAtArrival.arrivalTime + SAME_STOP_TRANSFER_TIME) {
                             log.debug("Found active trip ({}) on route {}", tripOffset, currentRoute.id());
                             tripEntryTime = currentStopTime.departure();
                             break;
