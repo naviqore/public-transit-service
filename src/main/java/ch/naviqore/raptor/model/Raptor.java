@@ -7,8 +7,6 @@ import java.util.*;
 
 /**
  * Raptor algorithm implementation
- *
- * @author munterfi
  */
 @Log4j2
 public class Raptor {
@@ -171,8 +169,10 @@ public class Raptor {
                         } else {
                             log.debug("Stop {} was not improved", stop.id());
                             Leg previous = earliestArrivalsLastRound[stopIdx];
-                            if( previous == null || previous.arrivalTime >= stopTime.arrival() ) {
-                                log.debug("Stop {} has been improved in same round, earlier trip not possible within this round", stop.id());
+                            if (previous == null || previous.arrivalTime >= stopTime.arrival()) {
+                                log.debug(
+                                        "Stop {} has been improved in same round, earlier trip not possible within this round",
+                                        stop.id());
                                 continue;
                             } else {
                                 log.debug("Checking for earlier trips at stop {}", stop.id());

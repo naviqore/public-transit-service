@@ -9,8 +9,6 @@ import java.util.*;
 
 /**
  * Builds the Raptor and its internal data structures
- * <p>
- * Note: The builder expects that stops, routes, route stops and stop times are added in the correct order.
  *
  * @author munterfi
  */
