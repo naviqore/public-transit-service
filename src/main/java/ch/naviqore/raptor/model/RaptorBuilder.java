@@ -8,7 +8,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 /**
- * Builds the Raptor and its internal data structures
+ * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
+ * are correctly added and validated before constructing the Raptor model:
+ * <ul>
+ *     <li>All stops must have at least one route serving them.</li>
+ *     <li>All stops of a route must be known before adding the route.</li>
+ *     <li>All trips of a route must have the same stop sequence.</li>
+ *     <li>Each stop time of a trip must have a departure time after the previous stop time's arrival time.</li>
+ *     <li>All trips in the final route container must be sorted by departure time.</li>
+ * </ul>
  *
  * @author munterfi
  */
