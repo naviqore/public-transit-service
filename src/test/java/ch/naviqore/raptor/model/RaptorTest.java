@@ -104,9 +104,6 @@ class RaptorTest {
 
         @Test
         void shouldFindConnectionBetweenOnlyFootpath(RaptorTestBuilder builder) {
-            // TODO: Fix this test case; The connection returned is R3-R (N -> K), R2-R (K -> B) and R1-F (B -> D)
-            //  instead of a footpath (N -> D) only.
-
             Raptor raptor = builder.withAddRoute1_AG()
                     .withAddRoute2_HL()
                     .withAddRoute3_MQ()

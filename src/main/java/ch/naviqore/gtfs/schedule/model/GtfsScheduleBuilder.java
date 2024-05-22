@@ -4,6 +4,7 @@ import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.gtfs.schedule.type.TransferType;
+import ch.naviqore.utils.cache.ValueObjectCache;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -15,7 +16,6 @@ import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implements a builder pattern for constructing instances of {@link GtfsSchedule}. This builder helps assemble a GTFS
@@ -30,7 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Log4j2
 public class GtfsScheduleBuilder {
 
-    private final Cache cache = new Cache();
+    private final ValueObjectCache<LocalDate> localDateCache = new ValueObjectCache<>();
+    private final ValueObjectCache<ServiceDayTime> serviceDayTimeCache = new ValueObjectCache<>();
     private final Map<String, Agency> agencies = new HashMap<>();
     private final Map<String, Calendar> calendars = new HashMap<>();
     private final Map<String, Stop> stops = new HashMap<>();
@@ -80,7 +81,8 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + id + " already exists");
         }
         log.debug("Adding calendar {}", id);
-        calendars.put(id, new Calendar(id, serviceDays, cache.getOrAdd(startDate), cache.getOrAdd(endDate)));
+        calendars.put(id,
+                new Calendar(id, serviceDays, localDateCache.getOrAdd(startDate), localDateCache.getOrAdd(endDate)));
         return this;
     }
 
@@ -91,7 +93,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + calendarId + " does not exist");
         }
         log.debug("Adding calendar {}-{}", calendarId, date);
-        CalendarDate calendarDate = new CalendarDate(calendar, cache.getOrAdd(date), type);
+        CalendarDate calendarDate = new CalendarDate(calendar, localDateCache.getOrAdd(date), type);
         calendar.addCalendarDate(calendarDate);
         return this;
     }
@@ -129,7 +131,8 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Stop " + stopId + " does not exist");
         }
         log.debug("Adding stop time at {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
-        StopTime stopTime = new StopTime(stop, trip, cache.getOrAdd(arrival), cache.getOrAdd(departure));
+        StopTime stopTime = new StopTime(stop, trip, serviceDayTimeCache.getOrAdd(arrival),
+                serviceDayTimeCache.getOrAdd(departure));
         stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
         return this;
@@ -187,39 +190,19 @@ public class GtfsScheduleBuilder {
     }
 
     private void clear() {
-        log.debug("Clearing maps and cache of the builder");
+        log.debug("Clearing cache and maps of the builder");
+        localDateCache.clear();
+        serviceDayTimeCache.clear();
         agencies.clear();
         calendars.clear();
         stops.clear();
         routes.clear();
         trips.clear();
-        cache.clear();
     }
 
     private void checkNotBuilt() {
         if (built) {
             throw new IllegalStateException("Cannot modify builder after build() has been called.");
-        }
-    }
-
-    /**
-     * Cache for value objects
-     */
-    static class Cache {
-        private final Map<LocalDate, LocalDate> localDates = new ConcurrentHashMap<>();
-        private final Map<ServiceDayTime, ServiceDayTime> serviceDayTimes = new ConcurrentHashMap<>();
-
-        public LocalDate getOrAdd(LocalDate value) {
-            return localDates.computeIfAbsent(value, k -> value);
-        }
-
-        public ServiceDayTime getOrAdd(ServiceDayTime value) {
-            return serviceDayTimes.computeIfAbsent(value, k -> value);
-        }
-
-        public void clear() {
-            localDates.clear();
-            serviceDayTimes.clear();
         }
     }
 }

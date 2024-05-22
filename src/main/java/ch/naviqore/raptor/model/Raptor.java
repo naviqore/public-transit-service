@@ -67,7 +67,8 @@ public class Raptor {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, Integer.MAX_VALUE);
-        earliestArrivals[sourceStopIdx] = departureTime;
+        // subtract same stop transfer time, as this will be added by default before scanning routes
+        earliestArrivals[sourceStopIdx] = departureTime - SAME_STOP_TRANSFER_TIME;
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Leg[stops.length]);
@@ -76,6 +77,10 @@ public class Raptor {
 
         Set<Integer> markedStops = new HashSet<>();
         markedStops.add(sourceStopIdx);
+
+        // expand footpaths for source stop
+        expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdx,
+                departureTime);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -163,6 +168,15 @@ public class Raptor {
                             markedStopsNext.add(stopIdx);
                             // earlier trip is not possible
                             continue;
+                        } else {
+                            log.debug("Stop {} was not improved", stop.id());
+                            Leg previous = earliestArrivalsLastRound[stopIdx];
+                            if( previous == null || previous.arrivalTime >= stopTime.arrival() ) {
+                                log.debug("Stop {} has been improved in same round, earlier trip not possible within this round", stop.id());
+                                continue;
+                            } else {
+                                log.debug("Checking for earlier trips at stop {}", stop.id());
+                            }
                         }
                     }
 
@@ -227,8 +241,8 @@ public class Raptor {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
-        for (int i = 1; i < earliestArrivalsPerRound.size(); i++) {
-            Leg arrival = earliestArrivalsPerRound.get(i)[targetStopIdx];
+        for (Leg[] legs : earliestArrivalsPerRound) {
+            Leg arrival = legs[targetStopIdx];
 
             // target stop not reached in this round
             if (arrival == null) {
@@ -250,6 +264,8 @@ public class Raptor {
                 } else if (arrival.type == ArrivalType.TRANSFER) {
                     id = String.format("transfer_%s_%s", fromStopId, toStopId);
                     type = Connection.LegType.FOOTPATH;
+                    // include same stop transfer time (which is subtracted before scanning routes)
+                    arrivalTime += SAME_STOP_TRANSFER_TIME;
                 } else {
                     throw new IllegalStateException("Unknown arrival type");
                 }
@@ -266,6 +282,26 @@ public class Raptor {
         }
 
         return connections;
+    }
+
+    private void expandFootpathsForSourceStop(int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
+                                              Set<Integer> markedStops, int sourceStopIdx, int departureTime) {
+        // if stop has no transfers, then no footpaths can be expanded
+        if (stops[sourceStopIdx].numberOfTransfers() == 0) {
+            return;
+        }
+        // mark all transfer stops, no checks needed for since all transfers will improve arrival time and can be
+        // marked
+        Stop sourceStop = stops[sourceStopIdx];
+        for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
+            Transfer transfer = transfers[i];
+            int newTargetStopArrivalTime = departureTime + transfer.duration() - SAME_STOP_TRANSFER_TIME;
+            earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
+            earliestArrivalsPerRound.getFirst()[transfer.targetStopIdx()] = new Leg(departureTime,
+                    newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                    earliestArrivalsPerRound.getFirst()[sourceStopIdx]);
+            markedStops.add(transfer.targetStopIdx());
+        }
     }
 
     private enum ArrivalType {

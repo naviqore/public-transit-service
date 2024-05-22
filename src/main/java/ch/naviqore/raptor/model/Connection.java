@@ -79,14 +79,19 @@ public class Connection implements Comparable<Connection> {
     }
 
     public int getNumSameStationTransfers() {
-        return getNumTransfers() - getNumFootPathTransfers();
+        int transferCounter = 0;
+        for (int i = 0; i < legs.size() - 1; i++) {
+            Leg current = legs.get(i);
+            Leg next = legs.get(i + 1);
+            if (current.type == LegType.ROUTE && next.type == LegType.ROUTE) {
+                transferCounter++;
+            }
+        }
+        return transferCounter;
     }
 
     public int getNumTransfers() {
-        if (legs.isEmpty()) {
-            return 0;
-        }
-        return getNumRouteLegs() - 1;
+        return getNumFootPathTransfers() + getNumSameStationTransfers();
     }
 
     public int getNumRouteLegs() {
