@@ -196,6 +196,7 @@ public class Raptor {
                         } else {
                             // no active trip found
                             log.debug("No active trip found on route {}", currentRoute.id());
+                            enteredTrip = false;
                             break;
                         }
                     }
