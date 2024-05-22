@@ -48,45 +48,63 @@ public class RaptorTestBuilder {
     private final List<Transfer> transfers = new ArrayList<>();
 
     private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd) {
-        Set<String> addedStops = new HashSet<>();
         RaptorBuilder builder = Raptor.builder();
-        routes.forEach(route -> {
-            builder.addRoute(route.id + "-F");
-            builder.addRoute(route.id + "-R");
-            route.stops.forEach(stop -> {
+        Set<String> addedStops = new HashSet<>();
+
+        for (Route route : routes) {
+            // define route ids
+            String routeIdF = route.id + "-F";
+            String routeIdR = route.id + "-R";
+
+            // add stops
+            for (String stop : route.stops) {
                 if (!addedStops.contains(stop)) {
                     builder.addStop(stop);
                     addedStops.add(stop);
                 }
-            });
-            for (int i = 0; i < route.stops.size(); i++) {
-                builder.addRouteStop(route.stops.get(i), route.id + "-F");
-                builder.addRouteStop(route.stops.get(route.stops.size() - 1 - i), route.id + "-R");
             }
-            int time = dayStart * SECONDS_IN_HOUR + route.firstDepartureOffsetInMinutes * 60;
+
+            // add routes
+            builder.addRoute(routeIdF, route.stops);
+            builder.addRoute(routeIdR, route.stops.reversed());
+
+            // add trips
+            int tripCount = 0;
+            int time = dayStart * SECONDS_IN_HOUR + route.firstDepartureOffset * 60;
             while (time < dayEnd * SECONDS_IN_HOUR) {
+
+                // add trips
+                String tripIdF = String.format("%s-F-%s", route.id, tripCount);
+                String tripIdR = String.format("%s-R-%s", route.id, tripCount);
+                builder.addTrip(tripIdF, routeIdF).addTrip(tripIdR, routeIdR);
+                tripCount++;
+
+                // add stop times
                 int departureTime = time;
                 // first stop of trip has no arrival time
-                int arrivalTime = 0;
+                int arrivalTime = departureTime;
                 for (int i = 0; i < route.stops.size(); i++) {
                     if (i + 1 == route.stops.size()) {
                         // last stop of trip has no departure time
-                        departureTime = 0;
+                        departureTime = arrivalTime;
                     }
-                    builder.addStopTime(route.stops.get(i), route.id + "-F", arrivalTime, departureTime);
-                    builder.addStopTime(route.stops.get(route.stops.size() - 1 - i), route.id + "-R", arrivalTime,
+                    builder.addStopTime(routeIdF, tripIdF, i, route.stops.get(i), arrivalTime, departureTime);
+                    builder.addStopTime(routeIdR, tripIdR, i, route.stops.get(route.stops.size() - 1 - i), arrivalTime,
                             departureTime);
 
-                    arrivalTime = departureTime + route.timeBetweenStopsInMinutes * 60;
-                    departureTime = arrivalTime + route.dwellTimeInMinutes * 60;
+                    arrivalTime = departureTime + route.travelTimeBetweenStops * 60;
+                    departureTime = arrivalTime + route.dwellTimeAtSTop * 60;
                 }
-                time += route.timeBetweenDeparturesInMinutes * 60;
+
+                time += route.headWayTime * 60;
             }
-        });
-        transfers.forEach(transfer -> {
-            builder.addTransfer(transfer.sourceStop, transfer.targetStop, transfer.durationInMinutes * 60);
-            builder.addTransfer(transfer.targetStop, transfer.sourceStop, transfer.durationInMinutes * 60);
-        });
+        }
+
+        for (Transfer transfer : transfers) {
+            builder.addTransfer(transfer.sourceStop, transfer.targetStop, transfer.duration * 60);
+            builder.addTransfer(transfer.targetStop, transfer.sourceStop, transfer.duration * 60);
+        }
+
         return builder.build();
     }
 
@@ -138,8 +156,13 @@ public class RaptorTestBuilder {
                 .build();
     }
 
-    private record Route(String id, List<String> stops, int firstDepartureOffsetInMinutes,
-                         int timeBetweenDeparturesInMinutes, int timeBetweenStopsInMinutes, int dwellTimeInMinutes) {
+    /**
+     * Route, times are in minutes.
+     *
+     * @param headWayTime the time between the trip departures.
+     */
+    private record Route(String id, List<String> stops, int firstDepartureOffset, int headWayTime,
+                         int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
         public Route(String id, List<String> stops) {
             this(id, stops, 0, 15, 5, 1);
@@ -147,7 +170,10 @@ public class RaptorTestBuilder {
 
     }
 
-    private record Transfer(String sourceStop, String targetStop, int durationInMinutes) {
+    /**
+     * Transfer, times are in minutes.
+     */
+    private record Transfer(String sourceStop, String targetStop, int duration) {
     }
 
 }
