@@ -168,9 +168,6 @@ final class Benchmark {
             writer.println(header);
 
             for (RoutingResult result : results) {
-                if (result == null) {
-                    continue;
-                }
                 writer.printf("%d,%s,%s,\"%s\",\"%s\",%s,%d,%s,%s,%d,%d,%d,%d,%d,%d%n", result.id, result.sourceStopId,
                         result.targetStopId, result.sourceStopName, result.targetStopName,
                         result.requestedDepartureTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), result.connections,
