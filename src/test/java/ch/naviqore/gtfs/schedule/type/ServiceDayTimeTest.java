@@ -40,12 +40,12 @@ class ServiceDayTimeTest {
 
         @Test
         void shouldThrowExceptionForInvalidMinutes() {
-            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 60, 0));
+            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, ServiceDayTime.MINUTES_IN_HOUR, 0));
         }
 
         @Test
         void shouldThrowExceptionForInvalidSeconds() {
-            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 0, 60));
+            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 0, ServiceDayTime.SECONDS_IN_MINUTE));
         }
 
     }
@@ -65,9 +65,9 @@ class ServiceDayTimeTest {
 
         @Test
         void shouldCompareServiceDayTimesCorrectly() {
-            ServiceDayTime sdt1 = new ServiceDayTime(3600);
-            ServiceDayTime sdt2 = new ServiceDayTime(7200);
-            ServiceDayTime sdt3 = new ServiceDayTime(3600);
+            ServiceDayTime sdt1 = new ServiceDayTime(ServiceDayTime.SECONDS_IN_HOUR);
+            ServiceDayTime sdt2 = new ServiceDayTime(2 * ServiceDayTime.SECONDS_IN_HOUR);
+            ServiceDayTime sdt3 = new ServiceDayTime(ServiceDayTime.SECONDS_IN_HOUR);
 
             assertTrue(sdt1.compareTo(sdt2) < 0);
             assertTrue(sdt2.compareTo(sdt1) > 0);

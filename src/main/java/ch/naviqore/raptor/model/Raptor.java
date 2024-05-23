@@ -11,6 +11,7 @@ import java.util.*;
 @Log4j2
 public class Raptor {
 
+    public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
     public final static int SAME_STOP_TRANSFER_TIME = 120;
     private final InputValidator validator = new InputValidator();
@@ -64,7 +65,7 @@ public class Raptor {
     private List<Leg[]> spawnFromSourceStop(int sourceStopIdx, int targetStopIdx, int departureTime) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
-        Arrays.fill(earliestArrivals, Integer.MAX_VALUE);
+        Arrays.fill(earliestArrivals, INFINITY);
         // subtract same stop transfer time, as this will be added by default before scanning routes
         earliestArrivals[sourceStopIdx] = departureTime - SAME_STOP_TRANSFER_TIME;
 
@@ -125,7 +126,7 @@ public class Raptor {
 
                     // find first marked stop in route
                     if (!enteredTrip) {
-                        if (earliestArrivalTime == Integer.MAX_VALUE) {
+                        if (earliestArrivalTime == INFINITY) {
                             // when current arrival is infinity (Integer.MAX_VALUE), then the stop cannot be reached
                             log.debug("Stop {} cannot be reached, continue", stop.id());
                             continue;
@@ -320,7 +321,7 @@ public class Raptor {
      */
     private class InputValidator {
         private static final int MIN_DEPARTURE_TIME = 0;
-        private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60;
+        private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
 
         private static void validateStopIds(String sourceStopId, String targetStopId) {
             if (sourceStopId.equals(targetStopId)) {

@@ -19,7 +19,12 @@ import java.time.LocalTime;
 @Getter
 public final class ServiceDayTime implements Comparable<ServiceDayTime> {
 
-    public static final int SECONDS_IN_DAY = 86400;
+    public static final int HOURS_IN_DAY = 24;
+    public static final int MINUTES_IN_HOUR = 60;
+    public static final int SECONDS_IN_MINUTE = 60;
+    public static final int SECONDS_IN_HOUR = MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+    public static final int SECONDS_IN_DAY = HOURS_IN_DAY * SECONDS_IN_HOUR;
+
     private final int totalSeconds;
 
     public ServiceDayTime(int seconds) {
@@ -33,13 +38,13 @@ public final class ServiceDayTime implements Comparable<ServiceDayTime> {
         if (hours < 0) {
             throw new IllegalArgumentException("Hours cannot be negative.");
         }
-        if (minutes < 0 || minutes > 59) {
+        if (minutes < 0 || minutes >= MINUTES_IN_HOUR) {
             throw new IllegalArgumentException("Minutes must be between 0 and 59 inclusive");
         }
-        if (seconds < 0 || seconds > 59) {
+        if (seconds < 0 || seconds >= SECONDS_IN_MINUTE) {
             throw new IllegalArgumentException("Seconds must be between 0 and 59 inclusive");
         }
-        this.totalSeconds = seconds + 60 * minutes + 3600 * hours;
+        this.totalSeconds = seconds + SECONDS_IN_MINUTE * minutes + SECONDS_IN_HOUR * hours;
     }
 
     public static ServiceDayTime parse(String timeString) {
@@ -51,16 +56,16 @@ public final class ServiceDayTime implements Comparable<ServiceDayTime> {
     }
 
     public LocalTime toLocalTime() {
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        int seconds = totalSeconds % 60;
-        return LocalTime.of(hours % 24, minutes, seconds);
+        int hours = totalSeconds / SECONDS_IN_HOUR;
+        int minutes = (totalSeconds % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE;
+        int seconds = totalSeconds % SECONDS_IN_MINUTE;
+        return LocalTime.of(hours % HOURS_IN_DAY, minutes, seconds);
     }
 
     public LocalDateTime toLocalDateTime(LocalDate date) {
         LocalTime localTime = this.toLocalTime();
-        int hours = totalSeconds / 3600;
-        LocalDate adjustedDate = date.plusDays(hours / 24);
+        int hours = totalSeconds / SECONDS_IN_HOUR;
+        LocalDate adjustedDate = date.plusDays(hours / HOURS_IN_DAY);
         return LocalDateTime.of(adjustedDate, localTime);
     }
 
@@ -71,9 +76,9 @@ public final class ServiceDayTime implements Comparable<ServiceDayTime> {
 
     @Override
     public String toString() {
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        int seconds = totalSeconds % 60;
+        int hours = totalSeconds / SECONDS_IN_HOUR;
+        int minutes = (totalSeconds % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE;
+        int seconds = totalSeconds % SECONDS_IN_MINUTE;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 
