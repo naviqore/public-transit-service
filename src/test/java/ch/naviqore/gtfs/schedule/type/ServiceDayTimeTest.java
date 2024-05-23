@@ -37,6 +37,17 @@ class ServiceDayTimeTest {
             assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, -1, 0));
             assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 0, -1));
         }
+
+        @Test
+        void shouldThrowExceptionForInvalidMinutes() {
+            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 60, 0));
+        }
+
+        @Test
+        void shouldThrowExceptionForInvalidSeconds() {
+            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 0, 60));
+        }
+
     }
 
     @Nested

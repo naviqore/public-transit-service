@@ -64,8 +64,8 @@ class RouteBuilderTest {
             void shouldNotAddStopTimeToNonExistentTrip() {
                 StopTime stopTime = new StopTime(100, 200);
                 IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                        () -> builder.addStopTime("trip2", 0, STOP_1, stopTime));
-                assertEquals("Trip trip2 does not exist.", exception.getMessage());
+                        () -> builder.addStopTime("nonexistentTrip", 0, STOP_1, stopTime));
+                assertEquals("Trip nonexistentTrip does not exist.", exception.getMessage());
             }
 
             @Test
@@ -91,6 +91,9 @@ class RouteBuilderTest {
                 IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                         () -> builder.addStopTime(TRIP_1, 0, "nonexistentStop", stopTime));
                 assertEquals("Stop nonexistentStop does not match stop stop1 at position 0.", exception.getMessage());
+                exception = assertThrows(IllegalArgumentException.class,
+                        () -> builder.addStopTime(TRIP_1, 0, STOP_2, stopTime));
+                assertEquals("Stop stop2 does not match stop stop1 at position 0.", exception.getMessage());
             }
 
             @Test

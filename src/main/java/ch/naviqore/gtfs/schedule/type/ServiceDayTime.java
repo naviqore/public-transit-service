@@ -24,14 +24,20 @@ public final class ServiceDayTime implements Comparable<ServiceDayTime> {
 
     public ServiceDayTime(int seconds) {
         if (seconds < 0) {
-            throw new IllegalArgumentException("Seconds cannot be negative");
+            throw new IllegalArgumentException("Seconds cannot be negative.");
         }
         this.totalSeconds = seconds;
     }
 
     public ServiceDayTime(int hours, int minutes, int seconds) {
-        if (hours < 0 || minutes < 0 || seconds < 0) {
-            throw new IllegalArgumentException("Hours, minutes, and seconds cannot be negative");
+        if (hours < 0) {
+            throw new IllegalArgumentException("Hours cannot be negative.");
+        }
+        if (minutes < 0 || minutes > 59) {
+            throw new IllegalArgumentException("Minutes must be between 0 and 59 inclusive");
+        }
+        if (seconds < 0 || seconds > 59) {
+            throw new IllegalArgumentException("Seconds must be between 0 and 59 inclusive");
         }
         this.totalSeconds = seconds + 60 * minutes + 3600 * hours;
     }
