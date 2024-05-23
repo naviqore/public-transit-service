@@ -7,14 +7,13 @@ import java.util.*;
 
 /**
  * Raptor algorithm implementation
- *
- * @author munterfi
  */
 @Log4j2
 public class Raptor {
 
     public final static int NO_INDEX = -1;
     public final static int SAME_STOP_TRANSFER_TIME = 120;
+    private final InputValidator validator = new InputValidator();
     // lookup
     private final Map<String, Integer> stopsToIdx;
     private final Map<String, Integer> routesToIdx;
@@ -26,7 +25,6 @@ public class Raptor {
     private final StopTime[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
-    private final InputValidator validator;
 
     Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.stopsToIdx = lookup.stops();
@@ -37,7 +35,6 @@ public class Raptor {
         this.stopTimes = routeTraversal.stopTimes();
         this.routes = routeTraversal.routes();
         this.routeStops = routeTraversal.routeStops();
-        this.validator = new InputValidator();
     }
 
     public static RaptorBuilder builder() {
@@ -172,8 +169,10 @@ public class Raptor {
                         } else {
                             log.debug("Stop {} was not improved", stop.id());
                             Leg previous = earliestArrivalsLastRound[stopIdx];
-                            if( previous == null || previous.arrivalTime >= stopTime.arrival() ) {
-                                log.debug("Stop {} has been improved in same round, earlier trip not possible within this round", stop.id());
+                            if (previous == null || previous.arrivalTime >= stopTime.arrival()) {
+                                log.debug(
+                                        "Stop {} has been improved in same round, earlier trip not possible within this round",
+                                        stop.id());
                                 continue;
                             } else {
                                 log.debug("Checking for earlier trips at stop {}", stop.id());

@@ -7,5 +7,5 @@ package ch.naviqore.raptor.model;
  * @param routes     routes
  * @param routeStops route stops
  */
-public record RouteTraversal(StopTime[] stopTimes, Route[] routes, RouteStop[] routeStops) {
+record RouteTraversal(StopTime[] stopTimes, Route[] routes, RouteStop[] routeStops) {
 }

@@ -78,7 +78,6 @@ class RaptorTest {
             String targetStop = "B";
             int departureTime = 8 * SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
-            System.out.println(connections);
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
             assertEquals(sourceStop, connection.getFromStopId());
