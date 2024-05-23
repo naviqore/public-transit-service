@@ -125,6 +125,9 @@ final class Benchmark {
             writer.println(header);
 
             for (RoutingResult result : results) {
+                if( result == null ){
+                    continue;
+                }
                 writer.printf("%s,%s,%d,%d,%d,%d,%d,%d%n", result.sourceStop, result.targetStop,
                         result.requestedDepartureTime, result.connections.size(), result.departureTime,
                         result.arrivalTime, result.transfers, result.time);
