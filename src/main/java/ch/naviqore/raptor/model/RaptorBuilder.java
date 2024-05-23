@@ -3,13 +3,20 @@ package ch.naviqore.raptor.model;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 /**
- * Builds the Raptor and its internal data structures
- * <p>
- * Note: The builder expects that stops, routes, route stops and stop times are added in the correct order.
+ * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
+ * are correctly added and validated before constructing the Raptor model:
+ * <ul>
+ *     <li>All stops must have at least one route serving them.</li>
+ *     <li>All stops of a route must be known before adding the route.</li>
+ *     <li>All trips of a route must have the same stop sequence.</li>
+ *     <li>Each stop time of a trip must have a departure time after the previous stop time's arrival time.</li>
+ *     <li>All trips in the final route container must be sorted by departure time.</li>
+ * </ul>
  *
  * @author munterfi
  */
@@ -18,164 +25,199 @@ import java.util.*;
 public class RaptorBuilder {
 
     private final Map<String, Integer> stops = new HashMap<>();
-    private final Map<String, Integer> routes = new HashMap<>();
-    private final Map<String, List<String>> routeStops = new HashMap<>();
-    private final Map<String, List<StopTime>> stopTimes = new HashMap<>();
-    private final Map<String, Set<String>> stopRoutes = new HashMap<>();
+    private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
+    private final Map<String, Set<String>> stopRoutes = new HashMap<>();
 
-    private int stopSize = 0;
-    private int routeSize = 0;
-    private int routeStopSize = 0;
-    private int stopTimeSize = 0;
-    private int transferSize = 0;
+    int stopTimeSize = 0;
+    int routeStopSize = 0;
+    int transferSize = 0;
 
     public RaptorBuilder addStop(String id) {
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
+
         log.debug("Adding stop: id={}", id);
         stops.put(id, stops.size());
-        stopSize++;
+        stopRoutes.put(id, new HashSet<>());
+
         return this;
     }
 
-    public RaptorBuilder addRoute(String id) {
-        if (routes.containsKey(id)) {
+    public RaptorBuilder addRoute(String id, List<String> stopIds) {
+        if (routeBuilders.containsKey(id)) {
             throw new IllegalArgumentException("Route " + id + " already exists");
         }
-        log.debug("Adding route: id={}", id);
-        routes.put(id, routes.size());
-        routeSize++;
+
+        for (String stopId : stopIds) {
+            if (!stops.containsKey(stopId)) {
+                throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+            }
+            stopRoutes.get(stopId).add(id);
+        }
+
+        log.debug("Adding route: id={}, stopSequence={}", id, stopIds);
+        routeBuilders.put(id, new RouteBuilder(id, stopIds));
+        routeStopSize += stopIds.size();
+
         return this;
     }
 
-    public RaptorBuilder addRouteStop(String stopId, String routeId) {
-        log.debug("Adding route stop: stopId={}, routeId={}", stopId, routeId);
-        if (!stops.containsKey(stopId)) {
-            throw new IllegalArgumentException("Stop " + stopId + " does not exist");
-        }
-        if (!routes.containsKey(routeId)) {
-            throw new IllegalArgumentException("Route " + routeId + " does not exist");
-        }
-        routeStops.computeIfAbsent(routeId, k -> new ArrayList<>()).add(stopId);
-        stopRoutes.computeIfAbsent(stopId, k -> new HashSet<>()).add(routeId);
-        routeStopSize++;
+    public RaptorBuilder addTrip(String tripId, String routeId) {
+        getRouteBuilder(routeId).addTrip(tripId);
         return this;
     }
 
-    public RaptorBuilder addStopTime(String stopId, String routeId, int arrival, int departure) {
-        log.debug("Adding stop time: stopId={}, routeId={}, arrival={}, departure={}", stopId, routeId, arrival,
-                departure);
-        if (!stops.containsKey(stopId)) {
-            log.error("Stop {} does not exist", stopId);
-            // TODO: Reactivate after test for consistency of route stops.
-            // throw new IllegalArgumentException("Stop " + stopId + " does not exist");
-        }
-        if (!routes.containsKey(routeId)) {
-            throw new IllegalArgumentException("Route " + routeId + " does not exist");
-        }
-        stopTimes.computeIfAbsent(routeId, k -> new ArrayList<>()).add(new StopTime(arrival, departure));
+    public RaptorBuilder addStopTime(String routeId, String tripId, int position, String stopId, int arrival,
+                                     int departure) {
+        StopTime stopTime = new StopTime(arrival, departure);
+        getRouteBuilder(routeId).addStopTime(tripId, position, stopId, stopTime);
         stopTimeSize++;
+
         return this;
     }
 
     public RaptorBuilder addTransfer(String sourceStopId, String targetStopId, int duration) {
         log.debug("Adding transfer: sourceStopId={}, targetStopId={}, duration={}", sourceStopId, targetStopId,
                 duration);
+
         if (!stops.containsKey(sourceStopId)) {
             throw new IllegalArgumentException("Source stop " + sourceStopId + " does not exist");
         }
+
         if (!stops.containsKey(targetStopId)) {
             throw new IllegalArgumentException("Target stop " + targetStopId + " does not exist");
         }
+
         transfers.computeIfAbsent(sourceStopId, k -> new ArrayList<>())
                 .add(new Transfer(stops.get(targetStopId), duration));
         transferSize++;
+
         return this;
     }
 
     public Raptor build() {
-        Lookup lookup = buildLookup();
-        StopContext stopContext = buildStopContext();
-        RouteTraversal routeTraversal = buildRouteTraversal();
-        log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers", stopSize,
-                routeSize, routeStopSize, stopTimeSize, transferSize);
+        log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
+                stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
+
+        // build route containers and the raptor array-based data structures
+        List<RouteBuilder.RouteContainer> routeContainers = buildAndSortRouteContainers();
+        Lookup lookup = buildLookup(routeContainers);
+        StopContext stopContext = buildStopContext(lookup);
+        RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
+
         return new Raptor(lookup, stopContext, routeTraversal);
     }
 
-    private Lookup buildLookup() {
-        log.debug("Building lookup with {} stops and {} routes", stopSize, routeSize);
-        return new Lookup(new HashMap<>(stops), new HashMap<>(routes));
+    private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
+        return routeBuilders.values().parallelStream().map(RouteBuilder::build).sorted().toList();
     }
 
-    private StopContext buildStopContext() {
-        log.debug("Building stop context with {} stops and {} transfers", stopSize, transferSize);
-        Stop[] stopArr = new Stop[stopSize];
+    private Lookup buildLookup(List<RouteBuilder.RouteContainer> routeContainers) {
+        log.debug("Building lookup with {} stops and {} routes", stops.size(), routeContainers.size());
+        Map<String, Integer> routes = new HashMap<>(routeContainers.size());
+
+        // assign idx to routes based on sorted order
+        for (int i = 0; i < routeContainers.size(); i++) {
+            RouteBuilder.RouteContainer routeContainer = routeContainers.get(i);
+            routes.put(routeContainer.id(), i);
+        }
+
+        return new Lookup(Map.copyOf(stops), Map.copyOf(routes));
+    }
+
+    private StopContext buildStopContext(Lookup lookup) {
+        log.debug("Building stop context with {} stops and {} transfers", stops.size(), transferSize);
+
+        // allocate arrays in needed size
+        Stop[] stopArr = new Stop[stops.size()];
         int[] stopRouteArr = new int[stopRoutes.values().stream().mapToInt(Set::size).sum()];
         Transfer[] transferArr = new Transfer[transferSize];
 
-        int transferCnt = 0;
-        int stopRouteCnt = 0;
+        // iterate over stops and populate arrays
+        int transferIdx = 0;
+        int stopRouteIdx = 0;
         for (Map.Entry<String, Integer> entry : stops.entrySet()) {
             String stopId = entry.getKey();
             int stopIdx = entry.getValue();
 
-            List<Transfer> currentTransfers = transfers.get(stopId);
-            int currentTransferCnt = 0;
-            if (currentTransfers != null) {
-                for (Transfer transfer : currentTransfers) {
-                    transferArr[transferCnt++] = transfer;
-                    currentTransferCnt++;
-                }
-            }
-
+            // check if stop has no routes: Unserved stops are useless in the raptor data structure
             Set<String> currentStopRoutes = stopRoutes.get(stopId);
             if (currentStopRoutes == null) {
                 throw new IllegalStateException("Stop " + stopId + " has no routes");
             }
-            for (String routeId : currentStopRoutes) {
-                stopRouteArr[stopRouteCnt++] = routes.get(routeId);
+
+            // get the number of (optional) transfers
+            List<Transfer> currentTransfers = transfers.get(stopId);
+            int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
+
+            // add stop entry to stop array
+            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(),
+                    numberOfTransfers == 0 ? Raptor.NO_INDEX : transferIdx, numberOfTransfers);
+
+            // add transfer entry to transfer array if there are any
+            if (currentTransfers != null) {
+                for (Transfer transfer : currentTransfers) {
+                    transferArr[transferIdx++] = transfer;
+                }
             }
 
-            stopArr[stopIdx] = new Stop(stopId, stopRouteCnt - currentStopRoutes.size(), currentStopRoutes.size(),
-                    currentTransferCnt == 0 ? Raptor.NO_INDEX : transferCnt - currentTransferCnt, currentTransferCnt);
+            // add route index entries to stop route array
+            for (String routeId : currentStopRoutes) {
+                stopRouteArr[stopRouteIdx++] = lookup.routes().get(routeId);
+            }
         }
+
         return new StopContext(transferArr, stopArr, stopRouteArr);
     }
 
-    private RouteTraversal buildRouteTraversal() {
-        log.debug("Building route traversal with {} routes, {} route stops, {} stop times", routeSize, routeStopSize,
-                stopTimeSize);
-        Route[] routeArr = new Route[routeSize];
+    private RouteTraversal buildRouteTraversal(List<RouteBuilder.RouteContainer> routeContainers) {
+        log.debug("Building route traversal with {} routes, {} route stops, {} stop times", routeContainers.size(),
+                routeStopSize, stopTimeSize);
+
+        // allocate arrays in needed size
+        Route[] routeArr = new Route[routeContainers.size()];
         RouteStop[] routeStopArr = new RouteStop[routeStopSize];
         StopTime[] stopTimeArr = new StopTime[stopTimeSize];
 
+        // iterate over routes and populate arrays
         int routeStopCnt = 0;
         int stopTimeCnt = 0;
-        for (Map.Entry<String, Integer> entry : routes.entrySet()) {
-            String routeId = entry.getKey();
-            int routeIdx = entry.getValue();
+        for (int routeIdx = 0; routeIdx < routeContainers.size(); routeIdx++) {
+            RouteBuilder.RouteContainer routeContainer = routeContainers.get(routeIdx);
 
-            List<String> currentRouteStops = routeStops.get(routeId);
-            if (currentRouteStops == null) {
-                throw new IllegalStateException("Route " + routeId + " has no route stops");
-            }
-            for (String routeStop : currentRouteStops) {
-                routeStopArr[routeStopCnt++] = new RouteStop(stops.get(routeStop), routeIdx);
-            }
+            // add route entry to route array
+            final int numberOfStops = routeContainer.stopSequence().size();
+            final int numberOfTrips = routeContainer.trips().size();
+            routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt,
+                    numberOfTrips);
 
-            List<StopTime> currentStopTimes = stopTimes.get(routeId);
-            if (currentStopTimes == null) {
-                throw new IllegalStateException("Route " + routeId + " has no stop times");
-            }
-            for (StopTime stopTime : currentStopTimes) {
-                stopTimeArr[stopTimeCnt++] = stopTime;
+            // add stops to route stop array
+            Map<Integer, String> stopSequence = routeContainer.stopSequence();
+            for (int position = 0; position < numberOfStops; position++) {
+                int stopIdx = stops.get(stopSequence.get(position));
+                routeStopArr[routeStopCnt++] = new RouteStop(stopIdx, routeIdx);
             }
 
-            routeArr[routeIdx] = new Route(routeId, routeStopCnt - currentRouteStops.size(), currentRouteStops.size(),
-                    stopTimeCnt - currentStopTimes.size(), currentStopTimes.size());
+            // add times to stop time array
+            for (StopTime[] stopTimes : routeContainer.trips().values()) {
+                for (StopTime stopTime : stopTimes) {
+                    stopTimeArr[stopTimeCnt++] = stopTime;
+                }
+            }
         }
+
         return new RouteTraversal(stopTimeArr, routeArr, routeStopArr);
     }
+
+    private @NotNull RouteBuilder getRouteBuilder(String routeId) {
+        RouteBuilder routeBuilder = routeBuilders.get(routeId);
+        if (routeBuilder == null) {
+            throw new IllegalArgumentException("Route " + routeId + " does not exist");
+        }
+
+        return routeBuilder;
+    }
+
 }

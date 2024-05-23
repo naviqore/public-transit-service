@@ -24,8 +24,8 @@ import java.util.Set;
 @Log4j2
 public class GtfsToRaptorConverter {
 
-    private final Set<GtfsRoutePartitioner.SubRoute> subRoutes = new HashSet<>();
-    private final Set<Stop> stops = new HashSet<>();
+    private final Set<GtfsRoutePartitioner.SubRoute> addedSubRoutes = new HashSet<>();
+    private final Set<String> addedStops = new HashSet<>();
     private final RaptorBuilder builder = Raptor.builder();
     private final GtfsRoutePartitioner partitioner;
     private final GtfsSchedule schedule;
@@ -42,15 +42,29 @@ public class GtfsToRaptorConverter {
         for (Trip trip : activeTrips) {
             GtfsRoutePartitioner.SubRoute subRoute = partitioner.getSubRoute(trip);
 
-            if (!subRoutes.contains(subRoute)) {
-                subRoutes.add(subRoute);
-                builder.addRoute(subRoute.getId());
-                addRouteStops(trip, subRoute);
+            // add route if not already
+            if (!addedSubRoutes.contains(subRoute)) {
+                List<String> stopIds = subRoute.getStopsSequence().stream().map(Stop::getId).toList();
+
+                // add stops of that are not already added
+                for (String stopId : stopIds) {
+                    if (!addedStops.contains(stopId)) {
+                        builder.addStop(stopId);
+                        addedStops.add(stopId);
+                    }
+                }
+
+                builder.addRoute(subRoute.getId(), stopIds);
+                addedSubRoutes.add(subRoute);
             }
 
-            for (StopTime stopTime : trip.getStopTimes()) {
-                builder.addStopTime(stopTime.stop().getId(), subRoute.getId(), stopTime.arrival().getTotalSeconds(),
-                        stopTime.departure().getTotalSeconds());
+            // add current trip
+            builder.addTrip(trip.getId(), subRoute.getId());
+            List<StopTime> stopTimes = trip.getStopTimes();
+            for (int i = 0; i < stopTimes.size(); i++) {
+                StopTime stopTime = stopTimes.get(i);
+                builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
+                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
             }
         }
 
@@ -59,21 +73,9 @@ public class GtfsToRaptorConverter {
         return builder.build();
     }
 
-    private void addRouteStops(Trip trip, GtfsRoutePartitioner.SubRoute subRoute) {
-        for (StopTime stopTime : trip.getStopTimes()) {
-            Stop stop = stopTime.stop();
-
-            if (!stops.contains(stop)) {
-                stops.add(stop);
-                builder.addStop(stop.getId());
-            }
-
-            builder.addRouteStop(stop.getId(), subRoute.getId());
-        }
-    }
-
     private void addTransfers() {
-        for (Stop stop : stops) {
+        for (String stopId : addedStops) {
+            Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop() && transfer.getMinTransferTime()
                         .isPresent()) {
