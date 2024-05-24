@@ -1,0 +1,333 @@
+openapi: 3.0.0
+info:
+  title: Naviqore Public Transit API
+  version: 1.0.0
+  description: API for Public Transit Routing System
+paths:
+  /schedule/stops/autocomplete:
+    get:
+      summary: Autocomplete station names
+      description: Provides station names and their corresponding station IDs based on a partial input query.
+      tags:
+        - schedule
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial name of the station to search for.
+      responses:
+        '200':
+          description: A list of station names and IDs that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Autocomplete'
+              examples:
+                example:
+                  value:
+                    - id: "1"
+                      name: "Zuerich HB"
+                    - id: "2"
+                      name: "Zuerich Altstetten"
+  /schedule/stops/{stopId}/departures:
+    get:
+      summary: Get next departures from a stop
+      description: Retrieves the next departures from a specified stop at a given datetime.
+      tags:
+        - schedule
+      parameters:
+        - name: stopId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+        - name: dateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The date and time for which the next departures are requested.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: The maximum number of departures to return.
+      responses:
+        '200':
+          description: A list of the next departures from the specified stop.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StopTime'
+              examples:
+                example:
+                  value:
+                    - tripId: "123"
+                      stopId: "1"
+                      arrivalTime: "08:00:00"
+                      departureTime: "08:05:00"
+                    - tripId: "456"
+                      stopId: "1"
+                      arrivalTime: "08:10:00"
+                      departureTime: "08:15:00"
+  /schedule/stops/nearest:
+    get:
+      summary: Get nearest stops
+      description: Retrieves a list of stops within a specified distance from a given location.
+      tags:
+        - schedule
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: The latitude of the origin location.
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: The longitude of the origin location.
+        - name: maxDistance
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: The maximum distance from the origin location to search for stops.
+      responses:
+        '200':
+          description: A list of nearest stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stop'
+              examples:
+                example:
+                  value:
+                    - id: "1"
+                      name: "Zuerich HB"
+                      latitude: 47.378177
+                      longitude: 8.540192
+                    - id: "2"
+                      name: "Zuerich Altstetten"
+                      latitude: 47.391555
+                      longitude: 8.497153
+  /schedule/stops/{stopId}:
+    get:
+      summary: Get information about a stop
+      description: Provides detailed information about a specific stop, including coordinates, routes departing from there, and the name.
+      tags:
+        - schedule
+      parameters:
+        - name: stopId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+      responses:
+        '200':
+          description: Information about the specified stop.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stop'
+              examples:
+                example:
+                  value:
+                    id: "1"
+                    name: "Zuerich HB"
+                    latitude: 47.378177
+                    longitude: 8.540192
+                    routes:
+                      - id: "10"
+                        name: "Tram 10"
+                      - id: "4"
+                        name: "Bus 4"
+  /routing/connections:
+    get:
+      summary: Request connections between two stops
+      description: Requests connections between two stops at a given departure datetime.
+      tags:
+        - routing
+      parameters:
+        - name: sourceStopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the source stop.
+        - name: targetStopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the target stop.
+        - name: departureDateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The departure datetime from the source stop.
+      responses:
+        '200':
+          description: A list of connections between the specified stops.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Connection'
+              examples:
+                example:
+                  value:
+                    - legs:
+                        - id: "1"
+                          fromStopId: "1"
+                          toStopId: "2"
+                          departureTime: "08:00:00"
+                          arrivalTime: "08:10:00"
+                          type: "ROUTE"
+                        - id: "2"
+                          fromStopId: "2"
+                          toStopId: "3"
+                          departureTime: "08:15:00"
+                          arrivalTime: "08:25:00"
+                          type: "ROUTE"
+  /routing/isolines:
+    get:
+      summary: Request isolines from a stop
+      description: Requests isolines from a stop at a given departure datetime.
+      tags:
+        - routing
+      parameters:
+        - name: stopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+        - name: departureDateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The departure datetime from the stop.
+      responses:
+        '200':
+          description: A list of isolines from the specified stop.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Isoline'
+              examples:
+                example:
+                  value:
+                    - stopId: "1"
+                      departureTime: "08:00:00"
+                      coordinates:
+                        - latitude: 47.378177
+                          longitude: 8.540192
+                        - latitude: 47.391555
+                          longitude: 8.497153
+components:
+  schemas:
+    Autocomplete:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    StopTime:
+      type: object
+      properties:
+        tripId:
+          type: string
+        stopId:
+          type: string
+        arrivalTime:
+          type: string
+          format: time
+        departureTime:
+          type: string
+          format: time
+    Stop:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Connection:
+      type: object
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Leg'
+    Leg:
+      type: object
+      properties:
+        id:
+          type: string
+        fromStopId:
+          type: string
+        toStopId:
+          type: string
+        departureTime:
+          type: string
+          format: time
+        arrivalTime:
+          type: string
+          format: time
+        type:
+          type: string
+    Isoline:
+      type: object
+      properties:
+        stopId:
+          type: string
+        departureTime:
+          type: string
+          format: date-time
+        coordinates:
+          type: array
+          items:
+            type: object
+            properties:
+              latitude:
+                type: number
+              longitude:
+                type: number
