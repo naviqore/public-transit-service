@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * StopTime
+ * EarliestArrival
  */
 @Getter
-public class StopTime {
+public class EarliestArrival {
 
     @JsonProperty("stop")
     private Stop stop;
@@ -20,19 +20,13 @@ public class StopTime {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime arrivalTime;
 
-    @JsonProperty("departureTime")
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private LocalDateTime departureTime;
+    @JsonProperty("connection")
+    private Connection connection;
 
-    public StopTime(Stop stop, LocalDateTime arrivalTime, LocalDateTime departureTime) {
+    public EarliestArrival(Stop stop, LocalDateTime arrivalTime, Connection connection) {
         this.stop = stop;
         this.arrivalTime = arrivalTime;
-        this.departureTime = departureTime;
-    }
-
-    public StopTime stop(Stop stop) {
-        this.stop = stop;
-        return this;
+        this.connection = connection;
     }
 
     @Override
@@ -43,23 +37,23 @@ public class StopTime {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        StopTime stopTime = (StopTime) o;
-        return Objects.equals(this.stop, stopTime.stop) && Objects.equals(this.arrivalTime,
-                stopTime.arrivalTime) && Objects.equals(this.departureTime, stopTime.departureTime);
+        EarliestArrival earliestArrival = (EarliestArrival) o;
+        return Objects.equals(this.stop, earliestArrival.stop) && Objects.equals(this.arrivalTime,
+                earliestArrival.arrivalTime) && Objects.equals(this.connection, earliestArrival.connection);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(stop, arrivalTime, departureTime);
+        return Objects.hash(stop, arrivalTime, connection);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("class StopTime {\n");
+        sb.append("class EarliestArrival {\n");
         sb.append("    stop: ").append(toIndentedString(stop)).append("\n");
         sb.append("    arrivalTime: ").append(toIndentedString(arrivalTime)).append("\n");
-        sb.append("    departureTime: ").append(toIndentedString(departureTime)).append("\n");
+        sb.append("    connection: ").append(toIndentedString(connection)).append("\n");
         sb.append("}");
         return sb.toString();
     }

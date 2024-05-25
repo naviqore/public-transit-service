@@ -1,12 +1,12 @@
 package ch.naviqore.api.controller;
 
-import ch.naviqore.api.model.Autocomplete;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import ch.naviqore.api.model.Departure;
+import ch.naviqore.api.model.DistanceToStop;
+import ch.naviqore.api.model.SearchType;
+import ch.naviqore.api.model.Stop;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -14,17 +14,30 @@ import java.util.List;
 public class ScheduleController {
 
     @GetMapping("/stops/autocomplete")
-    public List<Autocomplete> getInquiries(@RequestParam String query) {
-        List<Autocomplete> dtos = new ArrayList<>();
-        Autocomplete dto = new Autocomplete();
-        dto.setId("1");
-        dto.setName("Autocomplete 1");
-        dtos.add(dto);
-        dto = new Autocomplete();
-        dto.setId("2");
-        dto.setName("Autocomplete 2");
-        dtos.add(dto);
-        return dtos;
+    public List<Stop> getAutoCompleteStops(@RequestParam String query,
+                                           @RequestParam(required = false, defaultValue = "10") int limit,
+                                           @RequestParam(required = false, defaultValue = "FUZZY") SearchType type) {
+        return DummyData.searchStops(query, limit, type);
+    }
+
+    @GetMapping("/stops/nearest")
+    public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
+                                                @RequestParam(required = false, defaultValue = "1000") int maxDistance,
+                                                @RequestParam(required = false, defaultValue = "10") int limit) {
+        return DummyData.getNearestStops(latitude, longitude, maxDistance, limit);
+    }
+
+    @GetMapping("/stops/{stopId}")
+    public Stop getStop(@PathVariable String stopId) {
+        return DummyData.getStop(stopId);
+    }
+
+    @GetMapping("/stops/{stopId}/departures")
+    public List<Departure> getDepartures(@PathVariable String stopId,
+                                         @RequestParam(required = false) LocalDateTime departureTime,
+                                         @RequestParam(required = false, defaultValue = "10") int limit,
+                                         @RequestParam(required = false) LocalDateTime untilDateTime) {
+        return DummyData.getDepartures(stopId, departureTime, limit, untilDateTime);
     }
 
 }

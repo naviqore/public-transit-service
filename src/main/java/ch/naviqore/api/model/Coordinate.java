@@ -3,20 +3,23 @@ package ch.naviqore.api.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Connection
+ * Coordinate
  */
 @Getter
-public class Connection {
+public class Coordinate {
 
-    @JsonProperty("legs")
-    private List<Leg> legs;
+    @JsonProperty("latitude")
+    private double latitude;
 
-    public Connection(List<Leg> legs) {
-        this.legs = legs;
+    @JsonProperty("longitude")
+    private double longitude;
+
+    public Coordinate(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     @Override
@@ -27,20 +30,22 @@ public class Connection {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Connection connection = (Connection) o;
-        return Objects.equals(this.legs, connection.legs);
+        Coordinate coordinate = (Coordinate) o;
+        return Objects.equals(this.latitude, coordinate.latitude) && Objects.equals(this.longitude,
+                coordinate.longitude);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(legs);
+        return Objects.hash(latitude, longitude);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("class Connection {\n");
-        sb.append("    legs: ").append(toIndentedString(legs)).append("\n");
+        sb.append("class Coordinate {\n");
+        sb.append("    latitude: ").append(toIndentedString(latitude)).append("\n");
+        sb.append("    longitude: ").append(toIndentedString(longitude)).append("\n");
         sb.append("}");
         return sb.toString();
     }

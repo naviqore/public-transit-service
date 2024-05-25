@@ -3,20 +3,23 @@ package ch.naviqore.api.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Connection
+ * Departure
  */
 @Getter
-public class Connection {
+public class Departure {
 
-    @JsonProperty("legs")
-    private List<Leg> legs;
+    @JsonProperty("stopTime")
+    private StopTime stopTime;
 
-    public Connection(List<Leg> legs) {
-        this.legs = legs;
+    @JsonProperty("trip")
+    private Trip trip;
+
+    public Departure(StopTime stopTime, Trip trip) {
+        this.stopTime = stopTime;
+        this.trip = trip;
     }
 
     @Override
@@ -27,20 +30,21 @@ public class Connection {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Connection connection = (Connection) o;
-        return Objects.equals(this.legs, connection.legs);
+        Departure departure = (Departure) o;
+        return Objects.equals(this.stopTime, departure.stopTime) && Objects.equals(this.trip, departure.trip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(legs);
+        return Objects.hash(stopTime, trip);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("class Connection {\n");
-        sb.append("    legs: ").append(toIndentedString(legs)).append("\n");
+        sb.append("class Departure {\n");
+        sb.append("    stopTime: ").append(toIndentedString(stopTime)).append("\n");
+        sb.append("    trip: ").append(toIndentedString(trip)).append("\n");
         sb.append("}");
         return sb.toString();
     }

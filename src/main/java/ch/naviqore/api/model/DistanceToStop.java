@@ -3,20 +3,23 @@ package ch.naviqore.api.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Connection
+ * DistanceToStop
  */
 @Getter
-public class Connection {
+public class DistanceToStop {
 
-    @JsonProperty("legs")
-    private List<Leg> legs;
+    @JsonProperty("stop")
+    private Stop stop;
 
-    public Connection(List<Leg> legs) {
-        this.legs = legs;
+    @JsonProperty("distance")
+    private double distance;
+
+    public DistanceToStop(Stop stop, double distance) {
+        this.stop = stop;
+        this.distance = distance;
     }
 
     @Override
@@ -27,20 +30,21 @@ public class Connection {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Connection connection = (Connection) o;
-        return Objects.equals(this.legs, connection.legs);
+        DistanceToStop distanceToStop = (DistanceToStop) o;
+        return Objects.equals(this.stop, distanceToStop.stop) && Objects.equals(this.distance, distanceToStop.distance);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(legs);
+        return Objects.hash(stop, distance);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("class Connection {\n");
-        sb.append("    legs: ").append(toIndentedString(legs)).append("\n");
+        sb.append("class DistanceToStop {\n");
+        sb.append("    stop: ").append(toIndentedString(stop)).append("\n");
+        sb.append("    distance: ").append(toIndentedString(distance)).append("\n");
         sb.append("}");
         return sb.toString();
     }

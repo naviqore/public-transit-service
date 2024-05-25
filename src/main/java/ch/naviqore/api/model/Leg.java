@@ -1,194 +1,99 @@
 package ch.naviqore.api.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.validation.constraints.*;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
  * Leg
  */
-
+@Getter
 public class Leg {
 
-  @JsonProperty("id")
-  private String id;
+    @JsonProperty("from")
+    private Coordinate from;
 
-  @JsonProperty("fromStopId")
-  private String fromStopId;
+    @JsonProperty("to")
+    private Coordinate to;
 
-  @JsonProperty("toStopId")
-  private String toStopId;
+    @JsonProperty("fromStop")
+    private Stop fromStop;
 
-  @JsonProperty("departureTime")
-  private String departureTime;
+    @JsonProperty("toStop")
+    private Stop toStop;
 
-  @JsonProperty("arrivalTime")
-  private String arrivalTime;
+    @JsonProperty("type")
+    private LegType type;
 
-  @JsonProperty("type")
-  private String type;
+    @JsonProperty("departureTime")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime departureTime;
 
-  public Leg id(String id) {
-    this.id = id;
-    return this;
-  }
+    @JsonProperty("arrivalTime")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime arrivalTime;
 
-  /**
-   * Get id
-   * @return id
-  */
-  
-  @Schema(name = "id", required = false)
-  public String getId() {
-    return id;
-  }
+    @JsonProperty("trip")
+    private Trip trip;
 
-  public void setId(String id) {
-    this.id = id;
-  }
-
-  public Leg fromStopId(String fromStopId) {
-    this.fromStopId = fromStopId;
-    return this;
-  }
-
-  /**
-   * Get fromStopId
-   * @return fromStopId
-  */
-  
-  @Schema(name = "fromStopId", required = false)
-  public String getFromStopId() {
-    return fromStopId;
-  }
-
-  public void setFromStopId(String fromStopId) {
-    this.fromStopId = fromStopId;
-  }
-
-  public Leg toStopId(String toStopId) {
-    this.toStopId = toStopId;
-    return this;
-  }
-
-  /**
-   * Get toStopId
-   * @return toStopId
-  */
-  
-  @Schema(name = "toStopId", required = false)
-  public String getToStopId() {
-    return toStopId;
-  }
-
-  public void setToStopId(String toStopId) {
-    this.toStopId = toStopId;
-  }
-
-  public Leg departureTime(String departureTime) {
-    this.departureTime = departureTime;
-    return this;
-  }
-
-  /**
-   * Get departureTime
-   * @return departureTime
-  */
-  
-  @Schema(name = "departureTime", required = false)
-  public String getDepartureTime() {
-    return departureTime;
-  }
-
-  public void setDepartureTime(String departureTime) {
-    this.departureTime = departureTime;
-  }
-
-  public Leg arrivalTime(String arrivalTime) {
-    this.arrivalTime = arrivalTime;
-    return this;
-  }
-
-  /**
-   * Get arrivalTime
-   * @return arrivalTime
-  */
-  
-  @Schema(name = "arrivalTime", required = false)
-  public String getArrivalTime() {
-    return arrivalTime;
-  }
-
-  public void setArrivalTime(String arrivalTime) {
-    this.arrivalTime = arrivalTime;
-  }
-
-  public Leg type(String type) {
-    this.type = type;
-    return this;
-  }
-
-  /**
-   * Get type
-   * @return type
-  */
-  
-  @Schema(name = "type", required = false)
-  public String getType() {
-    return type;
-  }
-
-  public void setType(String type) {
-    this.type = type;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    public Leg(Coordinate from, Coordinate to, Stop fromStop, Stop toStop, LegType type, LocalDateTime departureTime,
+               LocalDateTime arrivalTime, Trip trip) {
+        this.from = from;
+        this.to = to;
+        this.fromStop = fromStop;
+        this.toStop = toStop;
+        this.type = type;
+        this.departureTime = departureTime;
+        this.arrivalTime = arrivalTime;
+        this.trip = trip;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Leg leg = (Leg) o;
+        return Objects.equals(this.from, leg.from) && Objects.equals(this.to, leg.to) && Objects.equals(this.fromStop,
+                leg.fromStop) && Objects.equals(this.toStop, leg.toStop) && Objects.equals(this.type,
+                leg.type) && Objects.equals(this.departureTime, leg.departureTime) && Objects.equals(this.arrivalTime,
+                leg.arrivalTime);
     }
-    Leg leg = (Leg) o;
-    return Objects.equals(this.id, leg.id) &&
-        Objects.equals(this.fromStopId, leg.fromStopId) &&
-        Objects.equals(this.toStopId, leg.toStopId) &&
-        Objects.equals(this.departureTime, leg.departureTime) &&
-        Objects.equals(this.arrivalTime, leg.arrivalTime) &&
-        Objects.equals(this.type, leg.type);
-  }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(id, fromStopId, toStopId, departureTime, arrivalTime, type);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("class Leg {\n");
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    fromStopId: ").append(toIndentedString(fromStopId)).append("\n");
-    sb.append("    toStopId: ").append(toIndentedString(toStopId)).append("\n");
-    sb.append("    departureTime: ").append(toIndentedString(departureTime)).append("\n");
-    sb.append("    arrivalTime: ").append(toIndentedString(arrivalTime)).append("\n");
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("}");
-    return sb.toString();
-  }
-
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
+    @Override
+    public int hashCode() {
+        return Objects.hash(from, to, fromStop, toStop, type, departureTime, arrivalTime);
     }
-    return o.toString().replace("\n", "\n    ");
-  }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("class Leg {\n");
+        sb.append("    from: ").append(toIndentedString(from)).append("\n");
+        sb.append("    to: ").append(toIndentedString(to)).append("\n");
+        sb.append("    fromStop: ").append(toIndentedString(fromStop)).append("\n");
+        sb.append("    toStop: ").append(toIndentedString(toStop)).append("\n");
+        sb.append("    type: ").append(toIndentedString(type)).append("\n");
+        sb.append("    departureTime: ").append(toIndentedString(departureTime)).append("\n");
+        sb.append("    arrivalTime: ").append(toIndentedString(arrivalTime)).append("\n");
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /**
+     * Convert the given object to string with each line indented by 4 spaces (except the first line).
+     */
+    private String toIndentedString(Object o) {
+        if (o == null) {
+            return "null";
+        }
+        return o.toString().replace("\n", "\n    ");
+    }
 }
 
