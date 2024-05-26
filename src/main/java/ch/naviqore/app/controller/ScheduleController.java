@@ -1,9 +1,9 @@
-package ch.naviqore.api.controller;
+package ch.naviqore.app.controller;
 
-import ch.naviqore.api.model.Departure;
-import ch.naviqore.api.model.DistanceToStop;
-import ch.naviqore.api.model.SearchType;
-import ch.naviqore.api.model.Stop;
+import ch.naviqore.app.model.Departure;
+import ch.naviqore.app.model.DistanceToStop;
+import ch.naviqore.app.model.SearchType;
+import ch.naviqore.app.model.Stop;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;

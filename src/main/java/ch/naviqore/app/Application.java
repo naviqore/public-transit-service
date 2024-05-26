@@ -1,4 +1,4 @@
-package ch.naviqore.api;
+package ch.naviqore.app;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

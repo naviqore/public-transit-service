@@ -20,12 +20,12 @@ paths:
         - name: limit
           in: query
           schema:
-              type: integer
+            type: integer
           description: The maximum number of stations to return. Defaults to `10`.
         - name: searchType
           in: query
           schema:
-              $ref: '#/components/schemas/SEARCH_TYPE'
+            $ref: '#/components/schemas/SEARCH_TYPE'
           description: The type of search to perform. Defaults to `FUZZY`.
       responses:
         '200':
@@ -156,22 +156,22 @@ paths:
         - name: maxWalkingDuration
           in: query
           schema:
-             type: integer
+            type: integer
           description: The maximum walking duration in seconds. Defaults to `INFINITY`.
         - name: maxTransferNumber
           in: query
           schema:
-             type: integer
+            type: integer
           description: The maximum number of transfers between trips allowed in a connection. Defaults to `INFINITY`.
         - name: maxTravelTime
           in: query
           schema:
-             type: integer
+            type: integer
           description: The maximum travel time in seconds. Defaults to `INFINITY`.
         - name: minTransferTime
           in: query
           schema:
-             type: integer
+            type: integer
           description: The minimum transfer time between trips in seconds. Defaults to `0`.
       responses:
         '200':
@@ -214,7 +214,7 @@ paths:
         - name: maxTravelTime
           in: query
           schema:
-              type: integer
+            type: integer
           description: The maximum travel time in seconds. Defaults to `INFINITY`.
         - name: minTransferTime
           in: query
@@ -290,7 +290,7 @@ components:
           type: string
           format: date-time
         trip:
-            $ref: '#/components/schemas/Trip'
+          $ref: '#/components/schemas/Trip'
     EarliestArrival:
       type: object
       properties:
@@ -314,7 +314,7 @@ components:
         headSign:
           type: string
         route:
-            $ref: '#/components/schemas/Route'
+          $ref: '#/components/schemas/Route'
         stopTimes:
           type: array
           items:

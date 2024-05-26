@@ -1,7 +1,7 @@
-package ch.naviqore.api.controller;
+package ch.naviqore.app.controller;
 
-import ch.naviqore.api.model.Connection;
-import ch.naviqore.api.model.EarliestArrival;
+import ch.naviqore.app.model.Connection;
+import ch.naviqore.app.model.EarliestArrival;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

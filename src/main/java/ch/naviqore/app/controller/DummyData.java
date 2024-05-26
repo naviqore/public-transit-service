@@ -1,6 +1,6 @@
-package ch.naviqore.api.controller;
+package ch.naviqore.app.controller;
 
-import ch.naviqore.api.model.*;
+import ch.naviqore.app.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

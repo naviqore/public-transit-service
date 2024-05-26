@@ -1,0 +1,19 @@
+### Nearest stop
+GET http://localhost:8080/schedule/stops/nearest?latitude=48&longitude=8&maxDistance=500000
+Accept: application/json
+
+### Autocomplete stop name
+GET http://localhost:8080/schedule/stops/autocomplete?query=Sta&searchType=CONTAINS
+Accept: application/json
+
+### Departure at stop
+GET http://localhost:8080/schedule/stops/Stop-1/departures?limit=3
+Accept: application/json
+
+### Connection between two stops
+GET http://localhost:8080/routing/connections?sourceStopId=Stop-10&targetStopId=Stop-17
+Accept: application/json
+
+### Isoline from stop
+GET http://localhost:8080/routing/isolines?sourceStopId=Stop-10&maxTransferNumber=3&maxTravelTime=7200
+Accept: application/json
