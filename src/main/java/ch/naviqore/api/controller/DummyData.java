@@ -364,9 +364,9 @@ public class DummyData {
         HashMap<Stop, Leg> earliestArrivals = new HashMap<>();
 
         // find nearest stop and walk there by foot
-        List<DistanceToStop> closestStops = getNearestStops(from.getCoordinates().getLatitude(),
+        List<DistanceToStop> closestStops = getNearestStops(stops, from.getCoordinates().getLatitude(),
                 from.getCoordinates().getLongitude(), Integer.MAX_VALUE, 10);
-        Stop nearestStop = closestStops.get(0).getStop();
+        Stop nearestStop = closestStops.getFirst().getStop();
         spawnStops.add(nearestStop);
         stops.remove(nearestStop);
         earliestArrivals.put(nearestStop, buildFootpathLeg(from, nearestStop, departureTime));
@@ -388,8 +388,11 @@ public class DummyData {
             } else {
                 spawnStop = spawnStops.removeFirst();
             }
-            int maxConnections = stops.size() / 3;
-            int numConnections = random.nextInt(maxConnections + 2);
+            int maxConnections = stops.size() / 4;
+            if (maxConnections < 2) {
+                maxConnections = 2;
+            }
+            int numConnections = random.nextInt(maxConnections);
 
             List<DistanceToStop> nearestStops = getNearestStops(stops, spawnStop.getCoordinates().getLatitude(),
                     spawnStop.getCoordinates().getLongitude(), Integer.MAX_VALUE, 5 + numConnections);
