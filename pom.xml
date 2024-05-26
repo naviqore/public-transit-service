@@ -10,12 +10,14 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>ch.naviqore</groupId>
-    <artifactId>naviqore-raptor</artifactId>
+    <artifactId>public-transit-service</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    <name>RAPTOR</name>
-    <description>Round-based public transit routing (RAPTOR) algorithm implementation.</description>
-    <url>https://github.com/naviqore/raptor</url>
+    <name>Public Transit Service</name>
+    <description>
+        Public transit schedule information and connection routing service based on GTFS data and the RAPTOR algorithm.
+    </description>
+    <url>https://github.com/naviqore/public-transit-service</url>
 
     <licenses>
         <license>
@@ -40,9 +42,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/naviqore/raptor.git</connection>
-        <developerConnection>scm:git:ssh://github.com/naviqore/raptor.git</developerConnection>
-        <url>https://github.com/naviqore/raptor</url>
+        <connection>scm:git:git://github.com/naviqore/public-transit-service.git</connection>
+        <developerConnection>scm:git:ssh://github.com/naviqore/public-transit-service.git</developerConnection>
+        <url>https://github.com/naviqore/public-transit-service</url>
     </scm>
 
     <properties>
@@ -90,7 +92,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.0-M1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -102,7 +104,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -127,12 +129,12 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.23.1</version>
+            <version>3.0.0-beta1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.23.1</version>
+            <version>3.0.0-beta1</version>
         </dependency>
         <!-- io -->
         <dependency>
@@ -163,8 +165,15 @@
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>2.1.12</version>
+            <version>2.2.22</version>
         </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>maven_central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+    </repositories>
 
 </project>
