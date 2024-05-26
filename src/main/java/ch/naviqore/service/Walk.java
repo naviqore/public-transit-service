@@ -1,18 +1,23 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface Walk {
-    @NotNull Location getStart();
+public interface Walk extends Leg {
 
-    @NotNull Location getEnd();
+    Location getSourceLocation();
 
-    @Nullable Stop getStartStop();
+    Location getTargetLocation();
 
-    @Nullable Stop getEndStop();
+    /**
+     * The target public transit stop, if walk starts at a stop.
+     */
+    @Nullable
+    Stop getSourceStop();
 
-    int getDistance();
+    /**
+     * The target public transit stop, if walk ends at a stop.
+     */
+    @Nullable
+    Stop getTargetStop();
 
-    int getDuration();
 }

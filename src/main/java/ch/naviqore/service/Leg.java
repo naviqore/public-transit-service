@@ -1,22 +1,17 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
+/**
+ * Represents a leg of a connection, including its order, distance, and duration.
+ */
 public interface Leg {
-    @NotNull Location getDepartureLocation();
 
-    @NotNull Location getArrivalLocation();
+    /**
+     * The position of this leg in the overall connection.
+     */
+    int getOrder();
 
-    @Nullable Stop getDepartureStop();
+    int getDistance();
 
-    @Nullable Stop getArrivalStop();
+    int getDuration();
 
-    @NotNull DepartureTime getDepartureTime();
-
-    @NotNull ArrivalTime getArrivalTime();
-
-    @Nullable Trip getTrip();
-
-    @Nullable Walk getWalk();
 }

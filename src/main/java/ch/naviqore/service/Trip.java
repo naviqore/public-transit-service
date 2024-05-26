@@ -1,17 +1,18 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.List;
 
+/**
+ * A trip starts on a public transit route an follows its stop sequence.
+ * <p>
+ * Note: There can be trips with different stop sequences which belong to the same route.
+ */
 public interface Trip {
-    @NotNull String getTripId();
 
-    @NotNull Route getRoute();
+    String getId();
 
-    @NotNull StopTime getStartStop();
+    Route getRoute();
 
-    @NotNull StopTime getEndStop();
+    List<StopTime> getStopTimes();
 
-    @NotNull List<StopTime> getStopTimes();
 }
