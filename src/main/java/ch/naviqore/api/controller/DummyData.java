@@ -11,36 +11,29 @@ public class DummyData {
 
     public static List<Stop> getStops() {
         List<Stop> dtos = new ArrayList<>();
-        dtos.add(new Stop("Stop-1", "Train Station", new Coordinate(47.9, 8.0)));
-        dtos.add(new Stop("Stop-2", "Bus Station", new Coordinate(47.95, 8.05)));
-        dtos.add(new Stop("Stop-3", "Tram Station", new Coordinate(48.0, 8.1)));
-        dtos.add(new Stop("Stop-4", "Central Station", new Coordinate(48.1, 8.0)));
-        dtos.add(new Stop("Stop-5", "East Station", new Coordinate(47.9, 7.95)));
-        dtos.add(new Stop("Stop-6", "West Station", new Coordinate(48.15, 8.1)));
-        dtos.add(new Stop("Stop-7", "North Station", new Coordinate(48.05, 7.9)));
-        dtos.add(new Stop("Stop-8", "South Station", new Coordinate(48.2, 8.05)));
-        dtos.add(new Stop("Stop-9", "City Center", new Coordinate(47.95, 8.1)));
-        dtos.add(new Stop("Stop-10", "Main Square", new Coordinate(48.0, 8.05)));
-        dtos.add(new Stop("Stop-11", "University", new Coordinate(48.1, 7.95)));
-        dtos.add(new Stop("Stop-12", "Airport", new Coordinate(47.9, 8.1)));
-        dtos.add(new Stop("Stop-13", "Harbor", new Coordinate(48.2, 7.9)));
-        dtos.add(new Stop("Stop-14", "Market Place", new Coordinate(48.05, 8.0)));
-        dtos.add(new Stop("Stop-15", "Old Town", new Coordinate(47.95, 7.9)));
-        dtos.add(new Stop("Stop-16", "Industrial Park", new Coordinate(48.0, 8.1)));
-        dtos.add(new Stop("Stop-17", "Business District", new Coordinate(48.1, 8.05)));
-        dtos.add(new Stop("Stop-18", "Residential Area", new Coordinate(48.2, 8.0)));
-        dtos.add(new Stop("Stop-19", "Historic Site", new Coordinate(48.0, 7.95)));
-        dtos.add(new Stop("Stop-20", "Tech Park", new Coordinate(47.9, 8.05)));
-        dtos.add(new Stop("Stop-21", "City Hall", new Coordinate(48.1, 7.9)));
-        dtos.add(new Stop("Stop-22", "Library", new Coordinate(48.2, 8.1)));
-        dtos.add(new Stop("Stop-23", "Museum", new Coordinate(47.95, 8.0)));
-        dtos.add(new Stop("Stop-24", "Stadium", new Coordinate(48.05, 8.1)));
-        dtos.add(new Stop("Stop-25", "Aquarium", new Coordinate(48.0, 8.0)));
-        dtos.add(new Stop("Stop-26", "Zoo", new Coordinate(48.1, 8.05)));
-        dtos.add(new Stop("Stop-27", "Botanical Garden", new Coordinate(48.2, 7.95)));
-        dtos.add(new Stop("Stop-28", "Concert Hall", new Coordinate(48.05, 7.9)));
-        dtos.add(new Stop("Stop-29", "Exhibition Center", new Coordinate(48.0, 8.1)));
-        dtos.add(new Stop("Stop-30", "Convention Center", new Coordinate(47.9, 8.0)));
+        dtos.add(new Stop("Stop-1", "Zürich, Klinik Hirslanden", new Coordinate(47.35189719, 8.576602294)));
+        dtos.add(new Stop("Stop-2", "Brüttisellen, Gemeindehaus", new Coordinate(47.42036924, 8.628830345)));
+        dtos.add(new Stop("Stop-3", "Hausen a.A., Post A", new Coordinate(47.24489999, 8.532728576)));
+        dtos.add(new Stop("Stop-4", "Zürich, Bahnhof Stadelhofen", new Coordinate(47.36616091, 8.5472723)));
+        dtos.add(new Stop("Stop-5", "Spital Zollikerberg", new Coordinate(47.34735681, 8.596634725)));
+        dtos.add(new Stop("Stop-6", "Zürich, Central Polybahn", new Coordinate(47.37652769, 8.544352776)));
+        dtos.add(new Stop("Stop-7", "Uster, Buchholz", new Coordinate(47.35874961, 8.729172162)));
+        dtos.add(new Stop("Stop-8", "Zürich, Triemli", new Coordinate(47.3680227, 8.495682053)));
+        dtos.add(new Stop("Stop-9", "Winterthur, Hauptbahnhof", new Coordinate(47.49938025, 8.723908035)));
+        dtos.add(new Stop("Stop-10", "Zürich Flughafen, Bahnhof", new Coordinate(47.45027729, 8.56405283)));
+        dtos.add(new Stop("Stop-11", "Zürich, Schwamendingerplatz", new Coordinate(47.40487989, 8.571481897)));
+        dtos.add(new Stop("Stop-12", "Roswiesen", new Coordinate(47.40295252, 8.576979587)));
+        dtos.add(new Stop("Stop-13", "Siemens", new Coordinate(47.37846819, 8.494002204)));
+        dtos.add(new Stop("Stop-14", "Stauffacher", new Coordinate(47.37342517, 8.529252096)));
+        dtos.add(new Stop("Stop-15", "Sternen Oerlikon", new Coordinate(47.41007188, 8.546230254)));
+        dtos.add(new Stop("Stop-16", "Zoo", new Coordinate(47.38157041, 8.571553762)));
+        dtos.add(new Stop("Stop-17", "Universität Irchel", new Coordinate(47.39616056, 8.544828883)));
+        dtos.add(new Stop("Stop-18", "Benglen, Gerlisbrunnen", new Coordinate(47.36092808, 8.632872764)));
+        dtos.add(new Stop("Stop-19", "Winterthur, Grüzenstrasse", new Coordinate(47.49825747, 8.744587252)));
+        dtos.add(new Stop("Stop-20", "Zürich, Bahnhof Wollishofen", new Coordinate(47.34825762, 8.533294514)));
+        dtos.add(new Stop("Stop-21", "Elsau, Melcher", new Coordinate(47.50171676, 8.787230279)));
+        dtos.add(new Stop("Stop-22", "Wetzikon ZH, Walfershausen", new Coordinate(47.32205504, 8.797336326)));
+        dtos.add(new Stop("Stop-23", "Hombrechtikon, Tobel", new Coordinate(47.25379065, 8.780986988)));
         return dtos;
     }
 
@@ -138,7 +131,7 @@ public class DummyData {
 
     private static Connection buildTwoLegDummyConnection(Stop from, Stop to, LocalDateTime departureTime) {
 
-        Stop stopBetween = getStopInBetweenStops(from, to);
+        Stop stopBetween = getStopInBetweenStops(from, to, 2);
 
         if (stopBetween == null) {
             return buildSimpleDummyConnection(from, to, departureTime);
@@ -155,14 +148,14 @@ public class DummyData {
     private static Connection buildThreeLegDummyConnectionWithFootpath(Stop from, Stop to,
                                                                        LocalDateTime departureTime) {
 
-        Stop stopBetween = getStopInBetweenStops(from, to);
+        Stop stopBetween = getStopInBetweenStops(from, to, 2);
 
         if (stopBetween == null) {
             return buildTwoLegDummyConnection(from, to, departureTime);
         }
 
         List<DistanceToStop> closestStops = getNearestStops(stopBetween.getCoordinates().getLatitude(),
-                stopBetween.getCoordinates().getLongitude(), 5000, 10);
+                stopBetween.getCoordinates().getLongitude(), Integer.MAX_VALUE, 4);
 
         Stop closestStop = null;
 
@@ -195,32 +188,36 @@ public class DummyData {
         return new Connection(legs);
     }
 
-    private static Stop getStopInBetweenStops(Stop from, Stop to) {
-        List<Stop> stops = getStops();
-        // get all stops between from and to
-        List<Stop> stopsBetween = new ArrayList<>();
-        for (Stop stop : stops) {
-            if (stop.equals(from) || stop.equals(to)) {
+    private static Stop getStopInBetweenStops(Stop from, Stop to, int randomness) {
+        return getStopInBetweenStops(from, to, randomness, List.of(from, to));
+    }
+
+    private static Stop getStopInBetweenStops(Stop from, Stop to, int randomness, List<Stop> exclusionStops) {
+
+        // get coordinate of the center of the two stops
+        double centerLat = (from.getCoordinates().getLatitude() + to.getCoordinates().getLatitude()) / 2;
+        double centerLon = (from.getCoordinates().getLongitude() + to.getCoordinates().getLongitude()) / 2;
+        Coordinate center = new Coordinate(centerLat, centerLon);
+
+        List<DistanceToStop> closestStops = getNearestStops(center.getLatitude(), center.getLongitude(),
+                Integer.MAX_VALUE, 3+randomness);
+
+        // random sort to get different results
+        closestStops.sort((a, b) -> {
+            if (a.getStop().equals(b.getStop()) && a.getDistance() == b.getDistance()) {
+                return 0;
+            }
+            return Math.random() < 0.5 ? -1 : 1;
+        });
+
+        for (DistanceToStop distanceToStop : closestStops) {
+            if (exclusionStops.contains(distanceToStop.getStop())) {
                 continue;
             }
-            double maxLat = Math.max(from.getCoordinates().getLatitude(), to.getCoordinates().getLatitude());
-            double minLat = Math.min(from.getCoordinates().getLatitude(), to.getCoordinates().getLatitude());
-            double maxLon = Math.max(from.getCoordinates().getLongitude(), to.getCoordinates().getLongitude());
-            double minLon = Math.min(from.getCoordinates().getLongitude(), to.getCoordinates().getLongitude());
-            if (stop.getCoordinates().getLatitude() > minLat && stop.getCoordinates()
-                    .getLatitude() < maxLat && stop.getCoordinates().getLongitude() > minLon && stop.getCoordinates()
-                    .getLongitude() < maxLon) {
-                stopsBetween.add(stop);
-                System.out.println("Stop between: " + stop.getName());
-            }
+            return distanceToStop.getStop();
         }
 
-        if (stopsBetween.isEmpty()) {
-            return null;
-            //return stops.get((int) (Math.random() * stops.size()));
-        }
-
-        return stopsBetween.get((int) (Math.random() * stopsBetween.size()));
+        return null;
     }
 
     private static Leg buildTripDummyLeg(Stop from, Stop to, LocalDateTime departureTime) {
