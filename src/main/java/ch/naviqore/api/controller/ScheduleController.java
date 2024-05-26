@@ -34,10 +34,10 @@ public class ScheduleController {
 
     @GetMapping("/stops/{stopId}/departures")
     public List<Departure> getDepartures(@PathVariable String stopId,
-                                         @RequestParam(required = false) LocalDateTime departureTime,
+                                         @RequestParam(required = false) LocalDateTime departureDateTime,
                                          @RequestParam(required = false, defaultValue = "10") int limit,
                                          @RequestParam(required = false) LocalDateTime untilDateTime) {
-        return DummyData.getDepartures(stopId, departureTime, limit, untilDateTime);
+        return DummyData.getDepartures(stopId, departureDateTime, limit, untilDateTime);
     }
 
 }

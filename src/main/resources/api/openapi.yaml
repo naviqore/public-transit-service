@@ -49,7 +49,7 @@ paths:
           schema:
             type: string
           description: The ID of the stop.
-        - name: dateTime
+        - name: departureDateTime
           in: query
           schema:
             type: string

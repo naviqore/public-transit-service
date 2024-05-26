@@ -6,8 +6,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DummyData {
+
+    static Random random = new Random();
+    private static final Logger logger = LoggerFactory.getLogger(DummyData.class);
 
     public static List<Stop> getStops() {
         List<Stop> dtos = new ArrayList<>();
@@ -207,7 +214,7 @@ public class DummyData {
             if (a.getStop().equals(b.getStop()) && a.getDistance() == b.getDistance()) {
                 return 0;
             }
-            return Math.random() < 0.5 ? -1 : 1;
+            return random.nextInt(3) < 2 ? -1 : 1;
         });
 
         for (DistanceToStop distanceToStop : closestStops) {
@@ -224,27 +231,32 @@ public class DummyData {
         double distance = approximateDistance(from.getCoordinates(), to.getCoordinates());
         // get route randomly
         List<Route> routes = getRoutes();
-        Route route = routes.get((int) (Math.random() * routes.size()));
+        int routeIndex = random.nextInt(routes.size());
+        Route route = routes.get(routeIndex);
+
         int speed = 1000; // meters per minute
         if (route.getTransportMode().equals("Train")) {
             speed = 2000;
         }
         int travelTime = (int) (distance / speed); // in minutes
-        LocalDateTime tripDepartureTime = departureTime.plusMinutes((int) (Math.random() * 20));
+        int departureOffset = random.nextInt(20);
+        LocalDateTime tripDepartureTime = departureTime.plusMinutes(departureOffset);
         LocalDateTime tripArrivalTime = tripDepartureTime.plusMinutes(travelTime);
 
         ArrayList<StopTime> stopTimes = new ArrayList<>();
-        stopTimes.add(new StopTime(from, departureTime, tripDepartureTime));
+        stopTimes.add(new StopTime(from, tripDepartureTime, tripDepartureTime));
         stopTimes.add(new StopTime(to, tripArrivalTime, tripArrivalTime));
 
         Trip trip = new Trip(to.getName(), route, stopTimes);
 
-        return new Leg(from.getCoordinates(), to.getCoordinates(), from, to, LegType.ROUTE, departureTime,
+        return new Leg(from.getCoordinates(), to.getCoordinates(), from, to, LegType.ROUTE, tripDepartureTime,
                 tripArrivalTime, trip);
     }
 
     public static List<Departure> getDepartures(String stopId, LocalDateTime departureTime, int limit,
                                                 LocalDateTime untilDateTime) {
+
+        logger.info("Getting departures for stop: " + stopId + " at " + departureTime + " with limit " + limit);
 
         Stop stop = getStop(stopId);
 
@@ -260,8 +272,7 @@ public class DummyData {
                 continue;
             }
 
-            int randomMinutes = (int) (Math.random() * 120);
-            LocalDateTime tripDepartureTime = departureTime.plusMinutes(randomMinutes);
+            LocalDateTime tripDepartureTime = departureTime.plusMinutes(random.nextInt(120));
             Leg leg = buildTripDummyLeg(stop, targetStop, tripDepartureTime);
             Trip trip = leg.getTrip();
 
@@ -285,6 +296,8 @@ public class DummyData {
     public static List<Connection> getConnections(String fromStopId, String toStopId, LocalDateTime departureTime) {
         Stop from = getStop(fromStopId);
         Stop to = getStop(toStopId);
+
+        logger.info("Getting connections from " + from.getName() + " to " + to.getName() + " at " + departureTime);
 
         if (departureTime == null) {
             departureTime = LocalDateTime.now();
