@@ -40,12 +40,14 @@ class ServiceDayTimeTest {
 
         @Test
         void shouldThrowExceptionForInvalidMinutes() {
-            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, ServiceDayTime.MINUTES_IN_HOUR, 0));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new ServiceDayTime(0, ServiceDayTime.MINUTES_IN_HOUR, 0));
         }
 
         @Test
         void shouldThrowExceptionForInvalidSeconds() {
-            assertThrows(IllegalArgumentException.class, () -> new ServiceDayTime(0, 0, ServiceDayTime.SECONDS_IN_MINUTE));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new ServiceDayTime(0, 0, ServiceDayTime.SECONDS_IN_MINUTE));
         }
 
     }

@@ -3,14 +3,21 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
     <groupId>ch.naviqore</groupId>
-    <artifactId>naviqore-raptor</artifactId>
+    <artifactId>public-transit-service</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    <name>RAPTOR</name>
-    <description>Round-based public transit routing (RAPTOR) algorithm implementation.</description>
-    <url>https://github.com/naviqore/raptor</url>
+    <name>Public Transit Service</name>
+    <description>
+        Public transit schedule information and connection routing service based on GTFS data and the RAPTOR algorithm.
+    </description>
+    <url>https://github.com/naviqore/public-transit-service</url>
 
     <licenses>
         <license>
@@ -35,13 +42,14 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/naviqore/raptor.git</connection>
-        <developerConnection>scm:git:ssh://github.com/naviqore/raptor.git</developerConnection>
-        <url>https://github.com/naviqore/raptor</url>
+        <connection>scm:git:git://github.com/naviqore/public-transit-service.git</connection>
+        <developerConnection>scm:git:ssh://github.com/naviqore/public-transit-service.git</developerConnection>
+        <url>https://github.com/naviqore/public-transit-service</url>
     </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
@@ -72,6 +80,10 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
 
@@ -80,7 +92,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.0-M1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -92,7 +104,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -117,12 +129,12 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.23.1</version>
+            <version>3.0.0-beta1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.23.1</version>
+            <version>3.0.0-beta1</version>
         </dependency>
         <!-- io -->
         <dependency>
@@ -135,6 +147,33 @@
             <artifactId>commons-csv</artifactId>
             <version>1.10.0</version>
         </dependency>
+        <!-- api-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>2.0.1.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>2.2.22</version>
+        </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>maven_central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+    </repositories>
 
 </project>

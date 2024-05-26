@@ -1,0 +1,348 @@
+openapi: 3.0.0
+info:
+  title: Naviqore Public Transit API
+  version: 1.0.0
+  description: API for Public Transit Routing System
+paths:
+  /schedule/stops/autocomplete:
+    get:
+      summary: Autocomplete station names
+      description: Provides station names and their corresponding station IDs based on a partial input query.
+      tags:
+        - schedule
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial name of the station to search for.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: The maximum number of stations to return. Defaults to `10`.
+        - name: searchType
+          in: query
+          schema:
+            $ref: '#/components/schemas/SEARCH_TYPE'
+          description: The type of search to perform. Defaults to `FUZZY`.
+      responses:
+        '200':
+          description: A list of station names and IDs that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stop'
+  /schedule/stops/{stopId}/departures:
+    get:
+      summary: Get next departures from a stop
+      description: Retrieves the next departures from a specified stop at a given datetime.
+      tags:
+        - schedule
+      parameters:
+        - name: stopId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+        - name: departureDateTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: The date and time for which the next departures are requested. Defaults to the current time.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: The maximum number of departures to return. Defaults to `10`.
+        - name: untilDateTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: The date and time until which the departures are requested. Defaults to `null` (no limit).
+      responses:
+        '200':
+          description: A list of the next departures from the specified stop.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Departure'
+  /schedule/stops/nearest:
+    get:
+      summary: Get nearest stops
+      description: Retrieves a list of stops within a specified distance from a given location.
+      tags:
+        - schedule
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: The latitude of the origin location.
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: The longitude of the origin location.
+        - name: maxDistance
+          in: query
+          schema:
+            type: integer
+          description: The maximum distance from the origin location to search for stops in meters. Defaults to `1000`.
+      responses:
+        '200':
+          description: A list of nearest stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistanceToStop'
+  /schedule/stops/{stopId}:
+    get:
+      summary: Get information about a stop
+      description: Provides detailed information about a specific stop, including coordinates and the name.
+      tags:
+        - schedule
+      parameters:
+        - name: stopId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+      responses:
+        '200':
+          description: Information about the specified stop.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stop'
+  /routing/connections:
+    get:
+      summary: Request connections between two stops
+      description: Requests connections between two stops at a given departure datetime.
+      tags:
+        - routing
+      parameters:
+        - name: sourceStopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the source stop.
+        - name: targetStopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the target stop.
+        - name: departureDateTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: The departure datetime from the source stop. Defaults to the current time.
+        - name: maxWalkingDuration
+          in: query
+          schema:
+            type: integer
+          description: The maximum walking duration in seconds. Defaults to `INFINITY`.
+        - name: maxTransferNumber
+          in: query
+          schema:
+            type: integer
+          description: The maximum number of transfers between trips allowed in a connection. Defaults to `INFINITY`.
+        - name: maxTravelTime
+          in: query
+          schema:
+            type: integer
+          description: The maximum travel time in seconds. Defaults to `INFINITY`.
+        - name: minTransferTime
+          in: query
+          schema:
+            type: integer
+          description: The minimum transfer time between trips in seconds. Defaults to `0`.
+      responses:
+        '200':
+          description: A list of connections between the specified stops.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Connection'
+  /routing/isolines:
+    get:
+      summary: Request a list of fastest connections to each reachable stop
+      description: Request a list of fastest connections to each reachable stop from a specified stop at a given departure datetime.
+      tags:
+        - routing
+      parameters:
+        - name: stopId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the stop.
+        - name: departureDateTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: The departure datetime from the stop. Defaults to the current time.
+        - name: maxWalkingDuration
+          in: query
+          schema:
+            type: integer
+          description: The maximum walking duration in seconds. Defaults to `INFINITY`.
+        - name: maxTransferNumber
+          in: query
+          schema:
+            type: integer
+          description: The maximum number of transfers between trips allowed in a connection. Defaults to `INFINITY`.
+        - name: maxTravelTime
+          in: query
+          schema:
+            type: integer
+          description: The maximum travel time in seconds. Defaults to `INFINITY`.
+        - name: minTransferTime
+          in: query
+          schema:
+            type: integer
+          description: The minimum transfer time between trips in seconds. Defaults to `0`.
+      responses:
+        '200':
+          description: A list of stop and fastest connection pairs for each reachable stop.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EarliestArrival'
+components:
+  schemas:
+    StopTime:
+      type: object
+      properties:
+        stop:
+          $ref: '#/components/schemas/Stop'
+        arrivalTime:
+          type: string
+          format: date-time
+        departureTime:
+          type: string
+          format: date-time
+    Stop:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinate'
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+        transportMode:
+          type: string
+    Connection:
+      type: object
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Leg'
+    Leg:
+      type: object
+      properties:
+        from:
+          $ref: '#/components/schemas/Coordinate'
+        to:
+          $ref: '#/components/schemas/Coordinate'
+        fromStop:
+          $ref: '#/components/schemas/Stop'
+        toStop:
+          $ref: '#/components/schemas/Stop'
+        type:
+          $ref: '#/components/schemas/LegType'
+        departureTime:
+          type: string
+          format: date-time
+        arrivalTime:
+          type: string
+          format: date-time
+        trip:
+          $ref: '#/components/schemas/Trip'
+    EarliestArrival:
+      type: object
+      properties:
+        stop:
+          $ref: '#/components/schemas/Stop'
+        arrivalTime:
+          type: string
+          format: date-time
+        connection:
+          $ref: '#/components/schemas/Connection'
+    Coordinate:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+    Trip:
+      type: object
+      properties:
+        headSign:
+          type: string
+        route:
+          $ref: '#/components/schemas/Route'
+        stopTimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/StopTime'
+    Departure:
+      type: object
+      properties:
+        stopTime:
+          $ref: '#/components/schemas/StopTime'
+        trip:
+          $ref: '#/components/schemas/Trip'
+    LegType:
+      type: string
+      enum:
+        - WALK
+        - ROUTE
+    DistanceToStop:
+      type: object
+      properties:
+        stop:
+          $ref: '#/components/schemas/Stop'
+        distance:
+          type: number
+    SEARCH_TYPE:
+      type: string
+      enum:
+        - EXACT
+        - STARTS_WITH
+        - CONTAINS
+        - ENDS_WITH
+        - FUZZY
