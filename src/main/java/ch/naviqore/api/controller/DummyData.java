@@ -1,20 +1,16 @@
 package ch.naviqore.api.controller;
 
 import ch.naviqore.api.model.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
+import java.util.*;
+
 public class DummyData {
 
-    static Random random = new Random();
     private static final Logger logger = LoggerFactory.getLogger(DummyData.class);
+    static Random random = new Random();
 
     public static List<Stop> getStops() {
         List<Stop> dtos = new ArrayList<>();
@@ -41,6 +37,34 @@ public class DummyData {
         dtos.add(new Stop("Stop-21", "Elsau, Melcher", new Coordinate(47.50171676, 8.787230279)));
         dtos.add(new Stop("Stop-22", "Wetzikon ZH, Walfershausen", new Coordinate(47.32205504, 8.797336326)));
         dtos.add(new Stop("Stop-23", "Hombrechtikon, Tobel", new Coordinate(47.25379065, 8.780986988)));
+        dtos.add(new Stop("Stop-24", "Mönchaltorf, Langenmatt", new Coordinate(47.315526886, 8.7209782185)));
+        dtos.add(new Stop("Stop-25", "Hinwil, Girenbad", new Coordinate(47.30950315, 8.87194141)));
+        dtos.add(new Stop("Stop-26", "Zürich, Polyterrasse ETH", new Coordinate(47.37685009, 8.546391951)));
+        dtos.add(new Stop("Stop-27", "Pfäffikon ZH, Humbel", new Coordinate(47.38172856, 8.800857722)));
+        dtos.add(new Stop("Stop-28", "Benken ZH, Dorf", new Coordinate(47.6529254, 8.653300453)));
+        dtos.add(new Stop("Stop-29", "Winkel, Oberrüti", new Coordinate(47.47994371, 8.563073666)));
+        dtos.add(new Stop("Stop-30", "Flaach, Wesenplatz", new Coordinate(47.57530917, 8.609651314)));
+        dtos.add(new Stop("Stop-31", "Laupen ZH, Schulhaus", new Coordinate(47.26536213, 8.929370706)));
+        dtos.add(new Stop("Stop-32", "Embrach, Dreispitz", new Coordinate(47.50995745, 8.593858931)));
+        dtos.add(new Stop("Stop-33", "Brütten, Zentrum", new Coordinate(47.47198977, 8.676189527)));
+        dtos.add(new Stop("Stop-34", "Mettmenstetten, Bahnhof", new Coordinate(47.24308265, 8.458671464)));
+        dtos.add(new Stop("Stop-35", "Baar, Bahnmatt", new Coordinate(47.19659729, 8.523862204)));
+        dtos.add(new Stop("Stop-36", "Rümlang, Bahnhof", new Coordinate(47.45400701, 8.532611795)));
+        dtos.add(new Stop("Stop-37", "Bachs, Weiherbach", new Coordinate(47.5193738, 8.44891576)));
+        dtos.add(new Stop("Stop-38", "Dachsen, Lindenstrasse", new Coordinate(47.66353213, 8.620538895)));
+        dtos.add(new Stop("Stop-39", "Russikon, Kirche", new Coordinate(47.39620313, 8.773108763)));
+        dtos.add(new Stop("Stop-40", "Weisslingen, Widum", new Coordinate(47.43468736, 8.76346984)));
+        dtos.add(new Stop("Stop-41", "Horgen, Stocker", new Coordinate(47.26150932, 8.58926854)));
+        dtos.add(new Stop("Stop-42", "Hirzel, Strickler", new Coordinate(47.22884668, 8.601844954)));
+        dtos.add(new Stop("Stop-43", "Sitzberg, Sternen", new Coordinate(47.4234933, 8.912563227)));
+        dtos.add(new Stop("Stop-44", "Buch am Irchel, Unterbuch", new Coordinate(47.54997739, 8.61878718)));
+        dtos.add(new Stop("Stop-45", "Oetwil am See, Bergstrasse", new Coordinate(47.26976326, 8.718051019)));
+        dtos.add(new Stop("Stop-46", "Pfungen, Eskimo", new Coordinate(47.51937987, 8.637202643)));
+        dtos.add(new Stop("Stop-47", "Wallisellen, Bahnhof", new Coordinate(47.41268592, 8.592933666)));
+        dtos.add(new Stop("Stop-48", "Maur, See", new Coordinate(47.33994896, 8.677968191)));
+        dtos.add(new Stop("Stop-49", "Meilen, Friedhof", new Coordinate(47.27177473, 8.641424725)));
+        dtos.add(new Stop("Stop-50", "Stäfa, Schützenhaus Wanne", new Coordinate(47.25471134, 8.720611217)));
+
         return dtos;
     }
 
@@ -88,7 +112,11 @@ public class DummyData {
     }
 
     public static List<DistanceToStop> getNearestStops(double latitude, double longitude, int maxDistance, int limit) {
-        List<Stop> stops = getStops();
+        return getNearestStops(getStops(), latitude, longitude, maxDistance, limit);
+    }
+
+    private static List<DistanceToStop> getNearestStops(List<Stop> stops, double latitude, double longitude,
+                                                        int maxDistance, int limit) {
         List<DistanceToStop> result = new ArrayList<>();
         for (Stop stop : stops) {
             double distance = approximateDistance(stop.getCoordinates(), new Coordinate(latitude, longitude));
@@ -182,17 +210,20 @@ public class DummyData {
         ArrayList<Leg> legs = new ArrayList<>();
         Leg leg1 = buildTripDummyLeg(from, stopBetween, departureTime);
         legs.add(leg1);
-
-        int footpathDistance = (int) approximateDistance(stopBetween.getCoordinates(), closestStop.getCoordinates());
-        int footpathSpeed = 100; // meters per minute
-        int footpathTravelTime = footpathDistance / footpathSpeed; // in minutes
-
-        Leg leg2 = new Leg(stopBetween.getCoordinates(), closestStop.getCoordinates(), stopBetween, closestStop,
-                LegType.WALK, leg1.getArrivalTime(), leg1.getArrivalTime().plusMinutes(footpathTravelTime), null);
+        Leg leg2 = buildFootpathLeg(stopBetween, closestStop, leg1.getArrivalTime());
         legs.add(leg2);
         legs.add(buildTripDummyLeg(closestStop, to, leg2.getArrivalTime()));
 
         return new Connection(legs);
+    }
+
+    private static Leg buildFootpathLeg(Stop from, Stop to, LocalDateTime departureTime) {
+        int footpathDistance = (int) approximateDistance(from.getCoordinates(), to.getCoordinates());
+        int footpathSpeed = 100; // meters per minute
+        int footpathTravelTime = footpathDistance / footpathSpeed; // in minutes
+
+        return new Leg(from.getCoordinates(), to.getCoordinates(), from, to, LegType.WALK, departureTime,
+                departureTime.plusMinutes(footpathTravelTime), null);
     }
 
     private static Stop getStopInBetweenStops(Stop from, Stop to, int randomness) {
@@ -207,7 +238,7 @@ public class DummyData {
         Coordinate center = new Coordinate(centerLat, centerLon);
 
         List<DistanceToStop> closestStops = getNearestStops(center.getLatitude(), center.getLongitude(),
-                Integer.MAX_VALUE, 3+randomness);
+                Integer.MAX_VALUE, 3 + randomness);
 
         // random sort to get different results
         closestStops.sort((a, b) -> {
@@ -313,6 +344,9 @@ public class DummyData {
 
     public static List<EarliestArrival> getIsolines(String fromStopId, LocalDateTime departureTime, int maxTravelTime) {
         Stop from = getStop(fromStopId);
+        if (from == null) {
+            throw new IllegalArgumentException("Stop not found");
+        }
         if (departureTime == null) {
             departureTime = LocalDateTime.now();
         }
@@ -323,20 +357,80 @@ public class DummyData {
         }
 
         List<Stop> stops = getStops();
+        List<Stop> spawnStops = new ArrayList<>();
+        stops.remove(from);
+
         List<EarliestArrival> isolines = new ArrayList<>();
+        HashMap<Stop, Leg> earliestArrivals = new HashMap<>();
 
-        for (Stop targetStop : stops) {
-            if (from == targetStop) {
-                continue;
+        // find nearest stop and walk there by foot
+        List<DistanceToStop> closestStops = getNearestStops(from.getCoordinates().getLatitude(),
+                from.getCoordinates().getLongitude(), Integer.MAX_VALUE, 10);
+        Stop nearestStop = closestStops.get(0).getStop();
+        spawnStops.add(nearestStop);
+        stops.remove(nearestStop);
+        earliestArrivals.put(nearestStop, buildFootpathLeg(from, nearestStop, departureTime));
+
+        // pick 3 random stops to add trip to
+        for (int i = 0; i < 3; i++) {
+            int randomIndex = random.nextInt(closestStops.size());
+            DistanceToStop targetStopDistance = closestStops.get(randomIndex);
+            Stop targetStop = targetStopDistance.getStop();
+            stops.remove(targetStop);
+            spawnStops.add(targetStop);
+            earliestArrivals.put(targetStop, buildTripDummyLeg(from, targetStop, departureTime));
+        }
+
+        while (!stops.isEmpty()) {
+            Stop spawnStop;
+            if (spawnStops.isEmpty()) {
+                spawnStop = from;
+            } else {
+                spawnStop = spawnStops.removeFirst();
             }
-            Connection connection = buildSimpleDummyConnection(from, targetStop, departureTime);
+            int maxConnections = stops.size() / 3;
+            int numConnections = random.nextInt(maxConnections + 2);
 
-            Leg lastLeg = connection.getLegs().get(connection.getLegs().size() - 1);
-            if (untilDateTime != null && lastLeg.getArrivalTime().isAfter(untilDateTime)) {
-                continue;
+            List<DistanceToStop> nearestStops = getNearestStops(stops, spawnStop.getCoordinates().getLatitude(),
+                    spawnStop.getCoordinates().getLongitude(), Integer.MAX_VALUE, 5 + numConnections);
+
+            // shuffle to get not only closest stops
+            nearestStops.sort((a, b) -> {
+                if (a.getStop().equals(b.getStop()) && a.getDistance() == b.getDistance()) {
+                    return 0;
+                }
+                return random.nextInt(3) < 2 ? -1 : 1;
+            });
+
+            LocalDateTime spawnDepartureTime = earliestArrivals.get(spawnStop).getArrivalTime();
+
+            for (int i = 0; i < numConnections; i++) {
+                Stop targetStop = nearestStops.get(i).getStop();
+                stops.remove(targetStop);
+                spawnStops.add(targetStop);
+                Leg leg = buildTripDummyLeg(spawnStop, targetStop, spawnDepartureTime);
+                if (untilDateTime != null && leg.getArrivalTime().isAfter(untilDateTime)) {
+                    continue;
+                }
+                earliestArrivals.put(targetStop, leg);
             }
 
-            isolines.add(new EarliestArrival(targetStop, lastLeg.getArrivalTime(), connection));
+        }
+
+        // build connections for all stops
+        for (Map.Entry<Stop, Leg> entry : earliestArrivals.entrySet()) {
+            Stop targetStop = entry.getKey();
+            Leg lastLeg = entry.getValue();
+            List<Leg> legs = new ArrayList<>(List.of(lastLeg));
+
+            while (lastLeg.getFromStop() != from) {
+                lastLeg = earliestArrivals.get(lastLeg.getFromStop());
+                legs.add(lastLeg);
+            }
+
+            // sort legs by departure time
+            legs.sort(Comparator.comparing(Leg::getDepartureTime));
+            isolines.add(new EarliestArrival(targetStop, legs.getLast().getArrivalTime(), new Connection(legs)));
         }
 
         return isolines;
