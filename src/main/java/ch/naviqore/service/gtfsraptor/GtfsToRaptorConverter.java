@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
@@ -28,10 +28,16 @@ public class GtfsToRaptorConverter {
     private final Set<String> addedStops = new HashSet<>();
     private final RaptorBuilder builder = Raptor.builder();
     private final GtfsRoutePartitioner partitioner;
+    private final List<MinimumTimeTransfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
     public GtfsToRaptorConverter(GtfsSchedule schedule) {
+        this(schedule, List.of());
+    }
+
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<MinimumTimeTransfer> additionalTransfers) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
+        this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
     }
 
@@ -92,5 +98,41 @@ public class GtfsToRaptorConverter {
                 }
             }
         }
+
+        // Extra Validation, maybe unnecessary if guaranteed that MinimumTimeTransfers are unique
+        // The SimpleTransferGenerator does guarantee this.
+        List<MinimumTimeTransfer> uniqueAdditionalTransfers = additionalTransfers.stream().distinct().toList();
+
+        for (MinimumTimeTransfer transfer : uniqueAdditionalTransfers) {
+
+            if( transfer.from() == transfer.to() ) {
+                // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
+                //  transfers between the same station, as not implemented yet.
+                log.warn("Omit adding transfer from {} to {} with duration {} as it is the same stop", transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                continue;
+            }
+
+
+            // Again extra validation, which is not necessary when the MinimumTimeTransfers generator is correct
+            // and already checked this. The SimpleTransferGenerator does this check.
+            if (schedule.getStops()
+                    .get(transfer.from().getId())
+                    .getTransfers()
+                    .parallelStream()
+                    .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
+                            .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
+                log.warn(
+                        "Omit adding additional transfer from {} to {} with duration {} as it is already defined in GTFS schedule",
+                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                continue;
+            }
+            try {
+                builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+            } catch (IllegalArgumentException e) {
+                // TODO: Same problem as above
+                log.warn("Omit adding transfer: {}", e.getMessage());
+            }
+        }
+
     }
 }

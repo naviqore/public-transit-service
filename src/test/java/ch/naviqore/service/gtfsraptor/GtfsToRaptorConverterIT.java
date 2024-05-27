@@ -4,6 +4,7 @@ import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.service.gtfsraptor.GtfsToRaptorConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
