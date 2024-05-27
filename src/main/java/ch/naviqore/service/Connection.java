@@ -7,13 +7,6 @@ import java.util.List;
  */
 public interface Connection {
 
-    List<PublicTransitLeg> getPublicTransitLegs();
-
-    List<Walk> getWalks();
-
-    /**
-     * The total number of legs and walks in this connection.
-     */
-    int getSize();
+    List<Leg> getLegs();
 
 }
