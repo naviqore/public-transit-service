@@ -1,13 +1,15 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
+import java.time.LocalDateTime;
 
 public interface StopTime {
-    @NotNull Trip getTrip();
 
-    @NotNull Stop getStop();
+    Trip getTrip();
 
-    @NotNull ArrivalTime getArrivalTime();
+    Stop getStop();
 
-    @NotNull DepartureTime getDepartureTime();
+    LocalDateTime getArrivalTime();
+
+    LocalDateTime getDepartureTime();
+
 }

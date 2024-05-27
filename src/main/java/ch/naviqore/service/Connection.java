@@ -1,30 +1,12 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.List;
 
+/**
+ * A connection in a public transit schedule, consisting of multiple public transit legs and walks.
+ */
 public interface Connection {
-    @NotNull List<Leg> getLegs();
 
-    @NotNull Location getStartLocation();
+    List<Leg> getLegs();
 
-    @NotNull Location getEndLocation();
-
-    @Nullable Stop getStartStop();
-
-    @Nullable Stop getEndStop();
-
-    @NotNull ArrivalTime getArrivalTime();
-
-    @NotNull DepartureTime getDepartureTime();
-
-    int getDuration();
-
-    int getBeeLineDistance();
-
-    int getNumTransfers();
-
-    int getWalkingDistance();
 }

@@ -1,12 +1,20 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
-
+/**
+ * A public transit route (also called transit line).
+ */
 public interface Route {
-    @NotNull String getRouteId();
-    @NotNull String getRouteName();
-    @NotNull String getRouteShortName();
-    @NotNull String getRouteDescription();
-    @NotNull String getRouteType();
-    @NotNull String getAgency();
+
+    String getId();
+
+    String getName();
+
+    String getShortName();
+
+    String getDescription();
+
+    String getRouteType();
+
+    String getAgency();
+
 }

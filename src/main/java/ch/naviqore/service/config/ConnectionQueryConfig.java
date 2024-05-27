@@ -1,6 +1,7 @@
-package ch.naviqore.service;
+package ch.naviqore.service.config;
 
-public interface ConnectionQueryConfiguration {
+public interface ConnectionQueryConfig {
+
     int getMaximumWalkingDuration();
 
     int getMinimumTransferDuration();
@@ -8,4 +9,5 @@ public interface ConnectionQueryConfiguration {
     int getMaximumTransferNumber();
 
     int getMaximumTravelTime();
+
 }

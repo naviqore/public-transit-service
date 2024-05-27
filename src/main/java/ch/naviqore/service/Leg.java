@@ -1,22 +1,38 @@
 package ch.naviqore.service;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
+
+/**
+ * Represents a leg of a connection, including its order, distance, and duration.
+ */
 public interface Leg {
-    @NotNull Location getDepartureLocation();
 
-    @NotNull Location getArrivalLocation();
+    LegType getLegType();
 
-    @Nullable Stop getDepartureStop();
+    Location getSourceLocation();
 
-    @Nullable Stop getArrivalStop();
+    Location getTargetLocation();
 
-    @NotNull DepartureTime getDepartureTime();
+    LocalDateTime getArrivalTime();
 
-    @NotNull ArrivalTime getArrivalTime();
+    LocalDateTime getDepartureTime();
 
-    @Nullable Trip getTrip();
+    int getDistance();
 
-    @Nullable Walk getWalk();
+    int getDuration();
+
+    /**
+     * The target public transit stop, if walk starts at a stop.
+     */
+    @Nullable
+    Stop getSourceStop();
+
+    /**
+     * The target public transit stop, if walk ends at a stop.
+     */
+    @Nullable
+    Stop getTargetStop();
+
 }
