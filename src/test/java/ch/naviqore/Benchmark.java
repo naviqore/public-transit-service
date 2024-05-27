@@ -7,9 +7,12 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.GtfsToRaptorConverter;
+import ch.naviqore.service.gtfsraptor.GtfsToRaptorConverter;
 import ch.naviqore.raptor.model.Connection;
 import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.service.gtfsraptor.BeeLineWalkCalculator;
+import ch.naviqore.service.gtfsraptor.MinimumTimeTransfer;
+import ch.naviqore.service.gtfsraptor.SimpleTransferGenerator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -73,7 +76,11 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(SCHEDULE_DATE);
+        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(3000);
+        SimpleTransferGenerator transferGenerator = new SimpleTransferGenerator(walkCalculator, 120, 500);
+        List<MinimumTimeTransfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
+
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
     }
