@@ -7,12 +7,9 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.service.gtfsraptor.GtfsToRaptorConverter;
+import ch.naviqore.service.gtfsraptor.*;
 import ch.naviqore.raptor.model.Connection;
 import ch.naviqore.raptor.model.Raptor;
-import ch.naviqore.service.gtfsraptor.BeeLineWalkCalculator;
-import ch.naviqore.service.gtfsraptor.MinimumTimeTransfer;
-import ch.naviqore.service.gtfsraptor.SimpleTransferGenerator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -76,9 +73,16 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
+
+        // TODO: This should be implemented in the new integration service and should not need to run everytime a raptor
+        //  instance is created. Ideally this will be handled as an attribute with a list of transfer generators. With
+        //  this approach, transfers can be generated according to different rules with the first applicable one taking
+        //  precedence.
         BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(3000);
-        SimpleTransferGenerator transferGenerator = new SimpleTransferGenerator(walkCalculator, 120, 500);
+        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, 120, 500);
         List<MinimumTimeTransfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
+        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(120);
+        additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
 
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers).convert(SCHEDULE_DATE);
         manageResources();

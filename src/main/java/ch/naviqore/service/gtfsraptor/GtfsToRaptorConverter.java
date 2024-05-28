@@ -99,11 +99,7 @@ public class GtfsToRaptorConverter {
             }
         }
 
-        // Extra Validation, maybe unnecessary if guaranteed that MinimumTimeTransfers are unique
-        // The SimpleTransferGenerator does guarantee this.
-        List<MinimumTimeTransfer> uniqueAdditionalTransfers = additionalTransfers.stream().distinct().toList();
-
-        for (MinimumTimeTransfer transfer : uniqueAdditionalTransfers) {
+        for (MinimumTimeTransfer transfer : additionalTransfers) {
 
             if( transfer.from() == transfer.to() ) {
                 // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
@@ -112,17 +108,14 @@ public class GtfsToRaptorConverter {
                 continue;
             }
 
-
-            // Again extra validation, which is not necessary when the MinimumTimeTransfers generator is correct
-            // and already checked this. The SimpleTransferGenerator does this check.
             if (schedule.getStops()
                     .get(transfer.from().getId())
                     .getTransfers()
-                    .parallelStream()
+                    .stream()
                     .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
                             .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
                 log.warn(
-                        "Omit adding additional transfer from {} to {} with duration {} as it is already defined in GTFS schedule",
+                        "Omit adding additional transfer from {} to {} with duration {} as it has already been defined",
                         transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;
             }
