@@ -1,0 +1,19 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          IMAGE_TAG=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${COMMIT_HASH}
+          docker build . --file Dockerfile --tag $IMAGE_TAG
