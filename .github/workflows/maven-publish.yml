@@ -18,7 +18,7 @@ jobs:
       - name: Setup
         uses: actions/setup-java@v4
         with:
-          distribution: 'openjdk'
+          distribution: 'temurin'
           java-version: '21'
           cache: 'maven'
           server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
