@@ -11,7 +11,7 @@
     </parent>
     <groupId>ch.naviqore</groupId>
     <artifactId>public-transit-service</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 
     <name>Public Transit Service</name>
     <description>
@@ -46,6 +46,14 @@
         <developerConnection>scm:git:ssh://github.com/naviqore/public-transit-service.git</developerConnection>
         <url>https://github.com/naviqore/public-transit-service</url>
     </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/naviqore/public-transit-service</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
