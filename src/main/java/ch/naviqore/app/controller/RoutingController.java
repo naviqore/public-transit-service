@@ -1,7 +1,10 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.app.model.Connection;
-import ch.naviqore.app.model.EarliestArrival;
+import ch.naviqore.app.dto.Connection;
+import ch.naviqore.app.dto.DtoDummyData;
+import ch.naviqore.app.dto.EarliestArrival;
+import ch.naviqore.service.ConnectionRoutingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +17,13 @@ import java.util.List;
 @RequestMapping("/routing")
 public class RoutingController {
 
+    private final ConnectionRoutingService service;
+
+    @Autowired
+    public RoutingController(ConnectionRoutingService service) {
+        this.service = service;
+    }
+
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam String sourceStopId, @RequestParam String targetStopId,
                                            @RequestParam(required = false) LocalDateTime departureDateTime,
@@ -22,7 +32,9 @@ public class RoutingController {
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
         // TODO: Implement the method with  maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime
-        return DummyData.getConnections(sourceStopId, targetStopId, departureDateTime);
+        return DtoDummyData.getConnections(sourceStopId, targetStopId, departureDateTime);
+        // TODO: Decide on location or stop id.
+        // service.getConnections()
     }
 
     @GetMapping("/isolines")
@@ -33,7 +45,9 @@ public class RoutingController {
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                              @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
         // TODO: Implement the method with maxWalkingDuration, maxTransferNumber, minTransferTime
-        return DummyData.getIsolines(sourceStopId, departureDateTime, maxTravelTime);
+        return DtoDummyData.getIsolines(sourceStopId, departureDateTime, maxTravelTime);
+        // TODO: Decide on location or stop id.
+        // service.getIsolines();
     }
 
 }

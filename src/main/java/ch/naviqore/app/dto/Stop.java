@@ -1,11 +1,8 @@
-package ch.naviqore.app.model;
+package ch.naviqore.app.dto;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @EqualsAndHashCode(of = "id")
 @ToString
 @Getter

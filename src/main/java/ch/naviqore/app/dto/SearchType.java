@@ -1,4 +1,4 @@
-package ch.naviqore.app.model;
+package ch.naviqore.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -8,11 +8,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public enum SearchType {
 
-    EXACT("EXACT"),
     STARTS_WITH("STARTS_WITH"),
-    CONTAINS("CONTAINS"),
     ENDS_WITH("ENDS_WITH"),
-    FUZZY("FUZZY");
+    CONTAINS("CONTAINS"),
+    EXACT("EXACT");
 
     private final String value;
 
