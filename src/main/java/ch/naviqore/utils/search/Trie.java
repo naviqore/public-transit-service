@@ -21,7 +21,7 @@ class Trie<T> {
             node = node.children.get(c);
         }
         node.isEndOfWord = true;
-        node.value = value;
+        node.values.add(value);
     }
 
     public List<T> searchPrefix(String prefix) {
@@ -39,7 +39,7 @@ class Trie<T> {
 
     private void collectAllWords(Node<T> node, List<T> results) {
         if (node.isEndOfWord) {
-            results.add(node.value);
+            results.addAll(node.values);
         }
         for (Node<T> child : node.children.values()) {
             collectAllWords(child, results);
@@ -48,7 +48,7 @@ class Trie<T> {
 
     private static class Node<T> {
         Map<Character, Node<T>> children = new HashMap<>();
-        T value = null;
+        List<T> values = new ArrayList<>();
         boolean isEndOfWord = false;
     }
 }

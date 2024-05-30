@@ -16,9 +16,10 @@ import java.util.*;
 @Log4j2
 public class SearchIndex<T> {
 
-    private final Map<String, T> exactIndex = new HashMap<>();
+    private final Map<String, List<T>> exactIndex = new HashMap<>();
     private final Trie<T> startsWithIndex = new Trie<>();
     private final Trie<T> endsWithIndex = new Trie<>();
+    // TODO: This uses a lot of memory
     private final Map<String, Set<T>> containsIndex = new HashMap<>();
 
     private static String reverse(String text) {
@@ -30,25 +31,24 @@ public class SearchIndex<T> {
      *
      * @param key   the string key to be indexed.
      * @param value the value associated with the key.
-     * @throws IllegalArgumentException if the key already exists.
      */
-    public void add(String key, T value) throws IllegalArgumentException {
-        if (exactIndex.containsKey(key)) {
-            throw new IllegalArgumentException("Exact search key already exists: " + key);
+    public void add(String key, T value) {
+        if (key == null || key.isEmpty()) {
+            throw new IllegalArgumentException("Key cannot be null or empty.");
         }
         log.debug("Adding search key: {}", key);
-        exactIndex.put(key, value);
+        exactIndex.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
         startsWithIndex.insert(key, value);
         endsWithIndex.insert(reverse(key), value);
         addToContainsIndex(key, value);
     }
 
     /**
-     * Searches for a values matching the query and the search strategy.
+     * Searches for values matching the query and the search strategy.
      *
      * @param query    the string query to search for.
      * @param strategy the search strategy to use.
-     * @return the value associated with the query if found, otherwise null.
+     * @return the values associated with the query if found, otherwise an empty list.
      */
     public List<T> search(String query, SearchStrategy strategy) {
         log.debug("Searching for query: '{}' with strategy: {}", query, strategy);
@@ -58,7 +58,7 @@ public class SearchIndex<T> {
         }
 
         return switch (strategy) {
-            case EXACT -> exactIndex.containsKey(query) ? List.of(exactIndex.get(query)) : List.of();
+            case EXACT -> exactIndex.getOrDefault(query, List.of());
             case STARTS_WITH -> startsWithIndex.searchPrefix(query);
             case ENDS_WITH -> endsWithIndex.searchPrefix(reverse(query));
             case CONTAINS -> new ArrayList<>(containsIndex.getOrDefault(query, Set.of()));
@@ -80,5 +80,4 @@ public class SearchIndex<T> {
         CONTAINS,
         EXACT
     }
-
 }
