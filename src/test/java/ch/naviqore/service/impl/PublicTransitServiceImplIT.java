@@ -91,7 +91,7 @@ class PublicTransitServiceImplIT {
             }
 
             @Test
-            void shouldNotFindInactiveTripById() throws TripNotFoundException, TripNotActiveException {
+            void shouldNotFindInactiveTripById() {
                 assertThrows(TripNotActiveException.class, () -> service.getTripById("AB1", LocalDate.of(2023, 5, 15)));
             }
 
@@ -156,8 +156,8 @@ class PublicTransitServiceImplIT {
             @Test
             void shouldThrowNotImplementedException() {
                 assertThrows(NotImplementedException.class,
-                        () -> service.isoline(new Location(36.425288, -117.133162), LocalDateTime.of(2023, 5, 15, 8, 0),
-                                config));
+                        () -> service.getIsolines(new Location(36.425288, -117.133162),
+                                LocalDateTime.of(2023, 5, 15, 8, 0), config));
             }
         }
 

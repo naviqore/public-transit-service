@@ -30,6 +30,6 @@ public interface ConnectionRoutingService {
      * @param config        additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> isoline(Location source, LocalDateTime departureTime, ConnectionQueryConfig config);
+    Map<Stop, Connection> getIsolines(Location source, LocalDateTime departureTime, ConnectionQueryConfig config);
 
 }

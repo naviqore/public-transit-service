@@ -23,4 +23,5 @@ public class PublicTransitLegImpl extends LegImpl implements PublicTransitLeg {
     public <T> T accept(LegVisitor<T> visitor) {
         return visitor.visit(this);
     }
+
 }

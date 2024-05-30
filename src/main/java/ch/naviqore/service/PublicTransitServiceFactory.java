@@ -12,8 +12,4 @@ public class PublicTransitServiceFactory {
         return new PublicTransitServiceImpl(gtfsFilePath);
     }
 
-    public static void main(String[] args) {
-        PublicTransitService service = new PublicTransitServiceFactory("benchmark/input/switzerland.zip").create();
-    }
-
 }

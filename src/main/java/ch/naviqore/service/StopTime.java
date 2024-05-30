@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 public interface StopTime {
 
+    Trip getTrip();
+
     Stop getStop();
 
     LocalDateTime getArrivalTime();

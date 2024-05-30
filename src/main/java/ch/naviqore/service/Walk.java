@@ -1,9 +1,13 @@
 package ch.naviqore.service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 public interface Walk extends Leg {
+
+    /**
+     * Determines if this is first or a last mile walk.
+     */
+    WalkType getWalkType();
 
     LocalDateTime getArrivalTime();
 
@@ -14,13 +18,8 @@ public interface Walk extends Leg {
     Location getTargetLocation();
 
     /**
-     * The target public transit stop, if walk starts at a stop.
+     * The source or target stop of this first or last mile walk.
      */
-    Optional<Stop> getSourceStop();
-
-    /**
-     * The target public transit stop, if walk ends at a stop.
-     */
-    Optional<Stop> getTargetStop();
+    Stop getStop();
 
 }
