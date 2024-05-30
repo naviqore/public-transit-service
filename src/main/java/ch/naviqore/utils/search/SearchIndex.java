@@ -16,10 +16,12 @@ import java.util.*;
 @Log4j2
 public class SearchIndex<T> {
 
+    // TODO: On the complete stops of the GTFS of Switzerland, this index uses a lot of memory,
+    //  therefore we should try to limit search to a minimum search key length and a maximum tree depth
     private final Map<String, List<T>> exactIndex = new HashMap<>();
     private final Trie<T> startsWithIndex = new Trie<>();
     private final Trie<T> endsWithIndex = new Trie<>();
-    // TODO: This uses a lot of memory
+    // TODO: This most of the memory, also limit the length
     private final Map<String, Set<T>> containsIndex = new HashMap<>();
 
     private static String reverse(String text) {
