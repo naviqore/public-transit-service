@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import org.junit.jupiter.api.BeforeEach;

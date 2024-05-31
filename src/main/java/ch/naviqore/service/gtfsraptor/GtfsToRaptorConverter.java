@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
@@ -28,10 +28,16 @@ public class GtfsToRaptorConverter {
     private final Set<String> addedStops = new HashSet<>();
     private final RaptorBuilder builder = Raptor.builder();
     private final GtfsRoutePartitioner partitioner;
+    private final List<MinimumTimeTransfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
     public GtfsToRaptorConverter(GtfsSchedule schedule) {
+        this(schedule, List.of());
+    }
+
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<MinimumTimeTransfer> additionalTransfers) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
+        this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
     }
 
@@ -92,5 +98,34 @@ public class GtfsToRaptorConverter {
                 }
             }
         }
+
+        for (MinimumTimeTransfer transfer : additionalTransfers) {
+
+            if( transfer.from() == transfer.to() ) {
+                // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
+                //  transfers between the same station, as not implemented yet.
+                log.warn("Omit adding transfer from {} to {} with duration {} as it is the same stop", transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                continue;
+            }
+
+            if (schedule.getStops()
+                    .get(transfer.from().getId())
+                    .getTransfers()
+                    .stream()
+                    .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
+                            .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
+                log.warn(
+                        "Omit adding additional transfer from {} to {} with duration {} as it has already been defined",
+                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                continue;
+            }
+            try {
+                builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+            } catch (IllegalArgumentException e) {
+                // TODO: Same problem as above
+                log.warn("Omit adding transfer: {}", e.getMessage());
+            }
+        }
+
     }
 }
