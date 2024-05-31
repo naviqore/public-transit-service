@@ -22,6 +22,19 @@ public interface ConnectionRoutingService {
                                     ConnectionQueryConfig config);
 
     /**
+     * Retrieves possible connections between two stops at a specified time.
+     *
+     * @param source   the starting stop
+     * @param target   the destination stop
+     * @param time     the time of departure or arrival
+     * @param timeType the type of time specified (departure or arrival)
+     * @param config   additional configuration for the query
+     * @return a list of possible connections between the source and target stop
+     */
+    List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
+                                    ConnectionQueryConfig config);
+
+    /**
      * Retrieves the shortest possible connection to each stop from a given departure location and time  within a given
      * time budget or a maximum number of transfers.
      *

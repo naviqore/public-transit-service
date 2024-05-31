@@ -16,5 +16,5 @@ public enum WalkType {
      * A walk between two locations, the only leg of a connection.
      */
     DIRECT
-    
+
 }

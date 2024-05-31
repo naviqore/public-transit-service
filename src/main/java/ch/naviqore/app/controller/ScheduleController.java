@@ -27,6 +27,12 @@ public class ScheduleController {
         this.service = service;
     }
 
+    private static void validateLimit(int limit) {
+        if (limit <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limit must be greater than 0");
+        }
+    }
+
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
                                            @RequestParam(required = false, defaultValue = "10") int limit,
@@ -40,7 +46,7 @@ public class ScheduleController {
                                                 @RequestParam(required = false, defaultValue = "1000") int maxDistance,
                                                 @RequestParam(required = false, defaultValue = "10") int limit) {
         validateLimit(limit);
-        if( maxDistance < 0 ){
+        if (maxDistance < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max distance can not be negative");
         }
 
@@ -68,9 +74,10 @@ public class ScheduleController {
         if (departureDateTime == null) {
             departureDateTime = LocalDateTime.now();
         }
-        if( untilDateTime != null ){
-            if( untilDateTime.isBefore(departureDateTime) ){
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Until date time must be after departure date time");
+        if (untilDateTime != null) {
+            if (untilDateTime.isBefore(departureDateTime)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Until date time must be after departure date time");
             }
         }
 
@@ -83,11 +90,5 @@ public class ScheduleController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
         }
 
-    }
-
-    private static void validateLimit(int limit){
-        if( limit <= 0 ){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limit must be greater than 0");
-        }
     }
 }

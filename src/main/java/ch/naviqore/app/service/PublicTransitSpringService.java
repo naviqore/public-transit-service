@@ -64,6 +64,12 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) {
+        return delegate.getConnections(source, target, time, timeType, config);
+    }
+
+    @Override
     public Map<Stop, Connection> getIsolines(Location source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
         return delegate.getIsolines(source, departureTime, config);

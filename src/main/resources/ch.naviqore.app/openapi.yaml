@@ -158,7 +158,7 @@ paths:
         - name: sourceLongitude
           in: query
           schema:
-              type: number
+            type: number
           description: The longitude of the source stop, only used and required if no sourceStopId is provided.
         - name: targetStopId
           in: query
@@ -168,12 +168,12 @@ paths:
         - name: targetLatitude
           in: query
           schema:
-              type: number
+            type: number
           description: The latitude of the target stop, only used and required if no targetStopId is provided.
         - name: targetLongitude
           in: query
           schema:
-              type: number
+            type: number
           description: The longitude of the target stop, only used and required if no targetStopId is provided.
         - name: departureDateTime
           in: query

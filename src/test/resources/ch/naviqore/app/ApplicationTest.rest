@@ -1,19 +1,21 @@
 ### Nearest stop
-GET http://localhost:8080/schedule/stops/nearest?latitude=48&longitude=8&maxDistance=500000
+GET http://localhost:8080/schedule/stops/nearest?latitude=36&longitude=-116&maxDistance=500000
 Accept: application/json
 
 ### Autocomplete stop name
-GET http://localhost:8080/schedule/stops/autocomplete?query=Stadel&searchType=STARTS_WITH
+GET http://localhost:8080/schedule/stops/autocomplete?query=Sta&searchType=STARTS_WITH&limit=100
 Accept: application/json
 
 ### Departure at stop
-GET http://localhost:8080/schedule/stops/Stop-1/departures?limit=3
+GET http://localhost:8080/schedule/stops/STAGECOACH/departures?departureDateTime=2010-01-01T01:10:01&limit=3
 Accept: application/json
 
 ### Connection between two stops
-GET http://localhost:8080/routing/connections?sourceStopId=Stop-10&targetStopId=Stop-17
+GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
+    departureDateTime=2010-01-01T01:10:01
 Accept: application/json
 
 ### Isoline from stop
-GET http://localhost:8080/routing/isolines?sourceStopId=Stop-10&maxTransferNumber=3&maxTravelTime=7200
+GET http://localhost:8080/routing/isolines?sourceStopId=STAGECOACH&maxTransferNumber=3&maxTravelTime=7200&
+    departureDateTime=2010-01-01T01:10:01
 Accept: application/json

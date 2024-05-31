@@ -2,8 +2,13 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.DtoDummyData;
+import ch.naviqore.app.dto.DtoMapper;
 import ch.naviqore.app.dto.EarliestArrival;
-import ch.naviqore.service.ConnectionRoutingService;
+import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.Stop;
+import ch.naviqore.service.TimeType;
+import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.exception.StopNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,10 +24,10 @@ import java.util.List;
 @RequestMapping("/routing")
 public class RoutingController {
 
-    private final ConnectionRoutingService service;
+    private final PublicTransitService service;
 
     @Autowired
-    public RoutingController(ConnectionRoutingService service) {
+    public RoutingController(PublicTransitService service) {
         this.service = service;
     }
 
@@ -43,7 +48,8 @@ public class RoutingController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
+                    "Location based routing is not implemented yet.");
         }
 
         if (targetStopId == null) {
@@ -51,13 +57,23 @@ public class RoutingController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either targetStopId or targetLatitude and targetLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
+                    "Location based routing is not implemented yet.");
         }
 
-        // TODO: Implement the method with  maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime
-        return DtoDummyData.getConnections(sourceStopId, targetStopId, departureDateTime);
-        // TODO: Decide on location or stop id.
-        // service.getConnections()
+        if (departureDateTime == null) {
+            departureDateTime = LocalDateTime.now();
+        }
+        
+        Stop sourceStop = getStop(sourceStopId);
+        Stop targetStop = getStop(targetStopId);
+        ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
+                maxTravelTime);
+
+        return service.getConnections(sourceStop, targetStop, departureDateTime, TimeType.DEPARTURE, config)
+                .stream()
+                .map(DtoMapper::map)
+                .toList();
     }
 
     @GetMapping("/isolines")
@@ -74,13 +90,22 @@ public class RoutingController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
+                    "Location based routing is not implemented yet.");
         }
 
         // TODO: Implement the method with maxWalkingDuration, maxTransferNumber, minTransferTime
         return DtoDummyData.getIsolines(sourceStopId, departureDateTime, maxTravelTime);
         // TODO: Decide on location or stop id.
         // service.getIsolines();
+    }
+
+    private ch.naviqore.service.Stop getStop(String stopId) {
+        try {
+            return service.getStopById(stopId);
+        } catch (StopNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
+        }
     }
 
 }

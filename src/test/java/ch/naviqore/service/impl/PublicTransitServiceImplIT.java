@@ -143,7 +143,7 @@ class PublicTransitServiceImplIT {
 
             @Test
             void shouldHandleNoConnectionsFound() {
-                // TODO: Handle cases , should we throw an error or just return an empty list?:
+                // TODO: Handle cases, should we throw an error or just return an empty list?:
                 //  - No nearest stop exists
                 //  - A nearest stop exists but has no active trip on date
                 //  - no connections are found

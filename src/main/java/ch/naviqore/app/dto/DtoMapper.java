@@ -1,6 +1,7 @@
 package ch.naviqore.app.dto;
 
 import ch.naviqore.service.SearchType;
+import ch.naviqore.service.*;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -55,6 +56,43 @@ public class DtoMapper {
             case CONTAINS -> SearchType.CONTAINS;
             case EXACT -> SearchType.EXACT;
         };
+    }
+
+    public static Connection map(ch.naviqore.service.Connection connection) {
+        List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
+        return new Connection(legs);
+    }
+
+    private static class LegVisitorImpl implements LegVisitor<Leg> {
+        @Override
+        public Leg visit(PublicTransitLeg publicTransitLeg) {
+            // TODO: Trip id in raptor has to be passed first.
+            return new Leg(
+                    // map(publicTransitLeg.getDeparture().getStop().getLocation()),
+                    // map(publicTransitLeg.getArrival().getStop().getLocation()),
+                    null, null,
+                    // map(publicTransitLeg.getDeparture().getStop()),
+                    // map(publicTransitLeg.getArrival().getStop()),
+                    null, null, LegType.ROUTE,
+                    // publicTransitLeg.getDeparture().getDepartureTime(),
+                    // publicTransitLeg.getArrival().getArrivalTime(),
+                    null, null,
+                    // map(publicTransitLeg.getTrip())
+                    null);
+        }
+
+        @Override
+        public Leg visit(Transfer transfer) {
+            return new Leg(map(transfer.getSourceStop().getLocation()), map(transfer.getTargetStop().getLocation()),
+                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), LegType.WALK,
+                    transfer.getDepartureTime(), transfer.getArrivalTime(), null);
+        }
+
+        @Override
+        public Leg visit(Walk walk) {
+            return new Leg(map(walk.getSourceLocation()), map(walk.getTargetLocation()), null, null, LegType.WALK,
+                    walk.getDepartureTime(), walk.getArrivalTime(), null);
+        }
     }
 
 }

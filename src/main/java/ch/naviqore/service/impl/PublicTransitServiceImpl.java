@@ -15,6 +15,7 @@ import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -62,6 +63,13 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 .build();
     }
 
+    private static void notYetImplementedCheck(TimeType timeType) {
+        if (timeType == TimeType.ARRIVAL) {
+            // TODO: Implement in raptor
+            throw new NotImplementedException();
+        }
+    }
+
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return stopSearchIndex.search(like, map(searchType)).stream().map(TypeMapper::map).toList();
@@ -94,21 +102,46 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(Location source, Location target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) {
-        log.debug("Get connections from {} to {} {} at {}", source, target,
+        notYetImplementedCheck(timeType);
+
+        log.debug("Get connections from stop {} to stop {} {} at {}", source, target,
                 timeType == TimeType.ARRIVAL ? "arriving" : "departing", time);
 
-        if (timeType == TimeType.ARRIVAL) {
-            // TODO: Implement in raptor
-            throw new NotImplementedException();
-        }
+        // get public transit stops from schedule
+        ch.naviqore.gtfs.schedule.model.Stop sourceStop = schedule.getStops().get(source.getId());
+        ch.naviqore.gtfs.schedule.model.Stop targetStop = schedule.getStops().get(target.getId());
+
+        return getConnections(sourceStop, targetStop, time, null, null);
+    }
+
+    @Override
+    public List<Connection> getConnections(Location source, Location target, LocalDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) {
+        notYetImplementedCheck(timeType);
+
+        log.debug("Get connections from location {} to location {} {} at {}", source, target,
+                timeType == TimeType.ARRIVAL ? "arriving" : "departing", time);
 
         // get nearest public transit stops
         ch.naviqore.gtfs.schedule.model.Stop sourceStop = spatialStopIndex.nearestNeighbour(source.getLatitude(),
                 source.getLongitude());
         ch.naviqore.gtfs.schedule.model.Stop targetStop = spatialStopIndex.nearestNeighbour(target.getLatitude(),
                 target.getLongitude());
+
+        // TODO: Here we need a foot path routing or approximation, introduce FootpathRouting / PedestrianRouting
+        //  interface here. If the connection query starts or ends at a station, then set the first or last mile to
+        //  null. Maybe we should extend the interface for these cases, instead of always query via the locations?
+        Walk firstMile = createWalk(0, 0, WalkType.FIRST_MILE, null, null, source, target, map(sourceStop));
+        Walk lastMile = createWalk(0, 0, WalkType.LAST_MILE, null, null, source, target, map(targetStop));
+
+        return getConnections(sourceStop, targetStop, time, firstMile, lastMile);
+    }
+
+    private @NotNull List<Connection> getConnections(ch.naviqore.gtfs.schedule.model.Stop sourceStop,
+                                                     ch.naviqore.gtfs.schedule.model.Stop targetStop,
+                                                     LocalDateTime time, Walk firstMile, Walk lastMile) {
         int departureTime = time.toLocalTime().toSecondOfDay();
 
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
@@ -119,14 +152,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 targetStop.getId(), departureTime);
 
         // map to connection and generate first and last mile walk
-        return connections.stream().map(connection -> {
-            // TODO: Here we need a foot path routing or approximation, introduce FootpathRouting / PedestrianRouting
-            //  interface here. If the connection query starts or ends at a station, then set the first or last mile to
-            //  null. Maybe we should extend the interface for these cases, instead of always query via the locations?
-            Walk firstMile = createWalk(0, 0, WalkType.FIRST_MILE, null, null, source, target, map(sourceStop));
-            Walk lastMile = createWalk(0, 0, WalkType.LAST_MILE, null, null, source, target, map(targetStop));
-            return map(connection, firstMile, lastMile, time.toLocalDate(), schedule);
-        }).toList();
+        return connections.stream()
+                .map(connection -> map(connection, firstMile, lastMile, time.toLocalDate(), schedule))
+                .toList();
     }
 
     @Override
