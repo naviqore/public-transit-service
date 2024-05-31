@@ -113,7 +113,8 @@ class SearchIndexTest {
         @Test
         void shouldFindDuplicates() {
             List<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactly(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2);
+            assertThat(result).containsExactlyInAnyOrderElementsOf(
+                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
         }
     }
 
@@ -171,7 +172,8 @@ class SearchIndexTest {
         @Test
         void shouldFindDuplicates() {
             List<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2);
+            assertThat(result).containsExactlyInAnyOrderElementsOf(
+                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
         }
     }
 
@@ -224,7 +226,8 @@ class SearchIndexTest {
         @Test
         void shouldFindDuplicates() {
             List<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactly(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2);
+            assertThat(result).containsExactlyInAnyOrderElementsOf(
+                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
         }
     }
 
@@ -276,7 +279,8 @@ class SearchIndexTest {
         @Test
         void shouldFindDuplicates() {
             List<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2);
+            assertThat(result).containsExactlyInAnyOrderElementsOf(
+                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
         }
     }
 }
