@@ -3,7 +3,7 @@ GET http://localhost:8080/schedule/stops/nearest?latitude=48&longitude=8&maxDist
 Accept: application/json
 
 ### Autocomplete stop name
-GET http://localhost:8080/schedule/stops/autocomplete?query=Sta&searchType=CONTAINS
+GET http://localhost:8080/schedule/stops/autocomplete?query=Stadel&searchType=STARTS_WITH
 Accept: application/json
 
 ### Departure at stop

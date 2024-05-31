@@ -1,9 +1,15 @@
 package ch.naviqore.service;
 
-public interface Location {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-    double getLatitude();
+@RequiredArgsConstructor
+@Getter
+@ToString
+public class Location {
 
-    double getLongitude();
+    private final double latitude;
+    private final double longitude;
 
 }

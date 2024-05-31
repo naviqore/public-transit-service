@@ -93,7 +93,8 @@ class GtfsScheduleParser {
 
     private void parseTrips(CSVRecord record) {
         try {
-            builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"));
+            builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
+                    record.get("trip_headsign"));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());
         }

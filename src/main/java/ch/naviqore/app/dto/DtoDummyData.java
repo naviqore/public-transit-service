@@ -1,15 +1,14 @@
-package ch.naviqore.app.controller;
+package ch.naviqore.app.dto;
 
-import ch.naviqore.app.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
-public class DummyData {
+public class DtoDummyData {
 
-    private static final Logger logger = LoggerFactory.getLogger(DummyData.class);
+    private static final Logger logger = LoggerFactory.getLogger(DtoDummyData.class);
     static Random random = new Random();
 
     public static List<Stop> getStops() {
@@ -80,7 +79,7 @@ public class DummyData {
     public static List<Stop> searchStops(String query, int limit, SearchType type) {
         List<Stop> stops = getStops();
         List<Stop> result = new ArrayList<>();
-        if (type == SearchType.FUZZY || type == SearchType.CONTAINS) {
+        if (type == SearchType.CONTAINS) {
             for (Stop stop : stops) {
                 if (stop.getName().toLowerCase().contains(query.toLowerCase())) {
                     result.add(stop);

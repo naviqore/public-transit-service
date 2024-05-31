@@ -1,13 +1,17 @@
 package ch.naviqore.service.config;
 
-public interface ConnectionQueryConfig {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-    int getMaximumWalkingDuration();
+@RequiredArgsConstructor
+@Getter
+@ToString
+public class ConnectionQueryConfig {
 
-    int getMinimumTransferDuration();
-
-    int getMaximumTransferNumber();
-
-    int getMaximumTravelTime();
+    private final int maximumWalkingDuration;
+    private final int minimumTransferDuration;
+    private final int maximumTransferNumber;
+    private final int maximumTravelTime;
 
 }

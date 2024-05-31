@@ -1,24 +1,21 @@
-package ch.naviqore.app.model;
+package ch.naviqore.app.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @EqualsAndHashCode
 @ToString
 @Getter
 public class StopTime {
 
-    private Stop stop;
+    private final Stop stop;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private LocalDateTime arrivalTime;
+    private final LocalDateTime arrivalTime;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private LocalDateTime departureTime;
+    private final LocalDateTime departureTime;
 
 }
 
