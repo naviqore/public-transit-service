@@ -13,56 +13,56 @@ public class DtoDummyData {
 
     public static List<Stop> getStops() {
         List<Stop> dtos = new ArrayList<>();
-        dtos.add(new Stop("Stop-1", "Zürich, Klinik Hirslanden", new Coordinate(47.35189719, 8.576602294)));
-        dtos.add(new Stop("Stop-2", "Brüttisellen, Gemeindehaus", new Coordinate(47.42036924, 8.628830345)));
-        dtos.add(new Stop("Stop-3", "Hausen a.A., Post A", new Coordinate(47.24489999, 8.532728576)));
-        dtos.add(new Stop("Stop-4", "Zürich, Bahnhof Stadelhofen", new Coordinate(47.36616091, 8.5472723)));
-        dtos.add(new Stop("Stop-5", "Spital Zollikerberg", new Coordinate(47.34735681, 8.596634725)));
-        dtos.add(new Stop("Stop-6", "Zürich, Central Polybahn", new Coordinate(47.37652769, 8.544352776)));
-        dtos.add(new Stop("Stop-7", "Uster, Buchholz", new Coordinate(47.35874961, 8.729172162)));
-        dtos.add(new Stop("Stop-8", "Zürich, Triemli", new Coordinate(47.3680227, 8.495682053)));
-        dtos.add(new Stop("Stop-9", "Winterthur, Hauptbahnhof", new Coordinate(47.49938025, 8.723908035)));
-        dtos.add(new Stop("Stop-10", "Zürich Flughafen, Bahnhof", new Coordinate(47.45027729, 8.56405283)));
-        dtos.add(new Stop("Stop-11", "Zürich, Schwamendingerplatz", new Coordinate(47.40487989, 8.571481897)));
-        dtos.add(new Stop("Stop-12", "Roswiesen", new Coordinate(47.40295252, 8.576979587)));
-        dtos.add(new Stop("Stop-13", "Siemens", new Coordinate(47.37846819, 8.494002204)));
-        dtos.add(new Stop("Stop-14", "Stauffacher", new Coordinate(47.37342517, 8.529252096)));
-        dtos.add(new Stop("Stop-15", "Sternen Oerlikon", new Coordinate(47.41007188, 8.546230254)));
-        dtos.add(new Stop("Stop-16", "Zoo", new Coordinate(47.38157041, 8.571553762)));
-        dtos.add(new Stop("Stop-17", "Universität Irchel", new Coordinate(47.39616056, 8.544828883)));
-        dtos.add(new Stop("Stop-18", "Benglen, Gerlisbrunnen", new Coordinate(47.36092808, 8.632872764)));
-        dtos.add(new Stop("Stop-19", "Winterthur, Grüzenstrasse", new Coordinate(47.49825747, 8.744587252)));
-        dtos.add(new Stop("Stop-20", "Zürich, Bahnhof Wollishofen", new Coordinate(47.34825762, 8.533294514)));
-        dtos.add(new Stop("Stop-21", "Elsau, Melcher", new Coordinate(47.50171676, 8.787230279)));
-        dtos.add(new Stop("Stop-22", "Wetzikon ZH, Walfershausen", new Coordinate(47.32205504, 8.797336326)));
-        dtos.add(new Stop("Stop-23", "Hombrechtikon, Tobel", new Coordinate(47.25379065, 8.780986988)));
-        dtos.add(new Stop("Stop-24", "Mönchaltorf, Langenmatt", new Coordinate(47.315526886, 8.7209782185)));
-        dtos.add(new Stop("Stop-25", "Hinwil, Girenbad", new Coordinate(47.30950315, 8.87194141)));
-        dtos.add(new Stop("Stop-26", "Zürich, Polyterrasse ETH", new Coordinate(47.37685009, 8.546391951)));
-        dtos.add(new Stop("Stop-27", "Pfäffikon ZH, Humbel", new Coordinate(47.38172856, 8.800857722)));
-        dtos.add(new Stop("Stop-28", "Benken ZH, Dorf", new Coordinate(47.6529254, 8.653300453)));
-        dtos.add(new Stop("Stop-29", "Winkel, Oberrüti", new Coordinate(47.47994371, 8.563073666)));
-        dtos.add(new Stop("Stop-30", "Flaach, Wesenplatz", new Coordinate(47.57530917, 8.609651314)));
-        dtos.add(new Stop("Stop-31", "Laupen ZH, Schulhaus", new Coordinate(47.26536213, 8.929370706)));
-        dtos.add(new Stop("Stop-32", "Embrach, Dreispitz", new Coordinate(47.50995745, 8.593858931)));
-        dtos.add(new Stop("Stop-33", "Brütten, Zentrum", new Coordinate(47.47198977, 8.676189527)));
-        dtos.add(new Stop("Stop-34", "Mettmenstetten, Bahnhof", new Coordinate(47.24308265, 8.458671464)));
-        dtos.add(new Stop("Stop-35", "Baar, Bahnmatt", new Coordinate(47.19659729, 8.523862204)));
-        dtos.add(new Stop("Stop-36", "Rümlang, Bahnhof", new Coordinate(47.45400701, 8.532611795)));
-        dtos.add(new Stop("Stop-37", "Bachs, Weiherbach", new Coordinate(47.5193738, 8.44891576)));
-        dtos.add(new Stop("Stop-38", "Dachsen, Lindenstrasse", new Coordinate(47.66353213, 8.620538895)));
-        dtos.add(new Stop("Stop-39", "Russikon, Kirche", new Coordinate(47.39620313, 8.773108763)));
-        dtos.add(new Stop("Stop-40", "Weisslingen, Widum", new Coordinate(47.43468736, 8.76346984)));
-        dtos.add(new Stop("Stop-41", "Horgen, Stocker", new Coordinate(47.26150932, 8.58926854)));
-        dtos.add(new Stop("Stop-42", "Hirzel, Strickler", new Coordinate(47.22884668, 8.601844954)));
-        dtos.add(new Stop("Stop-43", "Sitzberg, Sternen", new Coordinate(47.4234933, 8.912563227)));
-        dtos.add(new Stop("Stop-44", "Buch am Irchel, Unterbuch", new Coordinate(47.54997739, 8.61878718)));
-        dtos.add(new Stop("Stop-45", "Oetwil am See, Bergstrasse", new Coordinate(47.26976326, 8.718051019)));
-        dtos.add(new Stop("Stop-46", "Pfungen, Eskimo", new Coordinate(47.51937987, 8.637202643)));
-        dtos.add(new Stop("Stop-47", "Wallisellen, Bahnhof", new Coordinate(47.41268592, 8.592933666)));
-        dtos.add(new Stop("Stop-48", "Maur, See", new Coordinate(47.33994896, 8.677968191)));
-        dtos.add(new Stop("Stop-49", "Meilen, Friedhof", new Coordinate(47.27177473, 8.641424725)));
-        dtos.add(new Stop("Stop-50", "Stäfa, Schützenhaus Wanne", new Coordinate(47.25471134, 8.720611217)));
+        dtos.add(new Stop("Stop-1", "Zürich, Klinik Hirslanden", new Location(47.35189719, 8.576602294)));
+        dtos.add(new Stop("Stop-2", "Brüttisellen, Gemeindehaus", new Location(47.42036924, 8.628830345)));
+        dtos.add(new Stop("Stop-3", "Hausen a.A., Post A", new Location(47.24489999, 8.532728576)));
+        dtos.add(new Stop("Stop-4", "Zürich, Bahnhof Stadelhofen", new Location(47.36616091, 8.5472723)));
+        dtos.add(new Stop("Stop-5", "Spital Zollikerberg", new Location(47.34735681, 8.596634725)));
+        dtos.add(new Stop("Stop-6", "Zürich, Central Polybahn", new Location(47.37652769, 8.544352776)));
+        dtos.add(new Stop("Stop-7", "Uster, Buchholz", new Location(47.35874961, 8.729172162)));
+        dtos.add(new Stop("Stop-8", "Zürich, Triemli", new Location(47.3680227, 8.495682053)));
+        dtos.add(new Stop("Stop-9", "Winterthur, Hauptbahnhof", new Location(47.49938025, 8.723908035)));
+        dtos.add(new Stop("Stop-10", "Zürich Flughafen, Bahnhof", new Location(47.45027729, 8.56405283)));
+        dtos.add(new Stop("Stop-11", "Zürich, Schwamendingerplatz", new Location(47.40487989, 8.571481897)));
+        dtos.add(new Stop("Stop-12", "Roswiesen", new Location(47.40295252, 8.576979587)));
+        dtos.add(new Stop("Stop-13", "Siemens", new Location(47.37846819, 8.494002204)));
+        dtos.add(new Stop("Stop-14", "Stauffacher", new Location(47.37342517, 8.529252096)));
+        dtos.add(new Stop("Stop-15", "Sternen Oerlikon", new Location(47.41007188, 8.546230254)));
+        dtos.add(new Stop("Stop-16", "Zoo", new Location(47.38157041, 8.571553762)));
+        dtos.add(new Stop("Stop-17", "Universität Irchel", new Location(47.39616056, 8.544828883)));
+        dtos.add(new Stop("Stop-18", "Benglen, Gerlisbrunnen", new Location(47.36092808, 8.632872764)));
+        dtos.add(new Stop("Stop-19", "Winterthur, Grüzenstrasse", new Location(47.49825747, 8.744587252)));
+        dtos.add(new Stop("Stop-20", "Zürich, Bahnhof Wollishofen", new Location(47.34825762, 8.533294514)));
+        dtos.add(new Stop("Stop-21", "Elsau, Melcher", new Location(47.50171676, 8.787230279)));
+        dtos.add(new Stop("Stop-22", "Wetzikon ZH, Walfershausen", new Location(47.32205504, 8.797336326)));
+        dtos.add(new Stop("Stop-23", "Hombrechtikon, Tobel", new Location(47.25379065, 8.780986988)));
+        dtos.add(new Stop("Stop-24", "Mönchaltorf, Langenmatt", new Location(47.315526886, 8.7209782185)));
+        dtos.add(new Stop("Stop-25", "Hinwil, Girenbad", new Location(47.30950315, 8.87194141)));
+        dtos.add(new Stop("Stop-26", "Zürich, Polyterrasse ETH", new Location(47.37685009, 8.546391951)));
+        dtos.add(new Stop("Stop-27", "Pfäffikon ZH, Humbel", new Location(47.38172856, 8.800857722)));
+        dtos.add(new Stop("Stop-28", "Benken ZH, Dorf", new Location(47.6529254, 8.653300453)));
+        dtos.add(new Stop("Stop-29", "Winkel, Oberrüti", new Location(47.47994371, 8.563073666)));
+        dtos.add(new Stop("Stop-30", "Flaach, Wesenplatz", new Location(47.57530917, 8.609651314)));
+        dtos.add(new Stop("Stop-31", "Laupen ZH, Schulhaus", new Location(47.26536213, 8.929370706)));
+        dtos.add(new Stop("Stop-32", "Embrach, Dreispitz", new Location(47.50995745, 8.593858931)));
+        dtos.add(new Stop("Stop-33", "Brütten, Zentrum", new Location(47.47198977, 8.676189527)));
+        dtos.add(new Stop("Stop-34", "Mettmenstetten, Bahnhof", new Location(47.24308265, 8.458671464)));
+        dtos.add(new Stop("Stop-35", "Baar, Bahnmatt", new Location(47.19659729, 8.523862204)));
+        dtos.add(new Stop("Stop-36", "Rümlang, Bahnhof", new Location(47.45400701, 8.532611795)));
+        dtos.add(new Stop("Stop-37", "Bachs, Weiherbach", new Location(47.5193738, 8.44891576)));
+        dtos.add(new Stop("Stop-38", "Dachsen, Lindenstrasse", new Location(47.66353213, 8.620538895)));
+        dtos.add(new Stop("Stop-39", "Russikon, Kirche", new Location(47.39620313, 8.773108763)));
+        dtos.add(new Stop("Stop-40", "Weisslingen, Widum", new Location(47.43468736, 8.76346984)));
+        dtos.add(new Stop("Stop-41", "Horgen, Stocker", new Location(47.26150932, 8.58926854)));
+        dtos.add(new Stop("Stop-42", "Hirzel, Strickler", new Location(47.22884668, 8.601844954)));
+        dtos.add(new Stop("Stop-43", "Sitzberg, Sternen", new Location(47.4234933, 8.912563227)));
+        dtos.add(new Stop("Stop-44", "Buch am Irchel, Unterbuch", new Location(47.54997739, 8.61878718)));
+        dtos.add(new Stop("Stop-45", "Oetwil am See, Bergstrasse", new Location(47.26976326, 8.718051019)));
+        dtos.add(new Stop("Stop-46", "Pfungen, Eskimo", new Location(47.51937987, 8.637202643)));
+        dtos.add(new Stop("Stop-47", "Wallisellen, Bahnhof", new Location(47.41268592, 8.592933666)));
+        dtos.add(new Stop("Stop-48", "Maur, See", new Location(47.33994896, 8.677968191)));
+        dtos.add(new Stop("Stop-49", "Meilen, Friedhof", new Location(47.27177473, 8.641424725)));
+        dtos.add(new Stop("Stop-50", "Stäfa, Schützenhaus Wanne", new Location(47.25471134, 8.720611217)));
 
         return dtos;
     }
@@ -118,7 +118,7 @@ public class DtoDummyData {
                                                         int maxDistance, int limit) {
         List<DistanceToStop> result = new ArrayList<>();
         for (Stop stop : stops) {
-            double distance = approximateDistance(stop.getCoordinates(), new Coordinate(latitude, longitude));
+            double distance = approximateDistance(stop.getCoordinates(), new Location(latitude, longitude));
             if (maxDistance > 0 && distance > maxDistance) {
                 continue;
             }
@@ -131,7 +131,7 @@ public class DtoDummyData {
         return result;
     }
 
-    public static double approximateDistance(Coordinate coord1, Coordinate coord2) {
+    public static double approximateDistance(Location coord1, Location coord2) {
         final double metersPerDegreeLat = 111320.0;
         final double lat1 = coord1.getLatitude();
         final double lon1 = coord1.getLongitude();
@@ -234,7 +234,7 @@ public class DtoDummyData {
         // get coordinate of the center of the two stops
         double centerLat = (from.getCoordinates().getLatitude() + to.getCoordinates().getLatitude()) / 2;
         double centerLon = (from.getCoordinates().getLongitude() + to.getCoordinates().getLongitude()) / 2;
-        Coordinate center = new Coordinate(centerLat, centerLon);
+        Location center = new Location(centerLat, centerLon);
 
         List<DistanceToStop> closestStops = getNearestStops(center.getLatitude(), center.getLongitude(),
                 Integer.MAX_VALUE, 3 + randomness);

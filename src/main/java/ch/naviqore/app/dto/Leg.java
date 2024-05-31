@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 @Getter
 public class Leg {
 
-    private final Coordinate from;
-    private final Coordinate to;
+    private final Location from;
+    private final Location to;
     private final Stop fromStop;
     private final Stop toStop;
     private final LegType type;

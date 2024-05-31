@@ -1,6 +1,5 @@
 package ch.naviqore.app.dto;
 
-import ch.naviqore.service.Location;
 import ch.naviqore.service.SearchType;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
@@ -15,8 +14,12 @@ public class DtoMapper {
         return new Stop(stop.getId(), stop.getName(), map(stop.getLocation()));
     }
 
-    public static Coordinate map(Location location) {
-        return new Coordinate(location.getLatitude(), location.getLongitude());
+    public static Location map(ch.naviqore.service.Location location) {
+        return new Location(location.getLatitude(), location.getLongitude());
+    }
+
+    public static ch.naviqore.service.Location map(Location location) {
+        return new ch.naviqore.service.Location(location.getLatitude(), location.getLongitude());
     }
 
     public static DistanceToStop map(ch.naviqore.service.Stop stop, double latitude, double longitude) {

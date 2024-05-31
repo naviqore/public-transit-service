@@ -6,7 +6,7 @@ import lombok.*;
 @EqualsAndHashCode
 @ToString
 @Getter
-public class Coordinate {
+public class Location {
 
     private final double latitude;
     private final double longitude;
