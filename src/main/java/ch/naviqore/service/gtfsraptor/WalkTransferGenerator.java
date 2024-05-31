@@ -4,6 +4,7 @@ import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +68,7 @@ public class WalkTransferGenerator implements TransferGenerator {
         }).toList();
         log.info("Generated {} transfers between {} stops", transfers.size(), stops.size());
 
-        return transfers;
+        return new ArrayList<>(transfers);
     }
 
     private MinimumTimeTransfer createTransfer(Stop fromStop, Stop toStop) {
