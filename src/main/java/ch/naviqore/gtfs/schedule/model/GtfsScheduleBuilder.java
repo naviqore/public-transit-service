@@ -50,13 +50,13 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
+    public GtfsScheduleBuilder addStop(String id, String name, String parentStop, double lat, double lon) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
-            throw new IllegalArgumentException("Agency " + id + " already exists");
+            throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, new GeoCoordinate(lat, lon)));
+        stops.put(id, new Stop(id, name, parentStop, new GeoCoordinate(lat, lon)));
         return this;
     }
 
