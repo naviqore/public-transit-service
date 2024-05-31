@@ -36,6 +36,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Stop'
+        '400':
+          description: Invalid input parameters
   /schedule/stops/{stopId}/departures:
     get:
       summary: Get next departures from a stop
@@ -75,6 +77,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Departure'
+        '400':
+          description: Invalid input parameters
+        '404':
+          description: StopID does not exist
   /schedule/stops/nearest:
     get:
       summary: Get nearest stops
@@ -108,6 +114,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/DistanceToStop'
+        '400':
+          description: Invalid input parameters
   /schedule/stops/{stopId}:
     get:
       summary: Get information about a stop
@@ -128,6 +136,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Stop'
+        '404':
+          description: StopID does not exist
   /routing/connections:
     get:
       summary: Request connections between two stops
@@ -137,16 +147,34 @@ paths:
       parameters:
         - name: sourceStopId
           in: query
-          required: true
           schema:
             type: string
-          description: The ID of the source stop.
+          description: The ID of the source stop, required if no sourceLatitude and sourceLongitude are provided.
+        - name: sourceLatitude
+          in: query
+          schema:
+            type: number
+          description: The latitude of the source stop, only used and required if no sourceStopId is provided.
+        - name: sourceLongitude
+          in: query
+          schema:
+              type: number
+          description: The longitude of the source stop, only used and required if no sourceStopId is provided.
         - name: targetStopId
           in: query
-          required: true
           schema:
             type: string
-          description: The ID of the target stop.
+          description: The ID of the target stop, required if no targetLatitude and targetLongitude are provided.
+        - name: targetLatitude
+          in: query
+          schema:
+              type: number
+          description: The latitude of the target stop, only used and required if no targetStopId is provided.
+        - name: targetLongitude
+          in: query
+          schema:
+              type: number
+          description: The longitude of the target stop, only used and required if no targetStopId is provided.
         - name: departureDateTime
           in: query
           schema:
@@ -182,19 +210,32 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Connection'
+        '400':
+          description: Invalid input parameters
+        '404':
+          description: StopID does not exist
   /routing/isolines:
     get:
       summary: Request a list of fastest connections to each reachable stop
-      description: Request a list of fastest connections to each reachable stop from a specified stop at a given departure datetime.
+      description: Request a list of fastest connections to each reachable stop from a specified position at a given departure datetime.
       tags:
         - routing
       parameters:
         - name: stopId
           in: query
-          required: true
           schema:
             type: string
-          description: The ID of the stop.
+          description: The ID of the source stop, required if no latitude and longitude are provided.
+        - name: longitude
+          in: query
+          schema:
+            type: number
+          description: The latitude of the start position, only used and required if no stopId is provided.
+        - name: latitude
+          in: query
+          schema:
+            type: number
+          description: The longitude of the start position, only used and required if no stopId is provided.
         - name: departureDateTime
           in: query
           schema:
@@ -230,6 +271,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EarliestArrival'
+        '400':
+          description: Invalid input parameters
+        '404':
+          description: StopID does not exist
 components:
   schemas:
     StopTime:

@@ -31,6 +31,7 @@ public class ScheduleController {
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
                                            @RequestParam(required = false, defaultValue = "10") int limit,
                                            @RequestParam(required = false, defaultValue = "STARTS_WITH") SearchType type) {
+        validateLimit(limit);
         return service.getStops(query, map(type)).stream().map(DtoMapper::map).limit(limit).toList();
     }
 
@@ -38,6 +39,11 @@ public class ScheduleController {
     public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
                                                 @RequestParam(required = false, defaultValue = "1000") int maxDistance,
                                                 @RequestParam(required = false, defaultValue = "10") int limit) {
+        validateLimit(limit);
+        if( maxDistance < 0 ){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max distance can not be negative");
+        }
+
         return service.getNearestStops(new Location(latitude, longitude), maxDistance, limit)
                 .stream()
                 .map(stop -> map(stop, latitude, longitude))
@@ -58,8 +64,14 @@ public class ScheduleController {
                                          @RequestParam(required = false) LocalDateTime departureDateTime,
                                          @RequestParam(required = false, defaultValue = "10") int limit,
                                          @RequestParam(required = false) LocalDateTime untilDateTime) {
+        validateLimit(limit);
         if (departureDateTime == null) {
             departureDateTime = LocalDateTime.now();
+        }
+        if( untilDateTime != null ){
+            if( untilDateTime.isBefore(departureDateTime) ){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Until date time must be after departure date time");
+            }
         }
 
         try {
@@ -73,4 +85,9 @@ public class ScheduleController {
 
     }
 
+    private static void validateLimit(int limit){
+        if( limit <= 0 ){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limit must be greater than 0");
+        }
+    }
 }
