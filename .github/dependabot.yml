@@ -4,8 +4,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
-    versioning-strategy: increase
     allow:
       - dependency-type: direct
     ignore:
-      - versions: [ "-alpha", "-beta", "-rc", "-SNAPSHOT" ]
+      - dependency-name: "*"
+        versions: [ "-alpha", "-beta", "-rc", "-SNAPSHOT" ]
