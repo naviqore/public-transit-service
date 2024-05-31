@@ -167,7 +167,7 @@ public class WalkTransferGeneratorTest {
     static GtfsSchedule getSchedule() {
         GtfsScheduleBuilder builder = GtfsSchedule.builder();
         for (StopData stopData : testStops.values()) {
-            builder.addStop(stopData.id(), stopData.name(), stopData.lat(), stopData.lon());
+            builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(), stopData.lon());
         }
         return builder.build();
 
