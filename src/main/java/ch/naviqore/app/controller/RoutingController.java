@@ -4,12 +4,13 @@ import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.DtoDummyData;
 import ch.naviqore.app.dto.EarliestArrival;
 import ch.naviqore.service.ConnectionRoutingService;
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,18 +38,20 @@ public class RoutingController {
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
-        if( sourceStopId == null ) {
-            if( sourceLatitude < 0 || sourceLongitude < 0 ) {
-                throw new IllegalArgumentException("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
+        if (sourceStopId == null) {
+            if (sourceLatitude < 0 || sourceLongitude < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new NotImplementedException("Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
         }
 
         if (targetStopId == null) {
             if (targetLatitude < 0 || targetLongitude < 0) {
-                throw new IllegalArgumentException("Either targetStopId or targetLatitude and targetLongitude must be provided.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Either targetStopId or targetLatitude and targetLongitude must be provided.");
             }
-            throw new NotImplementedException("Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
         }
 
         // TODO: Implement the method with  maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime
@@ -66,11 +69,12 @@ public class RoutingController {
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                              @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
-        if( sourceStopId == null ) {
-            if( sourceLatitude < 0 || sourceLongitude < 0 ) {
-                throw new IllegalArgumentException("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
+        if (sourceStopId == null) {
+            if (sourceLatitude < 0 || sourceLongitude < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new NotImplementedException("Location based routing is not implemented yet.");
+            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Location based routing is not implemented yet.");
         }
 
         // TODO: Implement the method with maxWalkingDuration, maxTransferNumber, minTransferTime
