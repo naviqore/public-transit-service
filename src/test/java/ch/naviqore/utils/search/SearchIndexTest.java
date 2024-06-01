@@ -15,15 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SearchIndexTest {
 
-    private SearchIndex<SearchCase> index;
-
-    @BeforeEach
-    void setUp() {
-        index = new SearchIndex<>();
-        for (SearchCase searchCase : SearchCase.values()) {
-            index.add(searchCase.value, searchCase);
-        }
-    }
+    private SearchIndexBuilder<SearchCase> builder;
 
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     @ToString
@@ -43,245 +35,264 @@ class SearchIndexTest {
         final String value;
     }
 
+    @BeforeEach
+    void setUp() {
+        builder = SearchIndex.builder();
+        for (SearchCase searchCase : SearchCase.values()) {
+            builder.add(searchCase.value, searchCase);
+        }
+    }
+
     @Nested
-    class InputValidation {
+    class Builder {
 
         @Test
         void shouldThrowWhenKeyIsNull() {
-            assertThatThrownBy(() -> index.add(null, SearchCase.SERIES_1)).isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Key cannot be null or empty.");
+            assertThatThrownBy(() -> builder.add(null, SearchCase.SERIES_1)).isInstanceOf(
+                    IllegalArgumentException.class).hasMessage("Key cannot be null or empty.");
         }
 
         @Test
         void shouldThrowWhenKeyIsEmpty() {
-            assertThatThrownBy(() -> index.add("", SearchCase.SERIES_1)).isInstanceOf(IllegalArgumentException.class)
+            assertThatThrownBy(() -> builder.add("", SearchCase.SERIES_1)).isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Key cannot be null or empty.");
         }
     }
 
     @Nested
-    class StartsWith {
+    class Search {
 
-        @Test
-        void shouldNotFindEmptyKey() {
-            Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).isEmpty();
+        private SearchIndex<SearchCase> index;
+
+        @BeforeEach
+        void setUp() {
+            index = builder.build();
         }
 
-        @Test
-        void shouldFindLeftPadded() {
-            Set<SearchCase> result = index.search("    left-padded", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
+        @Nested
+        class StartsWith {
+
+            @Test
+            void shouldNotFindEmptyKey() {
+                Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindLeftPadded() {
+                Set<SearchCase> result = index.search("    left-padded", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
+            }
+
+            @Test
+            void shouldFindRightPadded() {
+                Set<SearchCase> result = index.search("right-padded", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
+            }
+
+            @Test
+            void shouldFindSpecialCharacter() {
+                Set<SearchCase> result = index.search("$äö/üö)(", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
+            }
+
+            @Test
+            void shouldFindNumbers() {
+                Set<SearchCase> result = index.search("8187123", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactly(SearchCase.NUMBERS);
+            }
+
+            @Test
+            void shouldFindSeries() {
+                Set<SearchCase> result = index.search("A", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactlyInAnyOrder(SearchCase.SERIES_1, SearchCase.SERIES_2,
+                        SearchCase.SERIES_3, SearchCase.SERIES_4, SearchCase.SERIES_5);
+            }
+
+            @Test
+            void shouldNotFindSeries() {
+                Set<SearchCase> result = index.search("B", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldNotFindMissingKey() {
+                Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindDuplicates() {
+                Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.STARTS_WITH);
+                assertThat(result).containsExactlyInAnyOrderElementsOf(
+                        List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
+            }
         }
 
-        @Test
-        void shouldFindRightPadded() {
-            Set<SearchCase> result = index.search("right-padded", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
+        @Nested
+        class EndsWith {
+
+            @Test
+            void shouldNotFindEmptyKey() {
+                Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindLeftPadded() {
+                Set<SearchCase> result = index.search("left-padded", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
+            }
+
+            @Test
+            void shouldFindRightPadded() {
+                Set<SearchCase> result = index.search("    ", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
+            }
+
+            @Test
+            void shouldFindSpecialCharacter() {
+                Set<SearchCase> result = index.search(")(", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
+            }
+
+            @Test
+            void shouldFindNumbers() {
+                Set<SearchCase> result = index.search("7123", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.NUMBERS);
+            }
+
+            @Test
+            void shouldFindSeries() {
+                Set<SearchCase> result = index.search("E", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.SERIES_5);
+            }
+
+            @Test
+            void shouldFindSeriesInTheMiddle() {
+                Set<SearchCase> result = index.search("C", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactly(SearchCase.SERIES_3);
+            }
+
+            @Test
+            void shouldNotFindMissingKey() {
+                Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindDuplicates() {
+                Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.ENDS_WITH);
+                assertThat(result).containsExactlyInAnyOrderElementsOf(
+                        List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
+            }
         }
 
-        @Test
-        void shouldFindSpecialCharacter() {
-            Set<SearchCase> result = index.search("$äö/üö)(", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
+        @Nested
+        class Contains {
+
+            @Test
+            void shouldNotFindEmptyKey() {
+                Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindLeftPadded() {
+                Set<SearchCase> result = index.search("left", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
+            }
+
+            @Test
+            void shouldFindRightPadded() {
+                Set<SearchCase> result = index.search("right", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
+            }
+
+            @Test
+            void shouldFindSpecialCharacter() {
+                Set<SearchCase> result = index.search("äö", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
+            }
+
+            @Test
+            void shouldFindNumbers() {
+                Set<SearchCase> result = index.search("187", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactly(SearchCase.NUMBERS);
+            }
+
+            @Test
+            void shouldFindSeries() {
+                Set<SearchCase> result = index.search("B", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactlyInAnyOrder(SearchCase.SERIES_2, SearchCase.SERIES_3,
+                        SearchCase.SERIES_4, SearchCase.SERIES_5);
+            }
+
+            @Test
+            void shouldNotFindMissingKey() {
+                Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            void shouldFindDuplicates() {
+                Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.CONTAINS);
+                assertThat(result).containsExactlyInAnyOrderElementsOf(
+                        List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
+            }
         }
 
-        @Test
-        void shouldFindNumbers() {
-            Set<SearchCase> result = index.search("8187123", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactly(SearchCase.NUMBERS);
-        }
+        @Nested
+        class Exact {
 
-        @Test
-        void shouldFindSeries() {
-            Set<SearchCase> result = index.search("A", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactlyInAnyOrder(SearchCase.SERIES_1, SearchCase.SERIES_2, SearchCase.SERIES_3,
-                    SearchCase.SERIES_4, SearchCase.SERIES_5);
-        }
+            @Test
+            void shouldNotFindEmptyKey() {
+                Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).isEmpty();
+            }
 
-        @Test
-        void shouldNotFindSeries() {
-            Set<SearchCase> result = index.search("B", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).isEmpty();
-        }
+            @Test
+            void shouldFindLeftPadded() {
+                Set<SearchCase> result = index.search("    left-padded", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
+            }
 
-        @Test
-        void shouldNotFindMissingKey() {
-            Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).isEmpty();
-        }
+            @Test
+            void shouldFindRightPadded() {
+                Set<SearchCase> result = index.search("right-padded    ", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
+            }
 
-        @Test
-        void shouldFindDuplicates() {
-            Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.STARTS_WITH);
-            assertThat(result).containsExactlyInAnyOrderElementsOf(
-                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
-        }
-    }
+            @Test
+            void shouldFindSpecialCharacter() {
+                Set<SearchCase> result = index.search("$äö/üö)(", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
+            }
 
-    @Nested
-    class EndsWith {
+            @Test
+            void shouldFindNumbers() {
+                Set<SearchCase> result = index.search("8187123", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactly(SearchCase.NUMBERS);
+            }
 
-        @Test
-        void shouldNotFindEmptyKey() {
-            Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).isEmpty();
-        }
+            @Test
+            void shouldFindSeries() {
+                Set<SearchCase> result = index.search("AAA", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactly(SearchCase.SERIES_1);
+            }
 
-        @Test
-        void shouldFindLeftPadded() {
-            Set<SearchCase> result = index.search("left-padded", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
-        }
+            @Test
+            void shouldNotFindMissingKey() {
+                Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).isEmpty();
+            }
 
-        @Test
-        void shouldFindRightPadded() {
-            Set<SearchCase> result = index.search("    ", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
-        }
-
-        @Test
-        void shouldFindSpecialCharacter() {
-            Set<SearchCase> result = index.search(")(", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
-        }
-
-        @Test
-        void shouldFindNumbers() {
-            Set<SearchCase> result = index.search("7123", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.NUMBERS);
-        }
-
-        @Test
-        void shouldFindSeries() {
-            Set<SearchCase> result = index.search("E", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.SERIES_5);
-        }
-
-        @Test
-        void shouldFindSeriesInTheMiddle() {
-            Set<SearchCase> result = index.search("C", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactly(SearchCase.SERIES_3);
-        }
-
-        @Test
-        void shouldNotFindMissingKey() {
-            Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void shouldFindDuplicates() {
-            Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.ENDS_WITH);
-            assertThat(result).containsExactlyInAnyOrderElementsOf(
-                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
-        }
-    }
-
-    @Nested
-    class Contains {
-
-        @Test
-        void shouldNotFindEmptyKey() {
-            Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void shouldFindLeftPadded() {
-            Set<SearchCase> result = index.search("left", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
-        }
-
-        @Test
-        void shouldFindRightPadded() {
-            Set<SearchCase> result = index.search("right", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
-        }
-
-        @Test
-        void shouldFindSpecialCharacter() {
-            Set<SearchCase> result = index.search("äö", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
-        }
-
-        @Test
-        void shouldFindNumbers() {
-            Set<SearchCase> result = index.search("187", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactly(SearchCase.NUMBERS);
-        }
-
-        @Test
-        void shouldFindSeries() {
-            Set<SearchCase> result = index.search("B", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactlyInAnyOrder(SearchCase.SERIES_2, SearchCase.SERIES_3, SearchCase.SERIES_4,
-                    SearchCase.SERIES_5);
-        }
-
-        @Test
-        void shouldNotFindMissingKey() {
-            Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void shouldFindDuplicates() {
-            Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.CONTAINS);
-            assertThat(result).containsExactlyInAnyOrderElementsOf(
-                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
-        }
-    }
-
-    @Nested
-    class Exact {
-
-        @Test
-        void shouldNotFindEmptyKey() {
-            Set<SearchCase> result = index.search("", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void shouldFindLeftPadded() {
-            Set<SearchCase> result = index.search("    left-padded", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.LEFT_PADDED);
-        }
-
-        @Test
-        void shouldFindRightPadded() {
-            Set<SearchCase> result = index.search("right-padded    ", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.RIGHT_PADDED);
-        }
-
-        @Test
-        void shouldFindSpecialCharacter() {
-            Set<SearchCase> result = index.search("$äö/üö)(", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.SPECIAL_CHARACTER);
-        }
-
-        @Test
-        void shouldFindNumbers() {
-            Set<SearchCase> result = index.search("8187123", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.NUMBERS);
-        }
-
-        @Test
-        void shouldFindSeries() {
-            Set<SearchCase> result = index.search("AAA", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactly(SearchCase.SERIES_1);
-        }
-
-        @Test
-        void shouldNotFindMissingKey() {
-            Set<SearchCase> result = index.search("missing", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        void shouldFindDuplicates() {
-            Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.EXACT);
-            assertThat(result).containsExactlyInAnyOrderElementsOf(
-                    List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
+            @Test
+            void shouldFindDuplicates() {
+                Set<SearchCase> result = index.search("duplicate", SearchIndex.SearchStrategy.EXACT);
+                assertThat(result).containsExactlyInAnyOrderElementsOf(
+                        List.of(SearchCase.DUPLICATE_1, SearchCase.DUPLICATE_2));
+            }
         }
     }
 }

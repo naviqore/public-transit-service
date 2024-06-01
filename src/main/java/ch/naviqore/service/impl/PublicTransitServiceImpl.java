@@ -11,6 +11,7 @@ import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.utils.search.SearchIndex;
+import ch.naviqore.utils.search.SearchIndexBuilder;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.extern.log4j.Log4j2;
@@ -52,10 +53,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule) {
-        SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
-        schedule.getStops().values().forEach(stop -> index.add(stop.getName(), stop));
+        SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
+        schedule.getStops().values().forEach(stop -> builder.add(stop.getName(), stop));
 
-        return index;
+        return builder.build();
     }
 
     private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {

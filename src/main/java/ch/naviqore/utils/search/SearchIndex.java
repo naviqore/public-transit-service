@@ -1,6 +1,7 @@
 package ch.naviqore.utils.search;
 
-import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
@@ -14,28 +15,14 @@ import java.util.stream.Collectors;
  *
  * @param <T> the type of objects to be indexed.
  */
-@NoArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Log4j2
 public class SearchIndex<T> {
 
-    private final Trie<TrieEntry<T>> suffixTrie = new Trie<>();
+    private final Trie<Entry<T>> suffixTrie;
 
-    /**
-     * Adds a key-value pair to the index.
-     *
-     * @param key   the string key to be indexed.
-     * @param value the value associated with the key.
-     */
-    public void add(String key, T value) {
-        if (key == null || key.isEmpty()) {
-            throw new IllegalArgumentException("Key cannot be null or empty.");
-        }
-
-        log.debug("Adding search key: {}", key);
-        TrieEntry<T> entry = new TrieEntry<>(key, value);
-        for (int i = key.length() - 1; i >= 0; i--) {
-            suffixTrie.insert(key.substring(i), entry);
-        }
+    public static <T> SearchIndexBuilder<T> builder() {
+        return new SearchIndexBuilder<>();
     }
 
     /**
@@ -52,22 +39,22 @@ public class SearchIndex<T> {
             return Set.of();
         }
 
-        List<TrieEntry<T>> results = suffixTrie.searchPrefix(query);
+        List<Entry<T>> results = suffixTrie.searchPrefix(query);
 
         return switch (strategy) {
             case EXACT -> results.stream()
                     .filter(entry -> entry.key().equals(query))
-                    .map(TrieEntry::value)
+                    .map(Entry::value)
                     .collect(Collectors.toSet());
             case STARTS_WITH -> results.stream()
                     .filter(entry -> entry.key().startsWith(query))
-                    .map(TrieEntry::value)
+                    .map(Entry::value)
                     .collect(Collectors.toSet());
             case ENDS_WITH -> results.stream()
                     .filter(entry -> entry.key().endsWith(query))
-                    .map(TrieEntry::value)
+                    .map(Entry::value)
                     .collect(Collectors.toSet());
-            case CONTAINS -> results.stream().map(TrieEntry::value).collect(Collectors.toSet());
+            case CONTAINS -> results.stream().map(Entry::value).collect(Collectors.toSet());
         };
 
     }
@@ -79,6 +66,7 @@ public class SearchIndex<T> {
         EXACT
     }
 
-    private record TrieEntry<U>(String key, U value) {
+    record Entry<U>(String key, U value) {
     }
+
 }
