@@ -51,7 +51,7 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStop(String id, String name, String parentStop, double lat, double lon) {
+    public GtfsScheduleBuilder addStop(String id, String name, @Nullable String parentStop, double lat, double lon) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
