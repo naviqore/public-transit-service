@@ -38,12 +38,24 @@ class Trie<T> {
     public List<T> searchPrefix(String prefix) {
         List<T> results = new ArrayList<>();
         Node<T> node = root;
-        for (char c : prefix.toCharArray()) {
+        int i = 0;
+
+        while (i < prefix.length()) {
+            char c = prefix.charAt(i);
             node = node.children.get(c);
+
             if (node == null) {
                 return results;
             }
+            i++;
+
+            if (!node.prefix.isEmpty() && i < prefix.length() && prefix.startsWith(node.prefix, i)) {
+                i += node.prefix.length();
+            } else if (!node.prefix.isEmpty()) {
+                return results;
+            }
         }
+
         collectAllWords(node, results);
         return results;
     }
@@ -59,18 +71,20 @@ class Trie<T> {
     }
 
     private void compressNode(Node<T> node) {
-        while (node.children.size() == 1 && !node.isEndOfWord) {
-            char onlyChildKey = node.children.keySet().iterator().next();
-            Node<T> onlyChild = node.children.get(onlyChildKey);
-            node.children.clear();
-            node.children.put(onlyChildKey, onlyChild);
-            node.values.addAll(onlyChild.values);
-            node.isEndOfWord = onlyChild.isEndOfWord;
-            node = onlyChild;
+        for (Map.Entry<Character, Node<T>> entry : node.children.entrySet()) {
+            Node<T> child = entry.getValue();
+            compressNode(child);
         }
 
-        for (Node<T> child : node.children.values()) {
-            compressNode(child);
+        if (node.children.size() == 1 && !node.isEndOfWord) {
+            Map.Entry<Character, Node<T>> entry = node.children.entrySet().iterator().next();
+            Character key = entry.getKey();
+            Node<T> child = entry.getValue();
+
+            node.children = child.children;
+            node.prefix += key + child.prefix;
+            node.isEndOfWord = child.isEndOfWord;
+            node.values = child.values;
         }
     }
 
@@ -105,5 +119,6 @@ class Trie<T> {
         Map<Character, Node<T>> children = new HashMap<>();
         List<T> values = new ArrayList<>();
         boolean isEndOfWord = false;
+        String prefix = "";
     }
 }

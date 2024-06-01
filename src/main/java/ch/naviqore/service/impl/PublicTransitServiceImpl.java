@@ -54,7 +54,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule) {
         SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
-        schedule.getStops().values().forEach(stop -> builder.add(stop.getName(), stop));
+        schedule.getStops().values().forEach(stop -> builder.add(stop.getName().toLowerCase(), stop));
 
         return builder.build();
     }
@@ -73,7 +73,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
-        return stopSearchIndex.search(like, map(searchType)).stream().map(TypeMapper::map).toList();
+        return stopSearchIndex.search(like.toLowerCase(), map(searchType)).stream().map(TypeMapper::map).toList();
     }
 
     @Override
