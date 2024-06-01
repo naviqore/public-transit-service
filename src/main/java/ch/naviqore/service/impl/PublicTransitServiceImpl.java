@@ -28,10 +28,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static ch.naviqore.service.impl.TypeMapper.createWalk;
 import static ch.naviqore.service.impl.TypeMapper.map;
@@ -40,6 +37,7 @@ import static ch.naviqore.service.impl.TypeMapper.map;
 public class PublicTransitServiceImpl implements PublicTransitService {
 
     private final GtfsSchedule schedule;
+    private final Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStops;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
@@ -48,6 +46,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public PublicTransitServiceImpl(String gtfsFilePath) {
         schedule = readGtfsSchedule(gtfsFilePath);
         stopSearchIndex = generateStopSearchIndex(schedule);
+        parentStops = groupStopsByParent();
         spatialStopIndex = generateSpatialStopIndex(schedule);
 
         // TODO: Allow adding removing dynamically
@@ -56,6 +55,18 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex));
 
         minimumTimeTransfers = generateMinimumTimeTransfers(schedule, transferGenerators);
+    }
+
+    public Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent() {
+        Map <String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
+        for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
+            String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
+            if (!parentStopIds.containsKey(id)) {
+                parentStopIds.put(id, new ArrayList<>());
+            }
+            parentStopIds.get(id).add(stop);
+        }
+        return parentStopIds;
     }
 
     private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
