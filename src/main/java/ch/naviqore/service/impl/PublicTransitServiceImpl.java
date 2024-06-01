@@ -57,18 +57,6 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         minimumTimeTransfers = generateMinimumTimeTransfers(schedule, transferGenerators);
     }
 
-    public Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent() {
-        Map <String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
-        for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
-            String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
-            if (!parentStopIds.containsKey(id)) {
-                parentStopIds.put(id, new ArrayList<>());
-            }
-            parentStopIds.get(id).add(stop);
-        }
-        return parentStopIds;
-    }
-
     private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
         // TODO: Download file if needed
         try {
@@ -78,7 +66,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
     }
 
-    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule, Set<String> parentStops) {
+    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
+                                                                                             Set<String> parentStops) {
         SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
         parentStops.forEach(stopId -> index.add(stopId, schedule.getStops().get(stopId)));
         return index;
@@ -117,6 +106,18 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
     }
 
+    public Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent() {
+        Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
+        for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
+            String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
+            if (!parentStopIds.containsKey(id)) {
+                parentStopIds.put(id, new ArrayList<>());
+            }
+            parentStopIds.get(id).add(stop);
+        }
+        return parentStopIds;
+    }
+
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return stopSearchIndex.search(like, map(searchType)).stream().map(TypeMapper::map).toList();
@@ -125,22 +126,53 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     @Override
     public Optional<Stop> getNearestStop(GeoCoordinate location) {
         log.debug("Get nearest stop to {}", location);
-        return Optional.ofNullable(map(spatialStopIndex.nearestNeighbour(location)));
+        ch.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbour(location);
+        if (stop != null && stop.getParentId() != null && !stop.getParentId().equals(stop.getId())) {
+            stop = schedule.getStops().get(stop.getParentId());
+        }
+        return Optional.ofNullable(map(stop));
     }
 
     @Override
     public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
         log.debug("Get nearest {} stops to {} in radius {}", limit, location, radius);
-        return spatialStopIndex.rangeSearch(location, radius).stream().map(TypeMapper::map).limit(limit).toList();
+
+        List<ch.naviqore.gtfs.schedule.model.Stop> stops = new ArrayList<>();
+
+        for (ch.naviqore.gtfs.schedule.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
+            if (stop.getParentId() != null && !stop.getParentId().equals(stop.getId())) {
+                stop = schedule.getStops().get(stop.getParentId());
+            }
+            if (!stops.contains(stop)) {
+                stops.add(stop);
+            }
+
+        }
+
+        return stops.stream().map(TypeMapper::map).limit(limit).toList();
     }
 
     @Override
     public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
-        return schedule.getNextDepartures(stop.getId(), from, limit)
-                .stream()
+        List<String> stopIds;
+        if (parentStops.containsKey(stop.getId())) {
+            stopIds = getAllStopIdsForParentStop(stop.getId());
+        } else {
+            stopIds = List.of(stop.getId());
+        }
+        return stopIds.stream()
+                .flatMap(stopId -> schedule.getNextDepartures(stopId, from, limit).stream())
                 .map(stopTime -> map(stopTime, from.toLocalDate()))
+                .sorted(Comparator.comparing(StopTime::getDepartureTime))
                 .filter(stopTime -> until == null || stopTime.getDepartureTime().isBefore(until))
+                .limit(limit)
                 .toList();
+    }
+
+    private List<String> getAllStopIdsForParentStop(String stopId) {
+        ch.naviqore.gtfs.schedule.model.Stop gtfsStop = schedule.getStops().get(stopId);
+        String parentId = gtfsStop.getParentId() == null ? gtfsStop.getId() : gtfsStop.getParentId();
+        return parentStops.get(parentId).stream().map(ch.naviqore.gtfs.schedule.model.Stop::getId).toList();
     }
 
     @Override
