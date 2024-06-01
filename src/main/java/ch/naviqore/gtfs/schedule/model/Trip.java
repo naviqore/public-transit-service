@@ -15,6 +15,7 @@ public final class Trip implements Comparable<Trip>, Initializable {
     private final String id;
     private final Route route;
     private final Calendar calendar;
+    private final String headSign;
     private List<StopTime> stopTimes = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {

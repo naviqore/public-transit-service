@@ -153,14 +153,17 @@ public class GtfsScheduleTestBuilder {
         final List<String> routeStops = new ArrayList<>(route.stops);
         String weekdayPostfix = weekday ? "wd" : "we";
         String directionPostfix = "f";
+        String lastStop = STOPS.get(routeStops.getLast()).name;
         if (reverse) {
             Collections.reverse(routeStops);
             directionPostfix = "r";
+            lastStop = STOPS.get(routeStops.getFirst()).name;
         }
         int tripCount = 0;
         for (int tripDepartureTime = Validity.SERVICE_DAY_START.getTotalSeconds() + route.offset * 60; tripDepartureTime <= Validity.SERVICE_DAY_END.getTotalSeconds(); tripDepartureTime += headway) {
             String tripId = String.format("%s_%s_%s_%s", route.id, weekdayPostfix, directionPostfix, ++tripCount);
-            builder.addTrip(tripId, route.id, weekday ? "weekdays" : "weekends");
+            String headSign = String.format("%s, direction: %s", route.name, lastStop);
+            builder.addTrip(tripId, route.id, weekday ? "weekdays" : "weekends", headSign);
             int departureTime = tripDepartureTime;
             for (String stopId : routeStops) {
                 builder.addStopTime(tripId, stopId, new ServiceDayTime(departureTime - dwellTime),

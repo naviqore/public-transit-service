@@ -1,21 +1,18 @@
-package ch.naviqore.app.model;
+package ch.naviqore.app.dto;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @EqualsAndHashCode
 @ToString
 @Getter
 public class Leg {
 
-    private final Coordinate from;
-    private final Coordinate to;
+    private final Location from;
+    private final Location to;
     private final Stop fromStop;
     private final Stop toStop;
     private final LegType type;

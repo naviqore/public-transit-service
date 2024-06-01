@@ -11,8 +11,6 @@ public interface Route {
 
     String getShortName();
 
-    String getDescription();
-
     String getRouteType();
 
     String getAgency();

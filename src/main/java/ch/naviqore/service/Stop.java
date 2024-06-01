@@ -1,6 +1,6 @@
 package ch.naviqore.service;
 
-public interface Stop extends Location {
+public interface Stop {
 
     String getId();
 
