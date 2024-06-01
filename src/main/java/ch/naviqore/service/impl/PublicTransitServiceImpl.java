@@ -45,8 +45,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     public PublicTransitServiceImpl(String gtfsFilePath) {
         schedule = readGtfsSchedule(gtfsFilePath);
-        stopSearchIndex = generateStopSearchIndex(schedule);
         parentStops = groupStopsByParent();
+        stopSearchIndex = generateStopSearchIndex(schedule, parentStops.keySet());
         spatialStopIndex = generateSpatialStopIndex(schedule);
 
         // TODO: Allow adding removing dynamically
@@ -78,10 +78,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
     }
 
-    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule) {
+    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule, Set<String> parentStops) {
         SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
-        schedule.getStops().values().forEach(stop -> index.add(stop.getName(), stop));
-
+        parentStops.forEach(stopId -> index.add(stopId, schedule.getStops().get(stopId)));
         return index;
     }
 
