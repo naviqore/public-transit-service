@@ -2,6 +2,13 @@ package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
+import ch.naviqore.gtfs.schedule.model.Stop;
+import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
+import ch.naviqore.service.impl.transfergenerator.WalkTransferGenerator;
+import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
+import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
+import ch.naviqore.utils.spatial.index.KDTree;
+import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -26,102 +33,41 @@ public class WalkTransferGeneratorTest {
             new StopData("stop2", "Zürich, Opernhaus", 47.365030, 8.547976), "stop3",
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
 
-    @Nested
-    class Constructor {
-
-        @Test
-        void simpleTransferGenerator() {
-            assertDoesNotThrow(WalkTransferGeneratorTest::getDefaultWalkTransferGenerator);
-        }
-
-        @Test
-        void nullWalkCalculator_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(null, defaultMinimumTransferTime, defaultMaxWalkDistance));
-        }
-
-        @Test
-        void negativeSameStationTransferTime_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, -1, defaultMaxWalkDistance));
-        }
-
-        @Test
-        void zeroSameStationTransferTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new WalkTransferGenerator(defaultCalculator, 0, defaultMaxWalkDistance));
-        }
-
-        @Test
-        void negativeMaxWalkDistance_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, -1));
-        }
-
-        @Test
-        void zeroMaxWalkDistance_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, 0));
-        }
-
-    }
-
-    @Nested
-    class CreateTransfers {
-
-        @Test
-        void expectedBehavior() {
-            WalkTransferGenerator generator = getDefaultWalkTransferGenerator();
-            GtfsSchedule schedule = getSchedule();
-
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-
-            // all transfers from / to Stadelhofen should be within search radius
-            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
-
-            // transfer between Kunsthaus and Opernhaus should not be created
-            assertTransferNotGenerated(transfers, "stop2", "stop3");
-        }
-
-        @Test
-        void expectedBehavior_withIncreasedSearchRadius() {
-            GtfsSchedule schedule = getSchedule();
-            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
-                    1000);
-
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop2", "stop3", defaultMinimumTransferTime);
-        }
-
-        @Test
-        void expectedBehavior_shouldBeMinimumTransferTime() {
-            int minimumTransferTime = 2000; // should be applied to all stops within search radius
-            GtfsSchedule schedule = getSchedule();
-            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, minimumTransferTime,
-                    defaultMaxWalkDistance);
-
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-            // all transfers from / to Stadelhofen should be within search radius
-            assertTransfersGenerated(transfers, "stop1", "stop2", minimumTransferTime, true);
-            assertTransfersGenerated(transfers, "stop1", "stop3", minimumTransferTime, true);
-
-            // transfer between Kunsthaus and Opernhaus should not be created
-            assertTransferNotGenerated(transfers, "stop2", "stop3");
-        }
-    }
-
     static void assertNoSameStationTransfers(List<MinimumTimeTransfer> transfers) {
         for (MinimumTimeTransfer transfer : transfers) {
             assertNotEquals(transfer.from(), transfer.to());
         }
+    }
+
+    static MinimumTimeTransfer transferWasCreated(List<MinimumTimeTransfer> transfers, String fromStopId,
+                                                  String toStopId) {
+        for (MinimumTimeTransfer transfer : transfers) {
+            if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
+                return transfer;
+            }
+        }
+        throw new NoSuchElementException();
+    }
+
+    static GtfsSchedule getSchedule() {
+        GtfsScheduleBuilder builder = GtfsSchedule.builder();
+        for (StopData stopData : testStops.values()) {
+            builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(), stopData.lon());
+        }
+        return builder.build();
+    }
+
+    static KDTree<Stop> getSpatialStopIndex(GtfsSchedule schedule) {
+        return new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
+    }
+
+    static WalkTransferGenerator getDefaultWalkTransferGenerator() {
+        return getDefaultWalkTransferGenerator(getSchedule());
+    }
+
+    static WalkTransferGenerator getDefaultWalkTransferGenerator(GtfsSchedule schedule) {
+        return new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, defaultMaxWalkDistance,
+                getSpatialStopIndex(schedule));
     }
 
     public void assertTransfersGenerated(List<MinimumTimeTransfer> transfers, String fromStopId, String toStopId,
@@ -154,31 +100,112 @@ public class WalkTransferGeneratorTest {
         assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
     }
 
-    static MinimumTimeTransfer transferWasCreated(List<MinimumTimeTransfer> transfers, String fromStopId,
-                                                  String toStopId) {
-        for (MinimumTimeTransfer transfer : transfers) {
-            if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
-                return transfer;
-            }
-        }
-        throw new NoSuchElementException();
-    }
-
-    static GtfsSchedule getSchedule() {
-        GtfsScheduleBuilder builder = GtfsSchedule.builder();
-        for (StopData stopData : testStops.values()) {
-            builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(), stopData.lon());
-        }
-        return builder.build();
-
-    }
-
-    static WalkTransferGenerator getDefaultWalkTransferGenerator() {
-        return new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, defaultMaxWalkDistance);
-    }
-
     record StopData(String id, String name, double lat, double lon) {
+    }
 
+    @Nested
+    class Constructor {
+
+        @Test
+        void simpleTransferGenerator() {
+            assertDoesNotThrow(() -> getDefaultWalkTransferGenerator());
+        }
+
+        @Test
+        void nullWalkCalculator_shouldThrowException() {
+            KDTree<Stop> spatialIndex = getSpatialStopIndex(getSchedule());
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(null, defaultMinimumTransferTime, defaultMaxWalkDistance,
+                            spatialIndex));
+        }
+
+        @Test
+        void negativeSameStationTransferTime_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(defaultCalculator, -1, defaultMaxWalkDistance,
+                            getSpatialStopIndex(getSchedule())));
+        }
+
+        @Test
+        void zeroSameStationTransferTime_shouldNotThrowException() {
+            assertDoesNotThrow(() -> new WalkTransferGenerator(defaultCalculator, 0, defaultMaxWalkDistance,
+                    getSpatialStopIndex(getSchedule())));
+        }
+
+        @Test
+        void negativeMaxWalkDistance_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, -1,
+                            getSpatialStopIndex(getSchedule())));
+        }
+
+        @Test
+        void zeroMaxWalkDistance_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, 0,
+                            getSpatialStopIndex(getSchedule())));
+        }
+
+        @Test
+        void nullSpatialIndex_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, defaultMaxWalkDistance,
+                            null));
+        }
+
+    }
+
+    @Nested
+    class CreateTransfers {
+
+        @Test
+        void expectedBehavior() {
+            GtfsSchedule schedule = getSchedule();
+            WalkTransferGenerator generator = getDefaultWalkTransferGenerator(schedule);
+
+            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+
+            assertNoSameStationTransfers(transfers);
+
+            // all transfers from / to Stadelhofen should be within search radius
+            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
+            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
+
+            // transfer between Kunsthaus and Opernhaus should not be created
+            assertTransferNotGenerated(transfers, "stop2", "stop3");
+        }
+
+        @Test
+        void expectedBehavior_withIncreasedSearchRadius() {
+            GtfsSchedule schedule = getSchedule();
+            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
+                    1000, getSpatialStopIndex(schedule));
+
+            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+
+            assertNoSameStationTransfers(transfers);
+            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
+            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
+            assertTransfersGenerated(transfers, "stop2", "stop3", defaultMinimumTransferTime);
+        }
+
+        @Test
+        void expectedBehavior_shouldBeMinimumTransferTime() {
+            int minimumTransferTime = 2000; // should be applied to all stops within search radius
+            GtfsSchedule schedule = getSchedule();
+            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, minimumTransferTime,
+                    defaultMaxWalkDistance, getSpatialStopIndex(schedule));
+
+            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+
+            assertNoSameStationTransfers(transfers);
+            // all transfers from / to Stadelhofen should be within search radius
+            assertTransfersGenerated(transfers, "stop1", "stop2", minimumTransferTime, true);
+            assertTransfersGenerated(transfers, "stop1", "stop3", minimumTransferTime, true);
+
+            // transfer between Kunsthaus and Opernhaus should not be created
+            assertTransferNotGenerated(transfers, "stop2", "stop3");
+        }
     }
 
 }

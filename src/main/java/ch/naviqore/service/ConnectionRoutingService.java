@@ -1,6 +1,7 @@
 package ch.naviqore.service;
 
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,7 +19,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a list of possible connections between the source and target locations
      */
-    List<Connection> getConnections(Location source, Location target, LocalDateTime time, TimeType timeType,
+    List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
                                     ConnectionQueryConfig config);
 
     /**
@@ -43,6 +44,6 @@ public interface ConnectionRoutingService {
      * @param config        additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> getIsolines(Location source, LocalDateTime departureTime, ConnectionQueryConfig config);
+    Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime, ConnectionQueryConfig config);
 
 }

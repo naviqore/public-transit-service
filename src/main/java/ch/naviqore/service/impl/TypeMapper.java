@@ -22,11 +22,7 @@ final class TypeMapper {
             return null;
         }
 
-        return new StopImpl(stop.getId(), stop.getName(), map(stop.getCoordinate()));
-    }
-
-    public static Location map(GeoCoordinate coordinate) {
-        return new Location(coordinate.latitude(), coordinate.longitude());
+        return new StopImpl(stop.getId(), stop.getName(), stop.getCoordinate());
     }
 
     public static Route map(ch.naviqore.gtfs.schedule.model.Route route) {
@@ -67,8 +63,8 @@ final class TypeMapper {
     }
 
     public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
-                                  LocalDateTime arrivalTime, Location sourceLocation, Location targetLocation,
-                                  Stop stop) {
+                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
+                                  @Nullable Stop stop) {
         return new WalkImpl(distance, duration, walkType, departureTime, arrivalTime, sourceLocation, targetLocation,
                 stop);
     }
@@ -86,6 +82,14 @@ final class TypeMapper {
         }
 
         if (lastMile != null) {
+            Leg lastLeg = legs.getLast();
+            LocalDateTime walkStartTime = lastLeg.getArrivalTime();
+            LocalDateTime walkEndTime = walkStartTime.plusSeconds(lastMile.getDuration());
+
+            lastMile = createWalk(lastMile.getDistance(), lastMile.getDuration(), lastMile.getWalkType(), walkStartTime,
+                    walkEndTime, lastMile.getSourceLocation(), lastMile.getTargetLocation(),
+                    lastMile.getStop().orElse(null));
+
             legs.addLast(lastMile);
         }
 

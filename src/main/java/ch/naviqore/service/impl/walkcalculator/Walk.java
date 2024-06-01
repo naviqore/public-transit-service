@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfsraptor;
+package ch.naviqore.service.impl.walkcalculator;
 
 /**
  * Represents a walk between two points. Is only intended to be used in the {@link WalkCalculator}.

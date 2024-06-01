@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfsraptor;
+package ch.naviqore.service.impl.walkcalculator;
 
 import ch.naviqore.utils.spatial.GeoCoordinate;
 

@@ -1,6 +1,7 @@
 package ch.naviqore.service.impl;
 
 import ch.naviqore.service.*;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.ToString;
@@ -16,8 +17,8 @@ public class WalkImpl extends LegImpl implements Walk {
     private final WalkType walkType;
     private final LocalDateTime departureTime;
     private final LocalDateTime arrivalTime;
-    private final Location sourceLocation;
-    private final Location targetLocation;
+    private final GeoCoordinate sourceLocation;
+    private final GeoCoordinate targetLocation;
     @Getter(AccessLevel.NONE)
     @Nullable
     private final Stop stop;
@@ -26,7 +27,7 @@ public class WalkImpl extends LegImpl implements Walk {
      * Create a first or last mile walk between a station and a location.
      */
     WalkImpl(int distance, int duration, WalkType walkType, LocalDateTime departureTime, LocalDateTime arrivalTime,
-             Location sourceLocation, Location targetLocation, @Nullable Stop stop) {
+             GeoCoordinate sourceLocation, GeoCoordinate targetLocation, @Nullable Stop stop) {
         super(LegType.WALK, distance, duration);
         this.walkType = walkType;
         this.departureTime = departureTime;
@@ -40,7 +41,7 @@ public class WalkImpl extends LegImpl implements Walk {
      * Create a direct walk between two locations.
      */
     WalkImpl(int distance, int duration, LocalDateTime departureTime, LocalDateTime arrivalTime,
-             Location sourceLocation, Location targetLocation) {
+             GeoCoordinate sourceLocation, GeoCoordinate targetLocation) {
         this(distance, duration, WalkType.DIRECT, departureTime, arrivalTime, sourceLocation, targetLocation, null);
     }
 

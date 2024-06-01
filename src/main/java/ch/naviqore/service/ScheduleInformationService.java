@@ -4,6 +4,7 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDate;
@@ -28,7 +29,7 @@ public interface ScheduleInformationService {
      * @param location the location to search around
      * @return the nearest stop to the specified location if any.
      */
-    Optional<Stop> getNearestStop(Location location);
+    Optional<Stop> getNearestStop(GeoCoordinate location);
 
     /**
      * Retrieves the nearest stops to a given location within a specified radius.
@@ -38,7 +39,7 @@ public interface ScheduleInformationService {
      * @param limit    the maximum number of stops to retrieve
      * @return a list of the nearest stops to the specified location within the given radius
      */
-    List<Stop> getNearestStops(Location location, int radius, int limit);
+    List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit);
 
     /**
      * Retrieves the next departures from a specific stop within a given date range.

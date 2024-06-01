@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfsraptor;
+package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import lombok.AccessLevel;

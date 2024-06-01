@@ -12,21 +12,11 @@ import java.util.List;
 public class DtoMapper {
 
     public static Stop map(ch.naviqore.service.Stop stop) {
-        return new Stop(stop.getId(), stop.getName(), map(stop.getLocation()));
-    }
-
-    public static Location map(ch.naviqore.service.Location location) {
-        return new Location(location.getLatitude(), location.getLongitude());
-    }
-
-    public static ch.naviqore.service.Location map(Location location) {
-        return new ch.naviqore.service.Location(location.getLatitude(), location.getLongitude());
+        return new Stop(stop.getId(), stop.getName(), stop.getLocation());
     }
 
     public static DistanceToStop map(ch.naviqore.service.Stop stop, double latitude, double longitude) {
-        return new DistanceToStop(map(stop),
-                new GeoCoordinate(stop.getLocation().getLatitude(), stop.getLocation().getLongitude()).distanceTo(
-                        latitude, longitude));
+        return new DistanceToStop(map(stop), stop.getLocation().distanceTo(latitude, longitude));
     }
 
     public static Departure map(ch.naviqore.service.StopTime stopTime) {
@@ -83,14 +73,14 @@ public class DtoMapper {
 
         @Override
         public Leg visit(Transfer transfer) {
-            return new Leg(map(transfer.getSourceStop().getLocation()), map(transfer.getTargetStop().getLocation()),
+            return new Leg(transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
                     map(transfer.getSourceStop()), map(transfer.getTargetStop()), LegType.WALK,
                     transfer.getDepartureTime(), transfer.getArrivalTime(), null);
         }
 
         @Override
         public Leg visit(Walk walk) {
-            return new Leg(map(walk.getSourceLocation()), map(walk.getTargetLocation()), null, null, LegType.WALK,
+            return new Leg(walk.getSourceLocation(), walk.getTargetLocation(), null, null, LegType.WALK,
                     walk.getDepartureTime(), walk.getArrivalTime(), null);
         }
     }

@@ -1,9 +1,9 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.*;
-import ch.naviqore.service.Location;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.exception.StopNotFoundException;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -50,7 +50,7 @@ public class ScheduleController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max distance can not be negative");
         }
 
-        return service.getNearestStops(new Location(latitude, longitude), maxDistance, limit)
+        return service.getNearestStops(new GeoCoordinate(latitude, longitude), maxDistance, limit)
                 .stream()
                 .map(stop -> map(stop, latitude, longitude))
                 .toList();

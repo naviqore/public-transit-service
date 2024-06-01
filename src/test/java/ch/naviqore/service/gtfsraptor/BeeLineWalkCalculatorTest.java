@@ -1,5 +1,7 @@
 package ch.naviqore.service.gtfsraptor;
 
+import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
+import ch.naviqore.service.impl.walkcalculator.Walk;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

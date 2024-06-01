@@ -1,7 +1,8 @@
-package ch.naviqore.service.gtfsraptor;
+package ch.naviqore.service.impl.transfergenerator;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
+import ch.naviqore.service.impl.GtfsToRaptorConverter;
 
 /**
  * Represents a minimum time transfer between two stops. Is only intended to be used in the

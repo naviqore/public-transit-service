@@ -1,5 +1,6 @@
 package ch.naviqore.app.dto;
 
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -10,7 +11,7 @@ public class Stop {
 
     private final String id;
     private final String name;
-    private final Location coordinates;
+    private final GeoCoordinate coordinates;
 
 }
 

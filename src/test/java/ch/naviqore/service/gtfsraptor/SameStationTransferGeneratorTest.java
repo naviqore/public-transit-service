@@ -2,6 +2,8 @@ package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
+import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
+import ch.naviqore.service.impl.transfergenerator.SameStationTransferGenerator;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

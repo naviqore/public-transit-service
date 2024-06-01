@@ -6,6 +6,7 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,12 +44,12 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public Optional<Stop> getNearestStop(Location location) {
+    public Optional<Stop> getNearestStop(GeoCoordinate location) {
         return delegate.getNearestStop(location);
     }
 
     @Override
-    public List<Stop> getNearestStops(Location location, int radius, int limit) {
+    public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
         return delegate.getNearestStops(location, radius, limit);
     }
 
@@ -58,7 +59,7 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(Location source, Location target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) {
         return delegate.getConnections(source, target, time, timeType, config);
     }
@@ -70,7 +71,7 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Location source, LocalDateTime departureTime,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
         return delegate.getIsolines(source, departureTime, config);
     }

@@ -7,6 +7,7 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -56,13 +57,13 @@ class PublicTransitServiceImplIT {
         class NearestStop {
             @Test
             void shouldFindNearestStop() {
-                Stop stop = service.getNearestStop(new Location(36.425288, -117.133162)).orElseThrow();
+                Stop stop = service.getNearestStop(new GeoCoordinate(36.425288, -117.133162)).orElseThrow();
                 assertEquals("Furnace Creek Resort (Demo)", stop.getName());
             }
 
             @Test
             void shouldFindNearestStops() {
-                List<Stop> stops = service.getNearestStops(new Location(36.425288, -117.133162), Integer.MAX_VALUE,
+                List<Stop> stops = service.getNearestStops(new GeoCoordinate(36.425288, -117.133162), Integer.MAX_VALUE,
                         Integer.MAX_VALUE);
                 assertFalse(stops.isEmpty(), "Expected to find nearest stops.");
                 assertTrue(stops.size() > 1, "Expected to find more than one stop.");
@@ -135,9 +136,9 @@ class PublicTransitServiceImplIT {
         class Connections {
             @Test
             void shouldGetConnections() {
-                List<Connection> connections = service.getConnections(new Location(36.425288, -117.133162),
-                        new Location(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE,
-                        config);
+                List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
+                        new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
+                        TimeType.DEPARTURE, config);
                 assertFalse(connections.isEmpty(), "Expected to find connections.");
             }
 
@@ -156,7 +157,7 @@ class PublicTransitServiceImplIT {
             @Test
             void shouldThrowNotImplementedException() {
                 assertThrows(NotImplementedException.class,
-                        () -> service.getIsolines(new Location(36.425288, -117.133162),
+                        () -> service.getIsolines(new GeoCoordinate(36.425288, -117.133162),
                                 LocalDateTime.of(2023, 5, 15, 8, 0), config));
             }
         }

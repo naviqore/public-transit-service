@@ -1,19 +1,16 @@
 package ch.naviqore.service;
 
-import java.time.LocalDateTime;
+import ch.naviqore.utils.spatial.GeoCoordinate;
+
 import java.util.Optional;
 
 public interface Walk extends Leg {
 
     WalkType getWalkType();
 
-    LocalDateTime getArrivalTime();
+    GeoCoordinate getSourceLocation();
 
-    LocalDateTime getDepartureTime();
-
-    Location getSourceLocation();
-
-    Location getTargetLocation();
+    GeoCoordinate getTargetLocation();
 
     /**
      * The source or target stop of a first or last mile walk or none if it is a direct walk.

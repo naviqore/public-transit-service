@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfsraptor;
 
 import ch.naviqore.gtfs.schedule.model.*;
+import ch.naviqore.service.impl.GtfsRoutePartitioner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

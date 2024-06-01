@@ -2,7 +2,6 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.GtfsToRaptorConverter;
 import ch.naviqore.raptor.model.Raptor;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -10,7 +9,14 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
+import ch.naviqore.service.impl.transfergenerator.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfergenerator.TransferGenerator;
+import ch.naviqore.service.impl.transfergenerator.WalkTransferGenerator;
+import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
+import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
 import ch.naviqore.utils.search.SearchIndex;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.extern.log4j.Log4j2;
@@ -22,6 +28,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,11 +42,20 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
+    private final WalkCalculator walkCalculator;
+    private List<MinimumTimeTransfer> minimumTimeTransfers;
 
     public PublicTransitServiceImpl(String gtfsFilePath) {
         schedule = readGtfsSchedule(gtfsFilePath);
         stopSearchIndex = generateStopSearchIndex(schedule);
         spatialStopIndex = generateSpatialStopIndex(schedule);
+
+        // TODO: Allow adding removing dynamically
+        walkCalculator = new BeeLineWalkCalculator(3500);
+        List<TransferGenerator> transferGenerators = List.of(new SameStationTransferGenerator(120),
+                new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex));
+
+        minimumTimeTransfers = generateMinimumTimeTransfers(schedule, transferGenerators);
     }
 
     private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
@@ -63,6 +79,27 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 .build();
     }
 
+    private static List<MinimumTimeTransfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
+                                                                          List<TransferGenerator> transferGenerators) {
+        List<MinimumTimeTransfer> minimumTimeTransfers = new ArrayList<>();
+        List<MinimumTimeTransfer> generatedTransfers = transferGenerators.parallelStream()
+                .flatMap(generator -> generator.generateTransfers(schedule).stream())
+                .filter(transfer -> transfer.from()
+                        .getTransfers()
+                        .stream()
+                        .noneMatch(t -> t.getToStop().equals(transfer.to())))
+                .toList();
+
+        for (MinimumTimeTransfer transfer : generatedTransfers) {
+            if (minimumTimeTransfers.stream()
+                    .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
+                minimumTimeTransfers.add(transfer);
+            }
+        }
+
+        return minimumTimeTransfers;
+    }
+
     private static void notYetImplementedCheck(TimeType timeType) {
         if (timeType == TimeType.ARRIVAL) {
             // TODO: Implement in raptor
@@ -76,20 +113,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     @Override
-    public Optional<Stop> getNearestStop(Location location) {
+    public Optional<Stop> getNearestStop(GeoCoordinate location) {
         log.debug("Get nearest stop to {}", location);
-        return Optional.ofNullable(
-                map(spatialStopIndex.nearestNeighbour(location.getLatitude(), location.getLongitude())));
+        return Optional.ofNullable(map(spatialStopIndex.nearestNeighbour(location)));
     }
 
     @Override
-    public List<Stop> getNearestStops(Location location, int radius, int limit) {
+    public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
         log.debug("Get nearest {} stops to {} in radius {}", limit, location, radius);
-        return spatialStopIndex.rangeSearch(location.getLatitude(), location.getLongitude(), radius)
-                .stream()
-                .map(TypeMapper::map)
-                .limit(limit)
-                .toList();
+        return spatialStopIndex.rangeSearch(location, radius).stream().map(TypeMapper::map).limit(limit).toList();
     }
 
     @Override
@@ -117,35 +149,51 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(Location source, Location target, LocalDateTime time, TimeType timeType,
-                                           ConnectionQueryConfig config) {
+    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
+                                           TimeType timeType, ConnectionQueryConfig config) {
         notYetImplementedCheck(timeType);
 
         log.debug("Get connections from location {} to location {} {} at {}", source, target,
                 timeType == TimeType.ARRIVAL ? "arriving" : "departing", time);
 
         // get nearest public transit stops
-        ch.naviqore.gtfs.schedule.model.Stop sourceStop = spatialStopIndex.nearestNeighbour(source.getLatitude(),
-                source.getLongitude());
-        ch.naviqore.gtfs.schedule.model.Stop targetStop = spatialStopIndex.nearestNeighbour(target.getLatitude(),
-                target.getLongitude());
+        ch.naviqore.gtfs.schedule.model.Stop sourceStop = spatialStopIndex.nearestNeighbour(source);
+        ch.naviqore.gtfs.schedule.model.Stop targetStop = spatialStopIndex.nearestNeighbour(target);
 
-        // TODO: Here we need a foot path routing or approximation, introduce FootpathRouting / PedestrianRouting
-        //  interface here. If the connection query starts or ends at a station, then set the first or last mile to
-        //  null. Maybe we should extend the interface for these cases, instead of always query via the locations?
-        Walk firstMile = createWalk(0, 0, WalkType.FIRST_MILE, null, null, source, target, map(sourceStop));
-        Walk lastMile = createWalk(0, 0, WalkType.LAST_MILE, null, null, source, target, map(targetStop));
+        // TODO: Make CutOff configurable
+        int minWalkDistanceCutoff = 200;
+
+        ch.naviqore.service.impl.walkcalculator.Walk toSourceWalk = walkCalculator.calculateWalk(source,
+                sourceStop.getCoordinate());
+        ch.naviqore.service.impl.walkcalculator.Walk toTargetWalk = walkCalculator.calculateWalk(target,
+                targetStop.getCoordinate());
+
+        Walk firstMile = null;
+        Walk lastMile = null;
+
+        if (toSourceWalk.distance() >= minWalkDistanceCutoff) {
+            LocalDateTime walkDepartureTime = time.minusSeconds(0); // easiest way to copy
+            time = walkDepartureTime.plusSeconds(toSourceWalk.duration());
+            firstMile = createWalk(toSourceWalk.distance(), toSourceWalk.duration(), WalkType.FIRST_MILE,
+                    walkDepartureTime, time, source, sourceStop.getCoordinate(), map(sourceStop));
+        }
+
+        if (toTargetWalk.distance() >= minWalkDistanceCutoff) {
+            lastMile = createWalk(toTargetWalk.distance(), toTargetWalk.duration(), WalkType.LAST_MILE, null, null,
+                    targetStop.getCoordinate(), target, map(targetStop));
+        }
 
         return getConnections(sourceStop, targetStop, time, firstMile, lastMile);
     }
 
     private @NotNull List<Connection> getConnections(ch.naviqore.gtfs.schedule.model.Stop sourceStop,
                                                      ch.naviqore.gtfs.schedule.model.Stop targetStop,
-                                                     LocalDateTime time, Walk firstMile, Walk lastMile) {
+                                                     LocalDateTime time, @Nullable Walk firstMile,
+                                                     @Nullable Walk lastMile) {
         int departureTime = time.toLocalTime().toSecondOfDay();
 
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(time.toLocalDate());
+        Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
 
         // query connection from raptor
         List<ch.naviqore.raptor.model.Connection> connections = raptor.routeEarliestArrival(sourceStop.getId(),
@@ -158,7 +206,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Location source, LocalDateTime departureTime,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
         throw new NotImplementedException();
     }
