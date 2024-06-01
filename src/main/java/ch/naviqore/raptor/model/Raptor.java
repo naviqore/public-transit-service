@@ -1,6 +1,5 @@
 package ch.naviqore.raptor.model;
 
-import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
@@ -42,44 +41,60 @@ public class Raptor {
         return new RaptorBuilder();
     }
 
-    public List<Connection> routeEarliestArrival(@NonNull String sourceStopId, @NonNull String targetStopId,
-                                                 int departureTime) {
-        InputValidator.validateDepartureTime(departureTime);
-        InputValidator.validateStopIds(sourceStopId, targetStopId);
-        int sourceStopIdx = validator.validateAndGetStopIdx(sourceStopId);
-        int targetStopIdx = validator.validateAndGetStopIdx(targetStopId);
+    public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
+        return routeEarliestArrival(Map.of(sourceStopId, departureTime), List.of(targetStopId));
+    }
 
-        log.info("Routing earliest arrival from {} to {} at {}", sourceStopId, targetStopId, departureTime);
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdx, targetStopIdx, departureTime);
+    public List<Connection> routeEarliestArrival(List<String> sourceStopIds, List<String> targetStopIds,
+                                                 int departureTime) {
+        Map<String, Integer> sourceStops = new HashMap<>();
+        for (String sourceStopId : sourceStopIds) {
+            sourceStops.put(sourceStopId, departureTime);
+        }
+        return routeEarliestArrival(sourceStops, targetStopIds);
+    }
+
+    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, List<String> targetStopIds) {
+        InputValidator.validateStopPermutations(sourceStops, targetStopIds);
+        int[] sourceStopIdxs = validator.validateAndGetStopIdx(sourceStops.keySet());
+        int[] targetStopIdxs = validator.validateAndGetStopIdx(targetStopIds);
+        int[] departureTimes = sourceStops.values().stream().mapToInt(Integer::intValue).toArray();
+
+        log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes);
 
         // get pareto-optimal solutions
-        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdx);
+        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
     }
 
     // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
-    private List<Leg[]> spawnFromSourceStop(int sourceStopIdx, int departureTime) {
-        return spawnFromSourceStop(sourceStopIdx, NO_INDEX, departureTime);
+    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdx, int[] departureTime) {
+        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime);
     }
 
     // if targetStopIdx is set (>= 0), then the search will stop when target stop cannot be pareto optimized
-    private List<Leg[]> spawnFromSourceStop(int sourceStopIdx, int targetStopIdx, int departureTime) {
+    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
-        // subtract same stop transfer time, as this will be added by default before scanning routes
-        earliestArrivals[sourceStopIdx] = departureTime - SAME_STOP_TRANSFER_TIME;
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Leg[stops.length]);
-        earliestArrivalsPerRound.getFirst()[sourceStopIdx] = new Leg(0, departureTime, ArrivalType.INITIAL, NO_INDEX,
-                sourceStopIdx, null);
-
         Set<Integer> markedStops = new HashSet<>();
-        markedStops.add(sourceStopIdx);
 
-        // expand footpaths for source stop
-        expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdx,
-                departureTime);
+        for (int i = 0; i < sourceStopIdxs.length; i++) {
+            // subtract same stop transfer time, as this will be added by default before scanning routes
+            earliestArrivals[sourceStopIdxs[i]] = departureTimes[i] - SAME_STOP_TRANSFER_TIME;
+            earliestArrivalsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, departureTimes[i], ArrivalType.INITIAL,
+                    NO_INDEX, sourceStopIdxs[i], null);
+            markedStops.add(sourceStopIdxs[i]);
+        }
+
+        for(int i = 0; i < targetStopIdxs.length; i++) {
+            expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdxs[i],
+                    departureTimes[i]);
+        }
+        int earliestArrival = getEarliestArrivalTime(targetStopIdxs, earliestArrivals);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -155,7 +170,7 @@ public class Raptor {
                             log.debug("Stop {} was improved", stop.id());
 
                             // check if search should be stopped after finding the best time
-                            if (targetStopIdx >= 0 && stopTime.arrival() >= earliestArrivals[targetStopIdx]) {
+                            if (stopTime.arrival() >= earliestArrival) {
                                 log.debug("Stop {} is not better than best time, continue", stop.id());
                                 continue;
                             }
@@ -165,6 +180,12 @@ public class Raptor {
                                     ArrivalType.ROUTE, currentRouteIdx, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
+                            // check if this was a target stop
+                            if (Arrays.stream(targetStopIdxs).anyMatch(targetStopIdx -> targetStopIdx == stopIdx)) {
+                                earliestArrival = getEarliestArrivalTime(targetStopIdxs, earliestArrivals);
+                                log.debug("Earliest arrival to a target stop improved to {}", earliestArrival);
+                            }
+
                             // earlier trip is not possible
                             continue;
                         } else {
@@ -238,32 +259,49 @@ public class Raptor {
         return earliestArrivalsPerRound;
     }
 
+    private int getEarliestArrivalTime(int[] targetStopIdxs, int[] earliestArrivals) {
+        int earliestArrival = INFINITY;
+        for (int targetStopIdx : targetStopIdxs) {
+            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx]);
+        }
+        return earliestArrival;
+    }
+
     private List<Connection> reconstructParetoOptimalSolutions(List<Leg[]> earliestArrivalsPerRound,
-                                                               int targetStopIdx) {
+                                                               int[] targetStopIdxs) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
         for (Leg[] legs : earliestArrivalsPerRound) {
-            Leg arrival = legs[targetStopIdx];
+
+            Leg leg = null;
+
+            for (int targetStopIdx : targetStopIdxs) {
+                if (legs[targetStopIdx] != null) {
+                    if (leg == null || legs[targetStopIdx].arrivalTime < leg.arrivalTime) {
+                        leg = legs[targetStopIdx];
+                    }
+                }
+            }
 
             // target stop not reached in this round
-            if (arrival == null) {
+            if (leg == null) {
                 continue;
             }
 
             // iterate through arrivals starting at target stop
             Connection connection = new Connection();
-            while (arrival.type != ArrivalType.INITIAL) {
+            while (leg.type != ArrivalType.INITIAL) {
                 String id;
-                String fromStopId = stops[arrival.previous.stopIdx].id();
-                String toStopId = stops[arrival.stopIdx].id();
+                String fromStopId = stops[leg.previous.stopIdx].id();
+                String toStopId = stops[leg.stopIdx].id();
                 Connection.LegType type;
-                int departureTime = arrival.departureTime;
-                int arrivalTime = arrival.arrivalTime;
-                if (arrival.type == ArrivalType.ROUTE) {
-                    id = routes[arrival.routeOrTransferIdx].id();
+                int departureTime = leg.departureTime;
+                int arrivalTime = leg.arrivalTime;
+                if (leg.type == ArrivalType.ROUTE) {
+                    id = routes[leg.routeOrTransferIdx].id();
                     type = Connection.LegType.ROUTE;
-                } else if (arrival.type == ArrivalType.TRANSFER) {
+                } else if (leg.type == ArrivalType.TRANSFER) {
                     id = String.format("transfer_%s_%s", fromStopId, toStopId);
                     type = Connection.LegType.FOOTPATH;
                     // include same stop transfer time (which is subtracted before scanning routes)
@@ -272,7 +310,7 @@ public class Raptor {
                     throw new IllegalStateException("Unknown arrival type");
                 }
                 connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
-                arrival = arrival.previous;
+                leg = leg.previous;
             }
 
             // initialize connection: Reverse order of legs and add connection
@@ -298,6 +336,9 @@ public class Raptor {
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
             int newTargetStopArrivalTime = departureTime + transfer.duration() - SAME_STOP_TRANSFER_TIME;
+            if( earliestArrivals[transfer.targetStopIdx()] <= newTargetStopArrivalTime) {
+                continue;
+            }
             earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
             earliestArrivalsPerRound.getFirst()[transfer.targetStopIdx()] = new Leg(departureTime,
                     newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
@@ -323,9 +364,18 @@ public class Raptor {
         private static final int MIN_DEPARTURE_TIME = 0;
         private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
 
-        private static void validateStopIds(String sourceStopId, String targetStopId) {
-            if (sourceStopId.equals(targetStopId)) {
-                throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
+        private static void validateStopPermutations(Map<String, Integer> sourceStops, List<String> targetStopIds) {
+            if (sourceStops.isEmpty()) {
+                throw new IllegalArgumentException("At least one source stop must be provided.");
+            }
+            if (targetStopIds.isEmpty()) {
+                throw new IllegalArgumentException("At least one target stop must be provided.");
+            }
+            sourceStops.values().forEach(InputValidator::validateDepartureTime);
+            for (String sourceStopId : sourceStops.keySet()) {
+                if (targetStopIds.contains(sourceStopId)) {
+                    throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
+                }
             }
         }
 
@@ -334,6 +384,10 @@ public class Raptor {
                 throw new IllegalArgumentException(
                         "Departure time must be between " + MIN_DEPARTURE_TIME + " and " + MAX_DEPARTURE_TIME + " seconds.");
             }
+        }
+
+        private int[] validateAndGetStopIdx(Collection<String> stopIds) {
+            return stopIds.stream().mapToInt(this::validateAndGetStopIdx).toArray();
         }
 
         private int validateAndGetStopIdx(String stopId) {
