@@ -41,7 +41,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
-    private List<MinimumTimeTransfer> minimumTimeTransfers;
+    private final List<MinimumTimeTransfer> minimumTimeTransfers;
 
     public PublicTransitServiceImpl(String gtfsFilePath) {
         schedule = readGtfsSchedule(gtfsFilePath);
