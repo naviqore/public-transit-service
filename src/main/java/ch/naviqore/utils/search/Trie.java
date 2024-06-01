@@ -51,4 +51,5 @@ class Trie<T> {
         List<T> values = new ArrayList<>();
         boolean isEndOfWord = false;
     }
+
 }

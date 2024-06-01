@@ -3,7 +3,9 @@ package ch.naviqore.utils.search;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * SearchIndex class for indexing strings and their associated objects.
@@ -16,17 +18,7 @@ import java.util.*;
 @Log4j2
 public class SearchIndex<T> {
 
-    // TODO: On the complete stops of the GTFS of Switzerland, this index uses a lot of memory,
-    //  therefore we should try to limit search to a minimum search key length and a maximum tree depth
-    private final Map<String, List<T>> exactIndex = new HashMap<>();
-    private final Trie<T> startsWithIndex = new Trie<>();
-    private final Trie<T> endsWithIndex = new Trie<>();
-    // TODO: This most of the memory, also limit the length
-    private final Map<String, Set<T>> containsIndex = new HashMap<>();
-
-    private static String reverse(String text) {
-        return new StringBuilder(text).reverse().toString();
-    }
+    private final Trie<TrieEntry<T>> suffixTrie = new Trie<>();
 
     /**
      * Adds a key-value pair to the index.
@@ -38,11 +30,12 @@ public class SearchIndex<T> {
         if (key == null || key.isEmpty()) {
             throw new IllegalArgumentException("Key cannot be null or empty.");
         }
+
         log.debug("Adding search key: {}", key);
-        exactIndex.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
-        startsWithIndex.insert(key, value);
-        endsWithIndex.insert(reverse(key), value);
-        addToContainsIndex(key, value);
+        TrieEntry<T> entry = new TrieEntry<>(key, value);
+        for (int i = key.length() - 1; i >= 0; i--) {
+            suffixTrie.insert(key.substring(i), entry);
+        }
     }
 
     /**
@@ -52,28 +45,31 @@ public class SearchIndex<T> {
      * @param strategy the search strategy to use.
      * @return the values associated with the query if found, otherwise an empty list.
      */
-    public List<T> search(String query, SearchStrategy strategy) {
+    public Set<T> search(String query, SearchStrategy strategy) {
         log.debug("Searching for query: '{}' with strategy: {}", query, strategy);
 
         if (query == null || query.isEmpty()) {
-            return List.of();
+            return Set.of();
         }
+
+        List<TrieEntry<T>> results = suffixTrie.searchPrefix(query);
 
         return switch (strategy) {
-            case EXACT -> exactIndex.getOrDefault(query, List.of());
-            case STARTS_WITH -> startsWithIndex.searchPrefix(query);
-            case ENDS_WITH -> endsWithIndex.searchPrefix(reverse(query));
-            case CONTAINS -> new ArrayList<>(containsIndex.getOrDefault(query, Set.of()));
+            case EXACT -> results.stream()
+                    .filter(entry -> entry.key().equals(query))
+                    .map(TrieEntry::value)
+                    .collect(Collectors.toSet());
+            case STARTS_WITH -> results.stream()
+                    .filter(entry -> entry.key().startsWith(query))
+                    .map(TrieEntry::value)
+                    .collect(Collectors.toSet());
+            case ENDS_WITH -> results.stream()
+                    .filter(entry -> entry.key().endsWith(query))
+                    .map(TrieEntry::value)
+                    .collect(Collectors.toSet());
+            case CONTAINS -> results.stream().map(TrieEntry::value).collect(Collectors.toSet());
         };
-    }
 
-    private void addToContainsIndex(String key, T value) {
-        for (int i = 0; i <= key.length(); i++) {
-            for (int j = i + 1; j <= key.length(); j++) {
-                String substring = key.substring(i, j);
-                containsIndex.computeIfAbsent(substring, k -> new HashSet<>()).add(value);
-            }
-        }
     }
 
     public enum SearchStrategy {
@@ -81,5 +77,8 @@ public class SearchIndex<T> {
         ENDS_WITH,
         CONTAINS,
         EXACT
+    }
+
+    private record TrieEntry<U>(String key, U value) {
     }
 }
