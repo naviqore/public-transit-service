@@ -42,26 +42,48 @@ public class Raptor {
     }
 
     public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
-        return routeEarliestArrival(Map.of(sourceStopId, departureTime), List.of(targetStopId));
+        return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
-    public List<Connection> routeEarliestArrival(List<String> sourceStopIds, List<String> targetStopIds,
+    public List<Connection> routeEarliestArrival(Collection<String> sourceStopIds, Collection<String> targetStopIds,
                                                  int departureTime) {
-        Map<String, Integer> sourceStops = new HashMap<>();
-        for (String sourceStopId : sourceStopIds) {
-            sourceStops.put(sourceStopId, departureTime);
-        }
-        return routeEarliestArrival(sourceStops, targetStopIds);
+        Map<String, Integer> sourceStops = createStopMap(sourceStopIds, departureTime);
+        Map<String, Integer> targetStops = createStopMap(targetStopIds, 0);
+        return routeEarliestArrival(sourceStops, targetStops);
     }
 
-    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, List<String> targetStopIds) {
+    private Map<String, Integer> createStopMap(String stopId, int value) {
+        return Map.of(stopId, value);
+    }
+
+    private Map<String, Integer> createStopMap(Collection<String> stopIds, int value) {
+        Map<String, Integer> stopMap = new HashMap<>();
+        for (String stopId : stopIds) {
+            stopMap.put(stopId, value);
+        }
+        return stopMap;
+    }
+
+    private Map<String, Integer> createStopMap(List<String> stopIds, List<Integer> values) {
+        if (stopIds.size() != values.size()) {
+            throw new IllegalArgumentException("Stop IDs and values must have the same size.");
+        }
+        Map<String, Integer> stopMap = new HashMap<>();
+        for (int i = 0; i < stopIds.size(); i++) {
+            stopMap.put(stopIds.get(i), values.get(i));
+        }
+        return stopMap;
+    }
+
+    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
         InputValidator.validateStopPermutations(sourceStops, targetStopIds);
         int[] sourceStopIdxs = validator.validateAndGetStopIdx(sourceStops.keySet());
-        int[] targetStopIdxs = validator.validateAndGetStopIdx(targetStopIds);
         int[] departureTimes = sourceStops.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] targetStopIdxs = validator.validateAndGetStopIdx(targetStopIds.keySet());
+        int[] targetStopHandicaps = targetStopIds.values().stream().mapToInt(Integer::intValue).toArray();
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes);
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes, targetStopHandicaps);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
@@ -69,14 +91,28 @@ public class Raptor {
 
     // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
     private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdx, int[] departureTime) {
-        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime);
+        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime, new int[]{});
     }
 
-    // if targetStopIdx is set (>= 0), then the search will stop when target stop cannot be pareto optimized
-    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes) {
+    // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
+    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes, int[] targetStopHandicaps) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
+
+        if( sourceStopIdxs.length != departureTimes.length ){
+            throw new IllegalArgumentException("Source stops and departure times must have the same size.");
+        }
+
+        if( targetStopIdxs.length != targetStopHandicaps.length ){
+            throw new IllegalArgumentException("Target stops and handicaps must have the same size.");
+        }
+
+        int[] targetStops = new int[targetStopIdxs.length*2];
+        for (int i = 0; i < targetStopIdxs.length; i++) {
+            targetStops[i] = targetStopIdxs[i];
+            targetStops[i + targetStopIdxs.length] = targetStopHandicaps[i];
+        }
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
         earliestArrivalsPerRound.add(new Leg[stops.length]);
@@ -90,11 +126,11 @@ public class Raptor {
             markedStops.add(sourceStopIdxs[i]);
         }
 
-        for(int i = 0; i < targetStopIdxs.length; i++) {
+        for (int i = 0; i < targetStopIdxs.length; i++) {
             expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdxs[i],
                     departureTimes[i]);
         }
-        int earliestArrival = getEarliestArrivalTime(targetStopIdxs, earliestArrivals);
+        int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -259,10 +295,12 @@ public class Raptor {
         return earliestArrivalsPerRound;
     }
 
-    private int getEarliestArrivalTime(int[] targetStopIdxs, int[] earliestArrivals) {
+    private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals) {
         int earliestArrival = INFINITY;
-        for (int targetStopIdx : targetStopIdxs) {
-            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx]);
+        for(int i = 0; i < targetStops.length; i += 2) {
+            int targetStopIdx = targetStops[i];
+            int targetStopHandicap = targetStops[i + 1];
+            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + targetStopHandicap);
         }
         return earliestArrival;
     }
@@ -336,7 +374,7 @@ public class Raptor {
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
             int newTargetStopArrivalTime = departureTime + transfer.duration() - SAME_STOP_TRANSFER_TIME;
-            if( earliestArrivals[transfer.targetStopIdx()] <= newTargetStopArrivalTime) {
+            if (earliestArrivals[transfer.targetStopIdx()] <= newTargetStopArrivalTime) {
                 continue;
             }
             earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
@@ -364,14 +402,17 @@ public class Raptor {
         private static final int MIN_DEPARTURE_TIME = 0;
         private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
 
-        private static void validateStopPermutations(Map<String, Integer> sourceStops, List<String> targetStopIds) {
+        private static void validateStopPermutations(Map<String, Integer> sourceStops,
+                                                     Map<String, Integer> targetStops) {
             if (sourceStops.isEmpty()) {
                 throw new IllegalArgumentException("At least one source stop must be provided.");
             }
-            if (targetStopIds.isEmpty()) {
+            if (targetStops.isEmpty()) {
                 throw new IllegalArgumentException("At least one target stop must be provided.");
             }
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
+            targetStops.values().forEach(InputValidator::validateArrivalHandicap);
+            Set<String> targetStopIds = targetStops.keySet();
             for (String sourceStopId : sourceStops.keySet()) {
                 if (targetStopIds.contains(sourceStopId)) {
                     throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
@@ -383,6 +424,12 @@ public class Raptor {
             if (departureTime < MIN_DEPARTURE_TIME || departureTime > MAX_DEPARTURE_TIME) {
                 throw new IllegalArgumentException(
                         "Departure time must be between " + MIN_DEPARTURE_TIME + " and " + MAX_DEPARTURE_TIME + " seconds.");
+            }
+        }
+
+        private static void validateArrivalHandicap(int arrivalHandicap) {
+            if (arrivalHandicap < 0) {
+                throw new IllegalArgumentException("Arrival handicap must be greater or equal to 0.");
             }
         }
 

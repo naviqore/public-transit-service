@@ -154,12 +154,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     @Override
     public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
-        List<String> stopIds;
-        if (parentStops.containsKey(stop.getId())) {
-            stopIds = getAllStopIdsForParentStop(stop.getId());
-        } else {
-            stopIds = List.of(stop.getId());
-        }
+        List<String> stopIds = getAllStopIdsForStop(stop);
         return stopIds.stream()
                 .flatMap(stopId -> schedule.getNextDepartures(stopId, from, limit).stream())
                 .map(stopTime -> map(stopTime, from.toLocalDate()))
@@ -167,6 +162,16 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 .filter(stopTime -> until == null || stopTime.getDepartureTime().isBefore(until))
                 .limit(limit)
                 .toList();
+    }
+
+    private List<String> getAllStopIdsForStop(Stop stop) {
+        List<String> stopIds;
+        if (parentStops.containsKey(stop.getId())) {
+            stopIds = getAllStopIdsForParentStop(stop.getId());
+        } else {
+            stopIds = List.of(stop.getId());
+        }
+        return stopIds;
     }
 
     private List<String> getAllStopIdsForParentStop(String stopId) {
