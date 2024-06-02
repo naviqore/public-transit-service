@@ -1,54 +1,67 @@
 package ch.naviqore.utils.search;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * A generic Trie (prefix tree) implementation that stores key-value pairs where the key is a string.
+ * Trie data structure for storing values with associated string keys, which supports inserting values and searching by
+ * prefix. Duplicates are allowed, meaning multiple values can be associated with a single key.
  *
- * @param <T> The type of value that the trie will store.
+ * @param <T> the type of the values that can be inserted into the Trie.
  */
-class Trie<T> {
+public interface Trie<T> {
 
-    private final Node<T> root = new Node<>();
+    /**
+     * Inserts a value into the Trie associated with a specific key. If the key already exists, the value is added to
+     * the list of values for that key, allowing for duplicate values under the same key.
+     *
+     * @param key   the key associated with the value to insert.
+     * @param value the value to insert into the trie.
+     */
+    void insert(String key, T value);
 
-    public void insert(String key, T value) {
-        Node<T> node = root;
-        for (char c : key.toCharArray()) {
-            node.children.putIfAbsent(c, new Node<>());
-            node = node.children.get(c);
-        }
-        node.isEndOfWord = true;
-        node.values.add(value);
-    }
+    /**
+     * Searches for all values associated with keys that start with the given prefix. If no values are found, returns an
+     * empty list.
+     *
+     * @param prefix the prefix of the key to search for.
+     * @return a list of values whose keys start with the given prefix.
+     */
+    List<T> startsWith(String prefix);
 
-    public List<T> searchPrefix(String prefix) {
-        List<T> results = new ArrayList<>();
-        Node<T> node = root;
-        for (char c : prefix.toCharArray()) {
-            node = node.children.get(c);
-            if (node == null) {
-                return results;
-            }
-        }
-        collectAllWords(node, results);
-        return results;
-    }
+    /**
+     * Retrieves all nodes currently in the Trie.
+     *
+     * @return a list of all nodes in the trie.
+     */
+    List<Node<T>> getNodes();
 
-    private void collectAllWords(Node<T> node, List<T> results) {
-        if (node.isEndOfWord) {
-            results.addAll(node.values);
-        }
-        for (Node<T> child : node.children.values()) {
-            collectAllWords(child, results);
-        }
-    }
+    /**
+     * Gets the number of unique keys in the Trie.
+     *
+     * @return the number of unique keys stored in the trie.
+     */
+    int size();
 
-    private static class Node<T> {
-        Map<Character, Node<T>> children = new HashMap<>();
-        List<T> values = new ArrayList<>();
-        boolean isEndOfWord = false;
+    /**
+     * Node within the Trie structure, containing a list of children and values.
+     *
+     * @param <V> the type of values stored in the node.
+     */
+    interface Node<V> {
+
+        /**
+         * Retrieves all child nodes of this node.
+         *
+         * @return a list of all child nodes.
+         */
+        List<Node<V>> getChildren();
+
+        /**
+         * Retrieves all values stored in this node.
+         *
+         * @return a list of values stored in this node.
+         */
+        List<V> getValues();
+
     }
 }
