@@ -35,7 +35,7 @@ class Trie<T> {
         node.values.add(value);
     }
 
-    public List<T> searchPrefix(String prefix) {
+    public List<T> search(String prefix) {
         List<T> results = new ArrayList<>();
         Node<T> node = root;
         int i = 0;
@@ -121,4 +121,5 @@ class Trie<T> {
         boolean isEndOfWord = false;
         String prefix = "";
     }
+
 }

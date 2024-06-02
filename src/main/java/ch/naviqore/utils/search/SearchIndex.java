@@ -39,7 +39,7 @@ public class SearchIndex<T> {
             return Set.of();
         }
 
-        List<Entry<T>> results = suffixTrie.searchPrefix(query);
+        List<Entry<T>> results = suffixTrie.search(query);
 
         return switch (strategy) {
             case EXACT -> results.stream()

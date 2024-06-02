@@ -17,35 +17,45 @@ class TrieTest {
             "laboris", "nisi", "ut", "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure", "dolor",
             "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat", "nulla",
             "pariatur", "excepteur", "sint", "occaecat", "cupidatat", "non", "proident", "sunt", "in", "culpa", "qui",
-            "officia", "deserunt", "mollit", "anim", "id", "est", "laborum"};
+            "officia", "deserunt", "mollit", "anim", "id", "est", "laborum", "3", "23", "123"};
 
     private Trie<String> trie;
 
+    private static void assertSuffixKeys(Trie<String> trie) {
+        List<String> result1 = trie.search("1");
+        assertThat(result1).contains("123");
+
+        List<String> result2 = trie.search("2");
+        assertThat(result2).contains("23");
+
+        List<String> result3 = trie.search("3");
+        assertThat(result3).contains("3");
+    }
+
     private static void assertExistingKey(Trie<String> trie) {
-        List<String> result = trie.searchPrefix("lorem");
-        System.out.println(result);
+        List<String> result = trie.search("lorem");
         assertThat(result).hasSize(1).contains("lorem");
     }
 
     private static void assertCommonPrefixes(Trie<String> trie) {
-        List<String> result = trie.searchPrefix("do");
+        List<String> result = trie.search("do");
         assertThat(result).containsExactlyInAnyOrder("do", "dolor", "dolor", "dolore", "dolore");
 
-        List<String> resultA = trie.searchPrefix("a");
+        List<String> resultA = trie.search("a");
         assertThat(resultA).containsExactlyInAnyOrder("amet", "adipiscing", "aliqua", "ad", "aute", "aliquip", "anim");
 
-        List<String> resultE = trie.searchPrefix("e");
+        List<String> resultE = trie.search("e");
         assertThat(resultE).containsExactlyInAnyOrder("ea", "esse", "est", "et", "eu", "ex", "excepteur",
                 "exercitation", "eiusmod", "elit", "enim");
 
-        List<String> resultI = trie.searchPrefix("i");
+        List<String> resultI = trie.search("i");
         assertThat(resultI).containsExactlyInAnyOrder("ipsum", "irure", "id", "in", "in", "in", "incididunt");
 
-        List<String> resultC = trie.searchPrefix("c");
+        List<String> resultC = trie.search("c");
         assertThat(resultC).containsExactlyInAnyOrder("consectetur", "commodo", "consequat", "cillum", "culpa",
                 "cupidatat");
 
-        List<String> resultS = trie.searchPrefix("s");
+        List<String> resultS = trie.search("s");
         assertThat(resultS).containsExactlyInAnyOrder("sit", "sed", "sint", "sunt");
     }
 
@@ -65,13 +75,18 @@ class TrieTest {
         }
 
         @Test
+        void shouldFindSuffixKeys() {
+            assertSuffixKeys(trie);
+        }
+
+        @Test
         void shouldFindMultipleKeysWithCommonPrefix() {
             assertCommonPrefixes(trie);
         }
 
         @Test
         void shouldNotFindNonExistingPrefix() {
-            List<String> result = trie.searchPrefix("xyz");
+            List<String> result = trie.search("xyz");
             assertThat(result).isEmpty();
         }
     }
@@ -83,7 +98,6 @@ class TrieTest {
             int initialSize = trie.getSize();
             trie.compress();
             int compressedSize = trie.getSize();
-            System.out.println(compressedSize);
             assertThat(compressedSize).isLessThan(initialSize);
         }
 
@@ -100,6 +114,7 @@ class TrieTest {
 
             assertExistingKey(trie);
             assertCommonPrefixes(trie);
+            assertSuffixKeys(trie);
         }
     }
 
