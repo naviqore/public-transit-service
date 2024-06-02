@@ -1,9 +1,7 @@
-package ch.naviqore.service.gtfsraptor;
+package ch.naviqore.service.impl.transfergenerator;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
-import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
-import ch.naviqore.service.impl.transfergenerator.SameStationTransferGenerator;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -17,17 +15,17 @@ public class SameStationTransferGeneratorTest {
     class Constructor {
         @Test
         void simpleTransferGenerator() {
-            assertDoesNotThrow(() -> new SameStationTransferGenerator(120));
+            Assertions.assertDoesNotThrow(() -> new SameStationTransferGenerator(120));
         }
 
         @Test
         void negativeSameStationTransferTime_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class, () -> new SameStationTransferGenerator(-1));
+            Assertions.assertThrows(IllegalArgumentException.class, () -> new SameStationTransferGenerator(-1));
         }
 
         @Test
         void zeroSameStationTransferTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new SameStationTransferGenerator(0));
+            Assertions.assertDoesNotThrow(() -> new SameStationTransferGenerator(0));
         }
     }
 
@@ -39,10 +37,10 @@ public class SameStationTransferGeneratorTest {
             SameStationTransferGenerator generator = new SameStationTransferGenerator(120);
             List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
 
-            assertEquals(2, transfers.size());
+            Assertions.assertEquals(2, transfers.size());
             for (MinimumTimeTransfer transfer : transfers) {
-                assertEquals(transfer.from(), transfer.to());
-                assertEquals(120, transfer.duration());
+                Assertions.assertEquals(transfer.from(), transfer.to());
+                Assertions.assertEquals(120, transfer.duration());
             }
         }
 
@@ -52,10 +50,10 @@ public class SameStationTransferGeneratorTest {
             SameStationTransferGenerator generator = new SameStationTransferGenerator(0);
             List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
 
-            assertEquals(2, transfers.size());
+            Assertions.assertEquals(2, transfers.size());
             for (MinimumTimeTransfer transfer : transfers) {
-                assertEquals(transfer.from(), transfer.to());
-                assertEquals(0, transfer.duration());
+                Assertions.assertEquals(transfer.from(), transfer.to());
+                Assertions.assertEquals(0, transfer.duration());
             }
         }
     }
