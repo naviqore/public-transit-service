@@ -227,7 +227,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             if (firstWalkDuration > minWalkDurationCutoff) {
                 int distance = (int) source.distanceTo(firstStop.getCoordinate());
                 firstMile = createWalk(distance, firstWalkDuration, WalkType.FIRST_MILE, time,
-                        time.plusSeconds(connection.getDuration()), source, firstStop.getCoordinate(), map(firstStop));
+                        time.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(), map(firstStop));
             }
 
             if (lastWalkDuration > minWalkDurationCutoff) {
@@ -305,7 +305,38 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     @Override
     public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
-        throw new NotImplementedException();
+        Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
+                departureTime.toLocalTime().toSecondOfDay());
+
+        // TODO: Not always create a new raptor, use mask on stop times based on active trips
+        Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(departureTime.toLocalDate());
+
+        Map<String, ch.naviqore.raptor.model.Connection> isoLines = raptor.getIsoLines(sourceStops);
+
+        // TODO: Make CutOff configurable, if walk duration is longer than this, add walk to first mile,
+        // else it is too short to be notable.
+        int minWalkDurationCutoff = 120;
+        Map<Stop, Connection> result = new HashMap<>();
+
+        for (Map.Entry<String, ch.naviqore.raptor.model.Connection> entry : isoLines.entrySet()) {
+            ch.naviqore.raptor.model.Connection connection = entry.getValue();
+            Walk firstMile = null;
+
+            ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(connection.getFromStopId());
+            int firstWalkDuration = sourceStops.get(connection.getFromStopId()) - departureTime.toLocalTime()
+                    .toSecondOfDay();
+
+            if (firstWalkDuration > minWalkDurationCutoff) {
+                int distance = (int) source.distanceTo(firstStop.getCoordinate());
+                firstMile = createWalk(distance, firstWalkDuration, WalkType.FIRST_MILE, departureTime,
+                        departureTime.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(), map(firstStop));
+            }
+
+            ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(entry.getKey());
+            result.put(map(stop), map(connection, firstMile, null, departureTime.toLocalDate(), schedule));
+        }
+
+        return result;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.model;
 
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -87,6 +88,30 @@ public class Raptor {
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
+    }
+
+    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(validator.validateAndGetStopIdx(sourceStops.keySet()),
+                sourceStops.values().stream().mapToInt(Integer::intValue).toArray());
+
+        Map<String, Connection> isoLines = new HashMap<>();
+        for (int i = 0; i < stops.length; i++) {
+            Stop stop = stops[i];
+            Leg earliestArrival = null;
+            for (Leg[] legs : earliestArrivalsPerRound) {
+                if (legs[i] != null) {
+                    if( earliestArrival == null ){
+                        earliestArrival = legs[i];
+                    } else if( legs[i].arrivalTime < earliestArrival.arrivalTime ){
+                        earliestArrival = legs[i];
+                    }
+                }
+            }
+            if( earliestArrival != null ){
+                isoLines.put(stop.id(), reconstructConnectionFromLeg(earliestArrival));
+            }
+        }
+        return isoLines;
     }
 
     // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
@@ -327,39 +352,46 @@ public class Raptor {
                 continue;
             }
 
-            // iterate through arrivals starting at target stop
-            Connection connection = new Connection();
-            while (leg.type != ArrivalType.INITIAL) {
-                String id;
-                String fromStopId = stops[leg.previous.stopIdx].id();
-                String toStopId = stops[leg.stopIdx].id();
-                Connection.LegType type;
-                int departureTime = leg.departureTime;
-                int arrivalTime = leg.arrivalTime;
-                if (leg.type == ArrivalType.ROUTE) {
-                    id = routes[leg.routeOrTransferIdx].id();
-                    type = Connection.LegType.ROUTE;
-                } else if (leg.type == ArrivalType.TRANSFER) {
-                    id = String.format("transfer_%s_%s", fromStopId, toStopId);
-                    type = Connection.LegType.FOOTPATH;
-                    // include same stop transfer time (which is subtracted before scanning routes)
-                    arrivalTime += SAME_STOP_TRANSFER_TIME;
-                } else {
-                    throw new IllegalStateException("Unknown arrival type");
-                }
-                connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
-                leg = leg.previous;
-            }
-
-            // initialize connection: Reverse order of legs and add connection
-            if (!connection.getLegs().isEmpty()) {
-                connection.initialize();
+            Connection connection = reconstructConnectionFromLeg(leg);
+            if (connection != null) {
                 connections.add(connection);
             }
-
         }
 
         return connections;
+    }
+
+     private @Nullable Connection reconstructConnectionFromLeg(Leg leg){
+        Connection connection = new Connection();
+        while (leg.type != ArrivalType.INITIAL) {
+            String id;
+            String fromStopId = stops[leg.previous.stopIdx].id();
+            String toStopId = stops[leg.stopIdx].id();
+            Connection.LegType type;
+            int departureTime = leg.departureTime;
+            int arrivalTime = leg.arrivalTime;
+            if (leg.type == ArrivalType.ROUTE) {
+                id = routes[leg.routeOrTransferIdx].id();
+                type = Connection.LegType.ROUTE;
+            } else if (leg.type == ArrivalType.TRANSFER) {
+                id = String.format("transfer_%s_%s", fromStopId, toStopId);
+                type = Connection.LegType.FOOTPATH;
+                // include same stop transfer time (which is subtracted before scanning routes)
+                arrivalTime += SAME_STOP_TRANSFER_TIME;
+            } else {
+                throw new IllegalStateException("Unknown arrival type");
+            }
+            connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
+            leg = leg.previous;
+        }
+
+        // initialize connection: Reverse order of legs and add connection
+        if (!connection.getLegs().isEmpty()) {
+            connection.initialize();
+            return connection;
+        } else {
+            return null;
+        }
     }
 
     private void expandFootpathsForSourceStop(int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
