@@ -82,14 +82,6 @@ final class TypeMapper {
         }
 
         if (lastMile != null) {
-            Leg lastLeg = legs.getLast();
-            LocalDateTime walkStartTime = lastLeg.getArrivalTime();
-            LocalDateTime walkEndTime = walkStartTime.plusSeconds(lastMile.getDuration());
-
-            lastMile = createWalk(lastMile.getDistance(), lastMile.getDuration(), lastMile.getWalkType(), walkStartTime,
-                    walkEndTime, lastMile.getSourceLocation(), lastMile.getTargetLocation(),
-                    lastMile.getStop().orElse(null));
-
             legs.addLast(lastMile);
         }
 
