@@ -54,7 +54,7 @@ class CompressedTrieTest {
 
         @Test
         void shouldGetSize() {
-            assertThat(trie.size()).isEqualTo(13);
+            assertThat(trie.size()).isEqualTo(15);
         }
 
         @Nested
@@ -97,6 +97,11 @@ class CompressedTrieTest {
             for (String key : KEYS) {
                 trie.insert(key, key);
             }
+        }
+
+        @Test
+        void shouldAddAll() {
+            assertThat(trie.size()).isEqualTo(KEYS.length);
         }
 
         @Test
