@@ -17,6 +17,14 @@ class SearchIndexTest {
 
     private SearchIndexBuilder<SearchCase> builder;
 
+    @BeforeEach
+    void setUp() {
+        builder = SearchIndex.builder();
+        for (SearchCase searchCase : SearchCase.values()) {
+            builder.add(searchCase.value, searchCase);
+        }
+    }
+
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     @ToString
     enum SearchCase {
@@ -33,14 +41,6 @@ class SearchIndexTest {
         SERIES_5("AAABBCDDEEE");
 
         final String value;
-    }
-
-    @BeforeEach
-    void setUp() {
-        builder = SearchIndex.builder();
-        for (SearchCase searchCase : SearchCase.values()) {
-            builder.add(searchCase.value, searchCase);
-        }
     }
 
     @Nested

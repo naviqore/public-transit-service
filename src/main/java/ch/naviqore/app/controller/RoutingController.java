@@ -64,7 +64,7 @@ public class RoutingController {
         if (departureDateTime == null) {
             departureDateTime = LocalDateTime.now();
         }
-        
+
         Stop sourceStop = getStop(sourceStopId);
         Stop targetStop = getStop(targetStopId);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,

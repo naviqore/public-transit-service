@@ -10,8 +10,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class SearchIndexBuilder<T> {
 
-    private final Trie<SearchIndex.Entry<T>> suffixTrie = new Trie<>();
-    int count = 0;
+    private final Trie<SearchIndex.Entry<T>> suffixTrie = new CompressedTrie<>();
 
     /**
      * Adds a key-value pair to the builder.
@@ -30,7 +29,6 @@ public class SearchIndexBuilder<T> {
         for (int i = key.length() - 1; i >= 0; i--) {
             suffixTrie.insert(key.substring(i), entry);
         }
-        count++;
 
         return this;
     }
@@ -41,11 +39,8 @@ public class SearchIndexBuilder<T> {
      * @return the built and compressed SearchIndex.
      */
     public SearchIndex<T> build() {
-        int initialSize = suffixTrie.getSize();
-        suffixTrie.compress();
-
-        log.info("Building search index for {} entries with compressed suffix trie from {} to {} nodes", count,
-                initialSize, suffixTrie.getSize());
+        log.info("Building search index for {} entries based on compressed suffix trie with {} nodes",
+                suffixTrie.size(), suffixTrie.getNodes().size());
         return new SearchIndex<>(suffixTrie);
     }
 
