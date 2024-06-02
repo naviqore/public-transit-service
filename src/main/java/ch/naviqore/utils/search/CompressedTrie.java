@@ -45,7 +45,7 @@ public class CompressedTrie<T> implements Trie<T> {
             // if the common prefix is shorter than the child's segment,
             // split the child node at the common prefix length
             if (commonLength < child.segment.length()) {
-                child = child.split(commonLength);
+                child.split(commonLength);
             }
 
             // if the common prefix is shorter than the remaining segment,
@@ -126,8 +126,20 @@ public class CompressedTrie<T> implements Trie<T> {
         return size;
     }
 
+    /**
+     * Reduces the memory footprint by trimming the capacity of node internal data structures.
+     */
+    public void trimToSize() {
+        List<Node<T>> nodes = new ArrayList<>();
+        root.collectNodes(nodes);
+
+        for (Node<T> node : nodes) {
+            ((ArrayList<?>) node.values).trimToSize();
+        }
+    }
+
     @ToString
-    static class Node<V> implements Trie.Node<V> {
+    private static class Node<V> implements Trie.Node<V> {
         private Map<Character, Node<V>> children;
         private List<V> values;
         private String segment;
@@ -164,7 +176,7 @@ public class CompressedTrie<T> implements Trie<T> {
             return minLength;
         }
 
-        Node<V> split(int index) {
+        void split(int index) {
             String newSegment = segment.substring(index);
 
             // update the current node to only include the prefix up to the split index
@@ -181,7 +193,6 @@ public class CompressedTrie<T> implements Trie<T> {
             this.values = new ArrayList<>();
             this.addChild(newNode);
 
-            return this;
         }
 
         void collectAllValues(List<V> results) {
