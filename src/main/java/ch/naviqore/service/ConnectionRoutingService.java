@@ -46,4 +46,14 @@ public interface ConnectionRoutingService {
      */
     Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime, ConnectionQueryConfig config);
 
+    /**
+     * Retrieves the shortest possible connection to each stop from a given departure stop and time  within a given
+     * time budget or a maximum number of transfers.
+     *
+     * @param source        the location to start the journey from
+     * @param departureTime the time of departure
+     * @param config        additional configuration for the query
+     * @return a map of stops to the shortest possible connection to each stop from the departure location
+     */
+    Map<Stop, Connection> getIsolines(Stop source, LocalDateTime departureTime, ConnectionQueryConfig config);
 }

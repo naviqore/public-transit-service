@@ -1,7 +1,6 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.DtoDummyData;
 import ch.naviqore.app.dto.DtoMapper;
 import ch.naviqore.app.dto.EarliestArrival;
 import ch.naviqore.service.PublicTransitService;
@@ -18,7 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import static ch.naviqore.app.dto.DtoMapper.map;
 
 @RestController
 @RequestMapping("/routing")
@@ -94,10 +97,22 @@ public class RoutingController {
                     "Location based routing is not implemented yet.");
         }
 
-        // TODO: Implement the method with maxWalkingDuration, maxTransferNumber, minTransferTime
-        return DtoDummyData.getIsolines(sourceStopId, departureDateTime, maxTravelTime);
-        // TODO: Decide on location or stop id.
-        // service.getIsolines();
+        Stop sourceStop = getStop(sourceStopId);
+        ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
+                maxTravelTime);
+
+        Map<Stop, ch.naviqore.service.Connection> connections = service.getIsolines(sourceStop, departureDateTime,
+                config);
+
+        List<EarliestArrival> arrivals = new ArrayList<>();
+
+        for (Map.Entry<Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
+            Stop stop = entry.getKey();
+            ch.naviqore.service.Connection connection = entry.getValue();
+            arrivals.add(map(stop, connection));
+        }
+
+        return arrivals;
     }
 
     private ch.naviqore.service.Stop getStop(String stopId) {
