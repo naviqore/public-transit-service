@@ -3,7 +3,7 @@ package ch.naviqore.service.impl;
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.RouteNotFoundException;
@@ -208,7 +208,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // query connection from raptor
         Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
 
-        List<ch.naviqore.raptor.model.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
 
         List<Connection> result = new ArrayList<>();
 
@@ -216,7 +216,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // else it is too short to be notable.
         int minWalkDurationCutoff = 120;
 
-        for (ch.naviqore.raptor.model.Connection connection : connections) {
+        for (ch.naviqore.raptor.Connection connection : connections) {
             Walk firstMile = null;
             Walk lastMile = null;
 
@@ -258,7 +258,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
 
         // query connection from raptor
-        List<ch.naviqore.raptor.model.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
 
         // map to connection and generate first and last mile walk
         return connections.stream()
@@ -313,15 +313,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
         Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(departureTime.toLocalDate());
 
-        Map<String, ch.naviqore.raptor.model.Connection> isoLines = raptor.getIsoLines(sourceStops);
+        Map<String, ch.naviqore.raptor.Connection> isoLines = raptor.getIsoLines(sourceStops);
 
         // TODO: Make CutOff configurable, if walk duration is longer than this, add walk to first mile,
         // else it is too short to be notable.
         int minWalkDurationCutoff = 120;
         Map<Stop, Connection> result = new HashMap<>();
 
-        for (Map.Entry<String, ch.naviqore.raptor.model.Connection> entry : isoLines.entrySet()) {
-            ch.naviqore.raptor.model.Connection connection = entry.getValue();
+        for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isoLines.entrySet()) {
+            ch.naviqore.raptor.Connection connection = entry.getValue();
             Walk firstMile = null;
 
             ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(connection.getFromStopId());

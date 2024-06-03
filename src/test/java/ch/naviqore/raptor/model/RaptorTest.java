@@ -1,5 +1,7 @@
 package ch.naviqore.raptor.model;
 
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Raptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

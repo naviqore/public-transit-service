@@ -2,8 +2,8 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
-import ch.naviqore.raptor.model.Raptor;
-import ch.naviqore.raptor.model.RaptorBuilder;
+import ch.naviqore.raptor.Raptor;
+import ch.naviqore.raptor.RaptorBuilder;
 import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
 import lombok.extern.log4j.Log4j2;
 

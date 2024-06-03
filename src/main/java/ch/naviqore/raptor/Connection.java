@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.model;
+package ch.naviqore.raptor;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
