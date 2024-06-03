@@ -7,13 +7,13 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.model.Connection;
-import ch.naviqore.raptor.model.Raptor;
-import ch.naviqore.service.impl.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
-import ch.naviqore.service.impl.transfergenerator.SameStationTransferGenerator;
-import ch.naviqore.service.impl.transfergenerator.WalkTransferGenerator;
-import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Raptor;
+import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
+import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
@@ -62,6 +62,9 @@ final class Benchmark {
     private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int NOT_AVAILABLE = -1;
+    public static final int WALKING_SPEED = 3000;
+    public static final int MINIMUM_TRANSFER_TIME = 120;
+    public static final int MAX_WALK_DISTANCE = 500;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -75,6 +78,7 @@ final class Benchmark {
         String path = BenchmarkData.get(DATASET);
         GtfsSchedule schedule = new GtfsScheduleReader().read(path);
         manageResources();
+
         return schedule;
     }
 
@@ -85,14 +89,18 @@ final class Benchmark {
         //  this approach, transfers can be generated according to different rules with the first applicable one taking
         //  precedence.
         KDTree<Stop> spatialStopIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
-        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(3000);
-        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex);
-        List<MinimumTimeTransfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
-        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(120);
+        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
+        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
+                MAX_WALK_DISTANCE, spatialStopIndex);
+        List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(
+                schedule);
+        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
+                MINIMUM_TRANSFER_TIME);
         additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
 
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers).convert(SCHEDULE_DATE);
         manageResources();
+
         return raptor;
     }
 
@@ -120,6 +128,7 @@ final class Benchmark {
             requests[i] = new RouteRequest(schedule.getStops().get(stopIds.get(sourceIndex)),
                     schedule.getStops().get(stopIds.get(destinationIndex)), random.nextInt(DEPARTURE_TIME_LIMIT));
         }
+
         return requests;
     }
 
@@ -143,6 +152,7 @@ final class Benchmark {
             }
 
         }
+
         return responses;
     }
 
@@ -159,6 +169,7 @@ final class Benchmark {
         long beelineDistance = Math.round(
                 request.sourceStop.getCoordinate().distanceTo(request.targetStop.getCoordinate()));
         long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
+
         return new RoutingResult(id, request.sourceStop().getId(), request.targetStop().getId(),
                 request.sourceStop().getName(), request.targetStop.getName(),
                 toLocalDatetime(request.departureTime).orElseThrow(), connections.size(), earliestDepartureTime,

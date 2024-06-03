@@ -3,6 +3,7 @@ package ch.naviqore.service.impl;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
@@ -30,7 +31,7 @@ class PublicTransitServiceImplIT {
     @BeforeEach
     void setUp(@TempDir Path tempDir) throws IOException {
         File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
-        service = new PublicTransitServiceImpl(zipFile.getAbsolutePath());
+        service = new PublicTransitServiceImpl(new ServiceConfig(zipFile.getAbsolutePath()));
     }
 
     @Nested

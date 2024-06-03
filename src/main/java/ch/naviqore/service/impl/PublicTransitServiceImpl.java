@@ -2,19 +2,20 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
-import ch.naviqore.service.impl.transfergenerator.MinimumTimeTransfer;
-import ch.naviqore.service.impl.transfergenerator.SameStationTransferGenerator;
-import ch.naviqore.service.impl.transfergenerator.TransferGenerator;
-import ch.naviqore.service.impl.transfergenerator.WalkTransferGenerator;
-import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
-import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
+import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
+import ch.naviqore.service.walk.BeeLineWalkCalculator;
+import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
@@ -39,65 +40,21 @@ import static ch.naviqore.service.impl.TypeMapper.map;
 @Log4j2
 public class PublicTransitServiceImpl implements PublicTransitService {
 
+    private final ServiceConfig config;
+    private final WalkCalculator walkCalculator;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
-    private final WalkCalculator walkCalculator;
-    private List<MinimumTimeTransfer> minimumTimeTransfers;
+    private final List<TransferGenerator.Transfer> minimumTimeTransfers;
 
-    public PublicTransitServiceImpl(String gtfsFilePath) {
-        schedule = readGtfsSchedule(gtfsFilePath);
-        stopSearchIndex = generateStopSearchIndex(schedule);
-        spatialStopIndex = generateSpatialStopIndex(schedule);
-
-        // TODO: Allow adding removing dynamically
-        walkCalculator = new BeeLineWalkCalculator(3500);
-        List<TransferGenerator> transferGenerators = List.of(new SameStationTransferGenerator(120),
-                new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex));
-
-        minimumTimeTransfers = generateMinimumTimeTransfers(schedule, transferGenerators);
-    }
-
-    private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
-        // TODO: Download file if needed
-        try {
-            return new GtfsScheduleReader().read(gtfsFilePath);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule) {
-        SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
-        schedule.getStops().values().forEach(stop -> index.add(stop.getName(), stop));
-
-        return index;
-    }
-
-    private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
-        return new KDTreeBuilder<ch.naviqore.gtfs.schedule.model.Stop>().addLocations(schedule.getStops().values())
-                .build();
-    }
-
-    private static List<MinimumTimeTransfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
-                                                                          List<TransferGenerator> transferGenerators) {
-        List<MinimumTimeTransfer> minimumTimeTransfers = new ArrayList<>();
-        List<MinimumTimeTransfer> generatedTransfers = transferGenerators.parallelStream()
-                .flatMap(generator -> generator.generateTransfers(schedule).stream())
-                .filter(transfer -> transfer.from()
-                        .getTransfers()
-                        .stream()
-                        .noneMatch(t -> t.getToStop().equals(transfer.to())))
-                .toList();
-
-        for (MinimumTimeTransfer transfer : generatedTransfers) {
-            if (minimumTimeTransfers.stream()
-                    .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
-                minimumTimeTransfers.add(transfer);
-            }
-        }
-
-        return minimumTimeTransfers;
+    public PublicTransitServiceImpl(ServiceConfig config) {
+        this.config = config;
+        this.walkCalculator = Initializer.initializeWalkCalculator(config);
+        schedule = Initializer.readGtfsSchedule(config.getGtfsUrl());
+        stopSearchIndex = Initializer.generateStopSearchIndex(schedule);
+        spatialStopIndex = Initializer.generateSpatialStopIndex(schedule);
+        minimumTimeTransfers = Initializer.generateMinimumTimeTransfers(schedule, walkCalculator, spatialStopIndex,
+                config);
     }
 
     private static void notYetImplementedCheck(TimeType timeType) {
@@ -163,10 +120,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // TODO: Make CutOff configurable
         int minWalkDistanceCutoff = 200;
 
-        ch.naviqore.service.impl.walkcalculator.Walk toSourceWalk = walkCalculator.calculateWalk(source,
-                sourceStop.getCoordinate());
-        ch.naviqore.service.impl.walkcalculator.Walk toTargetWalk = walkCalculator.calculateWalk(target,
-                targetStop.getCoordinate());
+        WalkCalculator.Walk toSourceWalk = walkCalculator.calculateWalk(source, sourceStop.getCoordinate());
+        WalkCalculator.Walk toTargetWalk = walkCalculator.calculateWalk(target, targetStop.getCoordinate());
 
         Walk firstMile = null;
         Walk lastMile = null;
@@ -196,7 +151,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
 
         // query connection from raptor
-        List<ch.naviqore.raptor.model.Connection> connections = raptor.routeEarliestArrival(sourceStop.getId(),
+        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStop.getId(),
                 targetStop.getId(), departureTime);
 
         // map to connection and generate first and last mile walk
@@ -252,7 +207,109 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public void updateStaticSchedule() {
         // TODO: Update method to pull new transit schedule from URL.
         //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
-        log.warn("Updating static schedule not implemented yet");
+        log.warn("Updating static schedule not implemented yet, would fetch from {}", config.getGtfsUrl());
+    }
+
+    private static class Initializer {
+
+        private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
+            return switch (config.getWalkCalculatorType()) {
+                case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
+                        new BeeLineWalkCalculator(config.getWalkingSpeed());
+            };
+        }
+
+        private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
+            // TODO: Download file if needed
+            try {
+                return new GtfsScheduleReader().read(gtfsFilePath);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(
+                GtfsSchedule schedule) {
+            SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
+            schedule.getStops().values().forEach(stop -> index.add(stop.getName(), stop));
+
+            return index;
+        }
+
+        private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
+            return new KDTreeBuilder<ch.naviqore.gtfs.schedule.model.Stop>().addLocations(schedule.getStops().values())
+                    .build();
+        }
+
+        private static List<TransferGenerator.Transfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
+                                                                                     WalkCalculator walkCalculator,
+                                                                                     KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
+                                                                                     ServiceConfig config) {
+
+            SameStationTransferGenerator sameStationGenerator = new SameStationTransferGenerator(
+                    config.getMinimumTransferTime());
+            WalkTransferGenerator walkGenerator = new WalkTransferGenerator(walkCalculator,
+                    config.getMinimumTransferTime(), config.getMaxWalkingDistance(), spatialStopIndex);
+
+            // TODO: Whats happening here, ca we write this in a more readable way? Maybe separate both generators und use
+            //  a CompletableFuture instead if a parallel stream? Or explain it with some comments... =)
+            List<TransferGenerator.Transfer> generatedTransfers = List.of(sameStationGenerator, walkGenerator)
+                    .parallelStream()
+                    .flatMap(generator -> generator.generateTransfers(schedule).stream())
+                    .filter(transfer -> transfer.from().getTransfers()
+                            // TODO: Another stream inside a loop...
+                            .stream().noneMatch(t -> t.getToStop().equals(transfer.to())))
+                    .toList();
+
+            // TODO: Are we trying to get unique transfers here? Seems kind of inefficient having a stream inside a loop,
+            //  maybe use a hashmap?
+            List<TransferGenerator.Transfer> minimumTimeTransfers = new ArrayList<>();
+            for (TransferGenerator.Transfer transfer : generatedTransfers) {
+                if (minimumTimeTransfers.stream()
+                        .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
+                    minimumTimeTransfers.add(transfer);
+                }
+            }
+
+            // TODO: Suggestion - but i am not sure if it is still correct as I do not fully understand what we want to
+            //  achieve here :=)
+        /*
+        // Helper method to process transfers for a generator
+        private List<TransferGenerator.Transfer> processTransfers(TransferGenerator generator, Schedule schedule) {
+            return generator.generateTransfers(schedule).stream()
+                .filter(transfer -> transfer.from().getTransfers()
+                    .stream().noneMatch(t -> t.getToStop().equals(transfer.to())))
+                .collect(Collectors.toList());
+        }
+
+        public List<TransferGenerator.Transfer> getUniqueTransfers(Schedule schedule) throws ExecutionException, InterruptedException {
+            SameStationTransferGenerator sameStationGenerator = new SameStationTransferGenerator(config.getMinimumTransferTime());
+            WalkTransferGenerator walkGenerator = new WalkTransferGenerator(
+                walkCalculator, config.getMinimumTransferTime(), config.getMaxWalkingDistance(), spatialStopIndex);
+
+            // Use CompletableFuture to handle asynchronous generation
+            CompletableFuture<List<TransferGenerator.Transfer>> futureSameStation = CompletableFuture.supplyAsync(() -> processTransfers(sameStationGenerator, schedule));
+            CompletableFuture<List<TransferGenerator.Transfer>> futureWalk = CompletableFuture.supplyAsync(() -> processTransfers(walkGenerator, schedule));
+
+            // Wait for both futures to complete and combine their results
+            List<TransferGenerator.Transfer> combinedTransfers = new ArrayList<>();
+            combinedTransfers.addAll(futureSameStation.get());
+            combinedTransfers.addAll(futureWalk.get());
+
+            // Use a HashMap to filter out duplicates based on from and to properties
+            Map<Pair<String, String>, TransferGenerator.Transfer> uniqueTransfers = new HashMap<>();
+            for (TransferGenerator.Transfer transfer : combinedTransfers) {
+                Pair<String, String> key = new Pair<>(transfer.from(), transfer.to());
+                uniqueTransfers.putIfAbsent(key, transfer);
+            }
+
+            return new ArrayList<>(uniqueTransfers.values());
+        }
+        */
+
+            return minimumTimeTransfers;
+        }
+
     }
 
 }

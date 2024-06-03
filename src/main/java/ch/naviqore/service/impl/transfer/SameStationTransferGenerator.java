@@ -1,0 +1,42 @@
+package ch.naviqore.service.impl.transfer;
+
+import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.Stop;
+import lombok.extern.log4j.Log4j2;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+@Log4j2
+public class SameStationTransferGenerator implements TransferGenerator {
+
+    private final int minimumTransferTime;
+
+    /**
+     * Creates a new SameStationTransferGenerator with the given minimum transfer time between stops at the same
+     * station.
+     *
+     * @param minimumTransferTime Minimum transfer time between stops at the same station (no walking required) in
+     *                            seconds.
+     */
+    public SameStationTransferGenerator(int minimumTransferTime) {
+        if (minimumTransferTime < 0) {
+            throw new IllegalArgumentException("sameStationTransferTime is negative");
+        }
+        this.minimumTransferTime = minimumTransferTime;
+    }
+
+    @Override
+    public List<Transfer> generateTransfers(GtfsSchedule schedule) {
+        List<Transfer> transfers = new ArrayList<>();
+        Map<String, Stop> stops = schedule.getStops();
+
+        log.info("Generating same station transfers for {} stops", stops.size());
+        for (Stop fromStop : stops.values()) {
+            transfers.add(new Transfer(fromStop, fromStop, minimumTransferTime));
+        }
+
+        return transfers;
+    }
+}

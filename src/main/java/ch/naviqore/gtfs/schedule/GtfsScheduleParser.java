@@ -85,8 +85,8 @@ class GtfsScheduleParser {
         if (record.isMapped("parent_station")) {
             parentId = record.get("parent_station");
         }
-        builder.addStop(record.get("stop_id"), record.get("stop_name"), parentId, Double.parseDouble(record.get("stop_lat")),
-                Double.parseDouble(record.get("stop_lon")));
+        builder.addStop(record.get("stop_id"), record.get("stop_name"), parentId,
+                Double.parseDouble(record.get("stop_lat")), Double.parseDouble(record.get("stop_lon")));
 
     }
 

@@ -69,7 +69,7 @@ final class TypeMapper {
                 stop);
     }
 
-    public static Connection map(ch.naviqore.raptor.model.Connection connection, @Nullable Walk firstMile,
+    public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Walk firstMile,
                                  @Nullable Walk lastMile, LocalDate date, GtfsSchedule schedule) {
         List<Leg> legs = new ArrayList<>();
 
@@ -77,7 +77,7 @@ final class TypeMapper {
             legs.addFirst(firstMile);
         }
 
-        for (ch.naviqore.raptor.model.Connection.Leg leg : connection.getLegs()) {
+        for (ch.naviqore.raptor.Connection.Leg leg : connection.getLegs()) {
             legs.add(map(leg, date, schedule));
         }
 
@@ -96,7 +96,7 @@ final class TypeMapper {
         return new ConnectionImpl(legs);
     }
 
-    public static Leg map(ch.naviqore.raptor.model.Connection.Leg leg, LocalDate date, GtfsSchedule schedule) {
+    public static Leg map(ch.naviqore.raptor.Connection.Leg leg, LocalDate date, GtfsSchedule schedule) {
         // TODO: Distance is needed on Footpaths, distance of trip can be estimated based on trip and beeline distance?
         int distance = 0;
         int duration = leg.arrivalTime() - leg.departureTime();
