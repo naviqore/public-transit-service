@@ -18,7 +18,8 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
 
     private final String id;
     private final String name;
-    @Nullable private final String parentId;
+    @Nullable
+    private final String parentId;
     private final GeoCoordinate coordinate;
     private List<StopTime> stopTimes = new ArrayList<>();
     private List<Transfer> transfers = new ArrayList<>();
