@@ -3,7 +3,6 @@ package ch.naviqore.service.impl.transfer;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.service.walk.WalkCalculator;
-import ch.naviqore.service.walk.Walk;
 import ch.naviqore.utils.spatial.index.KDTree;
 import lombok.extern.log4j.Log4j2;
 
@@ -79,7 +78,7 @@ public class WalkTransferGenerator implements TransferGenerator {
 
     private MinimumTimeTransfer createTransfer(Stop fromStop, Stop toStop) {
         // calculate the walking time between the stops
-        Walk walk = walkCalculator.calculateWalk(fromStop.getCoordinate(), toStop.getCoordinate());
+        WalkCalculator.Walk walk = walkCalculator.calculateWalk(fromStop.getCoordinate(), toStop.getCoordinate());
         int transferDuration = Math.max(walk.duration(), minimumTransferTime);
         return new MinimumTimeTransfer(fromStop, toStop, transferDuration);
     }

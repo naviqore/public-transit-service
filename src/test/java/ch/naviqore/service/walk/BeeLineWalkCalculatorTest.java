@@ -42,7 +42,7 @@ public class BeeLineWalkCalculatorTest {
             double distanceInMeters = coordinate1.distanceTo(coordinate2);
             int durationInSeconds = (int) distanceInMeters;
 
-            ch.naviqore.service.walk.Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
+            WalkCalculator.Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
 
             assertEquals(walk.distance(), Math.round(distanceInMeters));
             assertEquals(walk.duration(), durationInSeconds);
@@ -56,8 +56,8 @@ public class BeeLineWalkCalculatorTest {
             GeoCoordinate coordinate1 = getCoordinate1();
             GeoCoordinate coordinate2 = getCoordinate2();
 
-            ch.naviqore.service.walk.Walk walk1 = calculator1.calculateWalk(coordinate1, coordinate2);
-            Walk walk2 = calculator2.calculateWalk(coordinate2, coordinate1);
+            WalkCalculator.Walk walk1 = calculator1.calculateWalk(coordinate1, coordinate2);
+            WalkCalculator.Walk walk2 = calculator2.calculateWalk(coordinate2, coordinate1);
 
             assertEquals(walk1.distance(), walk2.distance());
             // Need to accept +/-1 s difference, as rounding may introduce this inaccuracy
