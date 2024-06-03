@@ -1,9 +1,12 @@
 package ch.naviqore.utils.search;
 
-import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * SearchIndex class for indexing strings and their associated objects.
@@ -12,37 +15,14 @@ import java.util.*;
  *
  * @param <T> the type of objects to be indexed.
  */
-@NoArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Log4j2
 public class SearchIndex<T> {
 
-    // TODO: On the complete stops of the GTFS of Switzerland, this index uses a lot of memory,
-    //  therefore we should try to limit search to a minimum search key length and a maximum tree depth
-    private final Map<String, List<T>> exactIndex = new HashMap<>();
-    private final Trie<T> startsWithIndex = new Trie<>();
-    private final Trie<T> endsWithIndex = new Trie<>();
-    // TODO: This most of the memory, also limit the length
-    private final Map<String, Set<T>> containsIndex = new HashMap<>();
+    private final Trie<Entry<T>> suffixTrie;
 
-    private static String reverse(String text) {
-        return new StringBuilder(text).reverse().toString();
-    }
-
-    /**
-     * Adds a key-value pair to the index.
-     *
-     * @param key   the string key to be indexed.
-     * @param value the value associated with the key.
-     */
-    public void add(String key, T value) {
-        if (key == null || key.isEmpty()) {
-            throw new IllegalArgumentException("Key cannot be null or empty.");
-        }
-        log.debug("Adding search key: {}", key);
-        exactIndex.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
-        startsWithIndex.insert(key, value);
-        endsWithIndex.insert(reverse(key), value);
-        addToContainsIndex(key, value);
+    public static <T> SearchIndexBuilder<T> builder() {
+        return new SearchIndexBuilder<>();
     }
 
     /**
@@ -52,28 +32,31 @@ public class SearchIndex<T> {
      * @param strategy the search strategy to use.
      * @return the values associated with the query if found, otherwise an empty list.
      */
-    public List<T> search(String query, SearchStrategy strategy) {
+    public Set<T> search(String query, SearchStrategy strategy) {
         log.debug("Searching for query: '{}' with strategy: {}", query, strategy);
 
         if (query == null || query.isEmpty()) {
-            return List.of();
+            return Set.of();
         }
+
+        List<Entry<T>> results = suffixTrie.startsWith(query);
 
         return switch (strategy) {
-            case EXACT -> exactIndex.getOrDefault(query, List.of());
-            case STARTS_WITH -> startsWithIndex.searchPrefix(query);
-            case ENDS_WITH -> endsWithIndex.searchPrefix(reverse(query));
-            case CONTAINS -> new ArrayList<>(containsIndex.getOrDefault(query, Set.of()));
+            case EXACT -> results.stream()
+                    .filter(entry -> entry.key().equals(query))
+                    .map(Entry::value)
+                    .collect(Collectors.toSet());
+            case STARTS_WITH -> results.stream()
+                    .filter(entry -> entry.key().startsWith(query))
+                    .map(Entry::value)
+                    .collect(Collectors.toSet());
+            case ENDS_WITH -> results.stream()
+                    .filter(entry -> entry.key().endsWith(query))
+                    .map(Entry::value)
+                    .collect(Collectors.toSet());
+            case CONTAINS -> results.stream().map(Entry::value).collect(Collectors.toSet());
         };
-    }
 
-    private void addToContainsIndex(String key, T value) {
-        for (int i = 0; i <= key.length(); i++) {
-            for (int j = i + 1; j <= key.length(); j++) {
-                String substring = key.substring(i, j);
-                containsIndex.computeIfAbsent(substring, k -> new HashSet<>()).add(value);
-            }
-        }
     }
 
     public enum SearchStrategy {
@@ -82,4 +65,8 @@ public class SearchIndex<T> {
         CONTAINS,
         EXACT
     }
+
+    record Entry<U>(String key, U value) {
+    }
+
 }

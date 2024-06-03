@@ -17,6 +17,7 @@ import ch.naviqore.service.impl.transfergenerator.WalkTransferGenerator;
 import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
 import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
 import ch.naviqore.utils.search.SearchIndex;
+import ch.naviqore.utils.search.SearchIndexBuilder;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
@@ -66,12 +67,13 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             throw new UncheckedIOException(e);
         }
     }
-
+    
     private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
                                                                                              Set<String> parentStops) {
-        SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> index = new SearchIndex<>();
-        parentStops.forEach(stopId -> index.add(stopId, schedule.getStops().get(stopId)));
-        return index;
+        SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
+        parentStops.forEach(stopId -> builder.add(stopId.toLowerCase(), schedule.getStops().get(stopId)));
+
+        return builder.build();
     }
 
     private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
@@ -121,7 +123,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
-        return stopSearchIndex.search(like, map(searchType)).stream().map(TypeMapper::map).toList();
+        return stopSearchIndex.search(like.toLowerCase(), map(searchType)).stream().map(TypeMapper::map).toList();
     }
 
     @Override

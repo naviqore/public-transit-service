@@ -36,9 +36,9 @@ public class ScheduleController {
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
                                            @RequestParam(required = false, defaultValue = "10") int limit,
-                                           @RequestParam(required = false, defaultValue = "STARTS_WITH") SearchType type) {
+                                           @RequestParam(required = false, defaultValue = "STARTS_WITH") SearchType searchType) {
         validateLimit(limit);
-        return service.getStops(query, map(type)).stream().map(DtoMapper::map).limit(limit).toList();
+        return service.getStops(query, map(searchType)).stream().map(DtoMapper::map).limit(limit).toList();
     }
 
     @GetMapping("/stops/nearest")
