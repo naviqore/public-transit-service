@@ -8,6 +8,7 @@ import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.StopNotFoundException;
+import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,8 +52,6 @@ public class RoutingController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
-                    "Location based routing is not implemented yet.");
         }
 
         if (targetStopId == null) {
@@ -60,23 +59,37 @@ public class RoutingController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either targetStopId or targetLatitude and targetLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
-                    "Location based routing is not implemented yet.");
         }
 
         if (departureDateTime == null) {
             departureDateTime = LocalDateTime.now();
         }
 
-        Stop sourceStop = getStop(sourceStopId);
-        Stop targetStop = getStop(targetStopId);
+        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
+        Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
+
+        GeoCoordinate sourceCoordinate = sourceStop == null ? new GeoCoordinate(sourceLatitude, sourceLongitude) : null;
+        GeoCoordinate targetCoordinate = targetStop == null ? new GeoCoordinate(targetLatitude, targetLongitude) : null;
+
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
                 maxTravelTime);
 
-        return service.getConnections(sourceStop, targetStop, departureDateTime, TimeType.DEPARTURE, config)
-                .stream()
-                .map(DtoMapper::map)
-                .toList();
+        List<ch.naviqore.service.Connection> connections;
+
+        if (sourceStop != null && targetStop != null) {
+            connections = service.getConnections(sourceStop, targetStop, departureDateTime, TimeType.DEPARTURE, config);
+        } else if (sourceStop != null) {
+            connections = service.getConnections(sourceStop, targetCoordinate, departureDateTime, TimeType.DEPARTURE,
+                    config);
+        } else if (targetStop != null) {
+            connections = service.getConnections(sourceCoordinate, targetStop, departureDateTime, TimeType.DEPARTURE,
+                    config);
+        } else {
+            connections = service.getConnections(sourceCoordinate, targetCoordinate, departureDateTime,
+                    TimeType.DEPARTURE, config);
+        }
+
+        return connections.stream().map(DtoMapper::map).toList();
     }
 
     @GetMapping("/isolines")
