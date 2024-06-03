@@ -62,6 +62,10 @@ final class Benchmark {
     private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int NOT_AVAILABLE = -1;
+    private static final int WALKING_SPEED = 3000;
+    private static final int MINIMUM_TRANSFER_TIME = 120;
+    private static final int SAME_STATION_TRANSFER_TIME = 120;
+    private static final int MAX_WALK_DISTANCE = 500;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -85,10 +89,12 @@ final class Benchmark {
         //  this approach, transfers can be generated according to different rules with the first applicable one taking
         //  precedence.
         KDTree<Stop> spatialStopIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
-        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(3000);
-        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex);
+        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
+        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
+                MAX_WALK_DISTANCE, spatialStopIndex);
         List<MinimumTimeTransfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
-        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(120);
+        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
+                SAME_STATION_TRANSFER_TIME);
         additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
 
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers).convert(SCHEDULE_DATE);
