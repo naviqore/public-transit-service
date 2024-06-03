@@ -35,10 +35,10 @@ public class SameStationTransferGeneratorTest {
         void shouldCreateTransfers_withPositiveSameStationTransferTime() {
             GtfsSchedule schedule = getSchedule();
             SameStationTransferGenerator generator = new SameStationTransferGenerator(120);
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertEquals(2, transfers.size());
-            for (MinimumTimeTransfer transfer : transfers) {
+            for (TransferGenerator.Transfer transfer : transfers) {
                 assertEquals(transfer.from(), transfer.to());
                 assertEquals(120, transfer.duration());
             }
@@ -48,10 +48,10 @@ public class SameStationTransferGeneratorTest {
         void shouldCreateTransfers_withZeroSameStationTransferTime() {
             GtfsSchedule schedule = getSchedule();
             SameStationTransferGenerator generator = new SameStationTransferGenerator(0);
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertEquals(2, transfers.size());
-            for (MinimumTimeTransfer transfer : transfers) {
+            for (TransferGenerator.Transfer transfer : transfers) {
                 assertEquals(transfer.from(), transfer.to());
                 assertEquals(0, transfer.duration());
             }

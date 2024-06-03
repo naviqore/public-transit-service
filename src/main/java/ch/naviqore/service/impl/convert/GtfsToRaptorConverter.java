@@ -4,7 +4,7 @@ import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.Raptor;
 import ch.naviqore.raptor.RaptorBuilder;
-import ch.naviqore.service.impl.transfer.MinimumTimeTransfer;
+import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDate;
@@ -29,14 +29,14 @@ public class GtfsToRaptorConverter {
     private final Set<String> addedStops = new HashSet<>();
     private final RaptorBuilder builder = Raptor.builder();
     private final GtfsRoutePartitioner partitioner;
-    private final List<MinimumTimeTransfer> additionalTransfers;
+    private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
     public GtfsToRaptorConverter(GtfsSchedule schedule) {
         this(schedule, List.of());
     }
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, List<MinimumTimeTransfer> additionalTransfers) {
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
@@ -100,12 +100,12 @@ public class GtfsToRaptorConverter {
             }
         }
 
-        for (MinimumTimeTransfer transfer : additionalTransfers) {
+        for (TransferGenerator.Transfer transfer : additionalTransfers) {
 
             if( transfer.from() == transfer.to() ) {
                 // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
                 //  transfers between the same station, as not implemented yet.
-                log.warn("Omit adding transfer from {} to {} with duration {} as it is the same stop", transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                log.warn("Omit adding transfer from {} 2to {} with duration {} as it is the same stop", transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;
             }
 

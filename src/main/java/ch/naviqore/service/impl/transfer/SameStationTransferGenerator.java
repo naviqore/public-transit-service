@@ -29,12 +29,12 @@ public class SameStationTransferGenerator implements TransferGenerator {
     }
 
     @Override
-    public List<MinimumTimeTransfer> generateTransfers(GtfsSchedule schedule) {
-        List<MinimumTimeTransfer> transfers = new ArrayList<>();
+    public List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule) {
+        List<TransferGenerator.Transfer> transfers = new ArrayList<>();
         Map<String, Stop> stops = schedule.getStops();
         log.info("Generating same station transfers for {} stops", stops.size());
         for (Stop fromStop : stops.values()) {
-            transfers.add(new MinimumTimeTransfer(fromStop, fromStop, sameStationTransferTime));
+            transfers.add(new TransferGenerator.Transfer(fromStop, fromStop, sameStationTransferTime));
         }
         return transfers;
     }

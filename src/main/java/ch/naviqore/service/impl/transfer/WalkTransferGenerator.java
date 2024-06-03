@@ -61,11 +61,11 @@ public class WalkTransferGenerator implements TransferGenerator {
      * @return List of minimum time transfers.
      */
     @Override
-    public List<MinimumTimeTransfer> generateTransfers(GtfsSchedule schedule) {
+    public List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule) {
         Map<String, Stop> stops = schedule.getStops();
 
         log.info("Generating transfers between {} stops", stops.size());
-        List<MinimumTimeTransfer> transfers = stops.values().parallelStream().flatMap(fromStop -> {
+        List<TransferGenerator.Transfer> transfers = stops.values().parallelStream().flatMap(fromStop -> {
             List<Stop> nearbyStops = spatialStopIndex.rangeSearch(fromStop, maxWalkDistance);
             return nearbyStops.stream()
                     .filter(toStop -> !toStop.equals(fromStop))
@@ -76,10 +76,10 @@ public class WalkTransferGenerator implements TransferGenerator {
         return new ArrayList<>(transfers);
     }
 
-    private MinimumTimeTransfer createTransfer(Stop fromStop, Stop toStop) {
+    private TransferGenerator.Transfer createTransfer(Stop fromStop, Stop toStop) {
         // calculate the walking time between the stops
         WalkCalculator.Walk walk = walkCalculator.calculateWalk(fromStop.getCoordinate(), toStop.getCoordinate());
         int transferDuration = Math.max(walk.duration(), minimumTransferTime);
-        return new MinimumTimeTransfer(fromStop, toStop, transferDuration);
+        return new TransferGenerator.Transfer(fromStop, toStop, transferDuration);
     }
 }

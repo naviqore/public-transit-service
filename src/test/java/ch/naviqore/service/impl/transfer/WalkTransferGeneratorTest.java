@@ -31,15 +31,15 @@ public class WalkTransferGeneratorTest {
             new StopData("stop2", "Zürich, Opernhaus", 47.365030, 8.547976), "stop3",
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
 
-    static void assertNoSameStationTransfers(List<MinimumTimeTransfer> transfers) {
-        for (MinimumTimeTransfer transfer : transfers) {
+    static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
+        for (TransferGenerator.Transfer transfer : transfers) {
             assertNotEquals(transfer.from(), transfer.to());
         }
     }
 
-    static MinimumTimeTransfer transferWasCreated(List<MinimumTimeTransfer> transfers, String fromStopId,
+    static TransferGenerator.Transfer transferWasCreated(List<TransferGenerator.Transfer> transfers, String fromStopId,
                                                   String toStopId) {
-        for (MinimumTimeTransfer transfer : transfers) {
+        for (TransferGenerator.Transfer transfer : transfers) {
             if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
                 return transfer;
             }
@@ -68,16 +68,16 @@ public class WalkTransferGeneratorTest {
                 getSpatialStopIndex(schedule));
     }
 
-    public void assertTransfersGenerated(List<MinimumTimeTransfer> transfers, String fromStopId, String toStopId,
+    public void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId,
                                          int minimumTransferTime) {
         assertTransfersGenerated(transfers, fromStopId, toStopId, minimumTransferTime, false);
     }
 
-    public void assertTransfersGenerated(List<MinimumTimeTransfer> transfers, String fromStopId, String toStopId,
+    public void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId,
                                          int minimumTransferTime, boolean shouldBeMinimumTransferTime) {
         try {
-            MinimumTimeTransfer transfer1 = transferWasCreated(transfers, fromStopId, toStopId);
-            MinimumTimeTransfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
+            TransferGenerator.Transfer transfer1 = transferWasCreated(transfers, fromStopId, toStopId);
+            TransferGenerator.Transfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
 
             if (shouldBeMinimumTransferTime) {
                 assertEquals(minimumTransferTime, transfer1.duration());
@@ -93,7 +93,7 @@ public class WalkTransferGeneratorTest {
         }
     }
 
-    public void assertTransferNotGenerated(List<MinimumTimeTransfer> transfers, String fromStopId, String toStopId) {
+    public void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId) {
         assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
         assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
     }
@@ -161,7 +161,7 @@ public class WalkTransferGeneratorTest {
             GtfsSchedule schedule = getSchedule();
             WalkTransferGenerator generator = getDefaultWalkTransferGenerator(schedule);
 
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertNoSameStationTransfers(transfers);
 
@@ -179,7 +179,7 @@ public class WalkTransferGeneratorTest {
             WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
                     1000, getSpatialStopIndex(schedule));
 
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertNoSameStationTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
@@ -194,7 +194,7 @@ public class WalkTransferGeneratorTest {
             WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, minimumTransferTime,
                     defaultMaxWalkDistance, getSpatialStopIndex(schedule));
 
-            List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertNoSameStationTransfers(transfers);
             // all transfers from / to Stadelhofen should be within search radius

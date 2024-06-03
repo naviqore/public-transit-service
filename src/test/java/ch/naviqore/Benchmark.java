@@ -10,8 +10,8 @@ import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.transfer.MinimumTimeTransfer;
 import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
@@ -92,7 +92,7 @@ final class Benchmark {
         BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
         WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
                 MAX_WALK_DISTANCE, spatialStopIndex);
-        List<MinimumTimeTransfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
+        List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
         SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
                 SAME_STATION_TRANSFER_TIME);
         additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));

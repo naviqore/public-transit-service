@@ -12,7 +12,6 @@ import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.transfer.MinimumTimeTransfer;
 import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
@@ -46,7 +45,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
-    private final List<MinimumTimeTransfer> minimumTimeTransfers;
+    private final List<TransferGenerator.Transfer> additionalTransfers;
 
     public PublicTransitServiceImpl(ServiceConfig config) {
         this.config = config;
@@ -62,7 +61,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 new WalkTransferGenerator(walkCalculator, config.getMinimumTransferTime(),
                         config.getMaxWalkingDistance(), spatialStopIndex));
 
-        minimumTimeTransfers = Initializer.generateMinimumTimeTransfers(schedule, transferGenerators);
+        additionalTransfers = Initializer.generateTransfers(schedule, transferGenerators);
     }
 
     private static void notYetImplementedCheck(TimeType timeType) {
@@ -157,7 +156,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> targetStops = getStopsWithWalkTimeFromLocation(target);
 
         // query connection from raptor
-        Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(time.toLocalDate());
 
         List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
 
@@ -206,7 +205,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> targetStops = getAllChildStopsFromStop(map(targetStop));
 
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(time.toLocalDate());
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(time.toLocalDate());
 
         // query connection from raptor
         List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
@@ -262,7 +261,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 departureTime.toLocalTime().toSecondOfDay());
 
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, minimumTimeTransfers).convert(departureTime.toLocalDate());
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
 
         Map<String, ch.naviqore.raptor.Connection> isoLines = raptor.getIsoLines(sourceStops);
 
@@ -381,10 +380,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                     .build();
         }
 
-        private static List<MinimumTimeTransfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
-                                                                              List<TransferGenerator> transferGenerators) {
-            List<MinimumTimeTransfer> minimumTimeTransfers = new ArrayList<>();
-            List<MinimumTimeTransfer> generatedTransfers = transferGenerators.parallelStream()
+        private static List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule,
+                                                                          List<TransferGenerator> transferGenerators) {
+            List<TransferGenerator.Transfer> generatedTransfers = new ArrayList<>();
+            List<TransferGenerator.Transfer> uncheckedGeneratedTransfers = transferGenerators.parallelStream()
                     .flatMap(generator -> generator.generateTransfers(schedule).stream())
                     .filter(transfer -> transfer.from()
                             .getTransfers()
@@ -392,14 +391,14 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                             .noneMatch(t -> t.getToStop().equals(transfer.to())))
                     .toList();
 
-            for (MinimumTimeTransfer transfer : generatedTransfers) {
-                if (minimumTimeTransfers.stream()
+            for (TransferGenerator.Transfer transfer : uncheckedGeneratedTransfers) {
+                if (generatedTransfers.stream()
                         .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
-                    minimumTimeTransfers.add(transfer);
+                    generatedTransfers.add(transfer);
                 }
             }
 
-            return minimumTimeTransfers;
+            return generatedTransfers;
         }
 
     }
