@@ -2,7 +2,6 @@ package ch.naviqore.app.dto;
 
 import ch.naviqore.service.SearchType;
 import ch.naviqore.service.*;
-import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

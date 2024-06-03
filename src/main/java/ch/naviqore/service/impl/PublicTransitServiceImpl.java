@@ -6,6 +6,7 @@ import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
@@ -38,6 +39,7 @@ import static ch.naviqore.service.impl.TypeMapper.map;
 @Log4j2
 public class PublicTransitServiceImpl implements PublicTransitService {
 
+    private final ServiceConfig config;
     private final GtfsSchedule schedule;
     private final Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStops;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
@@ -45,61 +47,21 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final WalkCalculator walkCalculator;
     private final List<MinimumTimeTransfer> minimumTimeTransfers;
 
-    public PublicTransitServiceImpl(String gtfsFilePath) {
-        schedule = readGtfsSchedule(gtfsFilePath);
-        parentStops = groupStopsByParent();
-        stopSearchIndex = generateStopSearchIndex(schedule, parentStops.keySet());
-        spatialStopIndex = generateSpatialStopIndex(schedule);
+    public PublicTransitServiceImpl(ServiceConfig config) {
+        this.config = config;
+        this.walkCalculator = Initializer.initializeWalkCalculator(config);
+        schedule = Initializer.readGtfsSchedule(config.getGtfsUrl());
+        parentStops = Initializer.groupStopsByParent(schedule);
+        stopSearchIndex = Initializer.generateStopSearchIndex(schedule, parentStops.keySet());
+        spatialStopIndex = Initializer.generateSpatialStopIndex(schedule);
 
-        // TODO: Allow adding removing dynamically
-        walkCalculator = new BeeLineWalkCalculator(3500);
-        List<TransferGenerator> transferGenerators = List.of(new SameStationTransferGenerator(120),
-                new WalkTransferGenerator(walkCalculator, 120, 500, spatialStopIndex));
+        // todo: make transfer generators configurable through application properties
+        List<TransferGenerator> transferGenerators = List.of(
+                new SameStationTransferGenerator(config.getMinimumTransferTime()),
+                new WalkTransferGenerator(walkCalculator, config.getMinimumTransferTime(),
+                        config.getMaxWalkingDistance(), spatialStopIndex));
 
-        minimumTimeTransfers = generateMinimumTimeTransfers(schedule, transferGenerators);
-    }
-
-    private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
-        // TODO: Download file if needed
-        try {
-            return new GtfsScheduleReader().read(gtfsFilePath);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-    
-    private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
-                                                                                             Set<String> parentStops) {
-        SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
-        parentStops.forEach(stopId -> builder.add(stopId.toLowerCase(), schedule.getStops().get(stopId)));
-
-        return builder.build();
-    }
-
-    private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
-        return new KDTreeBuilder<ch.naviqore.gtfs.schedule.model.Stop>().addLocations(schedule.getStops().values())
-                .build();
-    }
-
-    private static List<MinimumTimeTransfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
-                                                                          List<TransferGenerator> transferGenerators) {
-        List<MinimumTimeTransfer> minimumTimeTransfers = new ArrayList<>();
-        List<MinimumTimeTransfer> generatedTransfers = transferGenerators.parallelStream()
-                .flatMap(generator -> generator.generateTransfers(schedule).stream())
-                .filter(transfer -> transfer.from()
-                        .getTransfers()
-                        .stream()
-                        .noneMatch(t -> t.getToStop().equals(transfer.to())))
-                .toList();
-
-        for (MinimumTimeTransfer transfer : generatedTransfers) {
-            if (minimumTimeTransfers.stream()
-                    .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
-                minimumTimeTransfers.add(transfer);
-            }
-        }
-
-        return minimumTimeTransfers;
+        minimumTimeTransfers = Initializer.generateMinimumTimeTransfers(schedule, transferGenerators);
     }
 
     private static void notYetImplementedCheck(TimeType timeType) {
@@ -107,18 +69,6 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             // TODO: Implement in raptor
             throw new NotImplementedException();
         }
-    }
-
-    public Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent() {
-        Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
-        for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
-            String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
-            if (!parentStopIds.containsKey(id)) {
-                parentStopIds.put(id, new ArrayList<>());
-            }
-            parentStopIds.get(id).add(stop);
-        }
-        return parentStopIds;
     }
 
     @Override
@@ -331,7 +281,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             if (firstWalkDuration > minWalkDurationCutoff) {
                 int distance = (int) source.distanceTo(firstStop.getCoordinate());
                 firstMile = createWalk(distance, firstWalkDuration, WalkType.FIRST_MILE, departureTime,
-                        departureTime.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(), map(firstStop));
+                        departureTime.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(),
+                        map(firstStop));
             }
 
             ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(entry.getKey());
@@ -383,6 +334,73 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // TODO: Update method to pull new transit schedule from URL.
         //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
         log.warn("Updating static schedule not implemented yet");
+    }
+
+    private static class Initializer {
+
+        private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
+            return switch (config.getWalkCalculatorType()) {
+                case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
+                        new BeeLineWalkCalculator(config.getWalkingSpeed());
+            };
+        }
+
+        private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
+            // TODO: Download file if needed
+            try {
+                return new GtfsScheduleReader().read(gtfsFilePath);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        private static Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent(
+                GtfsSchedule schedule) {
+            Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
+            for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
+                String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
+                if (!parentStopIds.containsKey(id)) {
+                    parentStopIds.put(id, new ArrayList<>());
+                }
+                parentStopIds.get(id).add(stop);
+            }
+            return parentStopIds;
+        }
+
+        private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
+                                                                                                 Set<String> parentStops) {
+            SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
+            parentStops.forEach(stopId -> builder.add(stopId.toLowerCase(), schedule.getStops().get(stopId)));
+
+            return builder.build();
+        }
+
+        private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
+            return new KDTreeBuilder<ch.naviqore.gtfs.schedule.model.Stop>().addLocations(schedule.getStops().values())
+                    .build();
+        }
+
+        private static List<MinimumTimeTransfer> generateMinimumTimeTransfers(GtfsSchedule schedule,
+                                                                              List<TransferGenerator> transferGenerators) {
+            List<MinimumTimeTransfer> minimumTimeTransfers = new ArrayList<>();
+            List<MinimumTimeTransfer> generatedTransfers = transferGenerators.parallelStream()
+                    .flatMap(generator -> generator.generateTransfers(schedule).stream())
+                    .filter(transfer -> transfer.from()
+                            .getTransfers()
+                            .stream()
+                            .noneMatch(t -> t.getToStop().equals(transfer.to())))
+                    .toList();
+
+            for (MinimumTimeTransfer transfer : generatedTransfers) {
+                if (minimumTimeTransfers.stream()
+                        .noneMatch(t -> t.from().equals(transfer.from()) && t.to().equals(transfer.to()))) {
+                    minimumTimeTransfers.add(transfer);
+                }
+            }
+
+            return minimumTimeTransfers;
+        }
+
     }
 
 }
