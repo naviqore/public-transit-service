@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.model;
+package ch.naviqore.raptor;
 
 import ch.naviqore.raptor.RouteBuilder;
 import ch.naviqore.raptor.StopTime;

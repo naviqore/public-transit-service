@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.walkcalculator;
+package ch.naviqore.service.walk;
 
 import ch.naviqore.utils.spatial.GeoCoordinate;
 

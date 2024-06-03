@@ -1,9 +1,9 @@
-package ch.naviqore.service.impl.transfergenerator;
+package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
-import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
-import ch.naviqore.service.impl.walkcalculator.Walk;
+import ch.naviqore.service.walk.WalkCalculator;
+import ch.naviqore.service.walk.Walk;
 import ch.naviqore.utils.spatial.index.KDTree;
 import lombok.extern.log4j.Log4j2;
 

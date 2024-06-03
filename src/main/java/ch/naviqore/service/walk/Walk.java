@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.walkcalculator;
+package ch.naviqore.service.walk;
 
 /**
  * Represents a walk between two points. Is only intended to be used in the {@link WalkCalculator}.

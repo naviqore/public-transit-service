@@ -1,7 +1,5 @@
-package ch.naviqore.raptor.model;
+package ch.naviqore.raptor;
 
-import ch.naviqore.raptor.Raptor;
-import ch.naviqore.raptor.RaptorBuilder;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;

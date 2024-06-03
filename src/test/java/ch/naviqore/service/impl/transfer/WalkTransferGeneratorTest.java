@@ -1,10 +1,10 @@
-package ch.naviqore.service.impl.transfergenerator;
+package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import ch.naviqore.gtfs.schedule.model.Stop;
-import ch.naviqore.service.impl.walkcalculator.BeeLineWalkCalculator;
-import ch.naviqore.service.impl.walkcalculator.WalkCalculator;
+import ch.naviqore.service.walk.BeeLineWalkCalculator;
+import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import org.junit.jupiter.api.Nested;
@@ -33,7 +33,7 @@ public class WalkTransferGeneratorTest {
 
     static void assertNoSameStationTransfers(List<MinimumTimeTransfer> transfers) {
         for (MinimumTimeTransfer transfer : transfers) {
-            Assertions.assertNotEquals(transfer.from(), transfer.to());
+            assertNotEquals(transfer.from(), transfer.to());
         }
     }
 
@@ -80,11 +80,11 @@ public class WalkTransferGeneratorTest {
             MinimumTimeTransfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
 
             if (shouldBeMinimumTransferTime) {
-                Assertions.assertEquals(minimumTransferTime, transfer1.duration());
-                Assertions.assertEquals(minimumTransferTime, transfer2.duration());
+                assertEquals(minimumTransferTime, transfer1.duration());
+                assertEquals(minimumTransferTime, transfer2.duration());
             } else {
-                Assertions.assertTrue(transfer1.duration() > minimumTransferTime);
-                Assertions.assertTrue(transfer2.duration() > minimumTransferTime);
+                assertTrue(transfer1.duration() > minimumTransferTime);
+                assertTrue(transfer2.duration() > minimumTransferTime);
             }
 
         } catch (NoSuchElementException e) {
@@ -94,8 +94,8 @@ public class WalkTransferGeneratorTest {
     }
 
     public void assertTransferNotGenerated(List<MinimumTimeTransfer> transfers, String fromStopId, String toStopId) {
-        Assertions.assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
-        Assertions.assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
     }
 
     record StopData(String id, String name, double lat, double lon) {
@@ -106,49 +106,49 @@ public class WalkTransferGeneratorTest {
 
         @Test
         void simpleTransferGenerator() {
-            Assertions.assertDoesNotThrow(() -> getDefaultWalkTransferGenerator());
+            assertDoesNotThrow(() -> getDefaultWalkTransferGenerator());
         }
 
         @Test
         void nullWalkCalculator_shouldThrowException() {
             KDTree<Stop> spatialIndex = getSpatialStopIndex(getSchedule());
-            Assertions.assertThrows(IllegalArgumentException.class,
+            assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(null, defaultMinimumTransferTime, defaultMaxWalkDistance,
                             spatialIndex));
         }
 
         @Test
         void negativeSameStationTransferTime_shouldThrowException() {
-            Assertions.assertThrows(IllegalArgumentException.class,
+            assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(defaultCalculator, -1, defaultMaxWalkDistance,
                             getSpatialStopIndex(getSchedule())));
         }
 
         @Test
         void zeroSameStationTransferTime_shouldNotThrowException() {
-            Assertions.assertDoesNotThrow(() -> new WalkTransferGenerator(defaultCalculator, 0, defaultMaxWalkDistance,
+            assertDoesNotThrow(() -> new WalkTransferGenerator(defaultCalculator, 0, defaultMaxWalkDistance,
                     getSpatialStopIndex(getSchedule())));
         }
 
         @Test
         void negativeMaxWalkDistance_shouldThrowException() {
-            Assertions.assertThrows(IllegalArgumentException.class,
+            assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, -1,
                             getSpatialStopIndex(getSchedule())));
         }
 
         @Test
         void zeroMaxWalkDistance_shouldThrowException() {
-            Assertions.assertThrows(IllegalArgumentException.class,
+            assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, 0,
                             getSpatialStopIndex(getSchedule())));
         }
 
         @Test
         void nullSpatialIndex_shouldThrowException() {
-            Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, defaultMaxWalkDistance,
-                            null));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
+                            defaultMaxWalkDistance, null));
         }
 
     }

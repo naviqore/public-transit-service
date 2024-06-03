@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.transfergenerator;
+package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
@@ -15,17 +15,17 @@ public class SameStationTransferGeneratorTest {
     class Constructor {
         @Test
         void simpleTransferGenerator() {
-            Assertions.assertDoesNotThrow(() -> new SameStationTransferGenerator(120));
+            assertDoesNotThrow(() -> new SameStationTransferGenerator(120));
         }
 
         @Test
         void negativeSameStationTransferTime_shouldThrowException() {
-            Assertions.assertThrows(IllegalArgumentException.class, () -> new SameStationTransferGenerator(-1));
+            assertThrows(IllegalArgumentException.class, () -> new SameStationTransferGenerator(-1));
         }
 
         @Test
         void zeroSameStationTransferTime_shouldNotThrowException() {
-            Assertions.assertDoesNotThrow(() -> new SameStationTransferGenerator(0));
+            assertDoesNotThrow(() -> new SameStationTransferGenerator(0));
         }
     }
 
@@ -37,10 +37,10 @@ public class SameStationTransferGeneratorTest {
             SameStationTransferGenerator generator = new SameStationTransferGenerator(120);
             List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
 
-            Assertions.assertEquals(2, transfers.size());
+            assertEquals(2, transfers.size());
             for (MinimumTimeTransfer transfer : transfers) {
-                Assertions.assertEquals(transfer.from(), transfer.to());
-                Assertions.assertEquals(120, transfer.duration());
+                assertEquals(transfer.from(), transfer.to());
+                assertEquals(120, transfer.duration());
             }
         }
 
@@ -50,10 +50,10 @@ public class SameStationTransferGeneratorTest {
             SameStationTransferGenerator generator = new SameStationTransferGenerator(0);
             List<MinimumTimeTransfer> transfers = generator.generateTransfers(schedule);
 
-            Assertions.assertEquals(2, transfers.size());
+            assertEquals(2, transfers.size());
             for (MinimumTimeTransfer transfer : transfers) {
-                Assertions.assertEquals(transfer.from(), transfer.to());
-                Assertions.assertEquals(0, transfer.duration());
+                assertEquals(transfer.from(), transfer.to());
+                assertEquals(0, transfer.duration());
             }
         }
     }

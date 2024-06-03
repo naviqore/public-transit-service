@@ -1,7 +1,7 @@
-package ch.naviqore.service.impl.transfergenerator;
+package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.service.impl.GtfsToRaptorConverter;
+import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 
 import java.util.List;
 

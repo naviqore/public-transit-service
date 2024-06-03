@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.walkcalculator;
+package ch.naviqore.service.walk;
 
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.Nested;
@@ -13,17 +13,17 @@ public class BeeLineWalkCalculatorTest {
 
         @Test
         void withValidWalkingSpeed() {
-            Assertions.assertDoesNotThrow(() -> new BeeLineWalkCalculator(1000));
+            assertDoesNotThrow(() -> new BeeLineWalkCalculator(1000));
         }
 
         @Test
         void shouldCreateExceptionForNegativeWalkingSpeed() {
-            Assertions.assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(-1));
+            assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(-1));
         }
 
         @Test
         void shouldCreateExceptionForZeroWalkingSpeed() {
-            Assertions.assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(0));
+            assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(0));
         }
 
     }
@@ -42,10 +42,10 @@ public class BeeLineWalkCalculatorTest {
             double distanceInMeters = coordinate1.distanceTo(coordinate2);
             int durationInSeconds = (int) distanceInMeters;
 
-            Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
+            ch.naviqore.service.walk.Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
 
-            Assertions.assertEquals(walk.distance(), Math.round(distanceInMeters));
-            Assertions.assertEquals(walk.duration(), durationInSeconds);
+            assertEquals(walk.distance(), Math.round(distanceInMeters));
+            assertEquals(walk.duration(), durationInSeconds);
         }
 
         @Test
@@ -56,19 +56,18 @@ public class BeeLineWalkCalculatorTest {
             GeoCoordinate coordinate1 = getCoordinate1();
             GeoCoordinate coordinate2 = getCoordinate2();
 
-            Walk walk1 = calculator1.calculateWalk(coordinate1, coordinate2);
+            ch.naviqore.service.walk.Walk walk1 = calculator1.calculateWalk(coordinate1, coordinate2);
             Walk walk2 = calculator2.calculateWalk(coordinate2, coordinate1);
 
-            Assertions.assertEquals(walk1.distance(), walk2.distance());
+            assertEquals(walk1.distance(), walk2.distance());
             // Need to accept +/-1 s difference, as rounding may introduce this inaccuracy
-            Assertions.assertTrue(Math.abs(walk1.duration() - 2 * walk2.duration()) <= 1,
-                    "Walk1 is not twice as fast as walk2");
+            assertTrue(Math.abs(walk1.duration() - 2 * walk2.duration()) <= 1, "Walk1 is not twice as fast as walk2");
         }
 
         @Test
         void withNullCoordinate_shouldThrowException() {
             BeeLineWalkCalculator calculator = new BeeLineWalkCalculator(4000);
-            Assertions.assertThrows(IllegalArgumentException.class, () -> calculator.calculateWalk(null, getCoordinate2()));
+            assertThrows(IllegalArgumentException.class, () -> calculator.calculateWalk(null, getCoordinate2()));
         }
 
         private GeoCoordinate getCoordinate1() {

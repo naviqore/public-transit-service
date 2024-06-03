@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.transfergenerator;
+package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;

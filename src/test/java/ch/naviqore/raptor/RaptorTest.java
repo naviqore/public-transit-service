@@ -1,7 +1,5 @@
-package ch.naviqore.raptor.model;
+package ch.naviqore.raptor;
 
-import ch.naviqore.raptor.Connection;
-import ch.naviqore.raptor.Raptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -9,7 +7,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 
-import static ch.naviqore.raptor.model.RaptorTestBuilder.SECONDS_IN_HOUR;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -37,7 +34,7 @@ class RaptorTest {
 
             String sourceStop = "A";
             String targetStop = "Q";
-            int departureTime = 8 * SECONDS_IN_HOUR;
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
 
             // check if 2 connections were found
@@ -78,7 +75,7 @@ class RaptorTest {
 
             String sourceStop = "A";
             String targetStop = "B";
-            int departureTime = 8 * SECONDS_IN_HOUR;
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
@@ -98,7 +95,7 @@ class RaptorTest {
 
             String sourceStop = "A";
             String targetStop = "Q";
-            int departureTime = 8 * SECONDS_IN_HOUR;
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             assertTrue(connections.isEmpty(), "No connection should be found");
         }
@@ -115,7 +112,7 @@ class RaptorTest {
 
             String sourceStop = "N";
             String targetStop = "D";
-            int departureTime = 8 * SECONDS_IN_HOUR;
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
@@ -143,7 +140,7 @@ class RaptorTest {
             void shouldThrowErrorWhenSourceStopNotExists() {
                 String sourceStop = "NonExistentStop";
                 String targetStop = "A";
-                int departureTime = 8 * SECONDS_IN_HOUR;
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
 
                 assertThrows(IllegalArgumentException.class,
                         () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
@@ -154,7 +151,7 @@ class RaptorTest {
             void shouldThrowErrorWhenTargetStopNotExists() {
                 String sourceStop = "A";
                 String targetStop = "NonExistentStop";
-                int departureTime = 8 * SECONDS_IN_HOUR;
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
 
                 assertThrows(IllegalArgumentException.class,
                         () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
@@ -170,7 +167,7 @@ class RaptorTest {
                         () -> raptor.routeEarliestArrival(sourceStop, targetStop, -1),
                         "Departure time cannot be negative");
                 assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, 49 * SECONDS_IN_HOUR),
+                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, 49 * RaptorTestBuilder.SECONDS_IN_HOUR),
                         "Departure time cannot be greater than two days");
             }
 
@@ -178,7 +175,7 @@ class RaptorTest {
             void shouldThrowErrorWhenRequestBetweenSameStop() {
                 String sourceStop = "A";
                 String targetStop = "A";
-                int departureTime = 8 * SECONDS_IN_HOUR;
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
 
                 assertThrows(IllegalArgumentException.class,
                         () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
