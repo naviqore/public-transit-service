@@ -7,6 +7,7 @@ import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -18,27 +19,129 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class WalkTransferGeneratorTest {
 
-    static WalkCalculator defaultCalculator = new BeeLineWalkCalculator(4000);
-    static int defaultMinimumTransferTime = 120;
-    static int defaultMaxWalkDistance = 500;
-
-    // distances between:
-    // Stadelhofen <-> Opernhaus = 171 m
-    // Stadelhofen <-> Kunsthaus = 573 m
-    // Opernhaus <-> Kunsthaus = 403 m
-    static Map<String, StopData> testStops = Map.of("stop1",
+    /**
+     * Distances between locations:
+     * <ul>
+     *   <li>Stadelhofen <-> Opernhaus = 171 m</li>
+     *   <li>Stadelhofen <-> Kunsthaus = 573 m</li>
+     *   <li>Opernhaus <-> Kunsthaus = 403 m</li>
+     * </ul>
+     */
+    private static final Map<String, StopData> TEST_STOPS = Map.of("stop1",
             new StopData("stop1", "Zürich, Stadelhofen", 47.366542, 8.548384), "stop2",
             new StopData("stop2", "Zürich, Opernhaus", 47.365030, 8.547976), "stop3",
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
+    private static final WalkCalculator DEFAULT_CALCULATOR = new BeeLineWalkCalculator(4000);
+    private static final int DEFAULT_MINIMUM_TRANSFER_TIME = 120;
+    private static final int DEFAULT_MAX_WALK_DISTANCE = 500;
 
-    static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
-        for (TransferGenerator.Transfer transfer : transfers) {
-            assertNotEquals(transfer.from(), transfer.to());
+    private GtfsSchedule schedule;
+    private KDTree<Stop> spatialIndex;
+    private WalkTransferGenerator generator;
+
+    @BeforeEach
+    void setUp() {
+        GtfsScheduleBuilder builder = GtfsSchedule.builder();
+        TEST_STOPS.values()
+                .forEach(stopData -> builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(),
+                        stopData.lon()));
+        schedule = builder.build();
+        spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
+        generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                DEFAULT_MAX_WALK_DISTANCE, spatialIndex);
+    }
+
+    @Nested
+    class Constructor {
+
+        @Test
+        void simpleTransferGenerator() {
+            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                    DEFAULT_MAX_WALK_DISTANCE, spatialIndex));
+        }
+
+        @Test
+        void nullWalkCalculator_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(null, DEFAULT_MINIMUM_TRANSFER_TIME, DEFAULT_MAX_WALK_DISTANCE,
+                            spatialIndex));
+        }
+
+        @Test
+        void negativeSameStationTransferTime_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, -1, DEFAULT_MAX_WALK_DISTANCE, spatialIndex));
+        }
+
+        @Test
+        void zeroSameStationTransferTime_shouldNotThrowException() {
+            assertDoesNotThrow(
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, 0, DEFAULT_MAX_WALK_DISTANCE, spatialIndex));
+        }
+
+        @Test
+        void negativeMaxWalkDistance_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME, -1,
+                            spatialIndex));
+        }
+
+        @Test
+        void zeroMaxWalkDistance_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME, 0,
+                            spatialIndex));
+        }
+
+        @Test
+        void nullSpatialIndex_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                            DEFAULT_MAX_WALK_DISTANCE, null));
+        }
+
+    }
+
+    @Nested
+    class CreateTransfers {
+
+        @Test
+        void expectedBehavior() {
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
+            assertNoSameStationTransfers(transfers);
+            assertTransfersGenerated(transfers, "stop1", "stop2");
+            assertTransfersGenerated(transfers, "stop1", "stop3");
+            assertTransferNotGenerated(transfers, "stop2", "stop3");
+        }
+
+        @Test
+        void expectedBehavior_withIncreasedSearchRadius() {
+            WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
+                    DEFAULT_MINIMUM_TRANSFER_TIME,
+                    1000, spatialIndex);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
+            assertNoSameStationTransfers(transfers);
+            assertTransfersGenerated(transfers, "stop1", "stop2");
+            assertTransfersGenerated(transfers, "stop1", "stop3");
+            assertTransfersGenerated(transfers, "stop2", "stop3");
+        }
+
+        @Test
+        void expectedBehavior_shouldBeMinimumTransferTime() {
+            int minimumTransferTime = 2000;
+            WalkTransferGenerator highMinTimeGenerator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
+                    minimumTransferTime, DEFAULT_MAX_WALK_DISTANCE, spatialIndex);
+            List<TransferGenerator.Transfer> transfers = highMinTimeGenerator.generateTransfers(schedule);
+            assertNoSameStationTransfers(transfers);
+            assertTransfersGenerated(transfers, "stop1", "stop2");
+            assertTransfersGenerated(transfers, "stop1", "stop3");
+            assertTransferNotGenerated(transfers, "stop2", "stop3");
+            assertTransferNotGenerated(transfers, "stop1", "stop1");
         }
     }
 
-    static TransferGenerator.Transfer transferWasCreated(List<TransferGenerator.Transfer> transfers, String fromStopId,
-                                                  String toStopId) {
+    private static TransferGenerator.Transfer transferWasCreated(List<TransferGenerator.Transfer> transfers,
+                                                                 String fromStopId, String toStopId) {
         for (TransferGenerator.Transfer transfer : transfers) {
             if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
                 return transfer;
@@ -47,34 +150,28 @@ public class WalkTransferGeneratorTest {
         throw new NoSuchElementException();
     }
 
-    static GtfsSchedule getSchedule() {
-        GtfsScheduleBuilder builder = GtfsSchedule.builder();
-        for (StopData stopData : testStops.values()) {
-            builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(), stopData.lon());
+
+    private static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
+        for (TransferGenerator.Transfer transfer : transfers) {
+            assertNotEquals(transfer.from(), transfer.to());
         }
-        return builder.build();
     }
 
-    static KDTree<Stop> getSpatialStopIndex(GtfsSchedule schedule) {
-        return new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
+    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                 String toStopId) {
+        assertTransfersGenerated(transfers, fromStopId, toStopId,
+                WalkTransferGeneratorTest.DEFAULT_MINIMUM_TRANSFER_TIME, false);
     }
 
-    static WalkTransferGenerator getDefaultWalkTransferGenerator() {
-        return getDefaultWalkTransferGenerator(getSchedule());
+    private static void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                   String toStopId) {
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
     }
 
-    static WalkTransferGenerator getDefaultWalkTransferGenerator(GtfsSchedule schedule) {
-        return new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, defaultMaxWalkDistance,
-                getSpatialStopIndex(schedule));
-    }
-
-    public void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId,
-                                         int minimumTransferTime) {
-        assertTransfersGenerated(transfers, fromStopId, toStopId, minimumTransferTime, false);
-    }
-
-    public void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId,
-                                         int minimumTransferTime, boolean shouldBeMinimumTransferTime) {
+    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                 String toStopId, int minimumTransferTime,
+                                                 boolean shouldBeMinimumTransferTime) {
         try {
             TransferGenerator.Transfer transfer1 = transferWasCreated(transfers, fromStopId, toStopId);
             TransferGenerator.Transfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
@@ -93,117 +190,7 @@ public class WalkTransferGeneratorTest {
         }
     }
 
-    public void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId, String toStopId) {
-        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
-        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
-    }
-
-    record StopData(String id, String name, double lat, double lon) {
-    }
-
-    @Nested
-    class Constructor {
-
-        @Test
-        void simpleTransferGenerator() {
-            assertDoesNotThrow(() -> getDefaultWalkTransferGenerator());
-        }
-
-        @Test
-        void nullWalkCalculator_shouldThrowException() {
-            KDTree<Stop> spatialIndex = getSpatialStopIndex(getSchedule());
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(null, defaultMinimumTransferTime, defaultMaxWalkDistance,
-                            spatialIndex));
-        }
-
-        @Test
-        void negativeSameStationTransferTime_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, -1, defaultMaxWalkDistance,
-                            getSpatialStopIndex(getSchedule())));
-        }
-
-        @Test
-        void zeroSameStationTransferTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new WalkTransferGenerator(defaultCalculator, 0, defaultMaxWalkDistance,
-                    getSpatialStopIndex(getSchedule())));
-        }
-
-        @Test
-        void negativeMaxWalkDistance_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, -1,
-                            getSpatialStopIndex(getSchedule())));
-        }
-
-        @Test
-        void zeroMaxWalkDistance_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime, 0,
-                            getSpatialStopIndex(getSchedule())));
-        }
-
-        @Test
-        void nullSpatialIndex_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
-                            defaultMaxWalkDistance, null));
-        }
-
-    }
-
-    @Nested
-    class CreateTransfers {
-
-        @Test
-        void expectedBehavior() {
-            GtfsSchedule schedule = getSchedule();
-            WalkTransferGenerator generator = getDefaultWalkTransferGenerator(schedule);
-
-            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-
-            // all transfers from / to Stadelhofen should be within search radius
-            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
-
-            // transfer between Kunsthaus and Opernhaus should not be created
-            assertTransferNotGenerated(transfers, "stop2", "stop3");
-        }
-
-        @Test
-        void expectedBehavior_withIncreasedSearchRadius() {
-            GtfsSchedule schedule = getSchedule();
-            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, defaultMinimumTransferTime,
-                    1000, getSpatialStopIndex(schedule));
-
-            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-            assertTransfersGenerated(transfers, "stop1", "stop2", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop1", "stop3", defaultMinimumTransferTime);
-            assertTransfersGenerated(transfers, "stop2", "stop3", defaultMinimumTransferTime);
-        }
-
-        @Test
-        void expectedBehavior_shouldBeMinimumTransferTime() {
-            int minimumTransferTime = 2000; // should be applied to all stops within search radius
-            GtfsSchedule schedule = getSchedule();
-            WalkTransferGenerator generator = new WalkTransferGenerator(defaultCalculator, minimumTransferTime,
-                    defaultMaxWalkDistance, getSpatialStopIndex(schedule));
-
-            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
-
-            assertNoSameStationTransfers(transfers);
-            // all transfers from / to Stadelhofen should be within search radius
-            assertTransfersGenerated(transfers, "stop1", "stop2", minimumTransferTime, true);
-            assertTransfersGenerated(transfers, "stop1", "stop3", minimumTransferTime, true);
-
-            // transfer between Kunsthaus and Opernhaus should not be created
-            assertTransferNotGenerated(transfers, "stop2", "stop3");
-        }
+    private record StopData(String id, String name, double lat, double lon) {
     }
 
 }

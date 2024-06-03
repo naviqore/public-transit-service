@@ -2,6 +2,7 @@ package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -31,9 +32,19 @@ public class SameStationTransferGeneratorTest {
 
     @Nested
     class CreateTransfers {
+
+        private GtfsSchedule schedule;
+
+        @BeforeEach
+        void setUp() {
+            GtfsScheduleBuilder builder = GtfsSchedule.builder();
+            builder.addStop("stop1", "Zürich, Stadelhofen", "stop1", 47.366542, 8.548384);
+            builder.addStop("stop2", "Zürich, Opernhaus", "stop2", 47.365030, 8.547976);
+            schedule = builder.build();
+        }
+
         @Test
         void shouldCreateTransfers_withPositiveSameStationTransferTime() {
-            GtfsSchedule schedule = getSchedule();
             SameStationTransferGenerator generator = new SameStationTransferGenerator(120);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
@@ -46,7 +57,6 @@ public class SameStationTransferGeneratorTest {
 
         @Test
         void shouldCreateTransfers_withZeroSameStationTransferTime() {
-            GtfsSchedule schedule = getSchedule();
             SameStationTransferGenerator generator = new SameStationTransferGenerator(0);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
@@ -57,12 +67,4 @@ public class SameStationTransferGeneratorTest {
             }
         }
     }
-
-    static GtfsSchedule getSchedule() {
-        GtfsScheduleBuilder builder = GtfsSchedule.builder();
-        builder.addStop("stop1", "Zürich, Stadelhofen", "stop1", 47.366542, 8.548384);
-        builder.addStop("stop2", "Zürich, Opernhaus", "stop2", 47.365030, 8.547976);
-        return builder.build();
-    }
-
 }
