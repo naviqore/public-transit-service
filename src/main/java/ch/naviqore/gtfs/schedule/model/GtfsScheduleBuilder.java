@@ -13,9 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Implements a builder pattern for constructing instances of {@link GtfsSchedule}. This builder helps assemble a GTFS
@@ -38,6 +36,7 @@ public class GtfsScheduleBuilder {
     private final Map<String, Stop> stops = new HashMap<>();
     private final Map<String, Route> routes = new HashMap<>();
     private final Map<String, Trip> trips = new HashMap<>();
+    private final Map<String, List<Stop>> parents = new HashMap<>();
 
     private boolean built = false;
 
@@ -57,7 +56,9 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, parentStop, new GeoCoordinate(lat, lon)));
+        Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon));
+        parents.computeIfAbsent(parentStop, ignored -> new ArrayList<>()).add(stop);
+        stops.put(id, stop);
         return this;
     }
 
@@ -171,13 +172,28 @@ public class GtfsScheduleBuilder {
     public GtfsSchedule build() {
         checkNotBuilt();
         log.info("Building schedule with {} stops, {} routes and {} trips", stops.size(), routes.size(), trips.size());
+
+        // set parents for child
+        parents.forEach((parentId, children) -> {
+            Stop parent = stops.get(parentId);
+            if (parent == null) {
+                log.warn("Parent {} does not exist", parentId);
+            } else {
+                parent.setChildren(children);
+                children.forEach(child -> child.setParent(parent));
+            }
+        });
+
+        // initialize: make immutable and resize arrays to capacity
         trips.values().parallelStream().forEach(Initializable::initialize);
         stops.values().parallelStream().forEach(Initializable::initialize);
         routes.values().parallelStream().forEach(Initializable::initialize);
         calendars.values().parallelStream().forEach(Initializable::initialize);
+
         GtfsSchedule schedule = new GtfsSchedule(agencies, calendars, stops, routes, trips);
         clear();
         built = true;
+
         return schedule;
     }
 

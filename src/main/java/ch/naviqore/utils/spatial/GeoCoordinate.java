@@ -1,5 +1,7 @@
 package ch.naviqore.utils.spatial;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public record GeoCoordinate(double latitude, double longitude) implements Coordinate, Comparable<GeoCoordinate> {
 
     private static final int EARTH_RADIUS = 6371000;
@@ -29,11 +31,13 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
         }
     }
 
+    @JsonIgnore
     @Override
     public double getFirstComponent() {
         return latitude;
     }
 
+    @JsonIgnore
     @Override
     public double getSecondComponent() {
         return longitude;

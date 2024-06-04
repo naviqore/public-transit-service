@@ -43,7 +43,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private static final int MIN_WALK_DURATION = 120;
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
-    private final Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStops;
+    // private final Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStops;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
@@ -53,8 +53,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         this.config = config;
         this.walkCalculator = Initializer.initializeWalkCalculator(config);
         schedule = Initializer.readGtfsSchedule(config.getGtfsUrl());
-        parentStops = Initializer.groupStopsByParent(schedule);
-        stopSearchIndex = Initializer.generateStopSearchIndex(schedule, parentStops.keySet());
+        // parentStops = Initializer.groupStopsByParent(schedule);
+        stopSearchIndex = Initializer.generateStopSearchIndex(schedule);
         spatialStopIndex = Initializer.generateSpatialStopIndex(schedule);
 
         // todo: make transfer generators configurable through application properties
@@ -82,8 +82,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public Optional<Stop> getNearestStop(GeoCoordinate location) {
         log.debug("Get nearest stop to {}", location);
         ch.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbour(location);
-        if (stop != null && stop.getParentId() != null && !stop.getParentId().equals(stop.getId())) {
-            stop = schedule.getStops().get(stop.getParentId());
+        // if nearest stop, which could be null, is a child stop, return parent stop
+        if (stop != null && stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
+            stop = stop.getParent().get();
         }
         return Optional.ofNullable(map(stop));
     }
@@ -95,9 +96,11 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         List<ch.naviqore.gtfs.schedule.model.Stop> stops = new ArrayList<>();
 
         for (ch.naviqore.gtfs.schedule.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
-            if (stop.getParentId() != null && !stop.getParentId().equals(stop.getId())) {
-                stop = schedule.getStops().get(stop.getParentId());
+            // if nearest stop is a child stop, return parent stop
+            if (stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
+                stop = stop.getParent().get();
             }
+            // avoid adding same parent stop multiple times
             if (!stops.contains(stop)) {
                 stops.add(stop);
             }
@@ -119,20 +122,21 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 .toList();
     }
 
+    // returns all stops to be included in search
     private List<String> getAllStopIdsForStop(Stop stop) {
-        List<String> stopIds;
-        if (parentStops.containsKey(stop.getId())) {
-            stopIds = getAllStopIdsForParentStop(stop.getId());
-        } else {
-            stopIds = List.of(stop.getId());
-        }
-        return stopIds;
-    }
+        ch.naviqore.gtfs.schedule.model.Stop scheduleStop = schedule.getStops().get(stop.getId());
 
-    private List<String> getAllStopIdsForParentStop(String stopId) {
-        ch.naviqore.gtfs.schedule.model.Stop gtfsStop = schedule.getStops().get(stopId);
-        String parentId = gtfsStop.getParentId() == null ? gtfsStop.getId() : gtfsStop.getParentId();
-        return parentStops.get(parentId).stream().map(ch.naviqore.gtfs.schedule.model.Stop::getId).toList();
+        if (scheduleStop.getChildren().isEmpty()) {
+            // child stop; return itself
+            return List.of(stop.getId());
+        } else {
+            // parent stop; return all children and itself (departures on parent are possible)
+            List<String> stopIds = new ArrayList<>();
+            stopIds.add(scheduleStop.getId());
+            scheduleStop.getChildren().forEach(child -> stopIds.add(child.getId()));
+
+            return stopIds;
+        }
     }
 
     @Override
@@ -378,25 +382,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             }
         }
 
-        private static Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> groupStopsByParent(
+        private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(
                 GtfsSchedule schedule) {
-            Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStopIds = new HashMap<>();
-            for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
-                String id = stop.getParentId() == null ? stop.getId() : stop.getParentId();
-                if (!parentStopIds.containsKey(id)) {
-                    parentStopIds.put(id, new ArrayList<>());
-                }
-                parentStopIds.get(id).add(stop);
-            }
-            return parentStopIds;
-        }
-
-        private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
-                                                                                                 Set<String> parentStops) {
             SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
-            for (String parentStopId : parentStops) {
-                ch.naviqore.gtfs.schedule.model.Stop parentStop = schedule.getStops().get(parentStopId);
-                builder.add(parentStop.getName().toLowerCase(), parentStop);
+
+            // only add parent stops and stops without a parent
+            for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
+                if (stop.getParent().isEmpty()) {
+                    builder.add(stop.getName().toLowerCase(), stop);
+                }
             }
 
             return builder.build();

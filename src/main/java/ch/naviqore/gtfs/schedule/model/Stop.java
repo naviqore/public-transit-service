@@ -5,12 +5,10 @@ import ch.naviqore.utils.spatial.Location;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
@@ -18,9 +16,13 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
 
     private final String id;
     private final String name;
-    @Nullable
-    private final String parentId;
     private final GeoCoordinate coordinate;
+    @Nullable
+    @Setter(AccessLevel.PACKAGE)
+    @Getter(AccessLevel.NONE)
+    private Stop parent;
+    @Setter(AccessLevel.PACKAGE)
+    private List<Stop> children = new ArrayList<>();
     private List<StopTime> stopTimes = new ArrayList<>();
     private List<Transfer> transfers = new ArrayList<>();
 
@@ -32,9 +34,14 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
         transfers.add(transfer);
     }
 
+    public Optional<Stop> getParent() {
+        return Optional.ofNullable(parent);
+    }
+
     @Override
     public void initialize() {
         Collections.sort(stopTimes);
+        children = List.copyOf(children);
         stopTimes = List.copyOf(stopTimes);
         transfers = List.copyOf(transfers);
     }
