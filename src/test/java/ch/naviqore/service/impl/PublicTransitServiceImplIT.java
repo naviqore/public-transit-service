@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -156,11 +157,12 @@ class PublicTransitServiceImplIT {
         class Isoline {
 
             @Test
-            void shouldThrowNotImplementedException() {
-                assertThrows(NotImplementedException.class,
-                        () -> service.getIsolines(new GeoCoordinate(36.425288, -117.133162),
-                                LocalDateTime.of(2023, 5, 15, 8, 0), config));
+            void getIsolines_fromLocation() {
+                Map<Stop, Connection> connections = service.getIsolines(new GeoCoordinate(36.425288, -117.133162),
+                        LocalDateTime.of(2008, 5, 15, 8, 0), config);
+                assertFalse(connections.isEmpty(), "Expected to find connections.");
             }
+
         }
 
     }
