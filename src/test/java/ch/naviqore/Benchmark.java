@@ -7,9 +7,15 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.GtfsToRaptorConverter;
-import ch.naviqore.raptor.model.Connection;
-import ch.naviqore.raptor.model.Raptor;
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Raptor;
+import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
+import ch.naviqore.service.walk.BeeLineWalkCalculator;
+import ch.naviqore.utils.spatial.index.KDTree;
+import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -56,6 +62,10 @@ final class Benchmark {
     private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int NOT_AVAILABLE = -1;
+    private static final int WALKING_SPEED = 3000;
+    private static final int MINIMUM_TRANSFER_TIME = 120;
+    private static final int SAME_STATION_TRANSFER_TIME = 120;
+    private static final int MAX_WALK_DISTANCE = 500;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -73,7 +83,21 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        Raptor raptor = new GtfsToRaptorConverter(schedule).convert(SCHEDULE_DATE);
+
+        // TODO: This should be implemented in the new integration service and should not need to run everytime a raptor
+        //  instance is created. Ideally this will be handled as an attribute with a list of transfer generators. With
+        //  this approach, transfers can be generated according to different rules with the first applicable one taking
+        //  precedence.
+        KDTree<Stop> spatialStopIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
+        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
+        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
+                MAX_WALK_DISTANCE, spatialStopIndex);
+        List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
+        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
+                SAME_STATION_TRANSFER_TIME);
+        additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
+
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
     }

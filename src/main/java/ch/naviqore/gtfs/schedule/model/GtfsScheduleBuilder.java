@@ -32,6 +32,7 @@ public class GtfsScheduleBuilder {
 
     private final ValueObjectCache<LocalDate> localDateCache = new ValueObjectCache<>();
     private final ValueObjectCache<ServiceDayTime> serviceDayTimeCache = new ValueObjectCache<>();
+    private final ValueObjectCache<String> stringCache = new ValueObjectCache<>();
     private final Map<String, Agency> agencies = new HashMap<>();
     private final Map<String, Calendar> calendars = new HashMap<>();
     private final Map<String, Stop> stops = new HashMap<>();
@@ -50,13 +51,13 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
+    public GtfsScheduleBuilder addStop(String id, String name, @Nullable String parentStop, double lat, double lon) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
-            throw new IllegalArgumentException("Agency " + id + " already exists");
+            throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        stops.put(id, new Stop(id, name, new GeoCoordinate(lat, lon)));
+        stops.put(id, new Stop(id, name, parentStop, new GeoCoordinate(lat, lon)));
         return this;
     }
 
@@ -98,7 +99,7 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId) {
+    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign) {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");
@@ -112,7 +113,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + serviceId + " does not exist");
         }
         log.debug("Adding trip {}", id);
-        Trip trip = new Trip(id, route, calendar);
+        Trip trip = new Trip(id, route, calendar, stringCache.getOrAdd(headSign));
         route.addTrip(trip);
         trips.put(id, trip);
         calendar.addTrip(trip);

@@ -1,7 +1,5 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.utils.spatial.index.KDTree;
-import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -26,7 +24,6 @@ public class GtfsSchedule {
     private final Map<String, Stop> stops;
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
-    private final KDTree<Stop> spatialIndex;
 
     /**
      * Constructs an immutable GTFS schedule.
@@ -41,7 +38,6 @@ public class GtfsSchedule {
         this.stops = Map.copyOf(stops);
         this.routes = Map.copyOf(routes);
         this.trips = Map.copyOf(trips);
-        this.spatialIndex = new KDTreeBuilder<Stop>().addLocations(stops.values()).build();
     }
 
     /**
@@ -51,29 +47,6 @@ public class GtfsSchedule {
      */
     public static GtfsScheduleBuilder builder() {
         return new GtfsScheduleBuilder();
-    }
-
-    /**
-     * Retrieves a list of stops within a specified distance from a given location.
-     *
-     * @param latitude    the latitude of the origin location.
-     * @param longitude   the longitude of the origin location.
-     * @param maxDistance the maximum distance from the origin location.
-     * @return A list of stops within the specified distance.
-     */
-    public List<Stop> getNearestStops(double latitude, double longitude, int maxDistance) {
-        return spatialIndex.rangeSearch(latitude, longitude, maxDistance);
-    }
-
-    /**
-     * Retrieves the nearest stop to a given location.
-     *
-     * @param latitude  the latitude of the location.
-     * @param longitude the longitude of the location.
-     * @return The nearest stop to the specified location.
-     */
-    public Stop getNearestStop(double latitude, double longitude) {
-        return spatialIndex.nearestNeighbour(latitude, longitude);
     }
 
     /**

@@ -171,34 +171,6 @@ class GtfsScheduleTest {
             }
 
             @Nested
-            class NearestStops {
-
-                @Test
-                void shouldFindStopWithin1Meter() {
-                    assertThat(schedule.getNearestStops(47.5, 8.5, 1)).hasSize(1).extracting("id").containsOnly("s2");
-                }
-
-                @Test
-                void shouldFindStopsWithin10000Meters() {
-                    assertThat(schedule.getNearestStops(47.5, 8.5, 10000)).hasSize(3)
-                            .extracting("id")
-                            .containsOnly("u6", "s2", "u3");
-                }
-
-                @Test
-                void shouldFindAllStops() {
-                    assertThat(schedule.getNearestStops(47.5, 8.5, Integer.MAX_VALUE)).hasSize(9)
-                            .extracting("id")
-                            .containsOnly("s1", "s2", "s3", "u1", "u2", "u3", "u4", "u5", "u6");
-                }
-
-                @Test
-                void shouldFindNoStopsWhenNoneAreCloseEnough() {
-                    assertThat(schedule.getNearestStops(47.6, 8.5, 100)).isEmpty();
-                }
-            }
-
-            @Nested
             class NextDepartures {
 
                 private static final String STOP_ID = "s2";

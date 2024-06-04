@@ -1,11 +1,13 @@
 package ch.naviqore.service;
 
-public interface Stop extends Location {
+import ch.naviqore.utils.spatial.GeoCoordinate;
+
+public interface Stop {
 
     String getId();
 
     String getName();
 
-    Location getLocation();
+    GeoCoordinate getLocation();
 
 }

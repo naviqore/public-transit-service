@@ -73,7 +73,9 @@ final class BenchmarkData {
     @Getter
     public enum Dataset {
         SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"),
-        GERMANY("https://download.gtfs.de/germany/free/latest.zip");
+        GERMANY("https://download.gtfs.de/germany/free/latest.zip"),
+        ZUERICH_TRAMS("https://connolly.ch/zuerich-trams.zip"),
+        ZUERICH("https://connolly.ch/zvv.zip");
 
         private final String url;
 
