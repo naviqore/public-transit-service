@@ -290,10 +290,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (String stopId : stopIds) {
-            ch.naviqore.gtfs.schedule.model.Stop gtfsStop = schedule.getStops().get(stopId);
-            stopsWithWalkTime.put(stopId,
-                    startTimeInSeconds + walkCalculator.calculateWalk(stop.getLocation(), gtfsStop.getCoordinate())
-                            .duration());
+            stopsWithWalkTime.put(stopId, startTimeInSeconds);
         }
         return stopsWithWalkTime;
     }
@@ -354,15 +351,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         return null;
     }
 
-    private @Nullable Walk getLastWalk(GeoCoordinate source, String lastStopId, LocalDateTime arrivalTime,
+    private @Nullable Walk getLastWalk(GeoCoordinate target, String lastStopId, LocalDateTime arrivalTime,
                                        Map<String, Integer> targetStops) {
         ch.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
         int lastWalkDuration = targetStops.get(lastStopId);
 
         if (lastWalkDuration > MIN_WALK_DURATION) {
-            int distance = (int) source.distanceTo(lastStop.getCoordinate());
-            return createWalk(distance, lastWalkDuration, WalkType.FIRST_MILE, arrivalTime,
-                    arrivalTime.plusSeconds(lastWalkDuration), source, lastStop.getCoordinate(), map(lastStop));
+            int distance = (int) target.distanceTo(lastStop.getCoordinate());
+            return createWalk(distance, lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
+                    arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target, map(lastStop));
         }
         return null;
     }
