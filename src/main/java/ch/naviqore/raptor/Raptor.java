@@ -243,7 +243,7 @@ public class Raptor {
                             markedStopsNext.add(stopIdx);
                             // check if this was a target stop
                             if (Arrays.stream(targetStopIdxs).anyMatch(targetStopIdx -> targetStopIdx == stopIdx)) {
-                                earliestArrival = getEarliestArrivalTime(targetStopIdxs, earliestArrivals);
+                                earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals);
                                 log.debug("Earliest arrival to a target stop improved to {}", earliestArrival);
                             }
 
