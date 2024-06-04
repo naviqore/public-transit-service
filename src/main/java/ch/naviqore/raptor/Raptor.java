@@ -78,10 +78,12 @@ public class Raptor {
 
     public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
         InputValidator.validateStopPermutations(sourceStops, targetStopIds);
-        int[] sourceStopIdxs = validator.validateAndGetStopIdx(sourceStops.keySet());
-        int[] departureTimes = sourceStops.values().stream().mapToInt(Integer::intValue).toArray();
-        int[] targetStopIdxs = validator.validateAndGetStopIdx(targetStopIds.keySet());
-        int[] targetStopHandicaps = targetStopIds.values().stream().mapToInt(Integer::intValue).toArray();
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+        Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStopIds);
+        int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] targetStopHandicaps = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
         List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
@@ -92,9 +94,10 @@ public class Raptor {
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(
-                validator.validateAndGetStopIdx(sourceStops.keySet()),
-                sourceStops.values().stream().mapToInt(Integer::intValue).toArray());
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+        int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, departureTimes);
 
         Map<String, Connection> isoLines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
@@ -473,16 +476,25 @@ public class Raptor {
             }
         }
 
-        private int[] validateAndGetStopIdx(Collection<String> stopIds) {
-            return stopIds.stream().mapToInt(this::validateAndGetStopIdx).toArray();
-        }
-
-        private int validateAndGetStopIdx(String stopId) {
-            try {
-                return stopsToIdx.get(stopId);
-            } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Stop id " + stopId + " not found.");
+        private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
+            if (stops.isEmpty()) {
+                throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
+            // Loop over all stop pairs
+            Map<Integer, Integer> validStopIds = new HashMap<>();
+            for (Map.Entry<String, Integer> entry : stops.entrySet()) {
+                if (stopsToIdx.containsKey(entry.getKey())) {
+                    validateDepartureTime(entry.getValue());
+                    validStopIds.put(stopsToIdx.get(entry.getKey()), entry.getValue());
+                }
+                log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
+            }
+
+            if (validStopIds.isEmpty()) {
+                throw new IllegalArgumentException("No valid stops provided.");
+            }
+
+            return validStopIds;
         }
     }
 
