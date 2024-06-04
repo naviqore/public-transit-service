@@ -108,7 +108,12 @@ public class Raptor {
                 }
             }
             if( earliestArrival != null ){
-                isoLines.put(stop.id(), reconstructConnectionFromLeg(earliestArrival));
+                Connection connection = reconstructConnectionFromLeg(earliestArrival);
+                // A connection can be null, even though earliest arrival is not null --> INITIAL leg
+                if( connection != null ){
+                    isoLines.put(stop.id(), connection);
+                }
+
             }
         }
         return isoLines;
