@@ -476,6 +476,15 @@ public class Raptor {
             }
         }
 
+        /**
+         * Validate the stops provided in the query. This method will check that the map of stop ids and their
+         * corresponding departure / walk to target times are valid. This is done by checking if the map is not empty
+         * and then checking each entry if the stop id is present in the lookup. If not it is removed from the query. If
+         * no valid stops are found an IllegalArgumentException is thrown.
+         *
+         * @param stops the stops to validate.
+         * @return a map of valid stop IDs and their corresponding departure / walk to target times.
+         */
         private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
             if (stops.isEmpty()) {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
@@ -483,9 +492,11 @@ public class Raptor {
             // Loop over all stop pairs
             Map<Integer, Integer> validStopIds = new HashMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
-                if (stopsToIdx.containsKey(entry.getKey())) {
-                    validateDepartureTime(entry.getValue());
-                    validStopIds.put(stopsToIdx.get(entry.getKey()), entry.getValue());
+                String stopId = entry.getKey();
+                int time = entry.getValue();
+                if (stopsToIdx.containsKey(stopId)) {
+                    validateDepartureTime(time);
+                    validStopIds.put(stopsToIdx.get(stopId), time);
                 }
                 log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
             }
