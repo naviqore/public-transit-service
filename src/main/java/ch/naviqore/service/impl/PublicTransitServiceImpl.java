@@ -371,7 +371,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(GtfsSchedule schedule,
                                                                                                  Set<String> parentStops) {
             SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
-            parentStops.forEach(stopId -> builder.add(stopId.toLowerCase(), schedule.getStops().get(stopId)));
+            for (String parentStopId : parentStops) {
+                ch.naviqore.gtfs.schedule.model.Stop parentStop = schedule.getStops().get(parentStopId);
+                builder.add(parentStop.getName().toLowerCase(), parentStop);
+            }
 
             return builder.build();
         }
