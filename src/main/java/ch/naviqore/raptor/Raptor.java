@@ -83,11 +83,11 @@ public class Raptor {
         int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         int[] targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] targetStopHandicaps = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] walkingDurationsToTarget = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
         List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
-                targetStopHandicaps);
+                walkingDurationsToTarget);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
@@ -131,7 +131,7 @@ public class Raptor {
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
     private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes,
-                                            int[] targetStopHandicaps) {
+                                            int[] walkingDurationsToTarget) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
@@ -140,14 +140,14 @@ public class Raptor {
             throw new IllegalArgumentException("Source stops and departure times must have the same size.");
         }
 
-        if (targetStopIdxs.length != targetStopHandicaps.length) {
-            throw new IllegalArgumentException("Target stops and handicaps must have the same size.");
+        if (targetStopIdxs.length != walkingDurationsToTarget.length) {
+            throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
         int[] targetStops = new int[targetStopIdxs.length * 2];
         for (int i = 0; i < targetStopIdxs.length; i++) {
             targetStops[i] = targetStopIdxs[i];
-            targetStops[i + targetStopIdxs.length] = targetStopHandicaps[i];
+            targetStops[i + targetStopIdxs.length] = walkingDurationsToTarget[i];
         }
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
@@ -335,8 +335,8 @@ public class Raptor {
         int earliestArrival = INFINITY;
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
-            int targetStopHandicap = targetStops[i + 1];
-            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + targetStopHandicap);
+            int walkDurationToTarget = targetStops[i + 1];
+            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + walkDurationToTarget);
         }
         return earliestArrival;
     }
@@ -454,7 +454,7 @@ public class Raptor {
                 throw new IllegalArgumentException("At least one target stop must be provided.");
             }
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
-            targetStops.values().forEach(InputValidator::validateArrivalHandicap);
+            targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
             Set<String> targetStopIds = targetStops.keySet();
             for (String sourceStopId : sourceStops.keySet()) {
                 if (targetStopIds.contains(sourceStopId)) {
@@ -470,9 +470,9 @@ public class Raptor {
             }
         }
 
-        private static void validateArrivalHandicap(int arrivalHandicap) {
-            if (arrivalHandicap < 0) {
-                throw new IllegalArgumentException("Arrival handicap must be greater or equal to 0.");
+        private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
+            if (walkingDurationToTarget < 0) {
+                throw new IllegalArgumentException("Walking duration to target must be greater or equal to 0.");
             }
         }
 
