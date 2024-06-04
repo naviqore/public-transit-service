@@ -84,14 +84,16 @@ public class Raptor {
         int[] targetStopHandicaps = targetStopIds.values().stream().mapToInt(Integer::intValue).toArray();
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes, targetStopHandicaps);
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
+                targetStopHandicaps);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(validator.validateAndGetStopIdx(sourceStops.keySet()),
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(
+                validator.validateAndGetStopIdx(sourceStops.keySet()),
                 sourceStops.values().stream().mapToInt(Integer::intValue).toArray());
 
         Map<String, Connection> isoLines = new HashMap<>();
@@ -100,17 +102,17 @@ public class Raptor {
             Leg earliestArrival = null;
             for (Leg[] legs : earliestArrivalsPerRound) {
                 if (legs[i] != null) {
-                    if( earliestArrival == null ){
+                    if (earliestArrival == null) {
                         earliestArrival = legs[i];
-                    } else if( legs[i].arrivalTime < earliestArrival.arrivalTime ){
+                    } else if (legs[i].arrivalTime < earliestArrival.arrivalTime) {
                         earliestArrival = legs[i];
                     }
                 }
             }
-            if( earliestArrival != null ){
+            if (earliestArrival != null) {
                 Connection connection = reconstructConnectionFromLeg(earliestArrival);
                 // A connection can be null, even though earliest arrival is not null --> INITIAL leg
-                if( connection != null ){
+                if (connection != null) {
                     isoLines.put(stop.id(), connection);
                 }
 
@@ -125,20 +127,21 @@ public class Raptor {
     }
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes, int[] targetStopHandicaps) {
+    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes,
+                                            int[] targetStopHandicaps) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
 
-        if( sourceStopIdxs.length != departureTimes.length ){
+        if (sourceStopIdxs.length != departureTimes.length) {
             throw new IllegalArgumentException("Source stops and departure times must have the same size.");
         }
 
-        if( targetStopIdxs.length != targetStopHandicaps.length ){
+        if (targetStopIdxs.length != targetStopHandicaps.length) {
             throw new IllegalArgumentException("Target stops and handicaps must have the same size.");
         }
 
-        int[] targetStops = new int[targetStopIdxs.length*2];
+        int[] targetStops = new int[targetStopIdxs.length * 2];
         for (int i = 0; i < targetStopIdxs.length; i++) {
             targetStops[i] = targetStopIdxs[i];
             targetStops[i + targetStopIdxs.length] = targetStopHandicaps[i];
@@ -327,7 +330,7 @@ public class Raptor {
 
     private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals) {
         int earliestArrival = INFINITY;
-        for(int i = 0; i < targetStops.length; i += 2) {
+        for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int targetStopHandicap = targetStops[i + 1];
             earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + targetStopHandicap);
@@ -366,7 +369,7 @@ public class Raptor {
         return connections;
     }
 
-     private @Nullable Connection reconstructConnectionFromLeg(Leg leg){
+    private @Nullable Connection reconstructConnectionFromLeg(Leg leg) {
         Connection connection = new Connection();
         while (leg.type != ArrivalType.INITIAL) {
             String id;

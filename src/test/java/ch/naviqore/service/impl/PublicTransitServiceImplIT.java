@@ -9,7 +9,6 @@ import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

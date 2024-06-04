@@ -41,7 +41,8 @@ public class WalkTransferGenerator implements TransferGenerator {
      * @param minimumTransferTime Minimum transfer time between stops in seconds.
      * @param maxWalkDistance     Maximum walking distance between stops in meters.
      */
-    public WalkTransferGenerator(WalkCalculator walkCalculator, int minimumTransferTime, int maxWalkDistance, KDTree<Stop> spatialStopIndex) {
+    public WalkTransferGenerator(WalkCalculator walkCalculator, int minimumTransferTime, int maxWalkDistance,
+                                 KDTree<Stop> spatialStopIndex) {
         if (walkCalculator == null) throw new IllegalArgumentException("walkCalculator is null");
         if (minimumTransferTime < 0) throw new IllegalArgumentException("minimumTransferTime is negative");
         if (maxWalkDistance <= 0) throw new IllegalArgumentException("maxWalkDistance is negative or zero");

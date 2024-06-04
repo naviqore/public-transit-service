@@ -73,8 +73,25 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) {
+        return delegate.getConnections(source, target, time, timeType, config);
+    }
+
+    @Override
+    public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) {
+        return delegate.getConnections(source, target, time, timeType, config);
+    }
+
+    @Override
     public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
+        return delegate.getIsolines(source, departureTime, config);
+    }
+
+    @Override
+    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime departureTime, ConnectionQueryConfig config) {
         return delegate.getIsolines(source, departureTime, config);
     }
 

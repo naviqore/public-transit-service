@@ -16,16 +16,15 @@ public class BeeLineWalkCalculator implements WalkCalculator {
      * @param walkSpeed Walking speed in m/h.
      */
     public BeeLineWalkCalculator(int walkSpeed) {
-        if (walkSpeed <= 0){
+        if (walkSpeed <= 0) {
             throw new IllegalArgumentException("walkSpeed needs to be greater than 0");
         }
         this.walkSpeed = walkSpeed;
     }
 
-
     @Override
     public Walk calculateWalk(GeoCoordinate from, GeoCoordinate to) {
-        if( from == null || to == null ){
+        if (from == null || to == null) {
             throw new IllegalArgumentException("from and to cannot be null");
         }
         double distance = from.distanceTo(to);

@@ -166,9 +166,8 @@ class RaptorTest {
                 assertThrows(IllegalArgumentException.class,
                         () -> raptor.routeEarliestArrival(sourceStop, targetStop, -1),
                         "Departure time cannot be negative");
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, 49 * RaptorTestBuilder.SECONDS_IN_HOUR),
-                        "Departure time cannot be greater than two days");
+                assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStop, targetStop,
+                        49 * RaptorTestBuilder.SECONDS_IN_HOUR), "Departure time cannot be greater than two days");
             }
 
             @Test

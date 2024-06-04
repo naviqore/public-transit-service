@@ -1,7 +1,5 @@
 package ch.naviqore.raptor;
 
-import ch.naviqore.raptor.RouteBuilder;
-import ch.naviqore.raptor.StopTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

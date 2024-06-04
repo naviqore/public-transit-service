@@ -102,10 +102,11 @@ public class GtfsToRaptorConverter {
 
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
 
-            if( transfer.from() == transfer.to() ) {
+            if (transfer.from() == transfer.to()) {
                 // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
                 //  transfers between the same station, as not implemented yet.
-                log.warn("Omit adding transfer from {} 2to {} with duration {} as it is the same stop", transfer.from().getId(), transfer.to().getId(), transfer.duration());
+                log.warn("Omit adding transfer from {} 2to {} with duration {} as it is the same stop",
+                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;
             }
 

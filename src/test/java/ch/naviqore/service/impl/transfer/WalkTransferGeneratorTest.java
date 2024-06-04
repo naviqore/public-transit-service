@@ -39,6 +39,55 @@ public class WalkTransferGeneratorTest {
     private KDTree<Stop> spatialIndex;
     private WalkTransferGenerator generator;
 
+    private static TransferGenerator.Transfer transferWasCreated(List<TransferGenerator.Transfer> transfers,
+                                                                 String fromStopId, String toStopId) {
+        for (TransferGenerator.Transfer transfer : transfers) {
+            if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
+                return transfer;
+            }
+        }
+        throw new NoSuchElementException();
+    }
+
+    private static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
+        for (TransferGenerator.Transfer transfer : transfers) {
+            assertNotEquals(transfer.from(), transfer.to());
+        }
+    }
+
+    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                 String toStopId) {
+        assertTransfersGenerated(transfers, fromStopId, toStopId,
+                WalkTransferGeneratorTest.DEFAULT_MINIMUM_TRANSFER_TIME, false);
+    }
+
+    private static void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                   String toStopId) {
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
+        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
+    }
+
+    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
+                                                 String toStopId, int minimumTransferTime,
+                                                 boolean shouldBeMinimumTransferTime) {
+        try {
+            TransferGenerator.Transfer transfer1 = transferWasCreated(transfers, fromStopId, toStopId);
+            TransferGenerator.Transfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
+
+            if (shouldBeMinimumTransferTime) {
+                assertEquals(minimumTransferTime, transfer1.duration());
+                assertEquals(minimumTransferTime, transfer2.duration());
+            } else {
+                assertTrue(transfer1.duration() > minimumTransferTime);
+                assertTrue(transfer2.duration() > minimumTransferTime);
+            }
+
+        } catch (NoSuchElementException e) {
+            throw new AssertionError(
+                    String.format("Transfer not found between stops: %s and %s", fromStopId, toStopId));
+        }
+    }
+
     @BeforeEach
     void setUp() {
         GtfsScheduleBuilder builder = GtfsSchedule.builder();
@@ -49,6 +98,9 @@ public class WalkTransferGeneratorTest {
         spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
         generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
                 DEFAULT_MAX_WALK_DISTANCE, spatialIndex);
+    }
+
+    private record StopData(String id, String name, double lat, double lon) {
     }
 
     @Nested
@@ -117,8 +169,7 @@ public class WalkTransferGeneratorTest {
         @Test
         void expectedBehavior_withIncreasedSearchRadius() {
             WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
-                    DEFAULT_MINIMUM_TRANSFER_TIME,
-                    1000, spatialIndex);
+                    DEFAULT_MINIMUM_TRANSFER_TIME, 1000, spatialIndex);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
             assertNoSameStationTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
@@ -138,59 +189,6 @@ public class WalkTransferGeneratorTest {
             assertTransferNotGenerated(transfers, "stop2", "stop3");
             assertTransferNotGenerated(transfers, "stop1", "stop1");
         }
-    }
-
-    private static TransferGenerator.Transfer transferWasCreated(List<TransferGenerator.Transfer> transfers,
-                                                                 String fromStopId, String toStopId) {
-        for (TransferGenerator.Transfer transfer : transfers) {
-            if (transfer.from().getId().equals(fromStopId) && transfer.to().getId().equals(toStopId)) {
-                return transfer;
-            }
-        }
-        throw new NoSuchElementException();
-    }
-
-
-    private static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
-        for (TransferGenerator.Transfer transfer : transfers) {
-            assertNotEquals(transfer.from(), transfer.to());
-        }
-    }
-
-    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
-                                                 String toStopId) {
-        assertTransfersGenerated(transfers, fromStopId, toStopId,
-                WalkTransferGeneratorTest.DEFAULT_MINIMUM_TRANSFER_TIME, false);
-    }
-
-    private static void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
-                                                   String toStopId) {
-        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, fromStopId, toStopId));
-        assertThrows(NoSuchElementException.class, () -> transferWasCreated(transfers, toStopId, fromStopId));
-    }
-
-    private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
-                                                 String toStopId, int minimumTransferTime,
-                                                 boolean shouldBeMinimumTransferTime) {
-        try {
-            TransferGenerator.Transfer transfer1 = transferWasCreated(transfers, fromStopId, toStopId);
-            TransferGenerator.Transfer transfer2 = transferWasCreated(transfers, toStopId, fromStopId);
-
-            if (shouldBeMinimumTransferTime) {
-                assertEquals(minimumTransferTime, transfer1.duration());
-                assertEquals(minimumTransferTime, transfer2.duration());
-            } else {
-                assertTrue(transfer1.duration() > minimumTransferTime);
-                assertTrue(transfer2.duration() > minimumTransferTime);
-            }
-
-        } catch (NoSuchElementException e) {
-            throw new AssertionError(
-                    String.format("Transfer not found between stops: %s and %s", fromStopId, toStopId));
-        }
-    }
-
-    private record StopData(String id, String name, double lat, double lon) {
     }
 
 }

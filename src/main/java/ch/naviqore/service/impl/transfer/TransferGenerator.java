@@ -20,7 +20,6 @@ public interface TransferGenerator {
      */
     List<Transfer> generateTransfers(GtfsSchedule schedule);
 
-
     /**
      * Represents a minimum time transfer between two stops. Is only intended to be used in the
      * {@link GtfsToRaptorConverter}, as source to provide additional generated transfers not present in the

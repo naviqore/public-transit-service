@@ -17,7 +17,8 @@ public class SameStationTransferGenerator implements TransferGenerator {
     private final int sameStationTransferTime;
 
     /**
-     * Creates a new SameStationTransferGenerator with the given minimum transfer time between stops at the same station.
+     * Creates a new SameStationTransferGenerator with the given minimum transfer time between stops at the same
+     * station.
      *
      * @param sameStationTransferTime Minimum transfer time between stops at the same station in seconds.
      */
