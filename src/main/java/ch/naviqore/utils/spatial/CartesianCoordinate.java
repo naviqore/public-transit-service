@@ -61,7 +61,7 @@ public class CartesianCoordinate implements Coordinate {
 
     @Override
     public String toString() {
-        return "[" + this.getClass().getSimpleName() + ": " + x + ", " + y + "]";
+        return this.getClass().getSimpleName() + "(x=" + x + ", y=" + y + ")";
     }
 
 }
