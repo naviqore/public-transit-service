@@ -529,7 +529,7 @@ public class Raptor {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
 
-            // loop over all stop pairs and validate departure times and if stop exists in raptor
+            // loop over all stop pairs and check if stop exists in raptor, then validate departure time
             Map<Integer, Integer> validStopIds = new HashMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
                 String stopId = entry.getKey();
@@ -538,8 +538,9 @@ public class Raptor {
                 if (stopsToIdx.containsKey(stopId)) {
                     validateDepartureTime(time);
                     validStopIds.put(stopsToIdx.get(stopId), time);
+                } else {
+                    log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
                 }
-                log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
             }
 
             if (validStopIds.isEmpty()) {
