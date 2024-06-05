@@ -75,7 +75,15 @@ public class Connection implements Comparable<Connection> {
         return getArrivalTime() - getDepartureTime();
     }
 
-    public int getNumSameStationTransfers() {
+    public List<Leg> getWalkTransfers() {
+        return legs.stream().filter(l -> l.type == LegType.WALK_TRANSFER).toList();
+    }
+
+    public List<Leg> getRouteLegs() {
+        return legs.stream().filter(l -> l.type == LegType.ROUTE).toList();
+    }
+
+    public int getNumberOfSameStationTransfers() {
         int transferCounter = 0;
         for (int i = 0; i < legs.size() - 1; i++) {
             Leg current = legs.get(i);
@@ -87,16 +95,8 @@ public class Connection implements Comparable<Connection> {
         return transferCounter;
     }
 
-    public int getNumWalkTransfers() {
-        return (int) legs.stream().filter(l -> l.type == LegType.WALK_TRANSFER).count();
-    }
-
-    public int getNumTransfers() {
-        return getNumWalkTransfers() + getNumSameStationTransfers();
-    }
-
-    public int getNumRouteLegs() {
-        return (int) legs.stream().filter(l -> l.type == LegType.ROUTE).count();
+    public int getNumberOfTotalTransfers() {
+        return getWalkTransfers().size() + getNumberOfSameStationTransfers();
     }
 
     /**

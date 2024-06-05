@@ -160,8 +160,14 @@ final class Benchmark {
                 connections.stream().mapToInt(Connection::getArrivalTime).min().orElse(NOT_AVAILABLE));
         int minDuration = connections.stream().mapToInt(Connection::getDuration).min().orElse(NOT_AVAILABLE);
         int maxDuration = connections.stream().mapToInt(Connection::getDuration).max().orElse(NOT_AVAILABLE);
-        int minTransfers = connections.stream().mapToInt(Connection::getNumTransfers).min().orElse(NOT_AVAILABLE);
-        int maxTransfers = connections.stream().mapToInt(Connection::getNumTransfers).max().orElse(NOT_AVAILABLE);
+        int minTransfers = connections.stream()
+                .mapToInt(Connection::getNumberOfTotalTransfers)
+                .min()
+                .orElse(NOT_AVAILABLE);
+        int maxTransfers = connections.stream()
+                .mapToInt(Connection::getNumberOfTotalTransfers)
+                .max()
+                .orElse(NOT_AVAILABLE);
         long beelineDistance = Math.round(
                 request.sourceStop.getCoordinate().distanceTo(request.targetStop.getCoordinate()));
         long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
