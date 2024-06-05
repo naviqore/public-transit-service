@@ -50,14 +50,24 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStop(String id, String name, @Nullable String parentStop, double lat, double lon) {
+    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
+        addStop(id, name, lat, lon, null);
+        return this;
+    }
+
+    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
         Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon));
-        parents.computeIfAbsent(parentStop, ignored -> new ArrayList<>()).add(stop);
+
+        // only add stop id if it is not a blank string
+        if (!parentStopId.isEmpty()) {
+            parents.computeIfAbsent(parentStopId, ignored -> new ArrayList<>()).add(stop);
+        }
+
         stops.put(id, stop);
         return this;
     }
@@ -171,18 +181,9 @@ public class GtfsScheduleBuilder {
      */
     public GtfsSchedule build() {
         checkNotBuilt();
-        log.info("Building schedule with {} stops, {} routes and {} trips", stops.size(), routes.size(), trips.size());
 
-        // set parents for child
-        parents.forEach((parentId, children) -> {
-            Stop parent = stops.get(parentId);
-            if (parent == null) {
-                log.warn("Parent {} does not exist", parentId);
-            } else {
-                parent.setChildren(children);
-                children.forEach(child -> child.setParent(parent));
-            }
-        });
+        log.info("Building schedule with {} stops, {} routes and {} trips", stops.size(), routes.size(), trips.size());
+        setParentChildrenStopRelations();
 
         // initialize: make immutable and resize arrays to capacity
         trips.values().parallelStream().forEach(Initializable::initialize);
@@ -195,6 +196,21 @@ public class GtfsScheduleBuilder {
         built = true;
 
         return schedule;
+    }
+
+    private void setParentChildrenStopRelations() {
+        parents.forEach((parentId, children) -> {
+            Stop parent = stops.get(parentId);
+
+            if (parent == null) {
+                throw new IllegalStateException("Parent stop " + parentId + " for children " + children.stream()
+                        .map(Stop::getId)
+                        .toList() + " does not exist.");
+            }
+
+            parent.setChildren(children);
+            children.forEach(child -> child.setParent(parent));
+        });
     }
 
     /**
