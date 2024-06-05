@@ -47,7 +47,7 @@ class RaptorTest {
             assertTrue(connection1.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
             // check that transfers make sense
-            assertEquals(1, connection1.getNumFootPathTransfers());
+            assertEquals(1, connection1.getNumWalkTransfers());
             assertEquals(1, connection1.getNumTransfers());
             assertEquals(0, connection1.getNumSameStationTransfers());
 
@@ -58,7 +58,7 @@ class RaptorTest {
             assertTrue(connection2.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
             // check that transfers make sense
-            assertEquals(0, connection2.getNumFootPathTransfers());
+            assertEquals(0, connection2.getNumWalkTransfers());
             assertEquals(2, connection2.getNumTransfers());
             assertEquals(2, connection2.getNumSameStationTransfers());
 
@@ -83,7 +83,7 @@ class RaptorTest {
             assertEquals(targetStop, connection.getToStopId());
             assertTrue(connection.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
-            assertEquals(0, connection.getNumFootPathTransfers());
+            assertEquals(0, connection.getNumWalkTransfers());
             assertEquals(0, connection.getNumTransfers());
             assertEquals(0, connection.getNumSameStationTransfers());
         }
@@ -120,7 +120,7 @@ class RaptorTest {
             assertEquals(targetStop, connection.getToStopId());
             assertTrue(connection.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
-            assertEquals(1, connection.getNumFootPathTransfers());
+            assertEquals(1, connection.getNumWalkTransfers());
             assertEquals(1, connection.getNumTransfers());
             assertEquals(0, connection.getNumSameStationTransfers());
             assertEquals(0, connection.getNumRouteLegs());

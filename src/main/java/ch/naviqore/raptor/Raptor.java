@@ -397,7 +397,7 @@ public class Raptor {
 
             } else if (leg.type == ArrivalType.TRANSFER) {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
-                type = Connection.LegType.FOOTPATH;
+                type = Connection.LegType.WALK_TRANSFER;
                 // include same stop transfer time (which is subtracted before scanning routes)
                 arrivalTime += SAME_STOP_TRANSFER_TIME;
 

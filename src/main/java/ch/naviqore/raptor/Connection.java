@@ -75,10 +75,6 @@ public class Connection implements Comparable<Connection> {
         return getArrivalTime() - getDepartureTime();
     }
 
-    public int getNumFootPathTransfers() {
-        return (int) legs.stream().filter(l -> l.type == LegType.FOOTPATH).count();
-    }
-
     public int getNumSameStationTransfers() {
         int transferCounter = 0;
         for (int i = 0; i < legs.size() - 1; i++) {
@@ -91,8 +87,12 @@ public class Connection implements Comparable<Connection> {
         return transferCounter;
     }
 
+    public int getNumWalkTransfers() {
+        return (int) legs.stream().filter(l -> l.type == LegType.WALK_TRANSFER).count();
+    }
+
     public int getNumTransfers() {
-        return getNumFootPathTransfers() + getNumSameStationTransfers();
+        return getNumWalkTransfers() + getNumSameStationTransfers();
     }
 
     public int getNumRouteLegs() {
@@ -103,7 +103,7 @@ public class Connection implements Comparable<Connection> {
      * Types of legs in a connection.
      */
     public enum LegType {
-        FOOTPATH,
+        WALK_TRANSFER,
         ROUTE
     }
 

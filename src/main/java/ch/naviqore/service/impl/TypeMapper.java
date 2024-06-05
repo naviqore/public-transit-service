@@ -95,7 +95,7 @@ final class TypeMapper {
         Stop sourceStop = map(schedule.getStops().get(leg.fromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.toStopId()));
         return switch (leg.type()) {
-            case FOOTPATH -> new TransferImpl(distance, duration, toLocalDateTime(leg.departureTime(), date),
+            case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.departureTime(), date),
                     toLocalDateTime(leg.arrivalTime(), date), sourceStop, targetStop);
             // TODO: Refactor Raptor and extract interfaces. Put Trip id on leg, then stop time can be found.
             case ROUTE -> new PublicTransitLegImpl(distance, duration, null, null, null);
