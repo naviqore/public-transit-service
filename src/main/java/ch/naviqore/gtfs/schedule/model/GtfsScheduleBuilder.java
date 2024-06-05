@@ -51,7 +51,7 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
-        addStop(id, name, lat, lon, null);
+        addStop(id, name, lat, lon, "");
         return this;
     }
 
