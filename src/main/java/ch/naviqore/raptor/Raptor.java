@@ -380,7 +380,8 @@ public class Raptor {
 
         // start from destination leg and follow legs back until the initial leg is reached
         while (leg.type != ArrivalType.INITIAL) {
-            String id;
+            String routeId;
+            String tripId = null;
             assert leg.previous != null;
             String fromStopId = stops[leg.previous.stopIdx].id();
             String toStopId = stops[leg.stopIdx].id();
@@ -389,11 +390,13 @@ public class Raptor {
             int arrivalTime = leg.arrivalTime;
 
             if (leg.type == ArrivalType.ROUTE) {
-                id = routes[leg.routeOrTransferIdx].id();
+                Route route = routes[leg.routeOrTransferIdx];
+                routeId = route.id();
+                tripId = route.tripIds()[leg.tripOffset];
                 type = Connection.LegType.ROUTE;
 
             } else if (leg.type == ArrivalType.TRANSFER) {
-                id = String.format("transfer_%s_%s", fromStopId, toStopId);
+                routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Connection.LegType.FOOTPATH;
                 // include same stop transfer time (which is subtracted before scanning routes)
                 arrivalTime += SAME_STOP_TRANSFER_TIME;
@@ -402,7 +405,8 @@ public class Raptor {
                 throw new IllegalStateException("Unknown arrival type");
             }
 
-            connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
+            connection.addLeg(
+                    new Connection.Leg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
             leg = leg.previous;
         }
 

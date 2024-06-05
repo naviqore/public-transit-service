@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -109,8 +110,8 @@ public class Connection implements Comparable<Connection> {
     /**
      * A leg is a part of a connection that is travelled on the same route and transport mode, without a transfer.
      */
-    public record Leg(String routeId, String fromStopId, String toStopId, int departureTime, int arrivalTime,
-                      LegType type) implements Comparable<Leg> {
+    public record Leg(String routeId, @Nullable String tripId, String fromStopId, String toStopId, int departureTime,
+                      int arrivalTime, LegType type) implements Comparable<Leg> {
 
         @Override
         public int compareTo(@NotNull Connection.Leg other) {
