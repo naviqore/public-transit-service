@@ -11,14 +11,14 @@ import java.time.LocalDateTime;
 public class PublicTransitLegImpl extends LegImpl implements PublicTransitLeg {
 
     private final Trip trip;
-    private final StopTime arrival;
     private final StopTime departure;
+    private final StopTime arrival;
 
-    PublicTransitLegImpl(int distance, int duration, Trip trip, StopTime arrival, StopTime departure) {
+    PublicTransitLegImpl(int distance, int duration, Trip trip, StopTime departure, StopTime arrival) {
         super(LegType.PUBLIC_TRANSIT, distance, duration);
         this.trip = trip;
-        this.arrival = arrival;
         this.departure = departure;
+        this.arrival = arrival;
     }
 
     @Override

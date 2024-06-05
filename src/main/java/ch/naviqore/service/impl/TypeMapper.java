@@ -97,9 +97,43 @@ final class TypeMapper {
         return switch (leg.type()) {
             case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.departureTime(), date),
                     toLocalDateTime(leg.arrivalTime(), date), sourceStop, targetStop);
-            // TODO: Refactor Raptor and extract interfaces. Put Trip id on leg, then stop time can be found.
-            case ROUTE -> new PublicTransitLegImpl(distance, duration, null, null, null);
+            case ROUTE -> createPublicTransitLeg(leg, date, schedule);
         };
+    }
+
+    private static Leg createPublicTransitLeg(ch.naviqore.raptor.Connection.Leg leg, LocalDate date,
+                                              GtfsSchedule schedule) {
+        int duration = leg.arrivalTime() - leg.departureTime();
+        ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.tripId());
+        Trip trip = map(gtfsTrip, date);
+
+        assert gtfsTrip.getStopTimes().size() == trip.getStopTimes()
+                .size() : "GTFS trip and trip implementation in service must have the same number of stop times.";
+
+        // find departure and arrival stop time in stop sequence of trip
+        StopTime departure = null;
+        StopTime arrival = null;
+        for (int i = 0; i < gtfsTrip.getStopTimes().size(); i++) {
+            var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
+            // if the from stop id and the departure time matches, set the departure stop time
+            if (gtfsStopTime.stop().getId().equals(leg.fromStopId()) && gtfsStopTime.departure()
+                    .getTotalSeconds() == leg.departureTime()) {
+                departure = trip.getStopTimes().get(i);
+                continue;
+            }
+
+            // if the to stop id and the arrival time matches, set the arrival stop time
+            if (gtfsStopTime.stop().getId().equals(leg.toStopId()) && gtfsStopTime.arrival()
+                    .getTotalSeconds() == leg.arrivalTime()) {
+                arrival = trip.getStopTimes().get(i);
+                break;
+            }
+        }
+
+        assert departure != null : "Departure stop time cannot be null";
+        assert arrival != null : "Arrival stop time cannot be null";
+
+        return new PublicTransitLegImpl(0, duration, trip, departure, arrival);
     }
 
     private static LocalDateTime toLocalDateTime(int secondsOfDay, LocalDate date) {
