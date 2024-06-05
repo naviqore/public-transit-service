@@ -177,7 +177,7 @@ public class GtfsScheduleTestBuilder {
         for (String stopId : route.stops) {
             if (!addedStops.contains(stopId)) {
                 Stop stop = STOPS.get(stopId);
-                builder.addStop(stop.id, stop.id, stop.id, stop.lat, stop.lon);
+                builder.addStop(stop.id, stop.id, stop.lat, stop.lon);
                 addedStops.add(stopId);
             }
         }

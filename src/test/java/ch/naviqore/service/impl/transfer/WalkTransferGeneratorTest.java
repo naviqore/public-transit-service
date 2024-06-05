@@ -92,8 +92,7 @@ public class WalkTransferGeneratorTest {
     void setUp() {
         GtfsScheduleBuilder builder = GtfsSchedule.builder();
         TEST_STOPS.values()
-                .forEach(stopData -> builder.addStop(stopData.id(), stopData.name(), stopData.id(), stopData.lat(),
-                        stopData.lon()));
+                .forEach(stopData -> builder.addStop(stopData.id(), stopData.name(), stopData.lat(), stopData.lon()));
         schedule = builder.build();
         spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
         generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
