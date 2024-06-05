@@ -160,7 +160,7 @@ public class Raptor {
             // subtract same stop transfer time, as this will be added by default before scanning routes
             earliestArrivals[sourceStopIdxs[i]] = departureTimes[i] - SAME_STOP_TRANSFER_TIME;
             earliestArrivalsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, departureTimes[i], ArrivalType.INITIAL,
-                    NO_INDEX, sourceStopIdxs[i], null);
+                    NO_INDEX, NO_INDEX, sourceStopIdxs[i], null);
             markedStops.add(sourceStopIdxs[i]);
         }
 
@@ -249,9 +249,10 @@ public class Raptor {
                                 continue;
                             }
 
+                            // create a route leg
                             earliestArrivals[stopIdx] = stopTime.arrival();
                             earliestArrivalsThisRound[stopIdx] = new Leg(tripEntryTime, stopTime.arrival(),
-                                    ArrivalType.ROUTE, currentRouteIdx, stopIdx, enteredAtArrival);
+                                    ArrivalType.ROUTE, currentRouteIdx, tripOffset, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
                             // check if this was a target stop
@@ -317,7 +318,7 @@ public class Raptor {
                                 stops[stopIdx].id());
                         earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
                         earliestArrivalsThisRound[transfer.targetStopIdx()] = new Leg(earliestArrivals[stopIdx],
-                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
                                 earliestArrivalsThisRound[stopIdx]);
                         newStops.add(transfer.targetStopIdx());
                     }
@@ -432,7 +433,7 @@ public class Raptor {
             }
             earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
             earliestArrivalsPerRound.getFirst()[transfer.targetStopIdx()] = new Leg(departureTime,
-                    newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                    newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
                     earliestArrivalsPerRound.getFirst()[sourceStopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
@@ -464,12 +465,13 @@ public class Raptor {
      * @param departureTime      the departure time of the leg in seconds after midnight.
      * @param arrivalTime        the arrival time of the leg in seconds after midnight.
      * @param type               the type of the leg, can be INITIAL, ROUTE or TRANSFER.
-     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type.
+     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
+     * @param tripOffset         the trip offset on the current route (or NO_INDEX).
      * @param stopIdx            the arrival stop of the leg.
      * @param previous           the previous leg, null if it is the previous leg.
      */
-    private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
-                       @Nullable Leg previous) {
+    private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int tripOffset,
+                       int stopIdx, @Nullable Leg previous) {
     }
 
     /**
