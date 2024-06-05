@@ -1,10 +1,13 @@
 package ch.naviqore.utils.cache;
 
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 /**
@@ -15,10 +18,12 @@ import java.util.function.Supplier;
  */
 @Log4j2
 public class EvictionCache<K, V> {
+    @Getter
     private final int size;
     private final Strategy strategy;
     private final Map<K, V> cache;
     private final LinkedHashMap<K, Long> accessOrder; // Tracks insertion and access order
+    private final Lock lock = new ReentrantLock();
 
     /**
      * Constructs a new EvictionCache with the specified size and eviction strategy.
@@ -44,31 +49,41 @@ public class EvictionCache<K, V> {
      * @param supplier the supplier function to compute the value
      * @return the current (existing or computed) value associated with the specified key
      */
-    public synchronized V computeIfAbsent(K key, Supplier<V> supplier) {
-        if (cache.containsKey(key)) {
-            log.debug("Cache hit, retrieving cached instance for key {}", key);
+    public V computeIfAbsent(K key, Supplier<V> supplier) {
+        lock.lock();
+        try {
+            if (cache.containsKey(key)) {
+                log.debug("Cache hit, retrieving cached instance for key {}", key);
+                updateAccessOrder(key);
+                return cache.get(key);
+            }
+
+            if (cache.size() >= size) {
+                evict();
+            }
+
+            log.debug("No cache hit, computing new instance for key {}", key);
+            V value = supplier.get();
+            cache.put(key, value);
             updateAccessOrder(key);
-            return cache.get(key);
+
+            return value;
+        } finally {
+            lock.unlock();
         }
-
-        if (cache.size() >= size) {
-            evict();
-        }
-
-        log.debug("No cache hit, computing new instance for key {}", key);
-        V value = supplier.get();
-        cache.put(key, value);
-        updateAccessOrder(key);
-
-        return value;
     }
 
     /**
      * Clears the cache, removing all key-value mappings.
      */
-    public synchronized void clear() {
-        cache.clear();
-        accessOrder.clear();
+    public void clear() {
+        lock.lock();
+        try {
+            cache.clear();
+            accessOrder.clear();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -78,7 +93,19 @@ public class EvictionCache<K, V> {
      * @return {@code true} if this cache contains a mapping for the specified key
      */
     public boolean isCached(K key) {
-        return cache.containsKey(key);
+        lock.lock();
+        try {
+            return cache.containsKey(key);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Returns the current number of entries in the cache.
+     */
+    public int getNumberOfEntries() {
+        return cache.size();
     }
 
     private void updateAccessOrder(K key) {

@@ -4,11 +4,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.IntStream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EvictionCacheTest {
 
     public static final int CACHE_SIZE = 3;
+    public static final int CONCURRENT_ACCESS_COUNT = 1000;
 
     @Nested
     class LRU {
@@ -57,6 +64,13 @@ class EvictionCacheTest {
             assertThat(lruCache.isCached("b")).isFalse();
             assertThat(lruCache.isCached("c")).isFalse();
         }
+
+        @Test
+        void shouldHandleConcurrentAccess() throws InterruptedException, ExecutionException, TimeoutException {
+            runConcurrentAccess(lruCache);
+
+            assertThat(lruCache.getNumberOfEntries()).isEqualTo(CACHE_SIZE);
+        }
     }
 
     @Nested
@@ -104,5 +118,22 @@ class EvictionCacheTest {
             assertThat(mruCache.isCached("b")).isFalse();
             assertThat(mruCache.isCached("c")).isFalse();
         }
+
+        @Test
+        void shouldHandleConcurrentAccess() throws InterruptedException, ExecutionException, TimeoutException {
+            runConcurrentAccess(mruCache);
+
+            assertThat(mruCache.getNumberOfEntries()).isEqualTo(CACHE_SIZE);
+        }
+    }
+
+    private static void runConcurrentAccess(
+            EvictionCache<String, String> cache) throws InterruptedException, ExecutionException, TimeoutException {
+        CompletableFuture<?>[] futures = IntStream.range(0, CONCURRENT_ACCESS_COUNT)
+                .mapToObj(i -> CompletableFuture.runAsync(
+                        () -> cache.computeIfAbsent("key" + i % CACHE_SIZE, () -> "value" + i)))
+                .toArray(CompletableFuture[]::new);
+
+        CompletableFuture.allOf(futures).get(1, TimeUnit.MINUTES);
     }
 }
