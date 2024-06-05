@@ -53,7 +53,7 @@ public class DtoMapper {
     }
 
     public static EarliestArrival map(ch.naviqore.service.Stop stop, ch.naviqore.service.Connection connection) {
-        return new EarliestArrival(map(stop), connection.getLegs().getLast().getArrivalTime(), map(connection));
+        return new EarliestArrival(map(stop), connection.getArrivalTime(), map(connection));
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {

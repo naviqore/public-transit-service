@@ -1,7 +1,5 @@
 package ch.naviqore.service;
 
-import java.time.LocalDateTime;
-
 public interface Leg {
 
     LegType getLegType();
@@ -12,7 +10,4 @@ public interface Leg {
 
     int getDuration();
 
-    LocalDateTime getDepartureTime();
-
-    LocalDateTime getArrivalTime();
 }
