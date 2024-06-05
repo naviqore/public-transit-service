@@ -81,13 +81,13 @@ class GtfsScheduleParser {
     }
 
     private void parseStop(CSVRecord record) {
-        String parentId = null;
         if (record.isMapped("parent_station")) {
-            parentId = record.get("parent_station");
+            builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
+                    Double.parseDouble(record.get("stop_lon")), record.get("parent_station").trim());
+        } else {
+            builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
+                    Double.parseDouble(record.get("stop_lon")));
         }
-        builder.addStop(record.get("stop_id"), record.get("stop_name"), parentId,
-                Double.parseDouble(record.get("stop_lat")), Double.parseDouble(record.get("stop_lon")));
-
     }
 
     private void parseRoute(CSVRecord record) {

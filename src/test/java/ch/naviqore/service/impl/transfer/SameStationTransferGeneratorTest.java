@@ -38,8 +38,8 @@ public class SameStationTransferGeneratorTest {
         @BeforeEach
         void setUp() {
             GtfsScheduleBuilder builder = GtfsSchedule.builder();
-            builder.addStop("stop1", "Zürich, Stadelhofen", "stop1", 47.366542, 8.548384);
-            builder.addStop("stop2", "Zürich, Opernhaus", "stop2", 47.365030, 8.547976);
+            builder.addStop("stop1", "Zürich, Stadelhofen", 47.366542, 8.548384);
+            builder.addStop("stop2", "Zürich, Opernhaus", 47.365030, 8.547976);
             schedule = builder.build();
         }
 
