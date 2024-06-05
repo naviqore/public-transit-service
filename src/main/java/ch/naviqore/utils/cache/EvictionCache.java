@@ -46,7 +46,7 @@ public class EvictionCache<K, V> {
      */
     public synchronized V computeIfAbsent(K key, Supplier<V> supplier) {
         if (cache.containsKey(key)) {
-            log.info("Cache hit, retrieving cached instance for key {}", key);
+            log.debug("Cache hit, retrieving cached instance for key {}", key);
             updateAccessOrder(key);
             return cache.get(key);
         }
@@ -55,7 +55,7 @@ public class EvictionCache<K, V> {
             evict();
         }
 
-        log.info("No cache hit, computing new instance for key {}", key);
+        log.debug("No cache hit, computing new instance for key {}", key);
         V value = supplier.get();
         cache.put(key, value);
         updateAccessOrder(key);
@@ -88,7 +88,7 @@ public class EvictionCache<K, V> {
     private void evict() {
         K keyToEvict = strategy == Strategy.LRU ? findLRUKey() : findMRUKey();
         if (keyToEvict != null) {
-            log.info("Removing cached key {}, last access at {}", keyToEvict, accessOrder.get(keyToEvict));
+            log.debug("Removing cached key {}, last access at {}", keyToEvict, accessOrder.get(keyToEvict));
             cache.remove(keyToEvict);
             accessOrder.remove(keyToEvict);
         }
