@@ -210,7 +210,7 @@ public class DtoDummyData {
         int footpathSpeed = 100; // meters per minute
         int footpathTravelTime = footpathDistance / footpathSpeed; // in minutes
 
-        return new Leg(from.getCoordinates(), to.getCoordinates(), from, to, LegType.WALK, departureTime,
+        return new Leg(LegType.WALK, from.getCoordinates(), to.getCoordinates(), from, to, departureTime,
                 departureTime.plusMinutes(footpathTravelTime), null);
     }
 
@@ -268,7 +268,7 @@ public class DtoDummyData {
 
         Trip trip = new Trip(to.getName(), route, stopTimes);
 
-        return new Leg(from.getCoordinates(), to.getCoordinates(), from, to, LegType.ROUTE, tripDepartureTime,
+        return new Leg(LegType.ROUTE, from.getCoordinates(), to.getCoordinates(), from, to, tripDepartureTime,
                 tripArrivalTime, trip);
     }
 

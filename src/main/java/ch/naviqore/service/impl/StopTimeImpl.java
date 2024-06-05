@@ -10,13 +10,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-@ToString
+@ToString(exclude = "trip")
 public class StopTimeImpl implements StopTime {
 
     private final Stop stop;
     private final LocalDateTime arrivalTime;
     private final LocalDateTime departureTime;
     @Setter(AccessLevel.PACKAGE)
-    private Trip trip;
+    // cyclical dependency, therefore avoid serialization and use in toString representation
+    private transient Trip trip;
 
 }

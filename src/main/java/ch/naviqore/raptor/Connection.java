@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,11 +75,15 @@ public class Connection implements Comparable<Connection> {
         return getArrivalTime() - getDepartureTime();
     }
 
-    public int getNumFootPathTransfers() {
-        return (int) legs.stream().filter(l -> l.type == LegType.FOOTPATH).count();
+    public List<Leg> getWalkTransfers() {
+        return legs.stream().filter(l -> l.type == LegType.WALK_TRANSFER).toList();
     }
 
-    public int getNumSameStationTransfers() {
+    public List<Leg> getRouteLegs() {
+        return legs.stream().filter(l -> l.type == LegType.ROUTE).toList();
+    }
+
+    public int getNumberOfSameStationTransfers() {
         int transferCounter = 0;
         for (int i = 0; i < legs.size() - 1; i++) {
             Leg current = legs.get(i);
@@ -90,27 +95,23 @@ public class Connection implements Comparable<Connection> {
         return transferCounter;
     }
 
-    public int getNumTransfers() {
-        return getNumFootPathTransfers() + getNumSameStationTransfers();
-    }
-
-    public int getNumRouteLegs() {
-        return (int) legs.stream().filter(l -> l.type == LegType.ROUTE).count();
+    public int getNumberOfTotalTransfers() {
+        return getWalkTransfers().size() + getNumberOfSameStationTransfers();
     }
 
     /**
      * Types of legs in a connection.
      */
     public enum LegType {
-        FOOTPATH,
+        WALK_TRANSFER,
         ROUTE
     }
 
     /**
      * A leg is a part of a connection that is travelled on the same route and transport mode, without a transfer.
      */
-    public record Leg(String routeId, String fromStopId, String toStopId, int departureTime, int arrivalTime,
-                      LegType type) implements Comparable<Leg> {
+    public record Leg(String routeId, @Nullable String tripId, String fromStopId, String toStopId, int departureTime,
+                      int arrivalTime, LegType type) implements Comparable<Leg> {
 
         @Override
         public int compareTo(@NotNull Connection.Leg other) {

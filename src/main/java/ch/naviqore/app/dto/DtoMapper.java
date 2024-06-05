@@ -53,37 +53,43 @@ public class DtoMapper {
     }
 
     public static EarliestArrival map(ch.naviqore.service.Stop stop, ch.naviqore.service.Connection connection) {
-        return new EarliestArrival(map(stop), connection.getLegs().getLast().getArrivalTime(), map(connection));
+        return new EarliestArrival(map(stop), connection.getArrivalTime(), map(connection));
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {
         @Override
         public Leg visit(PublicTransitLeg publicTransitLeg) {
-            // TODO: Trip id in raptor has to be passed first.
-            return new Leg(
-                    // map(publicTransitLeg.getDeparture().getStop().getLocation()),
-                    // map(publicTransitLeg.getArrival().getStop().getLocation()),
-                    null, null,
-                    // map(publicTransitLeg.getDeparture().getStop()),
-                    // map(publicTransitLeg.getArrival().getStop()),
-                    null, null, LegType.ROUTE,
-                    // publicTransitLeg.getDeparture().getDepartureTime(),
-                    // publicTransitLeg.getArrival().getArrivalTime(),
-                    null, null,
-                    // map(publicTransitLeg.getTrip())
-                    null);
+            return new Leg(LegType.ROUTE, publicTransitLeg.getDeparture().getStop().getLocation(),
+                    publicTransitLeg.getArrival().getStop().getLocation(),
+                    map(publicTransitLeg.getDeparture().getStop()), map(publicTransitLeg.getArrival().getStop()),
+                    publicTransitLeg.getDeparture().getDepartureTime(), publicTransitLeg.getArrival().getArrivalTime(),
+                    map(publicTransitLeg.getTrip()));
         }
 
         @Override
         public Leg visit(Transfer transfer) {
-            return new Leg(transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
-                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), LegType.WALK,
-                    transfer.getDepartureTime(), transfer.getArrivalTime(), null);
+            return new Leg(LegType.WALK, transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
+                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), transfer.getDepartureTime(),
+                    transfer.getArrivalTime(), null);
         }
 
         @Override
         public Leg visit(Walk walk) {
-            return new Leg(walk.getSourceLocation(), walk.getTargetLocation(), null, null, LegType.WALK,
+            Stop sourceStop = null;
+            Stop targetStop = null;
+
+            // set stop depending on walk type
+            if (walk.getStop().isPresent()) {
+                switch (walk.getWalkType()) {
+                    case WalkType.LAST_MILE -> sourceStop = map(walk.getStop().get());
+                    case WalkType.FIRST_MILE -> targetStop = map(walk.getStop().get());
+                    // a walk between two stations is a TransferLeg and not a Walk, therefore this case should not occur
+                    case DIRECT -> throw new IllegalStateException(
+                            "No stop should be present in a direct walk between two location.");
+                }
+            }
+
+            return new Leg(LegType.WALK, walk.getSourceLocation(), walk.getTargetLocation(), sourceStop, targetStop,
                     walk.getDepartureTime(), walk.getArrivalTime(), null);
         }
     }

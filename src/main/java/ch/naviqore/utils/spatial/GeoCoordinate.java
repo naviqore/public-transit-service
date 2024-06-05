@@ -91,6 +91,6 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
 
     @Override
     public String toString() {
-        return "[" + this.getClass().getSimpleName() + ": " + latitude + "°, " + longitude + "°]";
+        return this.getClass().getSimpleName() + "(lat=" + latitude + "°, lon=" + longitude + "°)";
     }
 }

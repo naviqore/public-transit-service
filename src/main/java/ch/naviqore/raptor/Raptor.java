@@ -46,6 +46,7 @@ public class Raptor {
         return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
+    // TODO: Do we still need this? There are no usages...
     public List<Connection> routeEarliestArrival(Collection<String> sourceStopIds, Collection<String> targetStopIds,
                                                  int departureTime) {
         Map<String, Integer> sourceStops = createStopMap(sourceStopIds, departureTime);
@@ -65,6 +66,7 @@ public class Raptor {
         return stopMap;
     }
 
+    // TODO: Do we still need this? There are no usages...
     private Map<String, Integer> createStopMap(List<String> stopIds, List<Integer> values) {
         if (stopIds.size() != values.size()) {
             throw new IllegalArgumentException("Stop IDs and values must have the same size.");
@@ -158,7 +160,7 @@ public class Raptor {
             // subtract same stop transfer time, as this will be added by default before scanning routes
             earliestArrivals[sourceStopIdxs[i]] = departureTimes[i] - SAME_STOP_TRANSFER_TIME;
             earliestArrivalsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, departureTimes[i], ArrivalType.INITIAL,
-                    NO_INDEX, sourceStopIdxs[i], null);
+                    NO_INDEX, NO_INDEX, sourceStopIdxs[i], null);
             markedStops.add(sourceStopIdxs[i]);
         }
 
@@ -247,9 +249,10 @@ public class Raptor {
                                 continue;
                             }
 
+                            // create a route leg
                             earliestArrivals[stopIdx] = stopTime.arrival();
                             earliestArrivalsThisRound[stopIdx] = new Leg(tripEntryTime, stopTime.arrival(),
-                                    ArrivalType.ROUTE, currentRouteIdx, stopIdx, enteredAtArrival);
+                                    ArrivalType.ROUTE, currentRouteIdx, tripOffset, stopIdx, enteredAtArrival);
                             // mark stop improvement for next round
                             markedStopsNext.add(stopIdx);
                             // check if this was a target stop
@@ -315,7 +318,7 @@ public class Raptor {
                                 stops[stopIdx].id());
                         earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
                         earliestArrivalsThisRound[transfer.targetStopIdx()] = new Leg(earliestArrivals[stopIdx],
-                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
                                 earliestArrivalsThisRound[stopIdx]);
                         newStops.add(transfer.targetStopIdx());
                     }
@@ -374,25 +377,36 @@ public class Raptor {
 
     private @Nullable Connection reconstructConnectionFromLeg(Leg leg) {
         Connection connection = new Connection();
+
+        // start from destination leg and follow legs back until the initial leg is reached
         while (leg.type != ArrivalType.INITIAL) {
-            String id;
+            String routeId;
+            String tripId = null;
+            assert leg.previous != null;
             String fromStopId = stops[leg.previous.stopIdx].id();
             String toStopId = stops[leg.stopIdx].id();
             Connection.LegType type;
             int departureTime = leg.departureTime;
             int arrivalTime = leg.arrivalTime;
+
             if (leg.type == ArrivalType.ROUTE) {
-                id = routes[leg.routeOrTransferIdx].id();
+                Route route = routes[leg.routeOrTransferIdx];
+                routeId = route.id();
+                tripId = route.tripIds()[leg.tripOffset];
                 type = Connection.LegType.ROUTE;
+
             } else if (leg.type == ArrivalType.TRANSFER) {
-                id = String.format("transfer_%s_%s", fromStopId, toStopId);
-                type = Connection.LegType.FOOTPATH;
+                routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
+                type = Connection.LegType.WALK_TRANSFER;
                 // include same stop transfer time (which is subtracted before scanning routes)
                 arrivalTime += SAME_STOP_TRANSFER_TIME;
+
             } else {
                 throw new IllegalStateException("Unknown arrival type");
             }
-            connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
+
+            connection.addLeg(
+                    new Connection.Leg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
             leg = leg.previous;
         }
 
@@ -411,6 +425,7 @@ public class Raptor {
         if (stops[sourceStopIdx].numberOfTransfers() == 0) {
             return;
         }
+
         // mark all transfer stops, no checks needed for since all transfers will improve arrival time and can be
         // marked
         Stop sourceStop = stops[sourceStopIdx];
@@ -422,20 +437,45 @@ public class Raptor {
             }
             earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
             earliestArrivalsPerRound.getFirst()[transfer.targetStopIdx()] = new Leg(departureTime,
-                    newTargetStopArrivalTime, ArrivalType.TRANSFER, i, transfer.targetStopIdx(),
+                    newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
                     earliestArrivalsPerRound.getFirst()[sourceStopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
     }
 
+    /**
+     * Arrival type of the leg.
+     */
     private enum ArrivalType {
+
+        /**
+         * First leg in the connection, so there is no previous leg set.
+         */
         INITIAL,
+        /**
+         * A route leg uses a public transit trip in the network.
+         */
         ROUTE,
+        /**
+         * Uses a transfer between station (no same station transfers).
+         */
         TRANSFER
+
     }
 
-    private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
-                       Leg previous) {
+    /**
+     * A leg is a part of a connection in the same mode (PT or walk).
+     *
+     * @param departureTime      the departure time of the leg in seconds after midnight.
+     * @param arrivalTime        the arrival time of the leg in seconds after midnight.
+     * @param type               the type of the leg, can be INITIAL, ROUTE or TRANSFER.
+     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
+     * @param tripOffset         the trip offset on the current route (or NO_INDEX).
+     * @param stopIdx            the arrival stop of the leg.
+     * @param previous           the previous leg, null if it is the previous leg.
+     */
+    private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int tripOffset,
+                       int stopIdx, @Nullable Leg previous) {
     }
 
     /**
@@ -444,6 +484,7 @@ public class Raptor {
     private class InputValidator {
         private static final int MIN_DEPARTURE_TIME = 0;
         private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
+        private static final int MIN_WALKING_TIME_TO_TARGET = 0;
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
@@ -453,14 +494,17 @@ public class Raptor {
             if (targetStops.isEmpty()) {
                 throw new IllegalArgumentException("At least one target stop must be provided.");
             }
+
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
-            Set<String> targetStopIds = targetStops.keySet();
-            for (String sourceStopId : sourceStops.keySet()) {
-                if (targetStopIds.contains(sourceStopId)) {
-                    throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
-                }
+
+            // ensure departure and arrival stops are not the same
+            Set<String> intersection = new HashSet<>(sourceStops.keySet());
+            intersection.retainAll(targetStops.keySet());
+            if (!intersection.isEmpty()) {
+                throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
             }
+
         }
 
         private static void validateDepartureTime(int departureTime) {
@@ -471,8 +515,9 @@ public class Raptor {
         }
 
         private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
-            if (walkingDurationToTarget < 0) {
-                throw new IllegalArgumentException("Walking duration to target must be greater or equal to 0.");
+            if (walkingDurationToTarget < MIN_WALKING_TIME_TO_TARGET) {
+                throw new IllegalArgumentException(
+                        "Walking duration to target must be greater or equal to " + MIN_WALKING_TIME_TO_TARGET + "seconds.");
             }
         }
 
@@ -489,16 +534,19 @@ public class Raptor {
             if (stops.isEmpty()) {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
-            // Loop over all stop pairs
+
+            // loop over all stop pairs and check if stop exists in raptor, then validate departure time
             Map<Integer, Integer> validStopIds = new HashMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
                 String stopId = entry.getKey();
                 int time = entry.getValue();
+
                 if (stopsToIdx.containsKey(stopId)) {
                     validateDepartureTime(time);
                     validStopIds.put(stopsToIdx.get(stopId), time);
+                } else {
+                    log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
                 }
-                log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
             }
 
             if (validStopIds.isEmpty()) {

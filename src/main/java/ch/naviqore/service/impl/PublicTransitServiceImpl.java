@@ -43,7 +43,6 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private static final int MIN_WALK_DURATION = 120;
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
-    // private final Map<String, List<ch.naviqore.gtfs.schedule.model.Stop>> parentStops;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
@@ -86,6 +85,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         if (stop != null && stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
             stop = stop.getParent().get();
         }
+
         return Optional.ofNullable(map(stop));
     }
 

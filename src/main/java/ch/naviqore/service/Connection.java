@@ -1,5 +1,6 @@
 package ch.naviqore.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -8,5 +9,9 @@ import java.util.List;
 public interface Connection {
 
     List<Leg> getLegs();
+
+    LocalDateTime getDepartureTime();
+
+    LocalDateTime getArrivalTime();
 
 }

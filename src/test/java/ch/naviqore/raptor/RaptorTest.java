@@ -47,9 +47,9 @@ class RaptorTest {
             assertTrue(connection1.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
             // check that transfers make sense
-            assertEquals(1, connection1.getNumFootPathTransfers());
-            assertEquals(1, connection1.getNumTransfers());
-            assertEquals(0, connection1.getNumSameStationTransfers());
+            assertEquals(1, connection1.getWalkTransfers().size());
+            assertEquals(1, connection1.getNumberOfTotalTransfers());
+            assertEquals(0, connection1.getNumberOfSameStationTransfers());
 
             // check second connection
             Connection connection2 = connections.get(1);
@@ -58,14 +58,14 @@ class RaptorTest {
             assertTrue(connection2.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
             // check that transfers make sense
-            assertEquals(0, connection2.getNumFootPathTransfers());
-            assertEquals(2, connection2.getNumTransfers());
-            assertEquals(2, connection2.getNumSameStationTransfers());
+            assertEquals(0, connection2.getWalkTransfers().size());
+            assertEquals(2, connection2.getNumberOfTotalTransfers());
+            assertEquals(2, connection2.getNumberOfSameStationTransfers());
 
             // compare two connections (make sure they are pareto optimal)
             assertTrue(connection1.getDuration() > connection2.getDuration(),
                     "First connection should be slower than second connection");
-            assertTrue(connection1.getNumRouteLegs() < connection2.getNumRouteLegs(),
+            assertTrue(connection1.getRouteLegs().size() < connection2.getRouteLegs().size(),
                     "First connection should have fewer route legs than second connection");
         }
 
@@ -83,9 +83,9 @@ class RaptorTest {
             assertEquals(targetStop, connection.getToStopId());
             assertTrue(connection.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
-            assertEquals(0, connection.getNumFootPathTransfers());
-            assertEquals(0, connection.getNumTransfers());
-            assertEquals(0, connection.getNumSameStationTransfers());
+            assertEquals(0, connection.getWalkTransfers().size());
+            assertEquals(0, connection.getNumberOfTotalTransfers());
+            assertEquals(0, connection.getNumberOfSameStationTransfers());
         }
 
         @Test
@@ -120,10 +120,10 @@ class RaptorTest {
             assertEquals(targetStop, connection.getToStopId());
             assertTrue(connection.getDepartureTime() >= departureTime,
                     "Departure time should be greater equal than searched for departure time");
-            assertEquals(1, connection.getNumFootPathTransfers());
-            assertEquals(1, connection.getNumTransfers());
-            assertEquals(0, connection.getNumSameStationTransfers());
-            assertEquals(0, connection.getNumRouteLegs());
+            assertEquals(1, connection.getWalkTransfers().size());
+            assertEquals(1, connection.getNumberOfTotalTransfers());
+            assertEquals(0, connection.getNumberOfSameStationTransfers());
+            assertEquals(0, connection.getRouteLegs().size());
         }
 
         @Nested

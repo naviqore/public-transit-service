@@ -190,8 +190,8 @@ public class RaptorBuilder {
             // add route entry to route array
             final int numberOfStops = routeContainer.stopSequence().size();
             final int numberOfTrips = routeContainer.trips().size();
-            routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt,
-                    numberOfTrips);
+            routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt, numberOfTrips,
+                    routeContainer.trips().keySet().toArray(new String[0]));
 
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
