@@ -78,23 +78,26 @@ public class Raptor {
 
     public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
         InputValidator.validateStopPermutations(sourceStops, targetStopIds);
-        int[] sourceStopIdxs = validator.validateAndGetStopIdx(sourceStops.keySet());
-        int[] departureTimes = sourceStops.values().stream().mapToInt(Integer::intValue).toArray();
-        int[] targetStopIdxs = validator.validateAndGetStopIdx(targetStopIds.keySet());
-        int[] targetStopHandicaps = targetStopIds.values().stream().mapToInt(Integer::intValue).toArray();
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+        Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStopIds);
+        int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] walkingDurationsToTarget = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
         List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
-                targetStopHandicaps);
+                walkingDurationsToTarget);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(
-                validator.validateAndGetStopIdx(sourceStops.keySet()),
-                sourceStops.values().stream().mapToInt(Integer::intValue).toArray());
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+        int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, departureTimes);
 
         Map<String, Connection> isoLines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
@@ -128,7 +131,7 @@ public class Raptor {
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
     private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes,
-                                            int[] targetStopHandicaps) {
+                                            int[] walkingDurationsToTarget) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
@@ -137,14 +140,14 @@ public class Raptor {
             throw new IllegalArgumentException("Source stops and departure times must have the same size.");
         }
 
-        if (targetStopIdxs.length != targetStopHandicaps.length) {
-            throw new IllegalArgumentException("Target stops and handicaps must have the same size.");
+        if (targetStopIdxs.length != walkingDurationsToTarget.length) {
+            throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
         int[] targetStops = new int[targetStopIdxs.length * 2];
         for (int i = 0; i < targetStopIdxs.length; i++) {
             targetStops[i] = targetStopIdxs[i];
-            targetStops[i + targetStopIdxs.length] = targetStopHandicaps[i];
+            targetStops[i + targetStopIdxs.length] = walkingDurationsToTarget[i];
         }
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
@@ -332,8 +335,8 @@ public class Raptor {
         int earliestArrival = INFINITY;
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
-            int targetStopHandicap = targetStops[i + 1];
-            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + targetStopHandicap);
+            int walkDurationToTarget = targetStops[i + 1];
+            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + walkDurationToTarget);
         }
         return earliestArrival;
     }
@@ -451,7 +454,7 @@ public class Raptor {
                 throw new IllegalArgumentException("At least one target stop must be provided.");
             }
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
-            targetStops.values().forEach(InputValidator::validateArrivalHandicap);
+            targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
             Set<String> targetStopIds = targetStops.keySet();
             for (String sourceStopId : sourceStops.keySet()) {
                 if (targetStopIds.contains(sourceStopId)) {
@@ -467,22 +470,42 @@ public class Raptor {
             }
         }
 
-        private static void validateArrivalHandicap(int arrivalHandicap) {
-            if (arrivalHandicap < 0) {
-                throw new IllegalArgumentException("Arrival handicap must be greater or equal to 0.");
+        private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
+            if (walkingDurationToTarget < 0) {
+                throw new IllegalArgumentException("Walking duration to target must be greater or equal to 0.");
             }
         }
 
-        private int[] validateAndGetStopIdx(Collection<String> stopIds) {
-            return stopIds.stream().mapToInt(this::validateAndGetStopIdx).toArray();
-        }
-
-        private int validateAndGetStopIdx(String stopId) {
-            try {
-                return stopsToIdx.get(stopId);
-            } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Stop id " + stopId + " not found.");
+        /**
+         * Validate the stops provided in the query. This method will check that the map of stop ids and their
+         * corresponding departure / walk to target times are valid. This is done by checking if the map is not empty
+         * and then checking each entry if the stop id is present in the lookup. If not it is removed from the query. If
+         * no valid stops are found an IllegalArgumentException is thrown.
+         *
+         * @param stops the stops to validate.
+         * @return a map of valid stop IDs and their corresponding departure / walk to target times.
+         */
+        private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
+            if (stops.isEmpty()) {
+                throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
+            // Loop over all stop pairs
+            Map<Integer, Integer> validStopIds = new HashMap<>();
+            for (Map.Entry<String, Integer> entry : stops.entrySet()) {
+                String stopId = entry.getKey();
+                int time = entry.getValue();
+                if (stopsToIdx.containsKey(stopId)) {
+                    validateDepartureTime(time);
+                    validStopIds.put(stopsToIdx.get(stopId), time);
+                }
+                log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
+            }
+
+            if (validStopIds.isEmpty()) {
+                throw new IllegalArgumentException("No valid stops provided.");
+            }
+
+            return validStopIds;
         }
     }
 
