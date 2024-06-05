@@ -1,16 +1,19 @@
 package ch.naviqore.utils.cache;
 
+import lombok.extern.log4j.Log4j2;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * A generic cache class that supports LRU (Least Recently Used) and MRU (Most Recently Used) eviction strategies.
+ * A generic cache that supports LRU (Least Recently Used) and MRU (Most Recently Used) eviction strategies.
  *
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@Log4j2
 public class EvictionCache<K, V> {
     private final int size;
     private final Strategy strategy;
@@ -51,6 +54,7 @@ public class EvictionCache<K, V> {
      */
     public synchronized V computeIfAbsent(K key, Supplier<V> supplier) {
         if (cache.containsKey(key)) {
+            log.info("Cache hit, retrieving cached instance for key {}", key);
             updateAccessOrder(key);
             return cache.get(key);
         }
@@ -59,6 +63,7 @@ public class EvictionCache<K, V> {
             evict();
         }
 
+        log.info("No cache hit, computing new instance for key {}", key);
         V value = supplier.get();
         cache.put(key, value);
         updateAccessOrder(key);
@@ -91,6 +96,7 @@ public class EvictionCache<K, V> {
     private void evict() {
         K keyToEvict = strategy == Strategy.LRU ? findLRUKey() : findMRUKey();
         if (keyToEvict != null) {
+            log.info("Removing cached key {}, last access at {}", keyToEvict, accessOrder.get(keyToEvict));
             cache.remove(keyToEvict);
             accessOrder.remove(keyToEvict);
         }
