@@ -75,7 +75,21 @@ public class DtoMapper {
 
         @Override
         public Leg visit(Walk walk) {
-            return new Leg(LegType.WALK, walk.getSourceLocation(), walk.getTargetLocation(), null, null,
+            Stop sourceStop = null;
+            Stop targetStop = null;
+
+            // set stop depending on walk type
+            if (walk.getStop().isPresent()) {
+                switch (walk.getWalkType()) {
+                    case WalkType.LAST_MILE -> sourceStop = map(walk.getStop().get());
+                    case WalkType.FIRST_MILE -> targetStop = map(walk.getStop().get());
+                    // a walk between two stations is a TransferLeg and not a Walk, therefore this case should not occur
+                    case DIRECT -> throw new IllegalStateException(
+                            "No stop should be present in a direct walk between two location.");
+                }
+            }
+
+            return new Leg(LegType.WALK, walk.getSourceLocation(), walk.getTargetLocation(), sourceStop, targetStop,
                     walk.getDepartureTime(), walk.getArrivalTime(), null);
         }
     }
