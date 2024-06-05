@@ -1,4 +1,4 @@
-### Nearest stop
+### Nearest stops
 GET http://localhost:8080/schedule/stops/nearest?latitude=36&longitude=-116&maxDistance=500000
 Accept: application/json
 

@@ -59,31 +59,23 @@ public class DtoMapper {
     private static class LegVisitorImpl implements LegVisitor<Leg> {
         @Override
         public Leg visit(PublicTransitLeg publicTransitLeg) {
-            // TODO: Trip id in raptor has to be passed first.
-            return new Leg(
-                    // map(publicTransitLeg.getDeparture().getStop().getLocation()),
-                    // map(publicTransitLeg.getArrival().getStop().getLocation()),
-                    null, null,
-                    // map(publicTransitLeg.getDeparture().getStop()),
-                    // map(publicTransitLeg.getArrival().getStop()),
-                    null, null, LegType.ROUTE,
-                    // publicTransitLeg.getDeparture().getDepartureTime(),
-                    // publicTransitLeg.getArrival().getArrivalTime(),
-                    null, null,
-                    // map(publicTransitLeg.getTrip())
-                    null);
+            return new Leg(LegType.ROUTE, publicTransitLeg.getDeparture().getStop().getLocation(),
+                    publicTransitLeg.getArrival().getStop().getLocation(),
+                    map(publicTransitLeg.getDeparture().getStop()), map(publicTransitLeg.getArrival().getStop()),
+                    publicTransitLeg.getDeparture().getDepartureTime(), publicTransitLeg.getArrival().getArrivalTime(),
+                    map(publicTransitLeg.getTrip()));
         }
 
         @Override
         public Leg visit(Transfer transfer) {
-            return new Leg(transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
-                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), LegType.WALK,
-                    transfer.getDepartureTime(), transfer.getArrivalTime(), null);
+            return new Leg(LegType.WALK, transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
+                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), transfer.getDepartureTime(),
+                    transfer.getArrivalTime(), null);
         }
 
         @Override
         public Leg visit(Walk walk) {
-            return new Leg(walk.getSourceLocation(), walk.getTargetLocation(), null, null, LegType.WALK,
+            return new Leg(LegType.WALK, walk.getSourceLocation(), walk.getTargetLocation(), null, null,
                     walk.getDepartureTime(), walk.getArrivalTime(), null);
         }
     }

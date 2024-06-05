@@ -89,20 +89,20 @@ final class TypeMapper {
     }
 
     public static Leg map(ch.naviqore.raptor.Connection.Leg leg, LocalDate date, GtfsSchedule schedule) {
-        // TODO: Distance is needed on Footpaths, distance of trip can be estimated based on trip and beeline distance?
-        int distance = 0;
         int duration = leg.arrivalTime() - leg.departureTime();
         Stop sourceStop = map(schedule.getStops().get(leg.fromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.toStopId()));
+        int distance = (int) Math.round(sourceStop.getLocation().distanceTo(targetStop.getLocation()));
+
         return switch (leg.type()) {
             case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.departureTime(), date),
                     toLocalDateTime(leg.arrivalTime(), date), sourceStop, targetStop);
-            case ROUTE -> createPublicTransitLeg(leg, date, schedule);
+            case ROUTE -> createPublicTransitLeg(leg, date, schedule, distance);
         };
     }
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Connection.Leg leg, LocalDate date,
-                                              GtfsSchedule schedule) {
+                                              GtfsSchedule schedule, int distance) {
         int duration = leg.arrivalTime() - leg.departureTime();
         ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.tripId());
         Trip trip = map(gtfsTrip, date);
@@ -133,7 +133,7 @@ final class TypeMapper {
         assert departure != null : "Departure stop time cannot be null";
         assert arrival != null : "Arrival stop time cannot be null";
 
-        return new PublicTransitLegImpl(0, duration, trip, departure, arrival);
+        return new PublicTransitLegImpl(distance, duration, trip, departure, arrival);
     }
 
     private static LocalDateTime toLocalDateTime(int secondsOfDay, LocalDate date) {
