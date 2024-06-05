@@ -46,6 +46,7 @@ public class Raptor {
         return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
+    // TODO: Do we still need this? There are no usages...
     public List<Connection> routeEarliestArrival(Collection<String> sourceStopIds, Collection<String> targetStopIds,
                                                  int departureTime) {
         Map<String, Integer> sourceStops = createStopMap(sourceStopIds, departureTime);
@@ -65,6 +66,7 @@ public class Raptor {
         return stopMap;
     }
 
+    // TODO: Do we still need this? There are no usages...
     private Map<String, Integer> createStopMap(List<String> stopIds, List<Integer> values) {
         if (stopIds.size() != values.size()) {
             throw new IllegalArgumentException("Stop IDs and values must have the same size.");
@@ -374,24 +376,31 @@ public class Raptor {
 
     private @Nullable Connection reconstructConnectionFromLeg(Leg leg) {
         Connection connection = new Connection();
+
+        // start from destination leg and follow legs back until the initial leg is reached
         while (leg.type != ArrivalType.INITIAL) {
             String id;
+            assert leg.previous != null;
             String fromStopId = stops[leg.previous.stopIdx].id();
             String toStopId = stops[leg.stopIdx].id();
             Connection.LegType type;
             int departureTime = leg.departureTime;
             int arrivalTime = leg.arrivalTime;
+
             if (leg.type == ArrivalType.ROUTE) {
                 id = routes[leg.routeOrTransferIdx].id();
                 type = Connection.LegType.ROUTE;
+
             } else if (leg.type == ArrivalType.TRANSFER) {
                 id = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Connection.LegType.FOOTPATH;
                 // include same stop transfer time (which is subtracted before scanning routes)
                 arrivalTime += SAME_STOP_TRANSFER_TIME;
+
             } else {
                 throw new IllegalStateException("Unknown arrival type");
             }
+
             connection.addLeg(new Connection.Leg(id, fromStopId, toStopId, departureTime, arrivalTime, type));
             leg = leg.previous;
         }
@@ -411,6 +420,7 @@ public class Raptor {
         if (stops[sourceStopIdx].numberOfTransfers() == 0) {
             return;
         }
+
         // mark all transfer stops, no checks needed for since all transfers will improve arrival time and can be
         // marked
         Stop sourceStop = stops[sourceStopIdx];
@@ -428,14 +438,38 @@ public class Raptor {
         }
     }
 
+    /**
+     * Arrival type of the leg.
+     */
     private enum ArrivalType {
+
+        /**
+         * First leg in the connection, so there is no previous leg set.
+         */
         INITIAL,
+        /**
+         * A route leg uses a public transit trip in the network.
+         */
         ROUTE,
+        /**
+         * Uses a transfer between station (no same station transfers).
+         */
         TRANSFER
+
     }
 
+    /**
+     * A leg is a part of a connection in the same mode (PT or walk).
+     *
+     * @param departureTime      the departure time of the leg in seconds after midnight.
+     * @param arrivalTime        the arrival time of the leg in seconds after midnight.
+     * @param type               the type of the leg, can be INITIAL, ROUTE or TRANSFER.
+     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type.
+     * @param stopIdx            the arrival stop of the leg.
+     * @param previous           the previous leg, null if it is the previous leg.
+     */
     private record Leg(int departureTime, int arrivalTime, ArrivalType type, int routeOrTransferIdx, int stopIdx,
-                       Leg previous) {
+                       @Nullable Leg previous) {
     }
 
     /**
@@ -444,6 +478,7 @@ public class Raptor {
     private class InputValidator {
         private static final int MIN_DEPARTURE_TIME = 0;
         private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
+        private static final int MIN_WALKING_TIME_TO_TARGET = 0;
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
@@ -453,14 +488,17 @@ public class Raptor {
             if (targetStops.isEmpty()) {
                 throw new IllegalArgumentException("At least one target stop must be provided.");
             }
+
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
-            Set<String> targetStopIds = targetStops.keySet();
-            for (String sourceStopId : sourceStops.keySet()) {
-                if (targetStopIds.contains(sourceStopId)) {
-                    throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
-                }
+
+            // ensure departure and arrival stops are not the same
+            Set<String> intersection = new HashSet<>(sourceStops.keySet());
+            intersection.retainAll(targetStops.keySet());
+            if (!intersection.isEmpty()) {
+                throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
             }
+
         }
 
         private static void validateDepartureTime(int departureTime) {
@@ -471,8 +509,9 @@ public class Raptor {
         }
 
         private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
-            if (walkingDurationToTarget < 0) {
-                throw new IllegalArgumentException("Walking duration to target must be greater or equal to 0.");
+            if (walkingDurationToTarget < MIN_WALKING_TIME_TO_TARGET) {
+                throw new IllegalArgumentException(
+                        "Walking duration to target must be greater or equal to " + MIN_WALKING_TIME_TO_TARGET + "seconds.");
             }
         }
 
@@ -489,11 +528,13 @@ public class Raptor {
             if (stops.isEmpty()) {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
-            // Loop over all stop pairs
+
+            // loop over all stop pairs and validate departure times and if stop exists in raptor
             Map<Integer, Integer> validStopIds = new HashMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
                 String stopId = entry.getKey();
                 int time = entry.getValue();
+
                 if (stopsToIdx.containsKey(stopId)) {
                     validateDepartureTime(time);
                     validStopIds.put(stopsToIdx.get(stopId), time);
