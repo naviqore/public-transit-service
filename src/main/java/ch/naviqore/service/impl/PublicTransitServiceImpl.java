@@ -18,6 +18,7 @@ import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
+import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.search.SearchIndexBuilder;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -41,12 +42,18 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     // TODO: Make CutOff configurable, if walk duration is longer than this, no first or last walk is needed
     private static final int MIN_WALK_DURATION = 120;
+    // do not make the cache configurable, since this solution will be replaced by trip masking in the raptor
+    public final int CACHE_SIZE = 5;
+    public final EvictionCache.Strategy CACHE_EVICTION_STRATEGY = EvictionCache.Strategy.LRU;
+
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
     private final List<TransferGenerator.Transfer> additionalTransfers;
+    private final EvictionCache<LocalDate, Raptor> raptorCache = new EvictionCache<>(CACHE_SIZE,
+            CACHE_EVICTION_STRATEGY);
 
     public PublicTransitServiceImpl(ServiceConfig config) {
         this.config = config;
@@ -191,8 +198,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
 
         // query connection from raptor
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(time.toLocalDate());
-
+        Raptor raptor = getRaptor(time.toLocalDate());
         List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
 
         List<Connection> result = new ArrayList<>();
@@ -257,8 +263,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
                 departureTime.toLocalTime().toSecondOfDay());
 
-        // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
+        Raptor raptor = getRaptor(departureTime.toLocalDate());
 
         return mapToStopConnectionMap(raptor.getIsoLines(sourceStops), sourceStops, source, departureTime);
     }
@@ -268,10 +273,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> sourceStops = getAllChildStopsFromStop(source,
                 departureTime.toLocalTime().toSecondOfDay());
 
-        // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
+        Raptor raptor = getRaptor(departureTime.toLocalDate());
 
         return mapToStopConnectionMap(raptor.getIsoLines(sourceStops), sourceStops, null, departureTime);
+    }
+
+    private Raptor getRaptor(LocalDate date) {
+        // TODO: Not always create a new raptor, use mask on stop times based on active trips
+        return raptorCache.computeIfAbsent(date,
+                () -> new GtfsToRaptorConverter(schedule, additionalTransfers).convert(date));
     }
 
     private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,

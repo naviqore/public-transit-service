@@ -21,14 +21,6 @@ public class EvictionCache<K, V> {
     private final LinkedHashMap<K, Long> accessOrder; // Tracks insertion and access order
 
     /**
-     * Enum representing the eviction strategy.
-     */
-    public enum Strategy {
-        LRU,
-        MRU
-    }
-
-    /**
      * Constructs a new EvictionCache with the specified size and eviction strategy.
      *
      * @param size     the maximum number of elements the cache can hold
@@ -108,6 +100,14 @@ public class EvictionCache<K, V> {
 
     private K findMRUKey() {
         return accessOrder.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
+
+    /**
+     * Enum representing the eviction strategy.
+     */
+    public enum Strategy {
+        LRU,
+        MRU
     }
 
 }
