@@ -164,7 +164,7 @@ public class Raptor {
             markedStops.add(sourceStopIdxs[i]);
         }
 
-        for (int i = 0; i < targetStopIdxs.length; i++) {
+        for (int i = 0; i < sourceStopIdxs.length; i++) {
             expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdxs[i],
                     departureTimes[i]);
         }
