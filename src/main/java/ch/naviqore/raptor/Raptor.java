@@ -340,7 +340,14 @@ public class Raptor {
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
-            earliestArrival = Math.min(earliestArrival, earliestArrivals[targetStopIdx] + walkDurationToTarget);
+            int earliestArrivalAtTarget = earliestArrivals[targetStopIdx];
+
+            // To Prevent Adding a number to Max Integer Value (resulting in a very small negative number)
+            if( earliestArrivalAtTarget == INFINITY ) {
+                continue;
+            }
+
+            earliestArrival = Math.min(earliestArrival, earliestArrivalAtTarget + walkDurationToTarget);
         }
         return earliestArrival;
     }
