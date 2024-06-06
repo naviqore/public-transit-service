@@ -79,9 +79,9 @@ public class Raptor {
     }
 
     public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
-        InputValidator.validateStopPermutations(sourceStops, targetStopIds);
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStopIds);
+        InputValidator.validateStopPermutations(sourceStops, targetStopIds);
         int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         int[] targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
@@ -502,13 +502,6 @@ public class Raptor {
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
-            if (sourceStops.isEmpty()) {
-                throw new IllegalArgumentException("At least one source stop must be provided.");
-            }
-            if (targetStops.isEmpty()) {
-                throw new IllegalArgumentException("At least one target stop must be provided.");
-            }
-
             sourceStops.values().forEach(InputValidator::validateDepartureTime);
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
 
@@ -545,6 +538,9 @@ public class Raptor {
          * @return a map of valid stop IDs and their corresponding departure / walk to target times.
          */
         private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
+            if(stops == null) {
+                throw new IllegalArgumentException("Stops must not be null.");
+            }
             if (stops.isEmpty()) {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
             }
