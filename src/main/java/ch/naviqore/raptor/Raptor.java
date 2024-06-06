@@ -281,9 +281,15 @@ public class Raptor {
                     // find active trip, increase trip offset
                     tripOffset = 0;
                     enteredAtArrival = earliestArrivalsLastRound[stopIdx];
+
+                    int earliestDepartureTime = enteredAtArrival.arrivalTime;
+                    if( enteredAtArrival.type != ArrivalType.INITIAL ) {
+                        earliestDepartureTime += SAME_STOP_TRANSFER_TIME;
+                    }
+
                     while (tripOffset < numberOfTrips) {
                         StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
-                        if (currentStopTime.departure() >= enteredAtArrival.arrivalTime + SAME_STOP_TRANSFER_TIME) {
+                        if (currentStopTime.departure() >= earliestDepartureTime) {
                             log.debug("Found active trip ({}) on route {}", tripOffset, currentRoute.id());
                             tripEntryTime = currentStopTime.departure();
                             break;
