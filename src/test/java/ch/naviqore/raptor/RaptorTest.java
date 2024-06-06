@@ -205,143 +205,188 @@ class RaptorTest {
 
         }
 
-        @Nested
-        class InputValidation {
+    }
 
-            private Raptor raptor;
+    @Nested
+    class SameStationTransfers {
 
-            @BeforeEach
-            void setUp(RaptorTestBuilder builder) {
-                raptor = builder.buildWithDefaults();
-            }
+        @Test
+        void shouldTakeFirstTripWithoutAddingSameStationTransferTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+            // There should be a connection leaving stop A at 5:00 am
+            String sourceStop = "A";
+            String targetStop = "B";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            assertEquals(1, connections.size());
+            assertEquals(departureTime, connections.getFirst().getDepartureTime());
+        }
 
-            @Test
-            void shouldThrowErrorWhenSourceStopNotExists() {
-                String sourceStop = "NonExistentStop";
-                String targetStop = "A";
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+        @Test
+        void shouldMissConnectingTripBecauseOfSameStationTransferTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1).withAddRoute2_HL().build();
+            // TODO: Adjust when same station transfers are stop specific
+            // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
+            // Connection at 5:24 from B to C should be missed because of the same station transfer time (120s)
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
-                        "Source stop has to exists");
-            }
+            assertEquals(1, connections.size());
+            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
 
-            @Test
-            void shouldThrowErrorWhenTargetStopNotExists() {
-                String sourceStop = "A";
-                String targetStop = "NonExistentStop";
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            assertNotEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+        }
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
-                        "Target stop has to exists");
-            }
+        @Test
+        void shouldCatchConnectingTripBecauseWithSameStationTransferTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG(17, 15, 5, 1).withAddRoute2_HL().build();
+            // TODO: Adjust when same station transfers are stop specific
+            // There should be a connection leaving stop A at 5:17 am and arriving at stop B at 5:22 am
+            // Connection at 5:24 from B to C should be cached when the same station transfer time is 120s
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
 
-            @Test
-            void shouldNotThrowErrorForValidAndNonExistingSourceStop() {
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
-                Map<String, Integer> sourceStops = Map.of("A", departureTime, "NonExistentStop", departureTime);
-                Map<String, Integer> targetStops = Map.of("H", 0);
+            assertEquals(1, connections.size());
+            assertEquals(departureTime + 17 * 60, connections.getFirst().getDepartureTime());
 
-                assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Source stops can contain non-existing stops, if one entry is valid");
-            }
+            assertEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+        }
 
-            @Test
-            void shouldThrowErrorForInvalidDepartureTimeFromOneOfManySourceStops() {
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
-                Map<String, Integer> sourceStops = Map.of("A", departureTime, "B", Integer.MAX_VALUE);
-                Map<String, Integer> targetStops = Map.of("H", 0);
+    }
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Departure time has to be valid for all valid source stops");
-            }
+    @Nested
+    class InputValidation {
 
-            @Test
-            void shouldNotThrowErrorForValidAndNonExistingTargetStop() {
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
-                Map<String, Integer> sourceStops = Map.of("H", departureTime);
-                Map<String, Integer> targetStops = Map.of("A", 0, "NonExistentStop", 0);
+        private Raptor raptor;
 
-                assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Target stops can contain non-existing stops, if one entry is valid");
-            }
+        @BeforeEach
+        void setUp(RaptorTestBuilder builder) {
+            raptor = builder.buildWithDefaults();
+        }
 
-            @Test
-            void shouldThrowErrorForInvalidWalkToTargetTimeFromOneOfManyTargetStops() {
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
-                Map<String, Integer> sourceStops = Map.of("H", departureTime);
-                Map<String, Integer> targetStops = Map.of("A", 0, "B", -1);
+        @Test
+        void shouldThrowErrorWhenSourceStopNotExists() {
+            String sourceStop = "NonExistentStop";
+            String targetStop = "A";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Departure time has to be valid for all valid source stops");
-            }
+            assertThrows(IllegalArgumentException.class,
+                    () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
+                    "Source stop has to exists");
+        }
 
-            @Test
-            void shouldThrowErrorNullSourceStops(){
-                Map<String, Integer> sourceStops = null;
-                Map<String, Integer> targetStops = Map.of("H", 0);
+        @Test
+        void shouldThrowErrorWhenTargetStopNotExists() {
+            String sourceStop = "A";
+            String targetStop = "NonExistentStop";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Source stops cannot be null");
-            }
+            assertThrows(IllegalArgumentException.class,
+                    () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
+                    "Target stop has to exists");
+        }
 
-            @Test
-            void shouldThrowErrorNullTargetStops(){
-                Map<String, Integer> sourceStops = Map.of("A", 0);
-                Map<String, Integer> targetStops = null;
+        @Test
+        void shouldNotThrowErrorForValidAndNonExistingSourceStop() {
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime, "NonExistentStop", departureTime);
+            Map<String, Integer> targetStops = Map.of("H", 0);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Target stops cannot be null");
-            }
+            assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Source stops can contain non-existing stops, if one entry is valid");
+        }
 
-            @Test
-            void shouldThrowErrorEmptyMapSourceStops(){
-                Map<String, Integer> sourceStops = Map.of();
-                Map<String, Integer> targetStops = Map.of("H", 0);
+        @Test
+        void shouldThrowErrorForInvalidDepartureTimeFromOneOfManySourceStops() {
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime, "B", Integer.MAX_VALUE);
+            Map<String, Integer> targetStops = Map.of("H", 0);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Source and target stops cannot be null");
-            }
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Departure time has to be valid for all valid source stops");
+        }
 
-            @Test
-            void shouldThrowErrorEmptyMapTargetStops(){
-                Map<String, Integer> sourceStops = Map.of("A", 0);
-                Map<String, Integer> targetStops = Map.of();
+        @Test
+        void shouldNotThrowErrorForValidAndNonExistingTargetStop() {
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("H", departureTime);
+            Map<String, Integer> targetStops = Map.of("A", 0, "NonExistentStop", 0);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
-                        "Source and target stops cannot be null");
-            }
+            assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Target stops can contain non-existing stops, if one entry is valid");
+        }
 
-            @Test
-            void shouldThrowErrorWhenDepartureTimeIsOutOfRange() {
-                String sourceStop = "A";
-                String targetStop = "B";
+        @Test
+        void shouldThrowErrorForInvalidWalkToTargetTimeFromOneOfManyTargetStops() {
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("H", departureTime);
+            Map<String, Integer> targetStops = Map.of("A", 0, "B", -1);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, -1),
-                        "Departure time cannot be negative");
-                assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStop, targetStop,
-                        49 * RaptorTestBuilder.SECONDS_IN_HOUR), "Departure time cannot be greater than two days");
-            }
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Departure time has to be valid for all valid source stops");
+        }
 
-            @Test
-            void shouldThrowErrorWhenRequestBetweenSameStop() {
-                String sourceStop = "A";
-                String targetStop = "A";
-                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+        @Test
+        void shouldThrowErrorNullSourceStops() {
+            Map<String, Integer> sourceStops = null;
+            Map<String, Integer> targetStops = Map.of("H", 0);
 
-                assertThrows(IllegalArgumentException.class,
-                        () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
-                        "Stops cannot be the same");
-            }
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Source stops cannot be null");
+        }
 
+        @Test
+        void shouldThrowErrorNullTargetStops() {
+            Map<String, Integer> sourceStops = Map.of("A", 0);
+            Map<String, Integer> targetStops = null;
+
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Target stops cannot be null");
+        }
+
+        @Test
+        void shouldThrowErrorEmptyMapSourceStops() {
+            Map<String, Integer> sourceStops = Map.of();
+            Map<String, Integer> targetStops = Map.of("H", 0);
+
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Source and target stops cannot be null");
+        }
+
+        @Test
+        void shouldThrowErrorEmptyMapTargetStops() {
+            Map<String, Integer> sourceStops = Map.of("A", 0);
+            Map<String, Integer> targetStops = Map.of();
+
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                    "Source and target stops cannot be null");
+        }
+
+        @Test
+        void shouldThrowErrorWhenDepartureTimeIsOutOfRange() {
+            String sourceStop = "A";
+            String targetStop = "B";
+
+            assertThrows(IllegalArgumentException.class, () -> raptor.routeEarliestArrival(sourceStop, targetStop, -1),
+                    "Departure time cannot be negative");
+            assertThrows(IllegalArgumentException.class,
+                    () -> raptor.routeEarliestArrival(sourceStop, targetStop, 49 * RaptorTestBuilder.SECONDS_IN_HOUR),
+                    "Departure time cannot be greater than two days");
+        }
+
+        @Test
+        void shouldThrowErrorWhenRequestBetweenSameStop() {
+            String sourceStop = "A";
+            String targetStop = "A";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> raptor.routeEarliestArrival(sourceStop, targetStop, departureTime),
+                    "Stops cannot be the same");
         }
 
     }
