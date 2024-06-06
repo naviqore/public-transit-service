@@ -39,34 +39,9 @@ class RaptorTest {
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-
-            // check if the first connection is correct
-            Connection connection1 = connections.getFirst();
-            assertEquals(sourceStop, connection1.getFromStopId());
-            assertEquals(targetStop, connection1.getToStopId());
-            assertTrue(connection1.getDepartureTime() >= departureTime,
-                    "Departure time should be greater equal than searched for departure time");
-            // check that transfers make sense
-            assertEquals(1, connection1.getWalkTransfers().size());
-            assertEquals(1, connection1.getNumberOfTotalTransfers());
-            assertEquals(0, connection1.getNumberOfSameStationTransfers());
-
-            // check second connection
-            Connection connection2 = connections.get(1);
-            assertEquals(sourceStop, connection2.getFromStopId());
-            assertEquals(targetStop, connection2.getToStopId());
-            assertTrue(connection2.getDepartureTime() >= departureTime,
-                    "Departure time should be greater equal than searched for departure time");
-            // check that transfers make sense
-            assertEquals(0, connection2.getWalkTransfers().size());
-            assertEquals(2, connection2.getNumberOfTotalTransfers());
-            assertEquals(2, connection2.getNumberOfSameStationTransfers());
-
-            // compare two connections (make sure they are pareto optimal)
-            assertTrue(connection1.getDuration() > connection2.getDuration(),
-                    "First connection should be slower than second connection");
-            assertTrue(connection1.getRouteLegs().size() < connection2.getRouteLegs().size(),
-                    "First connection should have fewer route legs than second connection");
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 1, 2);
+            Helpers.assertConnection(connections.get(1), sourceStop, targetStop, departureTime, 2, 0, 3);
+            Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
         @Test
@@ -78,14 +53,7 @@ class RaptorTest {
             int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             assertEquals(1, connections.size());
-            Connection connection = connections.getFirst();
-            assertEquals(sourceStop, connection.getFromStopId());
-            assertEquals(targetStop, connection.getToStopId());
-            assertTrue(connection.getDepartureTime() >= departureTime,
-                    "Departure time should be greater equal than searched for departure time");
-            assertEquals(0, connection.getWalkTransfers().size());
-            assertEquals(0, connection.getNumberOfTotalTransfers());
-            assertEquals(0, connection.getNumberOfSameStationTransfers());
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 0, 1);
         }
 
         @Test
@@ -115,15 +83,41 @@ class RaptorTest {
             int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
             List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
             assertEquals(1, connections.size());
-            Connection connection = connections.getFirst();
-            assertEquals(sourceStop, connection.getFromStopId());
-            assertEquals(targetStop, connection.getToStopId());
-            assertTrue(connection.getDepartureTime() >= departureTime,
-                    "Departure time should be greater equal than searched for departure time");
-            assertEquals(1, connection.getWalkTransfers().size());
-            assertEquals(1, connection.getNumberOfTotalTransfers());
-            assertEquals(0, connection.getNumberOfSameStationTransfers());
-            assertEquals(0, connection.getRouteLegs().size());
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 1, 0);
+        }
+
+        private static class Helpers {
+
+            private static void assertConnection(Connection connection, String sourceStop, String targetStop,
+                                                 int departureTime, int numSameStationTransfers, int numWalkTransfers,
+                                                 int numTrips) {
+                assertEquals(sourceStop, connection.getFromStopId());
+                assertEquals(targetStop, connection.getToStopId());
+                assertTrue(connection.getDepartureTime() >= departureTime,
+                        "Departure time should be greater equal than searched for departure time");
+
+                assertEquals(numSameStationTransfers, connection.getNumberOfSameStationTransfers(),
+                        "Number of same station transfers should match");
+                assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
+                        "Number of walk transfers should match");
+                assertEquals(numSameStationTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                        "Number of transfers should match");
+
+                assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
+            }
+
+            private static void checkIfConnectionsAreParetoOptimal(List<Connection> connections) {
+                Connection previousConnection = connections.getFirst();
+                for (int i = 1; i < connections.size(); i++) {
+                    Connection currentConnection = connections.get(i);
+                    assertTrue(previousConnection.getDuration() > currentConnection.getDuration(),
+                            "Previous connection should be slower than current connection");
+                    assertTrue(previousConnection.getRouteLegs().size() < currentConnection.getRouteLegs().size(),
+                            "Previous connection should have fewer route legs than current connection");
+                    previousConnection = currentConnection;
+                }
+            }
+
         }
 
         @Nested
