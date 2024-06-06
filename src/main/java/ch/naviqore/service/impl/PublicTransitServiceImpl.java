@@ -52,8 +52,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
     private final List<TransferGenerator.Transfer> additionalTransfers;
-    private final EvictionCache<LocalDate, Raptor> raptorCache = new EvictionCache<>(CACHE_SIZE,
-            CACHE_EVICTION_STRATEGY);
+    private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Trip>, Raptor> raptorCache = new EvictionCache<>(
+            CACHE_SIZE, CACHE_EVICTION_STRATEGY);
 
     public PublicTransitServiceImpl(ServiceConfig config) {
         this.config = config;
@@ -280,7 +280,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     private Raptor getRaptor(LocalDate date) {
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        return raptorCache.computeIfAbsent(date,
+        return raptorCache.computeIfAbsent(new HashSet<>(schedule.getActiveTrips(date)),
                 () -> new GtfsToRaptorConverter(schedule, additionalTransfers).convert(date));
     }
 
