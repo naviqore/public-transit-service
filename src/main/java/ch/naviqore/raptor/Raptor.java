@@ -147,9 +147,10 @@ public class Raptor {
         }
 
         int[] targetStops = new int[targetStopIdxs.length * 2];
-        for (int i = 0; i < targetStopIdxs.length; i++) {
-            targetStops[i] = targetStopIdxs[i];
-            targetStops[i + targetStopIdxs.length] = walkingDurationsToTarget[i];
+        for (int i = 0; i < targetStops.length; i += 2) {
+            int index = (int) Math.ceil(i / 2.0);
+            targetStops[i] = targetStopIdxs[index];
+            targetStops[i + 1] = walkingDurationsToTarget[index];
         }
 
         final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
