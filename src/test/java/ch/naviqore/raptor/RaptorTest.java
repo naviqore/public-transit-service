@@ -57,6 +57,26 @@ class RaptorTest {
         }
 
         @Test
+        void routeWithSelfIntersectingRoute(RaptorTestBuilder builder) {
+            builder.withAddRoute5_AH_selfIntersecting();
+            Raptor raptor = builder.build();
+
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 10 * RaptorTestBuilder.SECONDS_IN_HOUR;
+
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            assertEquals(2, connections.size());
+
+            // First Connection Should have no transfers but ride the entire loop (slow)
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 0, 1);
+            // Second Connection Should Change at Stop B and take the earlier trip of the same route there (faster)
+            Helpers.assertConnection(connections.get(1), sourceStop, targetStop, departureTime, 1, 0, 2);
+
+            Helpers.checkIfConnectionsAreParetoOptimal(connections);
+        }
+
+        @Test
         void shouldNotFindConnectionBetweenNotLinkedStops(RaptorTestBuilder builder) {
             // Omit route R2/R4 and transfers to make stop Q (on R3) unreachable from A (on R1)
             Raptor raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();

@@ -29,6 +29,7 @@ import java.util.Set;
  * <li>R2: H, B, I, J, K, L</li>
  * <li>R3: M, K, N, O, P, Q</li>
  * <li>R4: R, P, F, S</li>
+ * <li>R5: A, B, C, D, E, F, P, O, N, K, J, I, B, H</li>
  * </ul>
  * <p>
  * Transfers:
@@ -128,6 +129,11 @@ public class RaptorTestBuilder {
         return this;
     }
 
+    public RaptorTestBuilder withAddRoute5_AH_selfIntersecting() {
+        routes.add(new Route("R5", List.of("A", "B", "C", "D", "E", "F", "P", "O", "N", "K", "J", "I", "B", "H")));
+        return this;
+    }
+
     public RaptorTestBuilder withAddTransfer1_ND() {
         return withAddTransfer1_ND(60);
     }
@@ -157,9 +163,14 @@ public class RaptorTestBuilder {
     }
 
     /**
-     * Route, times are in minutes.
+     * Route.
      *
-     * @param headWayTime the time between the trip departures.
+     * @param id                     the route id.
+     * @param stops                  the stops of the route.
+     * @param firstDepartureOffset   the time of the first departure in minutes after the start of the day.
+     * @param headWayTime            the time between the trip departures in minutes.
+     * @param travelTimeBetweenStops the travel time between stops in minutes.
+     * @param dwellTimeAtSTop        the dwell time at a stop in minutes (time between arrival and departure).
      */
     private record Route(String id, List<String> stops, int firstDepartureOffset, int headWayTime,
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
@@ -171,7 +182,11 @@ public class RaptorTestBuilder {
     }
 
     /**
-     * Transfer, times are in minutes.
+     * Transfer.
+     *
+     * @param sourceStop the id of the source stop.
+     * @param targetStop the id of the target stop.
+     * @param duration   the (walking) duration of the transfer between stops in minutes.
      */
     private record Transfer(String sourceStop, String targetStop, int duration) {
     }
