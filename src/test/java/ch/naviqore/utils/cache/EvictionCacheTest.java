@@ -17,6 +17,16 @@ class EvictionCacheTest {
     public static final int CACHE_SIZE = 3;
     public static final int CONCURRENT_ACCESS_COUNT = 1000;
 
+    private static void runConcurrentAccess(
+            EvictionCache<String, String> cache) throws InterruptedException, ExecutionException, TimeoutException {
+        CompletableFuture<?>[] futures = IntStream.range(0, CONCURRENT_ACCESS_COUNT)
+                .mapToObj(i -> CompletableFuture.runAsync(
+                        () -> cache.computeIfAbsent("key" + i % CACHE_SIZE, () -> "value" + i)))
+                .toArray(CompletableFuture[]::new);
+
+        CompletableFuture.allOf(futures).get(1, TimeUnit.MINUTES);
+    }
+
     @Nested
     class LRU {
 
@@ -41,8 +51,11 @@ class EvictionCacheTest {
             lruCache.computeIfAbsent("b", () -> "banana");
             lruCache.computeIfAbsent("c", () -> "cherry");
 
-            // access "a" again to make it recently used
-            lruCache.computeIfAbsent("a", () -> "apple");
+            // access "a" again to make it recently used, and change value to avocado
+            String cachedValue = lruCache.computeIfAbsent("a", () -> "avocado");
+            // "apple" should not have been recomputed to "avocado"
+            assertThat(cachedValue).isEqualTo("apple");
+
             // this should evict "b"
             lruCache.computeIfAbsent("d", () -> "date");
 
@@ -88,7 +101,8 @@ class EvictionCacheTest {
             assertThat(mruCache.isCached("a")).isFalse();
             mruCache.computeIfAbsent("a", () -> "apple");
             assertThat(mruCache.isCached("a")).isTrue();
-            assertThat(mruCache.computeIfAbsent("a", () -> "apple")).isEqualTo("apple");
+            // query with other value but same key, should not replace the value in cache
+            assertThat(mruCache.computeIfAbsent("a", () -> "avocado")).isEqualTo("apple");
         }
 
         @Test
@@ -125,15 +139,5 @@ class EvictionCacheTest {
 
             assertThat(mruCache.getNumberOfEntries()).isEqualTo(CACHE_SIZE);
         }
-    }
-
-    private static void runConcurrentAccess(
-            EvictionCache<String, String> cache) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture<?>[] futures = IntStream.range(0, CONCURRENT_ACCESS_COUNT)
-                .mapToObj(i -> CompletableFuture.runAsync(
-                        () -> cache.computeIfAbsent("key" + i % CACHE_SIZE, () -> "value" + i)))
-                .toArray(CompletableFuture[]::new);
-
-        CompletableFuture.allOf(futures).get(1, TimeUnit.MINUTES);
     }
 }
