@@ -238,6 +238,88 @@ class RaptorTest {
             }
 
             @Test
+            void shouldNotThrowErrorForValidAndNonExistingSourceStop() {
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+                Map<String, Integer> sourceStops = Map.of("A", departureTime, "NonExistentStop", departureTime);
+                Map<String, Integer> targetStops = Map.of("H", 0);
+
+                assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Source stops can contain non-existing stops, if one entry is valid");
+            }
+
+            @Test
+            void shouldThrowErrorForInvalidDepartureTimeFromOneOfManySourceStops() {
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+                Map<String, Integer> sourceStops = Map.of("A", departureTime, "B", Integer.MAX_VALUE);
+                Map<String, Integer> targetStops = Map.of("H", 0);
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Departure time has to be valid for all valid source stops");
+            }
+
+            @Test
+            void shouldNotThrowErrorForValidAndNonExistingTargetStop() {
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+                Map<String, Integer> sourceStops = Map.of("H", departureTime);
+                Map<String, Integer> targetStops = Map.of("A", 0, "NonExistentStop", 0);
+
+                assertDoesNotThrow(() -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Target stops can contain non-existing stops, if one entry is valid");
+            }
+
+            @Test
+            void shouldThrowErrorForInvalidWalkToTargetTimeFromOneOfManyTargetStops() {
+                int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+                Map<String, Integer> sourceStops = Map.of("H", departureTime);
+                Map<String, Integer> targetStops = Map.of("A", 0, "B", -1);
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Departure time has to be valid for all valid source stops");
+            }
+
+            @Test
+            void shouldThrowErrorNullSourceStops(){
+                Map<String, Integer> sourceStops = null;
+                Map<String, Integer> targetStops = Map.of("H", 0);
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Source stops cannot be null");
+            }
+
+            @Test
+            void shouldThrowErrorNullTargetStops(){
+                Map<String, Integer> sourceStops = Map.of("A", 0);
+                Map<String, Integer> targetStops = null;
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Target stops cannot be null");
+            }
+
+            @Test
+            void shouldThrowErrorEmptyMapSourceStops(){
+                Map<String, Integer> sourceStops = Map.of();
+                Map<String, Integer> targetStops = Map.of("H", 0);
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Source and target stops cannot be null");
+            }
+
+            @Test
+            void shouldThrowErrorEmptyMapTargetStops(){
+                Map<String, Integer> sourceStops = Map.of("A", 0);
+                Map<String, Integer> targetStops = Map.of();
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> raptor.routeEarliestArrival(sourceStops, targetStops),
+                        "Source and target stops cannot be null");
+            }
+
+            @Test
             void shouldThrowErrorWhenDepartureTimeIsOutOfRange() {
                 String sourceStop = "A";
                 String targetStop = "B";
