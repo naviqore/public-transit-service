@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -74,6 +75,70 @@ class RaptorTest {
             Helpers.assertConnection(connections.get(1), sourceStop, targetStop, departureTime, 1, 0, 2);
 
             Helpers.checkIfConnectionsAreParetoOptimal(connections);
+        }
+
+        @Test
+        void routeFromTwoSourceStopsWithSameDepartureTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime, "B", departureTime);
+            Map<String, Integer> targetStops = Map.of("H", 0);
+
+            // fastest and only connection should be B -> H
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+            assertEquals(1, connections.size());
+            Helpers.assertConnection(connections.getFirst(), "B", "H", departureTime, 0, 0, 1);
+        }
+
+        @Test
+        void routeFromTwoSourceStopsWithLaterDepartureTimeOnCloserStop(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime, "B",
+                    departureTime + RaptorTestBuilder.SECONDS_IN_HOUR);
+            Map<String, Integer> targetStops = Map.of("H", 0);
+
+            // fastest and only connection should be B -> H
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+            assertEquals(2, connections.size());
+            Helpers.assertConnection(connections.getFirst(), "B", "H",
+                    departureTime + RaptorTestBuilder.SECONDS_IN_HOUR, 0, 0, 1);
+            Helpers.assertConnection(connections.get(1), "A", "H", departureTime, 1, 0, 2);
+        }
+
+        @Test
+        void routeFromStopToTwoTargetStopsNoWalkTimeToTarget(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime);
+            Map<String, Integer> targetStops = Map.of("F", 0, "S", 0);
+
+            // fastest and only connection should be A -> F
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+            assertEquals(1, connections.size());
+            Helpers.assertConnection(connections.getFirst(), "A", "F", departureTime, 0, 0, 1);
+        }
+
+        @Test
+        void routeFromStopToTwoTargetStopsWithWalkTimeToTarget(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Integer> sourceStops = Map.of("A", departureTime);
+            Map<String, Integer> targetStops = Map.of("F", RaptorTestBuilder.SECONDS_IN_HOUR, "S", 0);
+
+            // since F is closer to A than S, the fastest connection should be A -> F, but because of the hour
+            // walk time to target, the connection A -> S should be faster (no additional walk time)
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+            assertEquals(2, connections.size());
+            Helpers.assertConnection(connections.getFirst(), "A", "F", departureTime, 0, 0, 1);
+            Helpers.assertConnection(connections.get(1), "A", "S", departureTime, 1, 0, 2);
+
+            // Note since the required walk time to target is not added as a leg, the solutions will not be pareto
+            // optimal without additional post-processing.
         }
 
         @Test
