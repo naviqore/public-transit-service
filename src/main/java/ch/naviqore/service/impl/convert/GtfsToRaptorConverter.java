@@ -84,7 +84,7 @@ public class GtfsToRaptorConverter {
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
-                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop() && transfer.getMinTransferTime()
+                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
                         .isPresent()) {
                     try {
                         builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
@@ -101,14 +101,6 @@ public class GtfsToRaptorConverter {
         }
 
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
-
-            if (transfer.from() == transfer.to()) {
-                // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
-                //  transfers between the same station, as not implemented yet.
-                log.warn("Omit adding transfer from {} 2to {} with duration {} as it is the same stop",
-                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
-                continue;
-            }
 
             if (schedule.getStops()
                     .get(transfer.from().getId())
