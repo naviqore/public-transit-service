@@ -303,6 +303,120 @@ class RaptorTest {
     }
 
     @Nested
+    class IsoLines {
+
+        @Test
+        void shouldCreateIsoLinesToAllStops(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+
+            String sourceStop = "A";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Connection> isoLines = raptor.getIsoLines(Map.of(sourceStop, departureTime));
+
+            int stopsInSystem = 19;
+            int expectedIsoLines = stopsInSystem - 1;
+            Helpers.assertIsoLines(isoLines, sourceStop, departureTime, expectedIsoLines);
+        }
+
+        @Test
+        void shouldCreateIsoLinesToSomeStopsNotAllConnected(RaptorTestBuilder builder) {
+            // Route 1 and 3 are not connected, thus all Stops of Route 3 should not be reachable from A
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
+
+            String sourceStop = "A";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Connection> isoLines = raptor.getIsoLines(Map.of(sourceStop, departureTime));
+
+            List<String> reachableStops = List.of("B", "C", "D", "E", "F", "G");
+            // Not Reachable Stops: M, K, N, O, P, Q
+
+            Helpers.assertIsoLines(isoLines, sourceStop, departureTime, reachableStops.size());
+
+            for (String stop : reachableStops) {
+                assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable");
+            }
+        }
+
+        @Test
+        void shouldCreateIsoLinesToStopsOfOtherLineOnlyConnectedByFootpath(RaptorTestBuilder builder) {
+            // Route 1 and Route 3 are only connected by Footpath between Stops D and N
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().withAddTransfer1_ND().build();
+
+            String sourceStop = "A";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            Map<String, Connection> isoLines = raptor.getIsoLines(Map.of(sourceStop, departureTime));
+
+            List<String> reachableStops = List.of("B", "C", "D", "E", "F", "G", "M", "K", "N", "O", "P", "Q");
+
+            Helpers.assertIsoLines(isoLines, sourceStop, departureTime, reachableStops.size());
+
+            for (String stop : reachableStops) {
+                assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable");
+            }
+        }
+
+        @Test
+        void shouldCreateIsoLinesFromTwoNotConnectedSourceStops(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
+
+            Map<String, Integer> departureTimeHours = Map.of("A", 8, "M", 16);
+
+            List<String> reachableStopsFromStopA = List.of("B", "C", "D", "E", "F", "G");
+            Map<String, Integer> sourceStops = Map.of("A", departureTimeHours.get("A") * RaptorTestBuilder.SECONDS_IN_HOUR,
+                    "M", departureTimeHours.get("M") * RaptorTestBuilder.SECONDS_IN_HOUR);
+            List<String> reachableStopsFromStopM = List.of("K", "N", "O", "P", "Q");
+
+            Map<String, Connection> isoLines = raptor.getIsoLines(sourceStops);
+
+            assertEquals(reachableStopsFromStopA.size() + reachableStopsFromStopM.size(), isoLines.size());
+
+            Map<String, List<String>> sourceTargets = Map.of("A", reachableStopsFromStopA, "M",
+                    reachableStopsFromStopM);
+
+            for (Map.Entry<String, List<String>> entry : sourceTargets.entrySet()) {
+                String sourceStop = entry.getKey();
+                List<String> reachableStops = entry.getValue();
+                int departureTimeHour = departureTimeHours.get(sourceStop);
+                int departureTime = departureTimeHour * RaptorTestBuilder.SECONDS_IN_HOUR;
+                for (String stop : reachableStops) {
+                    assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable from " + sourceStop);
+                    Connection connection = isoLines.get(stop);
+                    assertTrue(connection.getDepartureTime() >= departureTime,
+                            String.format("Connection should have departure time equal or after %d:00",
+                                    departureTimeHour));
+                    assertTrue(connection.getArrivalTime() < Integer.MAX_VALUE,
+                            "Connection should have arrival time before infinity");
+                    assertEquals(connection.getFromStopId(), sourceStop, "From stop should be " + sourceStop);
+                    assertEquals(connection.getToStopId(), stop, "To stop should be " + stop);
+                }
+            }
+        }
+
+        private static class Helpers {
+
+            private static final int INFINITY = Integer.MAX_VALUE;
+
+            private static void assertIsoLines(Map<String, Connection> isoLines, String sourceStopId, int departureTime,
+                                               int expectedIsoLines) {
+                assertEquals(expectedIsoLines, isoLines.size());
+                assertFalse(isoLines.containsKey(sourceStopId), "Source stop should not be in iso lines");
+                for (Map.Entry<String, Connection> entry : isoLines.entrySet()) {
+                    assertTrue(departureTime <= entry.getValue().getDepartureTime(),
+                            "Departure time should be greater than or equal to departure time");
+                    assertTrue(departureTime < entry.getValue().getArrivalTime(),
+                            "Arrival time should be greater than or equal to departure time");
+                    assertTrue(entry.getValue().getArrivalTime() < INFINITY,
+                            "Arrival time should be less than INFINITY");
+                    assertEquals(sourceStopId, entry.getValue().getFromStopId(), "From stop should be source stop");
+                    assertEquals(entry.getKey(), entry.getValue().getToStopId(), "To stop should be key of map entry");
+                }
+            }
+
+        }
+
+    }
+
+    @Nested
     class InputValidation {
 
         private Raptor raptor;
