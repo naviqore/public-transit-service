@@ -171,6 +171,50 @@ class RaptorTest {
             Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 1, 0);
         }
 
+        @Test
+        void shouldTakeFasterRouteOfOverlappingRoutes(RaptorTestBuilder builder) {
+            // Create Two Versions of the same route with different travel speeds (both leaving at same time from A)
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute1_AG("R1X", 0, 15, 3, 1).build();
+            String sourceStop = "A";
+            String targetStop = "G";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+
+            // Both Routes leave at 8:00 at Stop A, but R1 arrives at G at 8:35 whereas R1X arrives at G at 8:23
+            // R1X should be taken
+            assertEquals(1, connections.size());
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 0, 1);
+            // check departure at 8:00
+            Connection connection = connections.getFirst();
+            assertEquals(departureTime, connection.getDepartureTime());
+            // check arrival time at 8:23
+            assertEquals(departureTime + 23 * 60, connection.getArrivalTime());
+            // check that R1X(-F for forward) route was used
+            assertEquals("R1X-F", connection.getRouteLegs().getFirst().routeId());
+        }
+
+        @Test
+        void shouldTakeSlowerRouteOfOverlappingRoutesDueToEarlierDepartureTime(RaptorTestBuilder builder) {
+            // Create Two Versions of the same route with different travel speeds and different departure times
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute1_AG("R1X", 15, 30, 3, 1).build();
+            String sourceStop = "A";
+            String targetStop = "G";
+            int departureTime = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+
+            // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 8:15 from Stop A and
+            // arrives at G at 8:38. R1 should be used.
+            assertEquals(1, connections.size());
+            Helpers.assertConnection(connections.getFirst(), sourceStop, targetStop, departureTime, 0, 0, 1);
+            // check departure at 8:00
+            Connection connection = connections.getFirst();
+            assertEquals(departureTime, connection.getDepartureTime());
+            // check arrival time at 8:35
+            assertEquals(departureTime + 35 * 60, connection.getArrivalTime());
+            // check that R1(-F for forward) route was used
+            assertEquals("R1-F", connection.getRouteLegs().getFirst().routeId());
+        }
+
         private static class Helpers {
 
             private static void assertConnection(Connection connection, String sourceStop, String targetStop,

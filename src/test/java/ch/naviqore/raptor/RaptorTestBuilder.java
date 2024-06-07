@@ -114,7 +114,12 @@ public class RaptorTestBuilder {
     }
 
     public RaptorTestBuilder withAddRoute1_AG(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R1", List.of("A", "B", "C", "D", "E", "F", "G"), offset, headway, travelTime, dwellTime));
+        return withAddRoute1_AG("R1", offset, headway, travelTime, dwellTime);
+    }
+
+    public RaptorTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(
+                new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), offset, headway, travelTime, dwellTime));
         return this;
     }
 
