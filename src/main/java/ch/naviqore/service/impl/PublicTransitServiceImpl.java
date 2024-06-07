@@ -33,6 +33,7 @@ import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ch.naviqore.service.impl.TypeMapper.createWalk;
 import static ch.naviqore.service.impl.TypeMapper.map;
@@ -54,9 +55,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final List<TransferGenerator.Transfer> additionalTransfers;
 
     // caches for active trips per date and raptor instances
-    private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Trip>, Raptor> raptorCache = new EvictionCache<>(
+    private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Calendar>, Raptor> raptorCache = new EvictionCache<>(
             CACHE_SIZE, CACHE_EVICTION_STRATEGY);
-    private final EvictionCache<LocalDate, Set<ch.naviqore.gtfs.schedule.model.Trip>> activeTripsCache = new EvictionCache<>(
+    private final EvictionCache<LocalDate, Set<ch.naviqore.gtfs.schedule.model.Calendar>> activeTripsCache = new EvictionCache<>(
             CACHE_SIZE * 20, CACHE_EVICTION_STRATEGY);
 
     public PublicTransitServiceImpl(ServiceConfig config) {
@@ -282,12 +283,22 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         return mapToStopConnectionMap(raptor.getIsoLines(sourceStops), sourceStops, null, departureTime);
     }
 
+    // get cached or create and cache new raptor instance, based on the active calendars on a date
     private Raptor getRaptor(LocalDate date) {
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Set<ch.naviqore.gtfs.schedule.model.Trip> activeTrips = activeTripsCache.computeIfAbsent(date,
-                () -> new HashSet<>(schedule.getActiveTrips(date)));
-        return raptorCache.computeIfAbsent(activeTrips,
+        Set<ch.naviqore.gtfs.schedule.model.Calendar> activeServices = activeTripsCache.computeIfAbsent(date,
+                () -> getActiveServices(date));
+        return raptorCache.computeIfAbsent(activeServices,
                 () -> new GtfsToRaptorConverter(schedule, additionalTransfers).convert(date));
+    }
+
+    // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
+    private Set<ch.naviqore.gtfs.schedule.model.Calendar> getActiveServices(LocalDate date) {
+        return schedule.getCalendars()
+                .values()
+                .stream()
+                .filter(calendar -> calendar.isServiceAvailable(date))
+                .collect(Collectors.toSet());
     }
 
     private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,
