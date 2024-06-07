@@ -13,11 +13,9 @@ public class Raptor {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
-    public final static int SAME_STOP_TRANSFER_TIME = 120;
     private final InputValidator validator = new InputValidator();
     // lookup
     private final Map<String, Integer> stopsToIdx;
-    private final Map<String, Integer> routesToIdx;
     // stop context
     private final Transfer[] transfers;
     private final Stop[] stops;
@@ -29,7 +27,6 @@ public class Raptor {
 
     Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.stopsToIdx = lookup.stops();
-        this.routesToIdx = lookup.routes();
         this.transfers = stopContext.transfers();
         this.stops = stopContext.stops();
         this.stopRoutes = stopContext.stopRoutes();
@@ -158,16 +155,14 @@ public class Raptor {
         Set<Integer> markedStops = new HashSet<>();
 
         for (int i = 0; i < sourceStopIdxs.length; i++) {
-            // subtract same stop transfer time, as this will be added by default before scanning routes
-            earliestArrivals[sourceStopIdxs[i]] = departureTimes[i] - SAME_STOP_TRANSFER_TIME;
+            earliestArrivals[sourceStopIdxs[i]] = departureTimes[i];
             earliestArrivalsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, departureTimes[i], ArrivalType.INITIAL,
                     NO_INDEX, NO_INDEX, sourceStopIdxs[i], null);
             markedStops.add(sourceStopIdxs[i]);
         }
 
-        for (int i = 0; i < sourceStopIdxs.length; i++) {
-            expandFootpathsForSourceStop(earliestArrivals, earliestArrivalsPerRound, markedStops, sourceStopIdxs[i],
-                    departureTimes[i]);
+        for (int sourceStopIdx : sourceStopIdxs) {
+            expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0);
         }
         int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals);
 
@@ -283,8 +278,8 @@ public class Raptor {
                     enteredAtArrival = earliestArrivalsLastRound[stopIdx];
 
                     int earliestDepartureTime = enteredAtArrival.arrivalTime;
-                    if( enteredAtArrival.type != ArrivalType.INITIAL ) {
-                        earliestDepartureTime += SAME_STOP_TRANSFER_TIME;
+                    if (enteredAtArrival.type == ArrivalType.ROUTE) {
+                        earliestDepartureTime += stop.sameStationTransferTime();
                     }
 
                     while (tripOffset < numberOfTrips) {
@@ -310,26 +305,7 @@ public class Raptor {
             // temp variable to add any new stops to markedStopsNext
             Set<Integer> newStops = new HashSet<>();
             for (int stopIdx : markedStopsNext) {
-                Stop currentStop = stops[stopIdx];
-                if (currentStop.numberOfTransfers() == 0) {
-                    continue;
-                }
-                for (int i = currentStop.transferIdx(); i < currentStop.numberOfTransfers(); i++) {
-                    Transfer transfer = transfers[i];
-                    // TODO: Handle variable SAME_STOP_TRANSFER_TIMEs
-                    int newTargetStopArrivalTime = earliestArrivals[stopIdx] + transfer.duration() - SAME_STOP_TRANSFER_TIME;
-
-                    // update improved arrival time
-                    if (earliestArrivals[transfer.targetStopIdx()] > newTargetStopArrivalTime) {
-                        log.debug("Stop {} was improved by transfer from stop {}", stops[transfer.targetStopIdx()].id(),
-                                stops[stopIdx].id());
-                        earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
-                        earliestArrivalsThisRound[transfer.targetStopIdx()] = new Leg(earliestArrivals[stopIdx],
-                                newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
-                                earliestArrivalsThisRound[stopIdx]);
-                        newStops.add(transfer.targetStopIdx());
-                    }
-                }
+                expandFootpathsFromStop(stopIdx, earliestArrivals, earliestArrivalsPerRound, newStops, round);
             }
             markedStopsNext.addAll(newStops);
 
@@ -349,7 +325,7 @@ public class Raptor {
             int earliestArrivalAtTarget = earliestArrivals[targetStopIdx];
 
             // To Prevent Adding a number to Max Integer Value (resulting in a very small negative number)
-            if( earliestArrivalAtTarget == INFINITY ) {
+            if (earliestArrivalAtTarget == INFINITY) {
                 continue;
             }
 
@@ -412,9 +388,6 @@ public class Raptor {
             } else if (leg.type == ArrivalType.TRANSFER) {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Connection.LegType.WALK_TRANSFER;
-                // include same stop transfer time (which is subtracted before scanning routes)
-                arrivalTime += SAME_STOP_TRANSFER_TIME;
-
             } else {
                 throw new IllegalStateException("Unknown arrival type");
             }
@@ -433,26 +406,46 @@ public class Raptor {
         }
     }
 
-    private void expandFootpathsForSourceStop(int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
-                                              Set<Integer> markedStops, int sourceStopIdx, int departureTime) {
+    /**
+     * Expands all transfers between stops from a given stop. If a transfer improves the arrival time at the target
+     * stop, then the target stop is marked for the next round. And the improved arrival time is stored in the
+     * earliestArrivals array and the earliestArrivalsPerRound list (including the new Transfer Leg).
+     *
+     * @param stopIdx                  - The index of the stop to expand transfers from.
+     * @param earliestArrivals         - A array with the overall best arrival time for each stop, indexed by stop
+     *                                 index. Note: The arrival time is reduced by the same station transfer time for
+     *                                 transfers, to make them comparable with route arrivals.
+     * @param earliestArrivalsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
+     *                                 round.
+     * @param markedStops              - A set of stop indices that have been marked for scanning in the next round.
+     * @param round                    - The current round to relax footpaths for.
+     */
+    private void expandFootpathsFromStop(int stopIdx, int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
+                                         Set<Integer> markedStops, int round) {
         // if stop has no transfers, then no footpaths can be expanded
-        if (stops[sourceStopIdx].numberOfTransfers() == 0) {
+        if (stops[stopIdx].numberOfTransfers() == 0) {
             return;
         }
+        Stop sourceStop = stops[stopIdx];
+        int arrivalTime = earliestArrivals[stopIdx];
 
-        // mark all transfer stops, no checks needed for since all transfers will improve arrival time and can be
-        // marked
-        Stop sourceStop = stops[sourceStopIdx];
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
-            int newTargetStopArrivalTime = departureTime + transfer.duration() - SAME_STOP_TRANSFER_TIME;
-            if (earliestArrivals[transfer.targetStopIdx()] <= newTargetStopArrivalTime) {
+            Stop targetStop = stops[transfer.targetStopIdx()];
+            int newTargetStopArrivalTime = arrivalTime + transfer.duration();
+
+            // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced by the same stop transfer time
+            int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStationTransferTime();
+            if (earliestArrivals[transfer.targetStopIdx()] <= comparableNewTargetStopArrivalTime) {
                 continue;
             }
-            earliestArrivals[transfer.targetStopIdx()] = newTargetStopArrivalTime;
-            earliestArrivalsPerRound.getFirst()[transfer.targetStopIdx()] = new Leg(departureTime,
+
+            log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
+
+            earliestArrivals[transfer.targetStopIdx()] = comparableNewTargetStopArrivalTime;
+            earliestArrivalsPerRound.get(round)[transfer.targetStopIdx()] = new Leg(arrivalTime,
                     newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
-                    earliestArrivalsPerRound.getFirst()[sourceStopIdx]);
+                    earliestArrivalsPerRound.get(round)[stopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
     }
@@ -538,7 +531,7 @@ public class Raptor {
          * @return a map of valid stop IDs and their corresponding departure / walk to target times.
          */
         private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
-            if(stops == null) {
+            if (stops == null) {
                 throw new IllegalArgumentException("Stops must not be null.");
             }
             if (stops.isEmpty()) {
