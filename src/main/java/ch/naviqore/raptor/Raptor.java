@@ -39,6 +39,10 @@ public class Raptor {
         return new RaptorBuilder();
     }
 
+    public static RaptorBuilder builder(int sameStationTransferTime) {
+        return new RaptorBuilder(sameStationTransferTime);
+    }
+
     public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
         return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
