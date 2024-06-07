@@ -44,12 +44,13 @@ public class RaptorTestBuilder {
     static final int SECONDS_IN_HOUR = 3600;
     private static final int DAY_START_HOUR = 5;
     private static final int DAY_END_HOUR = 25;
-
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
+    private int sameStationTransferTime = 120;
 
-    private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd) {
-        RaptorBuilder builder = Raptor.builder();
+    private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
+                                int sameStationTransferTime) {
+        RaptorBuilder builder = Raptor.builder(sameStationTransferTime);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -157,8 +158,13 @@ public class RaptorTestBuilder {
         return this;
     }
 
+    public RaptorTestBuilder withSameStationTransferTime(int sameStationTransferTime) {
+        this.sameStationTransferTime = sameStationTransferTime;
+        return this;
+    }
+
     public Raptor build() {
-        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR);
+        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStationTransferTime);
     }
 
     public Raptor buildWithDefaults() {

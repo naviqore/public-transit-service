@@ -268,8 +268,10 @@ class RaptorTest {
 
         @Test
         void shouldMissConnectingTripBecauseOfSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1).withAddRoute2_HL().build();
-            // TODO: Adjust when same station transfers are stop specific
+            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+                    .withAddRoute2_HL()
+                    .withSameStationTransferTime(120)
+                    .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
             // Connection at 5:24 from B to C should be missed because of the same station transfer time (120s)
             String sourceStop = "A";
@@ -284,9 +286,29 @@ class RaptorTest {
         }
 
         @Test
-        void shouldCatchConnectingTripBecauseWithSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG(17, 15, 5, 1).withAddRoute2_HL().build();
-            // TODO: Adjust when same station transfers are stop specific
+        void shouldCatchConnectingTripBecauseOfNoSameStationTransferTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+                    .withAddRoute2_HL()
+                    .withSameStationTransferTime(0)
+                    .build();
+            // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
+            // Connection at 5:24 from B to C should not be missed because of no same station transfer time
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+
+            assertEquals(1, connections.size());
+            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+        }
+
+        @Test
+        void shouldCatchConnectingTripWithSameStationTransferTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG(17, 15, 5, 1)
+                    .withAddRoute2_HL()
+                    .withSameStationTransferTime(120)
+                    .build();
             // There should be a connection leaving stop A at 5:17 am and arriving at stop B at 5:22 am
             // Connection at 5:24 from B to C should be cached when the same station transfer time is 120s
             String sourceStop = "A";
@@ -362,8 +384,9 @@ class RaptorTest {
             Map<String, Integer> departureTimeHours = Map.of("A", 8, "M", 16);
 
             List<String> reachableStopsFromStopA = List.of("B", "C", "D", "E", "F", "G");
-            Map<String, Integer> sourceStops = Map.of("A", departureTimeHours.get("A") * RaptorTestBuilder.SECONDS_IN_HOUR,
-                    "M", departureTimeHours.get("M") * RaptorTestBuilder.SECONDS_IN_HOUR);
+            Map<String, Integer> sourceStops = Map.of("A",
+                    departureTimeHours.get("A") * RaptorTestBuilder.SECONDS_IN_HOUR, "M",
+                    departureTimeHours.get("M") * RaptorTestBuilder.SECONDS_IN_HOUR);
             List<String> reachableStopsFromStopM = List.of("K", "N", "O", "P", "Q");
 
             Map<String, Connection> isoLines = raptor.getIsoLines(sourceStops);
