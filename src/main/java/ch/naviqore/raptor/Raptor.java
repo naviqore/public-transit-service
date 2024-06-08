@@ -171,17 +171,7 @@ public class Raptor {
             earliestArrivalsPerRound.add(new Leg[stops.length]);
             Leg[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
 
-            // get routes of marked stops
-            Set<Integer> routesToScan = new HashSet<>();
-            for (int stopIdx : markedStops) {
-                Stop currentStop = stops[stopIdx];
-                int stopRouteIdx = currentStop.stopRouteIdx();
-                int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
-                while (stopRouteIdx < stopRouteEndIdx) {
-                    routesToScan.add(stopRoutes[stopRouteIdx]);
-                    stopRouteIdx++;
-                }
-            }
+            Set<Integer> routesToScan = getRoutesToScan(markedStops);
             log.debug("Routes to scan: {}", routesToScan);
 
             // scan routes
@@ -310,6 +300,25 @@ public class Raptor {
         }
 
         return earliestArrivalsPerRound;
+    }
+
+    /*
+     * Get all routes to scan from the marked stops.
+     *
+     * @param markedStops - The set of marked stops from the previous round.
+     */
+    private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
+        Set<Integer> routesToScan = new HashSet<>();
+        for (int stopIdx : markedStops) {
+            Stop currentStop = stops[stopIdx];
+            int stopRouteIdx = currentStop.stopRouteIdx();
+            int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
+            while (stopRouteIdx < stopRouteEndIdx) {
+                routesToScan.add(stopRoutes[stopRouteIdx]);
+                stopRouteIdx++;
+            }
+        }
+        return routesToScan;
     }
 
     private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals, int latestAcceptedArrival) {
