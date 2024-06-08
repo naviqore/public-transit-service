@@ -137,6 +137,9 @@ public class Raptor {
         int earliestDeparture = Arrays.stream(departureTimes).min().orElseThrow();
         int latestAcceptedArrival = config.getMaximumTravelTime() == INFINITY ? INFINITY : earliestDeparture + config.getMaximumTravelTime();
 
+        int maxWalkingDuration = config.getMaximumWalkingDuration();
+        int minTransferDuration = config.getMinimumTransferDuration();
+
         int[] targetStops = new int[targetStopIdxs.length * 2];
         for (int i = 0; i < targetStops.length; i += 2) {
             int index = (int) Math.ceil(i / 2.0);
@@ -156,7 +159,8 @@ public class Raptor {
         }
 
         for (int sourceStopIdx : sourceStopIdxs) {
-            expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0);
+            expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0,
+                    maxWalkingDuration, minTransferDuration);
         }
         int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
 
@@ -264,7 +268,7 @@ public class Raptor {
 
                     int earliestDepartureTime = enteredAtArrival.arrivalTime;
                     if (enteredAtArrival.type == ArrivalType.ROUTE) {
-                        earliestDepartureTime += stop.sameStationTransferTime();
+                        earliestDepartureTime += Math.max(stop.sameStationTransferTime(), minTransferDuration);
                     }
 
                     while (tripOffset < numberOfTrips) {
@@ -290,7 +294,8 @@ public class Raptor {
             // temp variable to add any new stops to markedStopsNext
             Set<Integer> newStops = new HashSet<>();
             for (int stopIdx : markedStopsNext) {
-                expandFootpathsFromStop(stopIdx, earliestArrivals, earliestArrivalsPerRound, newStops, round);
+                expandFootpathsFromStop(stopIdx, earliestArrivals, earliestArrivalsPerRound, newStops, round,
+                        maxWalkingDuration, minTransferDuration);
             }
             markedStopsNext.addAll(newStops);
 
@@ -423,9 +428,14 @@ public class Raptor {
      *                                 round.
      * @param markedStops              - A set of stop indices that have been marked for scanning in the next round.
      * @param round                    - The current round to relax footpaths for.
+     * @param maxWalkingDuration       - The maximum walking duration to reach the target stop. If the walking duration
+     *                                 exceeds this value, the target stop is not reached.
+     * @param minTransferDuration      - The minimum transfer duration time, since this is intended as rest period it is
+     *                                 added to the walk time.
      */
     private void expandFootpathsFromStop(int stopIdx, int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
-                                         Set<Integer> markedStops, int round) {
+                                         Set<Integer> markedStops, int round, int maxWalkingDuration,
+                                         int minTransferDuration) {
         // if stop has no transfers, then no footpaths can be expanded
         if (stops[stopIdx].numberOfTransfers() == 0) {
             return;
@@ -436,7 +446,11 @@ public class Raptor {
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
             Stop targetStop = stops[transfer.targetStopIdx()];
-            int newTargetStopArrivalTime = arrivalTime + transfer.duration();
+            int duration = transfer.duration();
+            if (maxWalkingDuration < duration) {
+                continue;
+            }
+            int newTargetStopArrivalTime = arrivalTime + transfer.duration() + minTransferDuration;
 
             // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced by the same stop transfer time
             int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStationTransferTime();
