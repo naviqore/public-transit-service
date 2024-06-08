@@ -324,6 +324,167 @@ class RaptorTest {
 
     }
 
+    /*
+     * Tests for the application of the QueryConfig class.
+     * Note: Since the QueryConfig is used in SpawnFromSourceStop no additional tests for the IsoLines QueryConfig are
+     * needed.
+     */
+    @Nested
+    class QueryConfigTest {
+
+        private static final String SOURCE_STOP = "A";
+        private static final String TARGET_STOP = "Q";
+        private static final int DEPARTURE_TIME = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
+
+        @Test
+        void shouldFindWalkableTransferWithMaxWalkingTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMaximumWalkingDuration(RaptorTestBuilder.SECONDS_IN_HOUR);
+
+            // Should return two pareto optimal connections:
+            // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
+            //  - Route R1-F from A to D
+            //  - Foot Transfer from D to N (30 minutes walk time
+            //  - Route R3-F from N to Q
+
+            // 2. Connection (with three route legs and two transfers (same station) --> faster but more transfers)
+            //  - Route R1-F from A to F
+            //  - Route R4-R from F to P
+            //  - Route R3-F from P to Q
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    queryConfig);
+
+            // check if 2 connections were found
+            assertEquals(2, connections.size());
+            EarliestArrival.Helpers.assertConnection(connections.getFirst(), SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    0, 1, 2);
+            EarliestArrival.Helpers.assertConnection(connections.get(1), SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME, 2, 0,
+                    3);
+            EarliestArrival.Helpers.checkIfConnectionsAreParetoOptimal(connections);
+        }
+
+        @Test
+        void shouldNotFindWalkableTransferWithMaxWalkingTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMaximumWalkingDuration(RaptorTestBuilder.SECONDS_IN_HOUR / 4); // 15 minutes
+
+            // Should only find three route leg connections, since direct transfer between D and N is longer than
+            // allowed maximum walking distance (60 minutes):
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    queryConfig);
+            assertEquals(1, connections.size());
+            EarliestArrival.Helpers.assertConnection(connections.getFirst(), SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    2, 0, 3);
+        }
+
+        @Test
+        void shouldFindConnectionWithMaxTransferNumber(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMaximumTransferNumber(1);
+
+            // Should only find the connection with the fewest transfers:
+            // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
+            //  - Route R1-F from A to D
+            //  - Foot Transfer from D to N
+            //  - Route R3-F from N to Q
+            // 2. Connection with two transfers (see above) should not be found
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    queryConfig);
+            assertEquals(1, connections.size());
+            EarliestArrival.Helpers.assertConnection(connections.getFirst(), SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    0, 1, 2);
+        }
+
+        @Test
+        void shouldFindConnectionWithMaxTravelTime(RaptorTestBuilder builder) {
+            Raptor raptor = builder.buildWithDefaults();
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMaximumTravelTime(RaptorTestBuilder.SECONDS_IN_HOUR);
+
+            // Should only find the quicker connection (more transfers):
+            //  - Route R1-F from A to F
+            //  - Route R4-R from F to P
+            //  - Route R3-F from P to Q
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    queryConfig);
+            assertEquals(1, connections.size());
+            EarliestArrival.Helpers.assertConnection(connections.getFirst(), SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    2, 0, 3);
+        }
+
+        @Test
+        void shouldUseSameStationTransferTimeWithZeroMinimumTransferDuration(RaptorTestBuilder builder) {
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMinimumTransferDuration(0);
+
+            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+                    .withAddRoute2_HL()
+                    .withSameStationTransferTime(120)
+                    .build();
+            // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am. Connection
+            // at 5:24 (next 5:39) from B to C should be missed because of the same station transfer time (120s),
+            // regardless of minimum same transfer duration at 0s
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime,
+                    queryConfig);
+
+            assertEquals(1, connections.size());
+            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(departureTime + 39 * 60, connections.getFirst().getLegs().get(1).departureTime());
+        }
+
+        @Test
+        void shouldUseMinimumTransferTime(RaptorTestBuilder builder) {
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMinimumTransferDuration(20 * 60); // 20 minutes
+
+            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+                    .withAddRoute2_HL()
+                    .withSameStationTransferTime(120)
+                    .build();
+            // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am. Connection
+            // at 5:24 and 5:39 from B to C should be missed because of the minimum transfer duration (20 minutes)
+            String sourceStop = "A";
+            String targetStop = "H";
+            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
+
+            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime,
+                    queryConfig);
+
+            assertEquals(1, connections.size());
+            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(departureTime + 54 * 60, connections.getFirst().getLegs().get(1).departureTime());
+        }
+
+        @Test
+        void shouldAddMinimumTransferTimeToWalkTransferDuration(RaptorTestBuilder builder) {
+            QueryConfig queryConfig = new QueryConfig();
+            queryConfig.setMinimumTransferDuration(20 * 60); // 20 minutes
+
+            Raptor raptor = builder.buildWithDefaults();
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME,
+                    queryConfig);
+
+            assertEquals(2, connections.size());
+            Connection firstConnection = connections.getFirst();
+            EarliestArrival.Helpers.assertConnection(firstConnection, SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME, 0, 1,
+                    2);
+
+            // The walk transfer from D to N takes 60 minutes and the route from N to Q leaves every 75 minutes.
+            Connection.Leg firstLeg = firstConnection.getRouteLegs().getFirst();
+            Connection.Leg secondLeg = firstConnection.getRouteLegs().getLast();
+            int timeDiff = secondLeg.departureTime() - firstLeg.arrivalTime();
+            assertTrue(timeDiff >= 75 * 60, "Time between trips should be at least 75 minutes");
+        }
+
+    }
+
     @Nested
     class IsoLines {
 
