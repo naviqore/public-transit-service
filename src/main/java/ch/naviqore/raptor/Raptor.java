@@ -133,6 +133,10 @@ public class Raptor {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
+        // This is used to determine the criteria for maximum travel time
+        int earliestDeparture = Arrays.stream(departureTimes).min().orElseThrow();
+        int latestAcceptedArrival = config.getMaximumTravelTime() == INFINITY ? INFINITY : earliestDeparture + config.getMaximumTravelTime();
+
         int[] targetStops = new int[targetStopIdxs.length * 2];
         for (int i = 0; i < targetStops.length; i += 2) {
             int index = (int) Math.ceil(i / 2.0);
@@ -154,7 +158,7 @@ public class Raptor {
         for (int sourceStopIdx : sourceStopIdxs) {
             expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0);
         }
-        int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals);
+        int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -243,7 +247,8 @@ public class Raptor {
                             markedStopsNext.add(stopIdx);
                             // check if this was a target stop
                             if (Arrays.stream(targetStopIdxs).anyMatch(targetStopIdx -> targetStopIdx == stopIdx)) {
-                                earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals);
+                                earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals,
+                                        latestAcceptedArrival);
                                 log.debug("Earliest arrival to a target stop improved to {}", earliestArrival);
                             }
 
@@ -307,8 +312,8 @@ public class Raptor {
         return earliestArrivalsPerRound;
     }
 
-    private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals) {
-        int earliestArrival = INFINITY;
+    private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals, int latestAcceptedArrival) {
+        int earliestArrival = latestAcceptedArrival;
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
