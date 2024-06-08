@@ -18,6 +18,7 @@ import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
+import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.search.SearchIndexBuilder;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -33,6 +34,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ch.naviqore.service.impl.TypeMapper.createWalk;
 import static ch.naviqore.service.impl.TypeMapper.map;
@@ -42,12 +44,17 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     // TODO: Make CutOff configurable, if walk duration is longer than this, no first or last walk is needed
     private static final int MIN_WALK_DURATION = 120;
+    // TODO: Make the cache configurable
+    public final int CACHE_SIZE = 5;
+    public final EvictionCache.Strategy CACHE_EVICTION_STRATEGY = EvictionCache.Strategy.LRU;
+
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
     private final List<TransferGenerator.Transfer> additionalTransfers;
+    private final RaptorCache cache;
 
     public PublicTransitServiceImpl(ServiceConfig config) {
         this.config = config;
@@ -64,6 +71,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                         config.getMaxWalkingDistance(), spatialStopIndex));
 
         additionalTransfers = Initializer.generateTransfers(schedule, transferGenerators);
+
+        // initialize raptor instances cache
+        cache = new RaptorCache(CACHE_SIZE, CACHE_EVICTION_STRATEGY);
     }
 
     private static void notYetImplementedCheck(TimeType timeType) {
@@ -198,8 +208,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
 
         // query connection from raptor
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(time.toLocalDate());
-
+        Raptor raptor = cache.getRaptor(time.toLocalDate());
         List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
                 map(config));
 
@@ -274,8 +283,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
                 departureTime.toLocalTime().toSecondOfDay(), config.getMaximumWalkingDuration());
 
-        // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
+        Raptor raptor = cache.getRaptor(departureTime.toLocalDate());
 
         return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, source, departureTime,
                 config);
@@ -286,8 +294,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> sourceStops = getAllChildStopsFromStop(source,
                 departureTime.toLocalTime().toSecondOfDay());
 
-        // TODO: Not always create a new raptor, use mask on stop times based on active trips
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
+        Raptor raptor = cache.getRaptor(departureTime.toLocalDate());
 
         return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, null, departureTime,
                 config);
@@ -389,6 +396,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // TODO: Update method to pull new transit schedule from URL.
         //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
         log.warn("Updating static schedule not implemented yet ({})", config.getGtfsUrl());
+
+        // clear the raptor cache, since new the cached instances are now outdated
+        cache.clear();
     }
 
     private static class Initializer {
@@ -459,4 +469,47 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     }
 
+    /**
+     * Caches for active services (= GTFS calendars) per date and raptor instances.
+     * <p>
+     * TODO: Not always create a new raptor, use mask on stop times based on active trips.
+     */
+    private class RaptorCache {
+
+        private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Calendar>, Raptor> raptorCache;
+        private final EvictionCache<LocalDate, Set<ch.naviqore.gtfs.schedule.model.Calendar>> activeServices;
+
+        /**
+         * @param cacheSize the maximum number of Raptor instances to be cached.
+         * @param strategy  the cache eviction strategy.
+         */
+        RaptorCache(int cacheSize, EvictionCache.Strategy strategy) {
+            raptorCache = new EvictionCache<>(cacheSize, strategy);
+            activeServices = new EvictionCache<>(Math.min(365, cacheSize * 20), strategy);
+        }
+
+        // get cached or create and cache new raptor instance, based on the active calendars on a date
+        private Raptor getRaptor(LocalDate date) {
+            Set<ch.naviqore.gtfs.schedule.model.Calendar> activeServices = this.activeServices.computeIfAbsent(date,
+                    () -> getActiveServices(date));
+            return raptorCache.computeIfAbsent(activeServices,
+                    () -> new GtfsToRaptorConverter(schedule, additionalTransfers).convert(date));
+        }
+
+        // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
+        private Set<ch.naviqore.gtfs.schedule.model.Calendar> getActiveServices(LocalDate date) {
+            return schedule.getCalendars()
+                    .values()
+                    .stream()
+                    .filter(calendar -> calendar.isServiceAvailable(date))
+                    .collect(Collectors.toSet());
+        }
+
+        // clear the cache, needs to be called when the GTFS schedule changes
+        private void clear() {
+            activeServices.clear();
+            raptorCache.clear();
+        }
+
+    }
 }
