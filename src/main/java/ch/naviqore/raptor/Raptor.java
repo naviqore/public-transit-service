@@ -47,39 +47,21 @@ public class Raptor {
         return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
-    // TODO: Do we still need this? There are no usages...
-    public List<Connection> routeEarliestArrival(Collection<String> sourceStopIds, Collection<String> targetStopIds,
-                                                 int departureTime) {
-        Map<String, Integer> sourceStops = createStopMap(sourceStopIds, departureTime);
-        Map<String, Integer> targetStops = createStopMap(targetStopIds, 0);
-        return routeEarliestArrival(sourceStops, targetStops);
+    public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime,
+                                                 QueryConfig config) {
+        return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0), config);
     }
 
     private Map<String, Integer> createStopMap(String stopId, int value) {
         return Map.of(stopId, value);
     }
 
-    private Map<String, Integer> createStopMap(Collection<String> stopIds, int value) {
-        Map<String, Integer> stopMap = new HashMap<>();
-        for (String stopId : stopIds) {
-            stopMap.put(stopId, value);
-        }
-        return stopMap;
-    }
-
-    // TODO: Do we still need this? There are no usages...
-    private Map<String, Integer> createStopMap(List<String> stopIds, List<Integer> values) {
-        if (stopIds.size() != values.size()) {
-            throw new IllegalArgumentException("Stop IDs and values must have the same size.");
-        }
-        Map<String, Integer> stopMap = new HashMap<>();
-        for (int i = 0; i < stopIds.size(); i++) {
-            stopMap.put(stopIds.get(i), values.get(i));
-        }
-        return stopMap;
-    }
-
     public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
+        return routeEarliestArrival(sourceStops, targetStopIds, new QueryConfig());
+    }
+
+    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds,
+                                                 QueryConfig config) {
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStopIds);
         InputValidator.validateStopPermutations(sourceStops, targetStopIds);
@@ -90,17 +72,21 @@ public class Raptor {
 
         log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
         List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
-                walkingDurationsToTarget);
+                walkingDurationsToTarget, config);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
+        return getIsoLines(sourceStops, new QueryConfig());
+    }
+
+    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, QueryConfig config) {
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, departureTimes);
+        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, departureTimes, config);
 
         Map<String, Connection> isoLines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
@@ -128,13 +114,13 @@ public class Raptor {
     }
 
     // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
-    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdx, int[] departureTime) {
-        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime, new int[]{});
+    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdx, int[] departureTime, QueryConfig config) {
+        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime, new int[]{}, config);
     }
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
     private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes,
-                                            int[] walkingDurationsToTarget) {
+                                            int[] walkingDurationsToTarget, QueryConfig config) {
         // initialization
         final int[] earliestArrivals = new int[stops.length];
         Arrays.fill(earliestArrivals, INFINITY);
