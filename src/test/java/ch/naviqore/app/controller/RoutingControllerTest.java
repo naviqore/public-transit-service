@@ -92,7 +92,7 @@ public class RoutingControllerTest {
     void testGetConnections_MissingSourceAndCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            routingController.getConnections(null, -1.0, -1.0, "targetStopId", -1.0, -1.0, LocalDateTime.now(), 30, 2,
+            routingController.getConnections(null, -91.0, -181.0, "targetStopId", -91.0, -181.0, LocalDateTime.now(), 30, 2,
                     120, 5);
         });
         assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
@@ -103,7 +103,7 @@ public class RoutingControllerTest {
     void testGetConnections_MissingTargetAndCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            routingController.getConnections("sourceStopId", -1.0, -1.0, null, -1.0, -1.0, LocalDateTime.now(), 30, 2,
+            routingController.getConnections("sourceStopId", -91.0, -181.0, null, -91.0, -181.0, LocalDateTime.now(), 30, 2,
                     120, 5);
         });
         assertEquals("Either targetStopId or targetLatitude and targetLongitude must be provided.",
@@ -114,7 +114,7 @@ public class RoutingControllerTest {
     void testGetConnection_InvalidCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            routingController.getConnections(null, 91, -181, null, 32, 32, LocalDateTime.now(), 30, 2, 120, 5);
+            routingController.getConnections(null, 91, 181, null, 32, 32, LocalDateTime.now(), 30, 2, 120, 5);
         });
         assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
                 exception.getReason());
@@ -144,7 +144,7 @@ public class RoutingControllerTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             routingController.getConnections(null, 0, 0, null, 0, 0, LocalDateTime.now(), 30, 2, -120, 5);
         });
-        assertEquals("Max travel time must be greater than or equal to 0.", exception.getReason());
+        assertEquals("Max travel time must be greater than 0.", exception.getReason());
     }
 
     @Test
