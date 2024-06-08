@@ -37,28 +37,34 @@ public class RoutingController {
 
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
-                                           @RequestParam(required = false, defaultValue = "-1.0") double sourceLatitude,
-                                           @RequestParam(required = false, defaultValue = "-1.0") double sourceLongitude,
+                                           @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
+                                           @RequestParam(required = false, defaultValue = "-181.0") double sourceLongitude,
                                            @RequestParam(required = false) String targetStopId,
-                                           @RequestParam(required = false, defaultValue = "-1.0") double targetLatitude,
-                                           @RequestParam(required = false, defaultValue = "-1.0") double targetLongitude,
+                                           @RequestParam(required = false, defaultValue = "-91.0") double targetLatitude,
+                                           @RequestParam(required = false, defaultValue = "-181.0") double targetLongitude,
                                            @RequestParam(required = false) LocalDateTime departureDateTime,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
+
+        GeoCoordinate sourceCoordinate = null;
+        GeoCoordinate targetCoordinate = null;
+
         if (sourceStopId == null) {
-            if (sourceLatitude < 0 || sourceLongitude < 0) {
+            if (sourceLatitude == -91.0 || sourceLongitude == -181.0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
+            sourceCoordinate = validateCoordinate(sourceLatitude, sourceLongitude);
         }
 
         if (targetStopId == null) {
-            if (targetLatitude < 0 || targetLongitude < 0) {
+            if (targetLatitude == -91.0 || targetLongitude == -181.0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either targetStopId or targetLatitude and targetLongitude must be provided.");
             }
+            targetCoordinate = validateCoordinate(targetLatitude, targetLongitude);
         }
 
         if (departureDateTime == null) {
@@ -68,9 +74,7 @@ public class RoutingController {
         Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
         Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
 
-        GeoCoordinate sourceCoordinate = sourceStop == null ? new GeoCoordinate(sourceLatitude, sourceLongitude) : null;
-        GeoCoordinate targetCoordinate = targetStop == null ? new GeoCoordinate(targetLatitude, targetLongitude) : null;
-
+        validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
                 maxTravelTime);
 
@@ -94,28 +98,35 @@ public class RoutingController {
 
     @GetMapping("/isolines")
     public List<EarliestArrival> getIsolines(@RequestParam(required = false) String sourceStopId,
-                                             @RequestParam(required = false, defaultValue = "-1.0") double sourceLatitude,
-                                             @RequestParam(required = false, defaultValue = "-1.0") double sourceLongitude,
+                                             @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
+                                             @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
                                              @RequestParam(required = false) LocalDateTime departureDateTime,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                              @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
+
+        GeoCoordinate sourceCoordinate = null;
         if (sourceStopId == null) {
-            if (sourceLatitude < 0 || sourceLongitude < 0) {
+            if (sourceLatitude == -91.0 || sourceLongitude == -181.0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
             }
-            throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
-                    "Location based routing is not implemented yet.");
+            sourceCoordinate = validateCoordinate(sourceLatitude, sourceLongitude);
         }
 
-        Stop sourceStop = getStop(sourceStopId);
+        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
+
+        validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
                 maxTravelTime);
 
-        Map<Stop, ch.naviqore.service.Connection> connections = service.getIsolines(sourceStop, departureDateTime,
-                config);
+        Map<Stop, ch.naviqore.service.Connection> connections;
+        if (sourceStop != null) {
+            connections = service.getIsolines(sourceStop, departureDateTime, config);
+        } else {
+            connections = service.getIsolines(sourceCoordinate, departureDateTime, config);
+        }
 
         List<EarliestArrival> arrivals = new ArrayList<>();
 
@@ -133,6 +144,34 @@ public class RoutingController {
             return service.getStopById(stopId);
         } catch (StopNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
+        }
+    }
+
+    private static GeoCoordinate validateCoordinate(double latitude, double longitude) {
+        try {
+            return new GeoCoordinate(latitude, longitude);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.");
+        }
+    }
+
+    private static void validateQueryParams(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
+                                            int minTransferTime) {
+        if (maxWalkingDuration < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Max walking duration must be greater than or equal to 0.");
+        }
+        if (maxTransferNumber < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Max transfer number must be greater than or equal to 0.");
+        }
+        if (maxTravelTime <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max travel time must be greater than 0.");
+        }
+        if (minTransferTime < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Min transfer time must be greater than or equal to 0.");
         }
     }
 
