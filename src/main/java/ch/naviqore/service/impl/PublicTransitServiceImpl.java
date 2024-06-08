@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -177,7 +178,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         if (sourceStop != null) {
             sourceStops = getAllChildStopsFromStop(map(sourceStop), departureTime);
         } else if (sourceLocation != null) {
-            sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, departureTime);
+            sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, departureTime,
+                    config.getMaximumWalkingDuration());
         } else {
             throw new IllegalArgumentException("Either sourceStop or sourceLocation must be provided.");
         }
@@ -185,15 +187,21 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         if (targetStop != null) {
             targetStops = getAllChildStopsFromStop(map(targetStop));
         } else if (targetLocation != null) {
-            targetStops = getStopsWithWalkTimeFromLocation(targetLocation);
+            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, config.getMaximumWalkingDuration());
         } else {
             throw new IllegalArgumentException("Either targetStop or targetLocation must be provided.");
+        }
+
+        // In this case either no source stop or target stop is within walkable distance
+        if (sourceStops.isEmpty() || targetStops.isEmpty()) {
+            return List.of();
         }
 
         // query connection from raptor
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(time.toLocalDate());
 
-        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
+        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
+                map(config));
 
         List<Connection> result = new ArrayList<>();
 
@@ -210,17 +218,24 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 lastMile = getLastWalk(targetLocation, connection.getToStopId(), arrivalTime, targetStops);
             }
 
-            result.add(map(connection, firstMile, lastMile, time.toLocalDate(), schedule));
+            Connection serviceConnection = map(connection, firstMile, lastMile, time.toLocalDate(), schedule);
+
+            // Filter needed because the raptor algorithm does not consider the firstMile and lastMile walk time
+            if (Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
+                    .getSeconds() <= config.getMaximumTravelTime()) {
+                result.add(serviceConnection);
+            }
         }
 
         return result;
     }
 
-    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location) {
-        return getStopsWithWalkTimeFromLocation(location, 0);
+    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
+        return getStopsWithWalkTimeFromLocation(location, 0, maxWalkDuration);
     }
 
-    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int startTimeInSeconds) {
+    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int startTimeInSeconds,
+                                                                 int maxWalkDuration) {
         // TODO: Make configurable
         int maxSearchRadius = 500;
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
@@ -232,8 +247,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (ch.naviqore.gtfs.schedule.model.Stop stop : nearestStops) {
-            stopsWithWalkTime.put(stop.getId(),
-                    startTimeInSeconds + walkCalculator.calculateWalk(location, stop.getCoordinate()).duration());
+            int walkDuration = walkCalculator.calculateWalk(location, stop.getCoordinate()).duration();
+            if (walkDuration <= maxWalkDuration) {
+                stopsWithWalkTime.put(stop.getId(), startTimeInSeconds + walkDuration);
+            }
         }
         return stopsWithWalkTime;
     }
@@ -255,12 +272,13 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
                                              ConnectionQueryConfig config) {
         Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
-                departureTime.toLocalTime().toSecondOfDay());
+                departureTime.toLocalTime().toSecondOfDay(), config.getMaximumWalkingDuration());
 
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops), sourceStops, source, departureTime);
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, source, departureTime,
+                config);
     }
 
     @Override
@@ -271,12 +289,14 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // TODO: Not always create a new raptor, use mask on stop times based on active trips
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalTransfers).convert(departureTime.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops), sourceStops, null, departureTime);
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, null, departureTime,
+                config);
     }
 
     private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,
                                                          Map<String, Integer> sourceStops,
-                                                         @Nullable GeoCoordinate source, LocalDateTime departureTime) {
+                                                         @Nullable GeoCoordinate source, LocalDateTime departureTime,
+                                                         ConnectionQueryConfig config) {
         Map<Stop, Connection> result = new HashMap<>();
 
         for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isoLines.entrySet()) {
@@ -287,8 +307,15 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 firstMile = getFirstWalk(source, connection.getFromStopId(), departureTime, sourceStops);
             }
 
-            ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(entry.getKey());
-            result.put(map(stop), map(connection, firstMile, null, departureTime.toLocalDate(), schedule));
+            Stop stop = map(schedule.getStops().get(entry.getKey()));
+            Connection serviceConnection = map(connection, firstMile, null, departureTime.toLocalDate(), schedule);
+
+            // The raptor algorithm does not consider the firstMile walk time, so we need to filter out connections
+            // that exceed the maximum travel time here
+            if (Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
+                    .getSeconds() <= config.getMaximumTravelTime()) {
+                result.put(stop, serviceConnection);
+            }
         }
 
         return result;
