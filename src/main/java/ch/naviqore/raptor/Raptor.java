@@ -162,7 +162,7 @@ public class Raptor {
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
-        while (!markedStops.isEmpty()) {
+        while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
             log.debug("Scanning routes for round {}", round);
             Set<Integer> markedStopsNext = new HashSet<>();
 
