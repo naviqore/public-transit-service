@@ -100,12 +100,15 @@ class RaptorTest {
                     departureTime + RaptorTestBuilder.SECONDS_IN_HOUR);
             Map<String, Integer> targetStops = Map.of("H", 0);
 
-            // fastest and only connection should be B -> H
+            // B -> H has no transfers but later arrival time (due to departure time one hour later)
+            // A -> H has one transfer but earlier arrival time
             List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops);
             assertEquals(2, connections.size());
             Helpers.assertConnection(connections.getFirst(), "B", "H",
                     departureTime + RaptorTestBuilder.SECONDS_IN_HOUR, 0, 0, 1);
             Helpers.assertConnection(connections.get(1), "A", "H", departureTime, 1, 0, 2);
+            assertTrue(connections.getFirst().getArrivalTime() > connections.get(1).getArrivalTime(),
+                    "Connection from A should arrive earlier than connection from B");
         }
 
         @Test
