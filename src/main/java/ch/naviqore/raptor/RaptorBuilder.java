@@ -21,8 +21,6 @@ import java.util.*;
 @Log4j2
 public class RaptorBuilder {
 
-    private final static int DEFAULT_SAME_STATION_TRANSFER_TIME = 120;
-
     private final int defaultSameStationTransferTime;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
@@ -33,10 +31,6 @@ public class RaptorBuilder {
     int stopTimeSize = 0;
     int routeStopSize = 0;
     int transferSize = 0;
-
-    RaptorBuilder() {
-        this(DEFAULT_SAME_STATION_TRANSFER_TIME);
-    }
 
     RaptorBuilder(int defaultSameStationTransferTime) {
         this.defaultSameStationTransferTime = defaultSameStationTransferTime;

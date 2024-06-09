@@ -35,10 +35,6 @@ public class Raptor {
         this.routeStops = routeTraversal.routeStops();
     }
 
-    public static RaptorBuilder builder() {
-        return new RaptorBuilder();
-    }
-
     public static RaptorBuilder builder(int sameStationTransferTime) {
         return new RaptorBuilder(sameStationTransferTime);
     }

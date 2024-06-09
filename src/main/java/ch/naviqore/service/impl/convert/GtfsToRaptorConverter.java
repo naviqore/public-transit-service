@@ -27,19 +27,20 @@ public class GtfsToRaptorConverter {
 
     private final Set<GtfsRoutePartitioner.SubRoute> addedSubRoutes = new HashSet<>();
     private final Set<String> addedStops = new HashSet<>();
-    private final RaptorBuilder builder = Raptor.builder();
+    private final RaptorBuilder builder;
     private final GtfsRoutePartitioner partitioner;
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule) {
-        this(schedule, List.of());
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStationTransferTime) {
+        this(schedule, List.of(), sameStationTransferTime);
     }
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers) {
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers, int sameStationTransferTime) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
+        this.builder = Raptor.builder(sameStationTransferTime);
     }
 
     public Raptor convert(LocalDate date) {

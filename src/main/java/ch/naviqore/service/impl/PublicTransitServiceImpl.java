@@ -493,7 +493,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             Set<ch.naviqore.gtfs.schedule.model.Calendar> activeServices = this.activeServices.computeIfAbsent(date,
                     () -> getActiveServices(date));
             return raptorCache.computeIfAbsent(activeServices,
-                    () -> new GtfsToRaptorConverter(schedule, additionalTransfers).convert(date));
+                    () -> new GtfsToRaptorConverter(schedule, additionalTransfers,
+                            config.getSameStationTransferTime()).convert(date));
         }
 
         // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
