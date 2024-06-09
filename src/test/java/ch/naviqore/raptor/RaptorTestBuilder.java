@@ -42,8 +42,14 @@ import java.util.Set;
 public class RaptorTestBuilder {
 
     static final int SECONDS_IN_HOUR = 3600;
-    private static final int DAY_START_HOUR = 5;
-    private static final int DAY_END_HOUR = 25;
+    static final int DAY_START_HOUR = 5;
+    static final int DAY_END_HOUR = 25;
+
+    static final int DEFAULT_TIME_BETWEEN_STOPS = 5;
+    static final int DEFAULT_DWELL_TIME = 1;
+    static final int DEFAULT_HEADWAY_TIME = 15;
+    static final int DEFAULT_OFFSET = 0;
+
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
     private int sameStationTransferTime = 120;
@@ -111,7 +117,7 @@ public class RaptorTestBuilder {
     }
 
     public RaptorTestBuilder withAddRoute1_AG() {
-        return withAddRoute1_AG(0, 15, 5, 1);
+        return withAddRoute1_AG(DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
     }
 
     public RaptorTestBuilder withAddRoute1_AG(int offset, int headway, int travelTime, int dwellTime) {
@@ -191,7 +197,7 @@ public class RaptorTestBuilder {
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
         public Route(String id, List<String> stops) {
-            this(id, stops, 0, 15, 5, 1);
+            this(id, stops, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
         }
 
     }
