@@ -254,72 +254,69 @@ class RaptorTest {
     @Nested
     class SameStationTransfers {
 
+        private static final String SOURCE_STOP = "A";
+        private static final String TARGET_STOP = "H";
+        private static final int DEPARTURE_TIME = 5 * RaptorTestBuilder.SECONDS_IN_HOUR; // 5 am
+        private static final int HEADWAY_TIME = 15;
+        private static final int TRAVEL_TIME = 5;
+        private static final int DWELL_TIME = 1;
+
         @Test
-        void shouldTakeFirstTripWithoutAddingSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.buildWithDefaults();
-            // There should be a connection leaving stop A at 5:00 am
-            String sourceStop = "A";
-            String targetStop = "B";
-            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
-            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+        void shouldTakeFirstTripWithoutAddingSameStationTransferTimeAtFirstStop(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute2_HL().withSameStationTransferTime(120).build();
+            // There should be a connection leaving stop A at 5:00 am and this test should ensure that the same station
+            // transfer time is not added at the first stop, i.e. departure time at 5:00 am should allow to board the
+            // first trip at 5:00 am
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME);
             assertEquals(1, connections.size());
-            assertEquals(departureTime, connections.getFirst().getDepartureTime());
+            assertEquals(DEPARTURE_TIME, connections.getFirst().getDepartureTime());
         }
 
         @Test
         void shouldMissConnectingTripBecauseOfSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+            Raptor raptor = builder.withAddRoute1_AG(19, HEADWAY_TIME, TRAVEL_TIME, DWELL_TIME)
                     .withAddRoute2_HL()
                     .withSameStationTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
-            // Connection at 5:24 from B to C should be missed because of the same station transfer time (120s)
-            String sourceStop = "A";
-            String targetStop = "H";
-            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
-            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            // Connection at 5:24 from B to H should be missed because of the same station transfer time (120s)
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME);
 
             assertEquals(1, connections.size());
-            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(DEPARTURE_TIME + 19 * 60, connections.getFirst().getDepartureTime());
 
-            assertNotEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+            assertNotEquals(DEPARTURE_TIME + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
         }
 
         @Test
         void shouldCatchConnectingTripBecauseOfNoSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
+            Raptor raptor = builder.withAddRoute1_AG(19, HEADWAY_TIME, TRAVEL_TIME, DWELL_TIME)
                     .withAddRoute2_HL()
                     .withSameStationTransferTime(0)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
-            // Connection at 5:24 from B to C should not be missed because of no same station transfer time
-            String sourceStop = "A";
-            String targetStop = "H";
-            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
-            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            // Connection at 5:24 from B to H should not be missed because of no same station transfer time
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME);
 
             assertEquals(1, connections.size());
-            assertEquals(departureTime + 19 * 60, connections.getFirst().getDepartureTime());
-            assertEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+            assertEquals(DEPARTURE_TIME + 19 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(DEPARTURE_TIME + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
         }
 
         @Test
         void shouldCatchConnectingTripWithSameStationTransferTime(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG(17, 15, 5, 1)
+            Raptor raptor = builder.withAddRoute1_AG(17, HEADWAY_TIME, TRAVEL_TIME, DWELL_TIME)
                     .withAddRoute2_HL()
                     .withSameStationTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:17 am and arriving at stop B at 5:22 am
-            // Connection at 5:24 from B to C should be cached when the same station transfer time is 120s
-            String sourceStop = "A";
-            String targetStop = "H";
-            int departureTime = 5 * RaptorTestBuilder.SECONDS_IN_HOUR;
-            List<Connection> connections = raptor.routeEarliestArrival(sourceStop, targetStop, departureTime);
+            // Connection at 5:24 from B to H should be cached when the same station transfer time is 120s
+            List<Connection> connections = raptor.routeEarliestArrival(SOURCE_STOP, TARGET_STOP, DEPARTURE_TIME);
 
             assertEquals(1, connections.size());
-            assertEquals(departureTime + 17 * 60, connections.getFirst().getDepartureTime());
+            assertEquals(DEPARTURE_TIME + 17 * 60, connections.getFirst().getDepartureTime());
 
-            assertEquals(departureTime + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
+            assertEquals(DEPARTURE_TIME + 24 * 60, connections.getFirst().getLegs().get(1).departureTime());
         }
 
     }
