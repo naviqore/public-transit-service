@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GtfsToRaptorConverterIT {
 
     private static final LocalDate DATE = LocalDate.of(2009, 4, 26);
+    private static final int SAME_STATION_TRANSFER_TIME = 120;
     private GtfsSchedule schedule;
 
     @BeforeEach
@@ -28,7 +29,7 @@ class GtfsToRaptorConverterIT {
 
     @Test
     void shouldConvertGtfsScheduleToRaptor() {
-        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule);
+        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, SAME_STATION_TRANSFER_TIME);
         Raptor raptor = mapper.convert(DATE);
         assertThat(raptor).isNotNull();
     }

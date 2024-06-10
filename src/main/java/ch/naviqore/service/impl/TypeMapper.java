@@ -2,7 +2,9 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.service.*;
+import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
@@ -99,6 +101,11 @@ final class TypeMapper {
                     toLocalDateTime(leg.arrivalTime(), date), sourceStop, targetStop);
             case ROUTE -> createPublicTransitLeg(leg, date, schedule, distance);
         };
+    }
+
+    public static QueryConfig map(ConnectionQueryConfig config) {
+        return new QueryConfig(config.getMaximumWalkingDuration(), config.getMinimumTransferDuration(),
+                config.getMaximumTransferNumber(), config.getMaximumTravelTime());
     }
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Connection.Leg leg, LocalDate date,

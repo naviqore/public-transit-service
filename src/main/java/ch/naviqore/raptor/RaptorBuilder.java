@@ -1,7 +1,5 @@
 package ch.naviqore.raptor;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,18 +18,23 @@ import java.util.*;
  *
  * @author munterfi
  */
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Log4j2
 public class RaptorBuilder {
 
+    private final int defaultSameStationTransferTime;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
+    private final Map<String, Integer> sameStationTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
 
     int stopTimeSize = 0;
     int routeStopSize = 0;
     int transferSize = 0;
+
+    RaptorBuilder(int defaultSameStationTransferTime) {
+        this.defaultSameStationTransferTime = defaultSameStationTransferTime;
+    }
 
     public RaptorBuilder addStop(String id) {
         if (stops.containsKey(id)) {
@@ -88,6 +91,11 @@ public class RaptorBuilder {
 
         if (!stops.containsKey(targetStopId)) {
             throw new IllegalArgumentException("Target stop " + targetStopId + " does not exist");
+        }
+
+        if (sourceStopId.equals(targetStopId)) {
+            sameStationTransfers.put(sourceStopId, duration);
+            return this;
         }
 
         transfers.computeIfAbsent(sourceStopId, k -> new ArrayList<>())
@@ -152,8 +160,10 @@ public class RaptorBuilder {
             List<Transfer> currentTransfers = transfers.get(stopId);
             int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
 
+            int sameStopTransferTime = sameStationTransfers.getOrDefault(stopId, defaultSameStationTransferTime);
+
             // add stop entry to stop array
-            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(),
+            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
                     numberOfTransfers == 0 ? Raptor.NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any

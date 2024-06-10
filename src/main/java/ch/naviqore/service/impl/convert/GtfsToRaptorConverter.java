@@ -27,19 +27,20 @@ public class GtfsToRaptorConverter {
 
     private final Set<GtfsRoutePartitioner.SubRoute> addedSubRoutes = new HashSet<>();
     private final Set<String> addedStops = new HashSet<>();
-    private final RaptorBuilder builder = Raptor.builder();
+    private final RaptorBuilder builder;
     private final GtfsRoutePartitioner partitioner;
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule) {
-        this(schedule, List.of());
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStationTransferTime) {
+        this(schedule, List.of(), sameStationTransferTime);
     }
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers) {
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers, int sameStationTransferTime) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
+        this.builder = Raptor.builder(sameStationTransferTime);
     }
 
     public Raptor convert(LocalDate date) {
@@ -84,7 +85,7 @@ public class GtfsToRaptorConverter {
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
-                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && stop != transfer.getToStop() && transfer.getMinTransferTime()
+                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
                         .isPresent()) {
                     try {
                         builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
@@ -101,14 +102,6 @@ public class GtfsToRaptorConverter {
         }
 
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
-
-            if (transfer.from() == transfer.to()) {
-                // TODO: Make Raptor handle same station transfers correctly. This is a workaround to avoid adding
-                //  transfers between the same station, as not implemented yet.
-                log.warn("Omit adding transfer from {} 2to {} with duration {} as it is the same stop",
-                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
-                continue;
-            }
 
             if (schedule.getStops()
                     .get(transfer.from().getId())
