@@ -7,13 +7,13 @@ import ch.naviqore.app.dto.Stop;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class ScheduleControllerTest {
 
     @Mock
@@ -34,11 +35,6 @@ public class ScheduleControllerTest {
 
     @InjectMocks
     private ScheduleController scheduleController;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
 
     @Test
     void testGetAutoCompleteStops() {
@@ -51,9 +47,8 @@ public class ScheduleControllerTest {
 
     @Test
     void testGetAutoCompleteStops_withNegativeLimit() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH));
 
         assertEquals("Limit must be greater than 0", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -61,9 +56,8 @@ public class ScheduleControllerTest {
 
     @Test
     void testGetAutoCompleteStops_withZeroLimit() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH));
 
         assertEquals("Limit must be greater than 0", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -85,9 +79,8 @@ public class ScheduleControllerTest {
 
     @Test
     void testGetNearestStops_withNegativeLimit() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getNearestStops(0, 0, 1000, -10);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getNearestStops(0, 0, 1000, -10));
 
         assertEquals("Limit must be greater than 0", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -95,9 +88,8 @@ public class ScheduleControllerTest {
 
     @Test
     void testGetNearestStops_withZeroLimit() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getNearestStops(0, 0, 1000, 0);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getNearestStops(0, 0, 1000, 0));
 
         assertEquals("Limit must be greater than 0", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -105,9 +97,8 @@ public class ScheduleControllerTest {
 
     @Test
     void testGetNearestStops_withNegativeMaxDistance() {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getNearestStops(0, 0, -1000, 10);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getNearestStops(0, 0, -1000, 10));
 
         assertEquals("Max distance can not be negative", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -122,9 +113,8 @@ public class ScheduleControllerTest {
             "-91, -181" // Invalid latitude and longitude
     })
     void testGetNearestStops_withInvalidCoordinates(double latitude, double longitude) {
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getNearestStops(latitude, longitude, 1000, 10);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getNearestStops(latitude, longitude, 1000, 10));
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
 
@@ -141,9 +131,8 @@ public class ScheduleControllerTest {
     void testGetStop_withStopNotFoundException() throws StopNotFoundException {
         String stopId = "stopId";
         when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getStop(stopId);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getStop(stopId));
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
     }
 
@@ -153,7 +142,8 @@ public class ScheduleControllerTest {
         ch.naviqore.service.Stop serviceStop = mock(ch.naviqore.service.Stop.class);
         when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
         List<ch.naviqore.service.StopTime> stopTimes = List.of();
-        when(scheduleInformationService.getNextDepartures(serviceStop, null, null, 10)).thenReturn(stopTimes);
+        when(scheduleInformationService.getNextDepartures(eq(serviceStop), any(LocalDateTime.class), eq(null),
+                eq(10))).thenReturn(stopTimes);
         List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, null, 10, null);
         assertNotNull(stopTimeDtos);
     }
@@ -162,22 +152,19 @@ public class ScheduleControllerTest {
     void testGetDepartures_withStopNotFoundException() throws StopNotFoundException {
         String stopId = "stopId";
         when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getDepartures(stopId, null, 10, null);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getDepartures(stopId, null, 10, null));
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
     }
 
     @Test
-    void testGetDepartures_withUntilDateTimeBeforeDepartureDateTime() throws StopNotFoundException {
+    void testGetDepartures_withUntilDateTimeBeforeDepartureDateTime() {
         String stopId = "stopId";
         LocalDateTime departureTime = LocalDateTime.now();
         LocalDateTime untilTime = departureTime.minusMinutes(1);
 
-        when(scheduleInformationService.getStopById(stopId)).thenReturn(mock(ch.naviqore.service.Stop.class));
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getDepartures(stopId, departureTime, 10, untilTime);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getDepartures(stopId, departureTime, 10, untilTime));
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
 
@@ -227,9 +214,8 @@ public class ScheduleControllerTest {
     @Test
     void testGetDepartures_withInvalidLimit() {
         int limit = 0;
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            scheduleController.getDepartures("stopId", null, limit, null);
-        });
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> scheduleController.getDepartures("stopId", null, limit, null));
         assertEquals("Limit must be greater than 0", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
