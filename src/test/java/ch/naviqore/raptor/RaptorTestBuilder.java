@@ -29,6 +29,7 @@ import java.util.Set;
  * <li>R2: H, B, I, J, K, L</li>
  * <li>R3: M, K, N, O, P, Q</li>
  * <li>R4: R, P, F, S</li>
+ * <li>R5: A, B, C, D, E, F, P, O, N, K, J, I, B, H</li>
  * </ul>
  * <p>
  * Transfers:
@@ -41,14 +42,21 @@ import java.util.Set;
 public class RaptorTestBuilder {
 
     static final int SECONDS_IN_HOUR = 3600;
-    private static final int DAY_START_HOUR = 5;
-    private static final int DAY_END_HOUR = 25;
+    static final int DAY_START_HOUR = 5;
+    static final int DAY_END_HOUR = 25;
+
+    static final int DEFAULT_TIME_BETWEEN_STOPS = 5;
+    static final int DEFAULT_DWELL_TIME = 1;
+    static final int DEFAULT_HEADWAY_TIME = 15;
+    static final int DEFAULT_OFFSET = 0;
 
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
+    private int sameStationTransferTime = 120;
 
-    private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd) {
-        RaptorBuilder builder = Raptor.builder();
+    private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
+                                int sameStationTransferTime) {
+        RaptorBuilder builder = Raptor.builder(sameStationTransferTime);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -109,7 +117,16 @@ public class RaptorTestBuilder {
     }
 
     public RaptorTestBuilder withAddRoute1_AG() {
-        routes.add(new Route("R1", List.of("A", "B", "C", "D", "E", "F", "G")));
+        return withAddRoute1_AG(DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
+    }
+
+    public RaptorTestBuilder withAddRoute1_AG(int offset, int headway, int travelTime, int dwellTime) {
+        return withAddRoute1_AG("R1", offset, headway, travelTime, dwellTime);
+    }
+
+    public RaptorTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(
+                new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), offset, headway, travelTime, dwellTime));
         return this;
     }
 
@@ -128,6 +145,11 @@ public class RaptorTestBuilder {
         return this;
     }
 
+    public RaptorTestBuilder withAddRoute5_AH_selfIntersecting() {
+        routes.add(new Route("R5", List.of("A", "B", "C", "D", "E", "F", "P", "O", "N", "K", "J", "I", "B", "H")));
+        return this;
+    }
+
     public RaptorTestBuilder withAddTransfer1_ND() {
         return withAddTransfer1_ND(60);
     }
@@ -142,8 +164,13 @@ public class RaptorTestBuilder {
         return this;
     }
 
+    public RaptorTestBuilder withSameStationTransferTime(int sameStationTransferTime) {
+        this.sameStationTransferTime = sameStationTransferTime;
+        return this;
+    }
+
     public Raptor build() {
-        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR);
+        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStationTransferTime);
     }
 
     public Raptor buildWithDefaults() {
@@ -157,21 +184,30 @@ public class RaptorTestBuilder {
     }
 
     /**
-     * Route, times are in minutes.
+     * Route.
      *
-     * @param headWayTime the time between the trip departures.
+     * @param id                     the route id.
+     * @param stops                  the stops of the route.
+     * @param firstDepartureOffset   the time of the first departure in minutes after the start of the day.
+     * @param headWayTime            the time between the trip departures in minutes.
+     * @param travelTimeBetweenStops the travel time between stops in minutes.
+     * @param dwellTimeAtSTop        the dwell time at a stop in minutes (time between arrival and departure).
      */
     private record Route(String id, List<String> stops, int firstDepartureOffset, int headWayTime,
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
         public Route(String id, List<String> stops) {
-            this(id, stops, 0, 15, 5, 1);
+            this(id, stops, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
         }
 
     }
 
     /**
-     * Transfer, times are in minutes.
+     * Transfer.
+     *
+     * @param sourceStop the id of the source stop.
+     * @param targetStop the id of the target stop.
+     * @param duration   the (walking) duration of the transfer between stops in minutes.
      */
     private record Transfer(String sourceStop, String targetStop, int duration) {
     }
