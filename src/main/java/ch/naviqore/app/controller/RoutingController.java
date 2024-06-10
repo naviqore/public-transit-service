@@ -35,6 +35,34 @@ public class RoutingController {
         this.service = service;
     }
 
+    private static GeoCoordinate validateCoordinate(double latitude, double longitude) {
+        try {
+            return new GeoCoordinate(latitude, longitude);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.");
+        }
+    }
+
+    private static void validateQueryParams(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
+                                            int minTransferTime) {
+        if (maxWalkingDuration < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Max walking duration must be greater than or equal to 0.");
+        }
+        if (maxTransferNumber < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Max transfer number must be greater than or equal to 0.");
+        }
+        if (maxTravelTime <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max travel time must be greater than 0.");
+        }
+        if (minTransferTime < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Min transfer time must be greater than or equal to 0.");
+        }
+    }
+
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
@@ -144,34 +172,6 @@ public class RoutingController {
             return service.getStopById(stopId);
         } catch (StopNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
-        }
-    }
-
-    private static GeoCoordinate validateCoordinate(double latitude, double longitude) {
-        try {
-            return new GeoCoordinate(latitude, longitude);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.");
-        }
-    }
-
-    private static void validateQueryParams(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
-                                            int minTransferTime) {
-        if (maxWalkingDuration < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Max walking duration must be greater than or equal to 0.");
-        }
-        if (maxTransferNumber < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Max transfer number must be greater than or equal to 0.");
-        }
-        if (maxTravelTime <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max travel time must be greater than 0.");
-        }
-        if (minTransferTime < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Min transfer time must be greater than or equal to 0.");
         }
     }
 

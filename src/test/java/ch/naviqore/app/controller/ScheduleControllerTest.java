@@ -114,8 +114,7 @@ public class ScheduleControllerTest {
     }
 
     @ParameterizedTest(name = "Test case {index}: Latitude={0}, Longitude={1}")
-    @CsvSource({
-            "91, 0",    // Invalid latitude
+    @CsvSource({"91, 0",    // Invalid latitude
             "-91, 0",   // Invalid latitude
             "0, 181",   // Invalid longitude
             "0, -181",  // Invalid longitude
@@ -190,8 +189,8 @@ public class ScheduleControllerTest {
         ch.naviqore.service.Stop serviceStop = mock(ch.naviqore.service.Stop.class);
         when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
         List<ch.naviqore.service.StopTime> stopTimes = List.of();
-        when(scheduleInformationService.getNextDepartures(eq(serviceStop), any(), eq(untilTime)
-                , eq(limit))).thenReturn(stopTimes);
+        when(scheduleInformationService.getNextDepartures(eq(serviceStop), any(), eq(untilTime), eq(limit))).thenReturn(
+                stopTimes);
         List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, null, limit, untilTime);
         assertNotNull(stopTimeDtos);
     }
@@ -205,8 +204,8 @@ public class ScheduleControllerTest {
         ch.naviqore.service.Stop serviceStop = mock(ch.naviqore.service.Stop.class);
         when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
         List<ch.naviqore.service.StopTime> stopTimes = List.of();
-        when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), eq(untilTime)
-                , eq(limit))).thenReturn(stopTimes);
+        when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), eq(untilTime),
+                eq(limit))).thenReturn(stopTimes);
         List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, departureTime, limit, untilTime);
         assertNotNull(stopTimeDtos);
     }
@@ -219,8 +218,8 @@ public class ScheduleControllerTest {
         ch.naviqore.service.Stop serviceStop = mock(ch.naviqore.service.Stop.class);
         when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
         List<ch.naviqore.service.StopTime> stopTimes = List.of();
-        when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), any()
-                , eq(limit))).thenReturn(stopTimes);
+        when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), any(),
+                eq(limit))).thenReturn(stopTimes);
         List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, departureTime, limit, null);
         assertNotNull(stopTimeDtos);
     }
