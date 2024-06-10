@@ -50,7 +50,14 @@ public class ScheduleController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max distance can not be negative");
         }
 
-        return service.getNearestStops(new GeoCoordinate(latitude, longitude), maxDistance, limit)
+        GeoCoordinate location;
+        try {
+            location = new GeoCoordinate(latitude, longitude);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+
+        return service.getNearestStops(location, maxDistance, limit)
                 .stream()
                 .map(stop -> map(stop, latitude, longitude))
                 .toList();
