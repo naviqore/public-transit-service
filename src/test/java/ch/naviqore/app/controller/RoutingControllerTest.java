@@ -6,11 +6,11 @@ import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class RoutingControllerTest {
 
     @Mock
@@ -32,13 +33,8 @@ public class RoutingControllerTest {
     @InjectMocks
     private RoutingController routingController;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
     @Test
-    void testGetConnections_WithValidSourceAndTargetStopIds() {
+    void testGetConnections_WithValidSourceAndTargetStopIds() throws StopNotFoundException {
         // Arrange
         String sourceStopId = "sourceStopId";
         String targetStopId = "targetStopId";
@@ -47,12 +43,8 @@ public class RoutingControllerTest {
         Stop sourceStop = mock(Stop.class);
         Stop targetStop = mock(Stop.class);
 
-        try {
-            when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
-            when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
-        } catch (StopNotFoundException e) {
-            fail("StopNotFoundException was thrown", e);
-        }
+        when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
+        when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
         when(publicTransitService.getConnections(eq(sourceStop), eq(targetStop), any(), any(), any())).thenReturn(
                 Collections.emptyList());
 
@@ -65,7 +57,7 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetConnections_WithoutSourceStopIdButWithCoordinates() {
+    void testGetConnections_WithoutSourceStopIdButWithCoordinates() throws StopNotFoundException {
         // Arrange
         double sourceLatitude = 46.2044;
         double sourceLongitude = 6.1432;
@@ -74,11 +66,7 @@ public class RoutingControllerTest {
 
         Stop targetStop = mock(Stop.class);
 
-        try {
-            when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
-        } catch (StopNotFoundException e) {
-            fail("StopNotFoundException was thrown", e);
-        }
+        when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
         when(publicTransitService.getConnections(any(GeoCoordinate.class), eq(targetStop), any(), any(),
                 any())).thenReturn(Collections.emptyList());
 
@@ -91,18 +79,14 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetConnections_InvalidStopId() {
+    void testGetConnections_InvalidStopId() throws StopNotFoundException {
         // Arrange
         String invalidStopId = "invalidStopId";
         String targetStopId = "targetStopId";
         Stop targetStop = mock(Stop.class);
 
-        try {
-            when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
-            when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
-        } catch (StopNotFoundException e) {
-            fail("StopNotFoundException was thrown", e);
-        }
+        when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
+
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             routingController.getConnections(invalidStopId, -91.0, -181.0, targetStopId, -91.0, -181.0,
@@ -188,18 +172,14 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetIsoLines() {
+    void testGetIsoLines() throws StopNotFoundException {
         // Arrange
         String sourceStopId = "sourceStopId";
         LocalDateTime departureDateTime = LocalDateTime.now();
 
         Stop sourceStop = mock(Stop.class);
 
-        try {
-            when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
-        } catch (StopNotFoundException e) {
-            fail("StopNotFoundException was thrown", e);
-        }
+        when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
         when(publicTransitService.getIsolines(eq(sourceStop), eq(departureDateTime), any())).thenReturn(
                 Collections.emptyMap());
 
@@ -212,15 +192,10 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetIsoLines_InvalidSourceStopId() {
+    void testGetIsoLines_InvalidSourceStopId() throws StopNotFoundException {
         // Arrange
         String invalidStopId = "invalidStopId";
-
-        try {
-            when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
-        } catch (StopNotFoundException e) {
-            fail("StopNotFoundException was thrown", e);
-        }
+        when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
