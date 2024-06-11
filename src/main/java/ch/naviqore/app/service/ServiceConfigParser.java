@@ -15,7 +15,7 @@ public class ServiceConfigParser {
                                @Value("${transfer.time.minimum:120}") int minimumTransferTime,
                                @Value("${transfer.defaultSameStationTransferTime:120}") int sameStationTransferTime,
                                @Value("${walking.distance.maximum:500}") int maxWalkingDistance,
-                               @Value("${walking.speed:3500}") int walkingSpeed,
+                               @Value("${walking.speed:2500}") int walkingSpeed,
                                @Value("${walking.calculator.type:BEE_LINE_DISTANCE}") String walkCalculatorTypeStr) {
         ServiceConfig.WalkCalculatorType walkCalculatorType = ServiceConfig.WalkCalculatorType.valueOf(
                 walkCalculatorTypeStr.toUpperCase());
