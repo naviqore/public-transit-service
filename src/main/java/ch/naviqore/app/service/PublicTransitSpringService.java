@@ -128,7 +128,7 @@ public class PublicTransitSpringService implements PublicTransitService {
             if (isLocalFile(gtfsStaticUrl)) {
                 return new GtfsScheduleFile(gtfsStaticUrl);
             } else if (isValidUrl(gtfsStaticUrl)) {
-                return new GtfsScheduleUrl(gtfsStaticUrl, "", "temp_gtfs.zip");
+                return new GtfsScheduleUrl(gtfsStaticUrl);
             } else {
                 throw new IllegalArgumentException("Invalid GTFS static URL: " + gtfsStaticUrl);
             }

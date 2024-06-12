@@ -26,10 +26,13 @@ class FileDownloaderTest {
 
     private static final String TEST_FILE_URL = "https://example.com/file.zip";
     private static final String TEST_FILE_NAME = "test.zip";
+
     @TempDir
-    Path tempDirectory;
+    private Path tempDirectory;
+
     @Mock
     private HttpClient httpClientMock;
+
     @InjectMocks
     private FileDownloader fileDownloader;
 
