@@ -1,5 +1,7 @@
 package ch.naviqore.app.service;
 
+import ch.naviqore.app.infrastructure.GtfsScheduleFile;
+import ch.naviqore.app.infrastructure.GtfsScheduleUrl;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -7,6 +9,7 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.service.repo.GtfsScheduleRepository;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +37,8 @@ public class PublicTransitSpringService implements PublicTransitService {
     public PublicTransitSpringService(ServiceConfigParser parser) {
         log.info("Initializing public transit spring service");
         this.config = parser.getServiceConfig();
-        this.delegate = new PublicTransitServiceFactory(config).create();
+        this.delegate = new PublicTransitServiceFactory(config,
+                InputValidator.getRepository(config.getGtfsStaticUrl())).create();
     }
 
     @Scheduled(cron = "${gtfs.static.update.cron}")
@@ -113,6 +120,34 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Override
     public void updateStaticSchedule() {
         delegate.updateStaticSchedule();
+    }
+
+    private static class InputValidator {
+
+        private static GtfsScheduleRepository getRepository(String gtfsStaticUrl) {
+            if (isLocalFile(gtfsStaticUrl)) {
+                return new GtfsScheduleFile(gtfsStaticUrl);
+            } else if (isValidUrl(gtfsStaticUrl)) {
+                return new GtfsScheduleUrl(gtfsStaticUrl, "", "temp_gtfs.zip");
+            } else {
+                throw new IllegalArgumentException("Invalid GTFS static URL: " + gtfsStaticUrl);
+            }
+        }
+
+        private static boolean isLocalFile(String path) {
+            File file = new File(path);
+            return file.exists() && file.isFile();
+        }
+
+        private static boolean isValidUrl(String urlString) {
+            try {
+                new URI(urlString);
+                return true;
+            } catch (URISyntaxException e) {
+                return false;
+            }
+        }
+
     }
 
 }

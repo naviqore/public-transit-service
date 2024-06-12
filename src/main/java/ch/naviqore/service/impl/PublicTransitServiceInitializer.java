@@ -1,6 +1,5 @@
 package ch.naviqore.service.impl;
 
-import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.type.TransferType;
@@ -20,8 +19,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -37,11 +34,11 @@ public class PublicTransitServiceInitializer {
     private final KDTree<Stop> spatialStopIndex;
     private final List<TransferGenerator.Transfer> additionalTransfers;
 
-    public PublicTransitServiceInitializer(ServiceConfig config) {
+    public PublicTransitServiceInitializer(ServiceConfig config, GtfsSchedule schedule) {
         this.config = config;
+        this.schedule = schedule;
         log.debug("Initializing with config: {}", config);
         this.walkCalculator = initializeWalkCalculator(config);
-        this.schedule = readGtfsSchedule(config.getGtfsStaticUrl());
         this.stopSearchIndex = generateStopSearchIndex(schedule);
         this.spatialStopIndex = generateSpatialStopIndex(schedule);
         this.additionalTransfers = generateTransfers(schedule,
@@ -53,16 +50,6 @@ public class PublicTransitServiceInitializer {
             case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
                     new BeeLineWalkCalculator(config.getWalkingSpeed());
         };
-
-    }
-
-    private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
-        // TODO: Download file if needed
-        try {
-            return new GtfsScheduleReader().read(gtfsFilePath);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     private static SearchIndex<Stop> generateStopSearchIndex(GtfsSchedule schedule) {
