@@ -31,7 +31,11 @@ class PublicTransitServiceImplIT {
     @BeforeEach
     void setUp(@TempDir Path tempDir) throws IOException {
         File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
-        service = new PublicTransitServiceImpl(new ServiceConfig(zipFile.getAbsolutePath()));
+        PublicTransitServiceInitializer initializer = new PublicTransitServiceInitializer(
+                new ServiceConfig(zipFile.getAbsolutePath()));
+        service = new PublicTransitServiceImpl(initializer.getConfig(), initializer.getSchedule(),
+                initializer.getSpatialStopIndex(), initializer.getStopSearchIndex(), initializer.getWalkCalculator(),
+                initializer.getAdditionalTransfers());
     }
 
     @Nested

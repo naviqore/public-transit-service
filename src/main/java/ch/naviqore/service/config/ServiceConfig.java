@@ -1,11 +1,13 @@
 package ch.naviqore.service.config;
 
 import lombok.Getter;
+import lombok.ToString;
 
 /**
  * Configuration to create a public transit service.
  */
 @Getter
+@ToString
 public class ServiceConfig {
 
     // note: The defaults should match the default values in the application.properties file.

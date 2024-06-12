@@ -1,9 +1,7 @@
 package ch.naviqore.service.impl;
 
-import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -13,23 +11,16 @@ import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
-import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
-import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
-import ch.naviqore.utils.search.SearchIndexBuilder;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
-import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -42,12 +33,6 @@ import static ch.naviqore.service.impl.TypeMapper.map;
 @Log4j2
 public class PublicTransitServiceImpl implements PublicTransitService {
 
-    // TODO: Make CutOff configurable, if walk duration is longer than this, no first or last walk is needed
-    private static final int MIN_WALK_DURATION = 120;
-    // TODO: Make the cache configurable
-    public final int CACHE_SIZE = 5;
-    public final EvictionCache.Strategy CACHE_EVICTION_STRATEGY = EvictionCache.Strategy.LRU;
-
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
@@ -56,24 +41,20 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final RaptorCache cache;
 
-    public PublicTransitServiceImpl(ServiceConfig config) {
+    PublicTransitServiceImpl(ServiceConfig config, GtfsSchedule schedule,
+                             KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
+                             SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex,
+                             WalkCalculator walkCalculator, List<TransferGenerator.Transfer> additionalTransfers) {
         this.config = config;
-        this.walkCalculator = Initializer.initializeWalkCalculator(config);
-        schedule = Initializer.readGtfsSchedule(config.getGtfsStaticUrl());
-        // parentStops = Initializer.groupStopsByParent(schedule);
-        stopSearchIndex = Initializer.generateStopSearchIndex(schedule);
-        spatialStopIndex = Initializer.generateSpatialStopIndex(schedule);
-
-        // todo: make transfer generators configurable through application properties
-        List<TransferGenerator> transferGenerators = List.of(
-                new SameStationTransferGenerator(config.getTransferTimeSameStopDefault()),
-                new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
-                        config.getWalkingDistanceMaximum(), spatialStopIndex));
-
-        additionalTransfers = Initializer.generateTransfers(schedule, transferGenerators);
+        this.schedule = schedule;
+        this.spatialStopIndex = spatialStopIndex;
+        this.stopSearchIndex = stopSearchIndex;
+        this.walkCalculator = walkCalculator;
+        this.additionalTransfers = List.copyOf(additionalTransfers);
 
         // initialize raptor instances cache
-        cache = new RaptorCache(CACHE_SIZE, CACHE_EVICTION_STRATEGY);
+        cache = new RaptorCache(config.getCacheSize(),
+                EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name()));
     }
 
     private static void notYetImplementedCheck(TimeType timeType) {
@@ -333,7 +314,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         int firstWalkDuration = sourceStops.get(firstStopId) - departureTime.toLocalTime().toSecondOfDay();
 
-        if (firstWalkDuration > MIN_WALK_DURATION) {
+        if (firstWalkDuration > config.getWalkingDurationMinimum()) {
             int distance = (int) source.distanceTo(firstStop.getCoordinate());
             return createWalk(distance, firstWalkDuration, WalkType.FIRST_MILE, departureTime,
                     departureTime.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(), map(firstStop));
@@ -346,7 +327,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         ch.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
         int lastWalkDuration = targetStops.get(lastStopId);
 
-        if (lastWalkDuration > MIN_WALK_DURATION) {
+        if (lastWalkDuration > config.getWalkingDurationMinimum()) {
             int distance = (int) target.distanceTo(lastStop.getCoordinate());
             return createWalk(distance, lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
                     arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target, map(lastStop));
@@ -399,74 +380,6 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         // clear the raptor cache, since new the cached instances are now outdated
         cache.clear();
-    }
-
-    private static class Initializer {
-
-        private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
-            return switch (config.getWalkingCalculatorType()) {
-                case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
-                        new BeeLineWalkCalculator(config.getWalkingSpeed());
-            };
-        }
-
-        private static GtfsSchedule readGtfsSchedule(String gtfsFilePath) {
-            // TODO: Download file if needed
-            try {
-                return new GtfsScheduleReader().read(gtfsFilePath);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-
-        private static SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> generateStopSearchIndex(
-                GtfsSchedule schedule) {
-            SearchIndexBuilder<ch.naviqore.gtfs.schedule.model.Stop> builder = SearchIndex.builder();
-
-            // only add parent stops and stops without a parent
-            for (ch.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
-                if (stop.getParent().isEmpty()) {
-                    builder.add(stop.getName().toLowerCase(), stop);
-                }
-            }
-
-            return builder.build();
-        }
-
-        private static KDTree<ch.naviqore.gtfs.schedule.model.Stop> generateSpatialStopIndex(GtfsSchedule schedule) {
-            return new KDTreeBuilder<ch.naviqore.gtfs.schedule.model.Stop>().addLocations(schedule.getStops().values())
-                    .build();
-        }
-
-        private static List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule,
-                                                                          List<TransferGenerator> transferGenerators) {
-            // Create Lookup for GTFS Transfers in Schedule to prevent adding duplicates later
-            Set<String> gtfsTransfers = new HashSet<>();
-            schedule.getStops().values().forEach(stop -> stop.getTransfers().forEach(transfer -> {
-                if (transfer.getTransferType() == TransferType.MINIMUM_TIME) {
-                    String key = transfer.getFromStop().getId() + transfer.getToStop().getId();
-                    gtfsTransfers.add(key);
-                }
-            }));
-
-            // Run all Generators in parallel and collect all generated Transfers
-            List<TransferGenerator.Transfer> uncheckedGeneratedTransfers = transferGenerators.parallelStream()
-                    .flatMap(generator -> generator.generateTransfers(schedule).stream())
-                    .toList();
-
-            // Add all generated Transfers to the Lookup if they are not already in the GTFS Transfers or
-            // where already generated by a preceding generator.
-            Map<String, TransferGenerator.Transfer> generatedTransfers = new HashMap<>();
-            for (TransferGenerator.Transfer transfer : uncheckedGeneratedTransfers) {
-                String key = transfer.from().getId() + transfer.to().getId();
-                if (!gtfsTransfers.contains(key) && !generatedTransfers.containsKey(key)) {
-                    generatedTransfers.put(key, transfer);
-                }
-            }
-
-            return new ArrayList<>(generatedTransfers.values());
-        }
-
     }
 
     /**
