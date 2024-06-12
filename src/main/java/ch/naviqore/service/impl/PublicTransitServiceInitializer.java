@@ -39,7 +39,7 @@ public class PublicTransitServiceInitializer {
 
     public PublicTransitServiceInitializer(ServiceConfig config) {
         this.config = config;
-        log.info("Initializing PublicTransitServiceInitializer with config {}", config);
+        log.debug("Initializing with config: {}", config);
         this.walkCalculator = initializeWalkCalculator(config);
         this.schedule = readGtfsSchedule(config.getGtfsStaticUrl());
         this.stopSearchIndex = generateStopSearchIndex(schedule);
@@ -100,7 +100,7 @@ public class PublicTransitServiceInitializer {
 
     private static List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule,
                                                                       List<TransferGenerator> transferGenerators) {
-        // create Lookup for GTFS Transfers in Schedule to prevent adding duplicates later
+        // create lookup for GTFS transfers in schedule to prevent adding duplicates later
         Set<String> gtfsTransfers = new HashSet<>();
         schedule.getStops().values().forEach(stop -> stop.getTransfers().forEach(transfer -> {
             if (transfer.getTransferType() == TransferType.MINIMUM_TIME) {
@@ -109,8 +109,8 @@ public class PublicTransitServiceInitializer {
             }
         }));
 
-        // run all Generators in parallel and collect all generated Transfers
-        List<TransferGenerator.Transfer> uncheckedGeneratedTransfers = transferGenerators.parallelStream()
+        // run all generators in sequence and collect all generated transfers
+        List<TransferGenerator.Transfer> uncheckedGeneratedTransfers = transferGenerators.stream()
                 .flatMap(generator -> generator.generateTransfers(schedule).stream())
                 .toList();
 
