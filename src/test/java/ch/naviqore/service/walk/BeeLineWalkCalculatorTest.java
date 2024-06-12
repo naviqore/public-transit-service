@@ -31,21 +31,23 @@ public class BeeLineWalkCalculatorTest {
     @Nested
     class CalculateWalk {
 
+        private static final double WALKING_SPEED = 1.4;
+
         @Test
         void expectedBehavior() {
-            int walkingSpeed = 3600; // 1 m/s
-            BeeLineWalkCalculator calculator = new BeeLineWalkCalculator(walkingSpeed);
+            BeeLineWalkCalculator calculator = new BeeLineWalkCalculator(WALKING_SPEED);
 
             GeoCoordinate coordinate1 = getCoordinate1();
             GeoCoordinate coordinate2 = getCoordinate2();
 
-            double distanceInMeters = coordinate1.distanceTo(coordinate2);
-            int durationInSeconds = (int) distanceInMeters;
+            double distanceInMeters = coordinate1.distanceTo(
+                    coordinate2) * BeeLineWalkCalculator.BEELINE_DISTANCE_FACTOR;
+            double durationInSeconds = distanceInMeters / WALKING_SPEED;
 
             WalkCalculator.Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
 
             assertEquals(walk.distance(), Math.round(distanceInMeters));
-            assertEquals(walk.duration(), durationInSeconds);
+            assertEquals(walk.duration(), Math.round(durationInSeconds));
         }
 
         @Test
