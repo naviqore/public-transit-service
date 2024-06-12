@@ -71,6 +71,7 @@ class FileDownloaderTest {
         verify(httpClientMock).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void shouldNotDownloadIfFileExistsAndNoOverwrite() throws IOException, InterruptedException {
         Files.createFile(tempDirectory.resolve(TEST_FILE_NAME));
