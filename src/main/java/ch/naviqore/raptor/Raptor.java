@@ -437,7 +437,14 @@ public class Raptor {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        int arrivalTime = earliestArrivals[stopIdx];
+        Leg previousLeg = earliestArrivalsPerRound.get(round)[stopIdx];
+
+        // do not relax footpath from stop that was only reached by footpath in the same round
+        if (previousLeg == null || previousLeg.type == ArrivalType.TRANSFER) {
+            return;
+        }
+
+        int arrivalTime = previousLeg.arrivalTime();
 
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
