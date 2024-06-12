@@ -203,8 +203,7 @@ class RaptorTest {
         void takeSlowerRouteOfOverlappingRoutesDueToEarlierDepartureTime(RaptorTestBuilder builder) {
             // Create Two Versions of the same route with different travel speeds and different departure times
             Raptor raptor = builder.withAddRoute1_AG()
-                    .withAddRoute1_AG("R1X", 15, 30, 3,
-                            RaptorTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddRoute1_AG("R1X", 15, 30, 3, RaptorTestBuilder.DEFAULT_DWELL_TIME)
                     .build();
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_G, EIGHT_AM);
 

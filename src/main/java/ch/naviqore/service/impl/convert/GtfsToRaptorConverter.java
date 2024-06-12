@@ -36,7 +36,8 @@ public class GtfsToRaptorConverter {
         this(schedule, List.of(), sameStationTransferTime);
     }
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers, int sameStationTransferTime) {
+    public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,
+                                 int sameStationTransferTime) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;

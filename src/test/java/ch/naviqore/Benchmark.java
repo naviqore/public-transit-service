@@ -97,7 +97,8 @@ final class Benchmark {
                 SAME_STATION_TRANSFER_TIME);
         additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
 
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers, SAME_STATION_TRANSFER_TIME).convert(SCHEDULE_DATE);
+        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
+                SAME_STATION_TRANSFER_TIME).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
     }
