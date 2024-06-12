@@ -34,9 +34,9 @@ public class PublicTransitSpringService implements PublicTransitService {
         this.delegate = new PublicTransitServiceFactory(config).create();
     }
 
-    @Scheduled(fixedRateString = "${gtfs.static.update.interval.hours} * 3600000")
+    @Scheduled(cron = "${gtfs.static.update.cron}")
     public void updateStaticScheduleTask() {
-        log.info("Updating static GTFS from: {}", config.getGtfsUrl());
+        log.info("Updating static GTFS from: {}", config.getGtfsStaticUrl());
         updateStaticSchedule();
     }
 
