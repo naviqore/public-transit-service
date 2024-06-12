@@ -3,6 +3,7 @@ package ch.naviqore.service.impl.transfer;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import ch.naviqore.gtfs.schedule.model.Stop;
+import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
@@ -31,7 +32,8 @@ public class WalkTransferGeneratorTest {
             new StopData("stop1", "Zürich, Stadelhofen", 47.366542, 8.548384), "stop2",
             new StopData("stop2", "Zürich, Opernhaus", 47.365030, 8.547976), "stop3",
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
-    private static final WalkCalculator DEFAULT_CALCULATOR = new BeeLineWalkCalculator(4000);
+    private static final WalkCalculator DEFAULT_CALCULATOR = new BeeLineWalkCalculator(
+            ServiceConfig.DEFAULT_WALKING_SPEED);
     private static final int DEFAULT_MINIMUM_TRANSFER_TIME = 120;
     private static final int DEFAULT_MAX_WALK_DISTANCE = 500;
 
