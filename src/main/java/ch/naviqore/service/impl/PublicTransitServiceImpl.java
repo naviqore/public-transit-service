@@ -59,16 +59,16 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public PublicTransitServiceImpl(ServiceConfig config) {
         this.config = config;
         this.walkCalculator = Initializer.initializeWalkCalculator(config);
-        schedule = Initializer.readGtfsSchedule(config.getGtfsUrl());
+        schedule = Initializer.readGtfsSchedule(config.getGtfsStaticUrl());
         // parentStops = Initializer.groupStopsByParent(schedule);
         stopSearchIndex = Initializer.generateStopSearchIndex(schedule);
         spatialStopIndex = Initializer.generateSpatialStopIndex(schedule);
 
         // todo: make transfer generators configurable through application properties
         List<TransferGenerator> transferGenerators = List.of(
-                new SameStationTransferGenerator(config.getMinimumTransferTime()),
-                new WalkTransferGenerator(walkCalculator, config.getMinimumTransferTime(),
-                        config.getMaxWalkingDistance(), spatialStopIndex));
+                new SameStationTransferGenerator(config.getTransferTimeSameStopDefault()),
+                new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
+                        config.getWalkingDistanceMaximum(), spatialStopIndex));
 
         additionalTransfers = Initializer.generateTransfers(schedule, transferGenerators);
 
@@ -395,7 +395,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public void updateStaticSchedule() {
         // TODO: Update method to pull new transit schedule from URL.
         //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
-        log.warn("Updating static schedule not implemented yet ({})", config.getGtfsUrl());
+        log.warn("Updating static schedule not implemented yet ({})", config.getGtfsStaticUrl());
 
         // clear the raptor cache, since new the cached instances are now outdated
         cache.clear();
@@ -404,7 +404,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private static class Initializer {
 
         private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
-            return switch (config.getWalkCalculatorType()) {
+            return switch (config.getWalkingCalculatorType()) {
                 case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
                         new BeeLineWalkCalculator(config.getWalkingSpeed());
             };
@@ -494,7 +494,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                     () -> getActiveServices(date));
             return raptorCache.computeIfAbsent(activeServices,
                     () -> new GtfsToRaptorConverter(schedule, additionalTransfers,
-                            config.getSameStationTransferTime()).convert(date));
+                            config.getTransferTimeSameStopDefault()).convert(date));
         }
 
         // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
