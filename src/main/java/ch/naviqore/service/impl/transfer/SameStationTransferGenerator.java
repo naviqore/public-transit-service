@@ -14,19 +14,19 @@ public class SameStationTransferGenerator implements TransferGenerator {
     /**
      * Minimum transfer time between stops at the same station (no walking required) in seconds.
      */
-    private final int sameStationTransferTime;
+    private final int minimumTransferTime;
 
     /**
      * Creates a new SameStationTransferGenerator with the given minimum transfer time between stops at the same
      * station.
      *
-     * @param sameStationTransferTime Minimum transfer time between stops at the same station in seconds.
+     * @param minimumTransferTime Minimum transfer time between stops at the same station in seconds.
      */
-    public SameStationTransferGenerator(int sameStationTransferTime) {
-        if (sameStationTransferTime < 0) {
+    public SameStationTransferGenerator(int minimumTransferTime) {
+        if (minimumTransferTime < 0) {
             throw new IllegalArgumentException("sameStationTransferTime is negative");
         }
-        this.sameStationTransferTime = sameStationTransferTime;
+        this.minimumTransferTime = minimumTransferTime;
     }
 
     @Override
@@ -35,7 +35,7 @@ public class SameStationTransferGenerator implements TransferGenerator {
         Map<String, Stop> stops = schedule.getStops();
         log.info("Generating same station transfers for {} stops", stops.size());
         for (Stop fromStop : stops.values()) {
-            transfers.add(new TransferGenerator.Transfer(fromStop, fromStop, sameStationTransferTime));
+            transfers.add(new TransferGenerator.Transfer(fromStop, fromStop, minimumTransferTime));
         }
         return transfers;
     }

@@ -13,11 +13,11 @@ public class ServiceConfigParser {
 
     public ServiceConfigParser(@Value("${gtfs.static.url}") String gtfsStaticUrl,
                                @Value("${gtfs.static.update.cron}") String gtfsStaticUpdateCron,
-                               @Value("${transfer.time.between.stops.minimum}") int transferTimeBetweenStopsMinimum,
                                @Value("${transfer.time.same.stop.default}") int transferTimeSameStopDefault,
+                               @Value("${transfer.time.between.stops.minimum}") int transferTimeBetweenStopsMinimum,
+                               @Value("${walking.search.radius}") int walkingSearchRadius,
                                @Value("${walking.calculator.type}") String walkingCalculatorType,
                                @Value("${walking.speed}") double walkingSpeed,
-                               @Value("${walking.distance.maximum}") int walkingDistanceMaximum,
                                @Value("${walking.duration.minimum}") int walkingDurationMinimum,
                                @Value("${cache.size}") int cacheSize,
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
@@ -27,8 +27,8 @@ public class ServiceConfigParser {
         ServiceConfig.CacheEvictionStrategy cacheEvictionStrategyEnum = ServiceConfig.CacheEvictionStrategy.valueOf(
                 cacheEvictionStrategy.toUpperCase());
 
-        this.serviceConfig = new ServiceConfig(gtfsStaticUrl, gtfsStaticUpdateCron, transferTimeBetweenStopsMinimum,
-                transferTimeSameStopDefault, walkCalculatorTypeEnum, walkingSpeed, walkingDistanceMaximum,
+        this.serviceConfig = new ServiceConfig(gtfsStaticUrl, gtfsStaticUpdateCron, transferTimeSameStopDefault,
+                transferTimeBetweenStopsMinimum, walkingSearchRadius, walkCalculatorTypeEnum, walkingSpeed,
                 walkingDurationMinimum, cacheSize, cacheEvictionStrategyEnum);
     }
 

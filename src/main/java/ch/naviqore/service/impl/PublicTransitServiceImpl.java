@@ -73,6 +73,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public Optional<Stop> getNearestStop(GeoCoordinate location) {
         log.debug("Get nearest stop to {}", location);
         ch.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbour(location);
+
         // if nearest stop, which could be null, is a child stop, return parent stop
         if (stop != null && stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
             stop = stop.getParent().get();
@@ -183,7 +184,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             throw new IllegalArgumentException("Either targetStop or targetLocation must be provided.");
         }
 
-        // In this case either no source stop or target stop is within walkable distance
+        // no source stop or target stop is within walkable distance, and therefore no connections are available
         if (sourceStops.isEmpty() || targetStops.isEmpty()) {
             return List.of();
         }
@@ -193,6 +194,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
                 map(config));
 
+        // assemble connection results
         List<Connection> result = new ArrayList<>();
 
         for (ch.naviqore.raptor.Connection connection : connections) {
@@ -226,10 +228,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int startTimeInSeconds,
                                                                  int maxWalkDuration) {
-        // TODO: Make configurable
-        int maxSearchRadius = 500;
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
-                spatialStopIndex.rangeSearch(location, maxSearchRadius));
+                spatialStopIndex.rangeSearch(location, config.getWalkingSearchRadius()));
 
         if (nearestStops.isEmpty()) {
             nearestStops.add(spatialStopIndex.nearestNeighbour(location));
