@@ -115,7 +115,16 @@ public class Connection implements Comparable<Connection> {
 
         @Override
         public int compareTo(@NotNull Connection.Leg other) {
-            return Integer.compare(this.departureTime, other.departureTime);
+            // sort legs first by departure time than by arrival time since there some legs that actually have the same
+            // departure and arrival time (really short distance local service) and therefore the following leg may
+            // have the same departure time but a later arrival time
+            int comparison = Integer.compare(this.departureTime, other.departureTime);
+            if (comparison != 0) {
+                return comparison;
+            } else {
+                return Integer.compare(this.arrivalTime, other.arrivalTime);
+            }
+
         }
 
     }
