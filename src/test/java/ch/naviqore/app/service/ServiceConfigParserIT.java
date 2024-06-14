@@ -21,7 +21,7 @@ public class ServiceConfigParserIT {
                         DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE", "Minimum Transfer Time cannot be smaller than zero."),
                 Arguments.of(DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, -1, DEFAULT_WALKING_SEARCH_RADIUS,
                         DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE",
-                        "Same Station Transfer Time cannot be smaller than zero."),
+                        "Same Stop Transfer Time cannot be smaller than zero."),
                 Arguments.of(DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, -1,
                         DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE",
                         "Maximum Walking Distance cannot be smaller than zero."),

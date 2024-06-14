@@ -10,7 +10,7 @@ import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.Raptor;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.transfer.SameStationTransferGenerator;
+import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
@@ -64,7 +64,7 @@ final class Benchmark {
     private static final int NOT_AVAILABLE = -1;
     private static final int WALKING_SPEED = 3000;
     private static final int MINIMUM_TRANSFER_TIME = 120;
-    private static final int SAME_STATION_TRANSFER_TIME = 120;
+    private static final int SAME_STOP_TRANSFER_TIME = 120;
     private static final int ACCESS_EGRESS_TIME = 15;
     private static final int SEARCH_RADIUS = 500;
 
@@ -93,12 +93,11 @@ final class Benchmark {
         WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
                 ACCESS_EGRESS_TIME, SEARCH_RADIUS, spatialStopIndex);
         List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
-        SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
-                SAME_STATION_TRANSFER_TIME);
-        additionalGeneratedTransfers.addAll(sameStationTransferGenerator.generateTransfers(schedule));
+        SameStopTransferGenerator sameStopTransferGenerator = new SameStopTransferGenerator(SAME_STOP_TRANSFER_TIME);
+        additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
 
         Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
-                SAME_STATION_TRANSFER_TIME).convert(SCHEDULE_DATE);
+                SAME_STOP_TRANSFER_TIME).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
     }

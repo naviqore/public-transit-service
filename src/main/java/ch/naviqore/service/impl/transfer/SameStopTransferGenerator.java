@@ -9,22 +9,18 @@ import java.util.List;
 import java.util.Map;
 
 @Log4j2
-public class SameStationTransferGenerator implements TransferGenerator {
+public class SameStopTransferGenerator implements TransferGenerator {
 
-    /**
-     * Minimum transfer time between stops at the same station (no walking required) in seconds.
-     */
     private final int minimumTransferTime;
 
     /**
-     * Creates a new SameStationTransferGenerator with the given minimum transfer time between stops at the same
-     * station.
+     * Creates a new generator
      *
-     * @param minimumTransferTime Minimum transfer time between stops at the same station in seconds.
+     * @param minimumTransferTime minimum transfer time between two trips at the same stop in seconds.
      */
-    public SameStationTransferGenerator(int minimumTransferTime) {
+    public SameStopTransferGenerator(int minimumTransferTime) {
         if (minimumTransferTime < 0) {
-            throw new IllegalArgumentException("sameStationTransferTime is negative");
+            throw new IllegalArgumentException("minimumTransferTime is negative");
         }
         this.minimumTransferTime = minimumTransferTime;
     }
@@ -33,10 +29,12 @@ public class SameStationTransferGenerator implements TransferGenerator {
     public List<TransferGenerator.Transfer> generateTransfers(GtfsSchedule schedule) {
         List<TransferGenerator.Transfer> transfers = new ArrayList<>();
         Map<String, Stop> stops = schedule.getStops();
-        log.info("Generating same station transfers for {} stops", stops.size());
+
+        log.info("Generating same stop transfers for {} stops", stops.size());
         for (Stop fromStop : stops.values()) {
             transfers.add(new TransferGenerator.Transfer(fromStop, fromStop, minimumTransferTime));
         }
+
         return transfers;
     }
 }

@@ -21,19 +21,19 @@ import java.util.*;
 @Log4j2
 public class RaptorBuilder {
 
-    private final int defaultSameStationTransferTime;
+    private final int defaultSameStopTransferTime;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
-    private final Map<String, Integer> sameStationTransfers = new HashMap<>();
+    private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
 
     int stopTimeSize = 0;
     int routeStopSize = 0;
     int transferSize = 0;
 
-    RaptorBuilder(int defaultSameStationTransferTime) {
-        this.defaultSameStationTransferTime = defaultSameStationTransferTime;
+    RaptorBuilder(int defaultSameStopTransferTime) {
+        this.defaultSameStopTransferTime = defaultSameStopTransferTime;
     }
 
     public RaptorBuilder addStop(String id) {
@@ -94,7 +94,7 @@ public class RaptorBuilder {
         }
 
         if (sourceStopId.equals(targetStopId)) {
-            sameStationTransfers.put(sourceStopId, duration);
+            sameStopTransfers.put(sourceStopId, duration);
             return this;
         }
 
@@ -160,7 +160,7 @@ public class RaptorBuilder {
             List<Transfer> currentTransfers = transfers.get(stopId);
             int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
 
-            int sameStopTransferTime = sameStationTransfers.getOrDefault(stopId, defaultSameStationTransferTime);
+            int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, defaultSameStopTransferTime);
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,

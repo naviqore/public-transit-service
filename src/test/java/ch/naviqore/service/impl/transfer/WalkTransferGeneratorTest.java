@@ -52,7 +52,7 @@ public class WalkTransferGeneratorTest {
         throw new NoSuchElementException();
     }
 
-    private static void assertNoSameStationTransfers(List<TransferGenerator.Transfer> transfers) {
+    private static void assertNoSameStopTransfers(List<TransferGenerator.Transfer> transfers) {
         for (TransferGenerator.Transfer transfer : transfers) {
             assertNotEquals(transfer.from(), transfer.to());
         }
@@ -122,7 +122,7 @@ public class WalkTransferGeneratorTest {
         }
 
         @Test
-        void negativeSameStationTransferTime_shouldThrowException() {
+        void negativeSameStopTransferTime_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, -1, DEFAULT_ACCESS_EGRESS_TIME,
                             DEFAULT_SEARCH_RADIUS, spatialIndex));
@@ -136,7 +136,7 @@ public class WalkTransferGeneratorTest {
         }
 
         @Test
-        void zeroSameStationTransferTime_shouldNotThrowException() {
+        void zeroSameStopTransferTime_shouldNotThrowException() {
             assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, 0, DEFAULT_ACCESS_EGRESS_TIME,
                     DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
@@ -176,7 +176,7 @@ public class WalkTransferGeneratorTest {
         @Test
         void expectedBehavior() {
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
-            assertNoSameStationTransfers(transfers);
+            assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
             assertTransferNotGenerated(transfers, "stop2", "stop3");
@@ -187,7 +187,7 @@ public class WalkTransferGeneratorTest {
             WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
                     DEFAULT_MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
-            assertNoSameStationTransfers(transfers);
+            assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
             assertTransfersGenerated(transfers, "stop2", "stop3");
@@ -199,7 +199,7 @@ public class WalkTransferGeneratorTest {
             WalkTransferGenerator highMinTimeGenerator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
                     minimumTransferTime, DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, spatialIndex);
             List<TransferGenerator.Transfer> transfers = highMinTimeGenerator.generateTransfers(schedule);
-            assertNoSameStationTransfers(transfers);
+            assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
             assertTransferNotGenerated(transfers, "stop2", "stop3");

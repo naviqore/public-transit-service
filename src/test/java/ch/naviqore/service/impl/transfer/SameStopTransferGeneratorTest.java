@@ -10,23 +10,23 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SameStationTransferGeneratorTest {
+public class SameStopTransferGeneratorTest {
 
     @Nested
     class Constructor {
         @Test
         void simpleTransferGenerator() {
-            assertDoesNotThrow(() -> new SameStationTransferGenerator(120));
+            assertDoesNotThrow(() -> new SameStopTransferGenerator(120));
         }
 
         @Test
-        void negativeSameStationTransferTime_shouldThrowException() {
-            assertThrows(IllegalArgumentException.class, () -> new SameStationTransferGenerator(-1));
+        void negativeSameStopTransferTime_shouldThrowException() {
+            assertThrows(IllegalArgumentException.class, () -> new SameStopTransferGenerator(-1));
         }
 
         @Test
-        void zeroSameStationTransferTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new SameStationTransferGenerator(0));
+        void zeroSameStopTransferTime_shouldNotThrowException() {
+            assertDoesNotThrow(() -> new SameStopTransferGenerator(0));
         }
     }
 
@@ -44,8 +44,8 @@ public class SameStationTransferGeneratorTest {
         }
 
         @Test
-        void shouldCreateTransfers_withPositiveSameStationTransferTime() {
-            SameStationTransferGenerator generator = new SameStationTransferGenerator(120);
+        void shouldCreateTransfers_withPositiveSameStopTransferTime() {
+            SameStopTransferGenerator generator = new SameStopTransferGenerator(120);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertEquals(2, transfers.size());
@@ -56,8 +56,8 @@ public class SameStationTransferGeneratorTest {
         }
 
         @Test
-        void shouldCreateTransfers_withZeroSameStationTransferTime() {
-            SameStationTransferGenerator generator = new SameStationTransferGenerator(0);
+        void shouldCreateTransfers_withZeroSameStopTransferTime() {
+            SameStopTransferGenerator generator = new SameStopTransferGenerator(0);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
 
             assertEquals(2, transfers.size());

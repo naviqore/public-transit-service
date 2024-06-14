@@ -51,7 +51,7 @@ class RaptorTest {
             //  - Foot Transfer from D to N
             //  - Route R3-F from N to Q
 
-            // 2. Connection (with three route legs and two transfers (same station) --> faster but more transfers)
+            // 2. Connection (with three route legs and two transfers (same stop) --> faster but more transfers)
             //  - Route R1-F from A to F
             //  - Route R4-R from F to P
             //  - Route R3-F from P to Q
@@ -223,18 +223,18 @@ class RaptorTest {
         private static class Helpers {
 
             private static void assertConnection(Connection connection, String sourceStop, String targetStop,
-                                                 int departureTime, int numSameStationTransfers, int numWalkTransfers,
+                                                 int departureTime, int numSameStopTransfers, int numWalkTransfers,
                                                  int numTrips) {
                 assertEquals(sourceStop, connection.getFromStopId());
                 assertEquals(targetStop, connection.getToStopId());
                 assertTrue(connection.getDepartureTime() >= departureTime,
                         "Departure time should be greater equal than searched for departure time");
 
-                assertEquals(numSameStationTransfers, connection.getNumberOfSameStationTransfers(),
-                        "Number of same station transfers should match");
+                assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
+                        "Number of same stop transfers should match");
                 assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
                         "Number of walk transfers should match");
-                assertEquals(numSameStationTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
                         "Number of transfers should match");
 
                 assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
@@ -257,12 +257,12 @@ class RaptorTest {
     }
 
     @Nested
-    class SameStationTransfers {
+    class SameStopTransfers {
 
         @Test
-        void takeFirstTripWithoutAddingSameStationTransferTimeAtFirstStop(RaptorTestBuilder builder) {
-            Raptor raptor = builder.withAddRoute1_AG().withAddRoute2_HL().withSameStationTransferTime(120).build();
-            // There should be a connection leaving stop A at 5:00 am and this test should ensure that the same station
+        void takeFirstTripWithoutAddingSameStopTransferTimeAtFirstStop(RaptorTestBuilder builder) {
+            Raptor raptor = builder.withAddRoute1_AG().withAddRoute2_HL().withSameStopTransferTime(120).build();
+            // There should be a connection leaving stop A at 5:00 am and this test should ensure that the same stop
             // transfer time is not added at the first stop, i.e. departure time at 5:00 am should allow to board the
             // first trip at 5:00 am
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_H, FIVE_AM);
@@ -271,14 +271,14 @@ class RaptorTest {
         }
 
         @Test
-        void missConnectingTripBecauseOfSameStationTransferTime(RaptorTestBuilder builder) {
+        void missConnectingTripBecauseOfSameStopTransferTime(RaptorTestBuilder builder) {
             Raptor raptor = builder.withAddRoute1_AG(19, RaptorTestBuilder.DEFAULT_HEADWAY_TIME,
                             RaptorTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorTestBuilder.DEFAULT_DWELL_TIME)
                     .withAddRoute2_HL()
-                    .withSameStationTransferTime(120)
+                    .withSameStopTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
-            // Connection at 5:24 from B to H should be missed because of the same station transfer time (120s)
+            // Connection at 5:24 from B to H should be missed because of the same stop transfer time (120s)
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
@@ -288,14 +288,14 @@ class RaptorTest {
         }
 
         @Test
-        void catchConnectingTripBecauseOfNoSameStationTransferTime(RaptorTestBuilder builder) {
+        void catchConnectingTripBecauseOfNoSameStopTransferTime(RaptorTestBuilder builder) {
             Raptor raptor = builder.withAddRoute1_AG(19, RaptorTestBuilder.DEFAULT_HEADWAY_TIME,
                             RaptorTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorTestBuilder.DEFAULT_DWELL_TIME)
                     .withAddRoute2_HL()
-                    .withSameStationTransferTime(0)
+                    .withSameStopTransferTime(0)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
-            // Connection at 5:24 from B to H should not be missed because of no same station transfer time
+            // Connection at 5:24 from B to H should not be missed because of no same stop transfer time
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
@@ -304,14 +304,14 @@ class RaptorTest {
         }
 
         @Test
-        void catchConnectingTripWithSameStationTransferTime(RaptorTestBuilder builder) {
+        void catchConnectingTripWithSameStopTransferTime(RaptorTestBuilder builder) {
             Raptor raptor = builder.withAddRoute1_AG(17, RaptorTestBuilder.DEFAULT_HEADWAY_TIME,
                             RaptorTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorTestBuilder.DEFAULT_DWELL_TIME)
                     .withAddRoute2_HL()
-                    .withSameStationTransferTime(120)
+                    .withSameStopTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:17 am and arriving at stop B at 5:22 am
-            // Connection at 5:24 from B to H should be cached when the same station transfer time is 120s
+            // Connection at 5:24 from B to H should be cached when the same stop transfer time is 120s
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
@@ -342,7 +342,7 @@ class RaptorTest {
             //  - Foot Transfer from D to N (30 minutes walk time
             //  - Route R3-F from N to Q
 
-            // 2. Connection (with three route legs and two transfers (same station) --> faster but more transfers)
+            // 2. Connection (with three route legs and two transfers (same stop) --> faster but more transfers)
             //  - Route R1-F from A to F
             //  - Route R4-R from F to P
             //  - Route R3-F from P to Q
@@ -401,16 +401,16 @@ class RaptorTest {
         }
 
         @Test
-        void useSameStationTransferTimeWithZeroMinimumTransferDuration(RaptorTestBuilder builder) {
+        void useSameStopTransferTimeWithZeroMinimumTransferDuration(RaptorTestBuilder builder) {
             QueryConfig queryConfig = new QueryConfig();
             queryConfig.setMinimumTransferDuration(0);
 
             Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
                     .withAddRoute2_HL()
-                    .withSameStationTransferTime(120)
+                    .withSameStopTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am. Connection
-            // at 5:24 (next 5:39) from B to C should be missed because of the same station transfer time (120s),
+            // at 5:24 (next 5:39) from B to C should be missed because of the same stop transfer time (120s),
             // regardless of minimum same transfer duration at 0s
             List<Connection> connections = raptor.routeEarliestArrival(STOP_A, STOP_H, FIVE_AM, queryConfig);
 
@@ -426,7 +426,7 @@ class RaptorTest {
 
             Raptor raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
                     .withAddRoute2_HL()
-                    .withSameStationTransferTime(120)
+                    .withSameStopTransferTime(120)
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am. Connection
             // at 5:24 and 5:39 from B to C should be missed because of the minimum transfer duration (20 minutes)

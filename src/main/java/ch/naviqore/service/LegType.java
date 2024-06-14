@@ -8,7 +8,7 @@ public enum LegType {
     PUBLIC_TRANSIT,
 
     /**
-     * A transfer, which means a walk between two transit stations.
+     * A transfer, which means a walk between two transit stops.
      */
     TRANSFER,
 
