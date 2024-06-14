@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,12 +39,12 @@ public class PublicTransitSpringService implements PublicTransitService {
         log.info("Initializing public transit spring service");
         this.config = parser.getServiceConfig();
         this.delegate = new PublicTransitServiceFactory(config,
-                InputValidator.getRepository(config.getGtfsStaticUrl())).create();
+                InputValidator.getRepository(config.getGtfsStaticUri())).create();
     }
 
     @Scheduled(cron = "${gtfs.static.update.cron}")
     public void updateStaticScheduleTask() {
-        log.info("Updating static GTFS from: {}", config.getGtfsStaticUrl());
+        log.info("Updating static GTFS from: {}", config.getGtfsStaticUri());
         updateStaticSchedule();
     }
 
@@ -124,13 +125,15 @@ public class PublicTransitSpringService implements PublicTransitService {
 
     private static class InputValidator {
 
+        private static final List<String> ALLOWED_SCHEMES = Arrays.asList("http", "https");
+
         private static GtfsScheduleRepository getRepository(String gtfsStaticUrl) {
             if (isLocalFile(gtfsStaticUrl)) {
                 return new GtfsScheduleFile(gtfsStaticUrl);
             } else if (isValidUrl(gtfsStaticUrl)) {
                 return new GtfsScheduleUrl(gtfsStaticUrl);
             } else {
-                throw new IllegalArgumentException("Invalid GTFS static URL: " + gtfsStaticUrl);
+                throw new IllegalArgumentException("Invalid GTFS static URI value: " + gtfsStaticUrl);
             }
         }
 
@@ -141,8 +144,9 @@ public class PublicTransitSpringService implements PublicTransitService {
 
         private static boolean isValidUrl(String urlString) {
             try {
-                new URI(urlString);
-                return true;
+                URI uri = new URI(urlString);
+                String scheme = uri.getScheme();
+                return scheme != null && ALLOWED_SCHEMES.contains(scheme);
             } catch (URISyntaxException e) {
                 return false;
             }

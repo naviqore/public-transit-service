@@ -376,7 +376,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public void updateStaticSchedule() {
         // TODO: Update method to pull new transit schedule from URL.
         //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
-        log.warn("Updating static schedule not implemented yet ({})", config.getGtfsStaticUrl());
+        log.warn("Updating static schedule not implemented yet ({})", config.getGtfsStaticUri());
 
         // clear the raptor cache, since new the cached instances are now outdated
         cache.clear();

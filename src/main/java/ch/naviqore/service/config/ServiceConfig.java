@@ -24,7 +24,7 @@ public class ServiceConfig {
     public static final int DEFAULT_CACHE_SIZE = 5;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
-    private final String gtfsStaticUrl;
+    private final String gtfsStaticUri;
     private final String gtfsStaticUpdateCron;
     private final int transferTimeSameStopDefault;
     private final int transferTimeBetweenStopsMinimum;
@@ -35,12 +35,12 @@ public class ServiceConfig {
     private final int cacheSize;
     private final CacheEvictionStrategy cacheEvictionStrategy;
 
-    public ServiceConfig(String gtfsStaticUrl, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
+    public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
                          int transferTimeBetweenStopsMinimum, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
                          int cacheSize, CacheEvictionStrategy cacheEvictionStrategy) {
 
-        this.gtfsStaticUrl = validateNonNull(gtfsStaticUrl, "gtfsStaticUrl");
+        this.gtfsStaticUri = validateNonNull(gtfsStaticUri, "gtfsStaticUrl");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferTimeSameStopDefault = validateNonNegative(transferTimeSameStopDefault,
                 "transferTimeSameStopDefault");
@@ -57,8 +57,8 @@ public class ServiceConfig {
     /**
      * Constructor with defaults
      */
-    public ServiceConfig(String gtfsStaticUrl) {
-        this(gtfsStaticUrl, DEFAULT_GTFS_STATIC_UPDATE_CRON, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
+    public ServiceConfig(String gtfsStaticUri) {
+        this(gtfsStaticUri, DEFAULT_GTFS_STATIC_UPDATE_CRON, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
                 DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_WALKING_SEARCH_RADIUS,
                 DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM,
                 DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
