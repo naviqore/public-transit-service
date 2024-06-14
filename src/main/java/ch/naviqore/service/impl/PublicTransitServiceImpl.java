@@ -312,10 +312,11 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private @Nullable Walk getFirstWalk(GeoCoordinate source, String firstStopId, LocalDateTime departureTime,
                                         Map<String, Integer> sourceStops) {
         ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
-        int firstWalkDuration = sourceStops.get(firstStopId) - departureTime.toLocalTime().toSecondOfDay();
+        int firstWalkDuration = sourceStops.get(firstStopId) - departureTime.toLocalTime()
+                .toSecondOfDay() + config.getTransferTimeAccessEgress();
 
         if (firstWalkDuration > config.getWalkingDurationMinimum()) {
-            int distance = (int) source.distanceTo(firstStop.getCoordinate());
+            int distance = (int) Math.round(source.distanceTo(firstStop.getCoordinate()));
             return createWalk(distance, firstWalkDuration, WalkType.FIRST_MILE, departureTime,
                     departureTime.plusSeconds(firstWalkDuration), source, firstStop.getCoordinate(), map(firstStop));
         }
@@ -325,10 +326,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private @Nullable Walk getLastWalk(GeoCoordinate target, String lastStopId, LocalDateTime arrivalTime,
                                        Map<String, Integer> targetStops) {
         ch.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
-        int lastWalkDuration = targetStops.get(lastStopId);
+        int lastWalkDuration = targetStops.get(lastStopId) + config.getTransferTimeAccessEgress();
 
         if (lastWalkDuration > config.getWalkingDurationMinimum()) {
-            int distance = (int) target.distanceTo(lastStop.getCoordinate());
+            int distance = (int) Math.round(target.distanceTo(lastStop.getCoordinate()));
             return createWalk(distance, lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
                     arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target, map(lastStop));
         }
