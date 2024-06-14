@@ -15,6 +15,7 @@ public class ServiceConfig {
 
     public static final int DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT = 120;
     public static final int DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM = 180;
+    public static final int DEFAULT_TRANSFER_TIME_ACCESS_EGRESS = 15;
 
     public static final int DEFAULT_WALKING_SEARCH_RADIUS = 500;
     public static final WalkCalculatorType DEFAULT_WALKING_CALCULATOR_TYPE = WalkCalculatorType.BEE_LINE_DISTANCE;
@@ -28,6 +29,7 @@ public class ServiceConfig {
     private final String gtfsStaticUpdateCron;
     private final int transferTimeSameStopDefault;
     private final int transferTimeBetweenStopsMinimum;
+    private final int transferTimeAccessEgress;
     private final int walkingSearchRadius;
     private final WalkCalculatorType walkingCalculatorType;
     private final double walkingSpeed;
@@ -36,7 +38,7 @@ public class ServiceConfig {
     private final CacheEvictionStrategy cacheEvictionStrategy;
 
     public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
-                         int transferTimeBetweenStopsMinimum, int walkingSearchRadius,
+                         int transferTimeBetweenStopsMinimum, int transferTimeAccessEgress, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
                          int cacheSize, CacheEvictionStrategy cacheEvictionStrategy) {
 
@@ -46,6 +48,7 @@ public class ServiceConfig {
                 "transferTimeSameStopDefault");
         this.transferTimeBetweenStopsMinimum = validateNonNegative(transferTimeBetweenStopsMinimum,
                 "transferTimeBetweenStopsMinimum");
+        this.transferTimeAccessEgress = validateNonNegative(transferTimeAccessEgress, "transferTimeAccessEgress");
         this.walkingSearchRadius = validateNonNegative(walkingSearchRadius, "walkingSearchRadius");
         this.walkingCalculatorType = validateNonNull(walkingCalculatorType, "walkingCalculatorType");
         this.walkingSpeed = validatePositive(walkingSpeed, "walkingSpeed");
@@ -59,9 +62,9 @@ public class ServiceConfig {
      */
     public ServiceConfig(String gtfsStaticUri) {
         this(gtfsStaticUri, DEFAULT_GTFS_STATIC_UPDATE_CRON, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
-                DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_WALKING_SEARCH_RADIUS,
-                DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM,
-                DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
+                DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_ACCESS_EGRESS,
+                DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED,
+                DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
     }
 
     private static <T> T validateNonNull(T value, String name) {

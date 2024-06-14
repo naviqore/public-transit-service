@@ -38,8 +38,9 @@ public class ServiceConfigParserIT {
     private static ServiceConfig getServiceConfig() {
         ServiceConfigParser parser = new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                 DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
-                DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE.name(), DEFAULT_WALKING_SPEED,
-                DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name());
+                DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS,
+                DEFAULT_WALKING_CALCULATOR_TYPE.name(), DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM,
+                DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name());
         return parser.getServiceConfig();
     }
 
@@ -63,8 +64,9 @@ public class ServiceConfigParserIT {
         assertThrows(IllegalArgumentException.class,
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
-                        DEFAULT_WALKING_SEARCH_RADIUS, "INVALID", DEFAULT_WALKING_SPEED,
-                        DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()));
+                        DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, "INVALID",
+                        DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE,
+                        DEFAULT_CACHE_EVICTION_STRATEGY.name()));
     }
 
     @ParameterizedTest(name = "{5}")
@@ -74,9 +76,10 @@ public class ServiceConfigParserIT {
                                                    String walkingCalculatorType, String message) {
         assertThrows(IllegalArgumentException.class,
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
-                        transferTimeSameStopDefault, transferTimeBetweenStopsMinimum, walkingSearchRadius,
-                        walkingCalculatorType.toUpperCase(), walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM,
-                        DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
+                        transferTimeSameStopDefault, transferTimeBetweenStopsMinimum,
+                        DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, walkingSearchRadius, walkingCalculatorType.toUpperCase(),
+                        walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE,
+                        DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
     }
 
 }

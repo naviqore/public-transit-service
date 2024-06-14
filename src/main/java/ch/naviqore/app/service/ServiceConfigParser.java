@@ -15,6 +15,7 @@ public class ServiceConfigParser {
                                @Value("${gtfs.static.update.cron}") String gtfsStaticUpdateCron,
                                @Value("${transfer.time.same.stop.default}") int transferTimeSameStopDefault,
                                @Value("${transfer.time.between.stops.minimum}") int transferTimeBetweenStopsMinimum,
+                               @Value("${transfer.time.access.egress}") int transferTimeAccessEgress,
                                @Value("${walking.search.radius}") int walkingSearchRadius,
                                @Value("${walking.calculator.type}") String walkingCalculatorType,
                                @Value("${walking.speed}") double walkingSpeed,
@@ -28,8 +29,8 @@ public class ServiceConfigParser {
                 cacheEvictionStrategy.toUpperCase());
 
         this.serviceConfig = new ServiceConfig(gtfsStaticUri, gtfsStaticUpdateCron, transferTimeSameStopDefault,
-                transferTimeBetweenStopsMinimum, walkingSearchRadius, walkCalculatorTypeEnum, walkingSpeed,
-                walkingDurationMinimum, cacheSize, cacheEvictionStrategyEnum);
+                transferTimeBetweenStopsMinimum, transferTimeAccessEgress, walkingSearchRadius, walkCalculatorTypeEnum,
+                walkingSpeed, walkingDurationMinimum, cacheSize, cacheEvictionStrategyEnum);
     }
 
 }
