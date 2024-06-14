@@ -65,7 +65,8 @@ final class Benchmark {
     private static final int WALKING_SPEED = 3000;
     private static final int MINIMUM_TRANSFER_TIME = 120;
     private static final int SAME_STATION_TRANSFER_TIME = 120;
-    private static final int MAX_WALK_DISTANCE = 500;
+    private static final int ACCESS_EGRESS_TIME = 15;
+    private static final int SEARCH_RADIUS = 500;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -83,7 +84,6 @@ final class Benchmark {
     }
 
     private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-
         // TODO: This should be implemented in the new integration service and should not need to run everytime a raptor
         //  instance is created. Ideally this will be handled as an attribute with a list of transfer generators. With
         //  this approach, transfers can be generated according to different rules with the first applicable one taking
@@ -91,7 +91,7 @@ final class Benchmark {
         KDTree<Stop> spatialStopIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
         BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
         WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
-                MAX_WALK_DISTANCE, spatialStopIndex);
+                ACCESS_EGRESS_TIME, SEARCH_RADIUS, spatialStopIndex);
         List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
         SameStationTransferGenerator sameStationTransferGenerator = new SameStationTransferGenerator(
                 SAME_STATION_TRANSFER_TIME);

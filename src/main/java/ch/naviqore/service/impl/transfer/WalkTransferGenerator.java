@@ -19,6 +19,7 @@ public class WalkTransferGenerator implements TransferGenerator {
 
     private final WalkCalculator walkCalculator;
     private final int minimumTransferTime;
+    private final int accessEgressTime;
     private final int searchRadius;
     private final KDTree<Stop> spatialStopIndex;
 
@@ -29,16 +30,19 @@ public class WalkTransferGenerator implements TransferGenerator {
      * @param walkCalculator      WalkCalculator to use for calculating walking times.
      * @param minimumTransferTime Minimum transfer time between stops in seconds, even if plain walking duration would
      *                            be shorter. Accounts for access and egress of vehicle, building, stairways, etc.
+     * @param accessEgressTime    Time needed to access or egress a public transit trip.
      * @param searchRadius        Search radius in meters, the maximum beeline walking distance between stops.
      */
-    public WalkTransferGenerator(WalkCalculator walkCalculator, int minimumTransferTime, int searchRadius,
-                                 KDTree<Stop> spatialStopIndex) {
+    public WalkTransferGenerator(WalkCalculator walkCalculator, int minimumTransferTime, int accessEgressTime,
+                                 int searchRadius, KDTree<Stop> spatialStopIndex) {
         if (walkCalculator == null) throw new IllegalArgumentException("walkCalculator is null");
         if (minimumTransferTime < 0) throw new IllegalArgumentException("minimumTransferTime is negative");
+        if (accessEgressTime < 0) throw new IllegalArgumentException("accessEgressTime is negative");
         if (searchRadius <= 0) throw new IllegalArgumentException("searchRadius is negative or zero");
         if (spatialStopIndex == null) throw new IllegalArgumentException("spatialStopIndex is null");
         this.walkCalculator = walkCalculator;
         this.minimumTransferTime = minimumTransferTime;
+        this.accessEgressTime = accessEgressTime;
         this.searchRadius = searchRadius;
         this.spatialStopIndex = spatialStopIndex;
     }
@@ -70,7 +74,9 @@ public class WalkTransferGenerator implements TransferGenerator {
     private TransferGenerator.Transfer createTransfer(Stop fromStop, Stop toStop) {
         // calculate the walking time between the stops
         WalkCalculator.Walk walk = walkCalculator.calculateWalk(fromStop.getCoordinate(), toStop.getCoordinate());
-        int transferDuration = Math.max(walk.duration(), minimumTransferTime);
+        // get total transfer duration by adding access and egress time (twice) to the walk duration
+        // and taking the maximum value between this total and the minimum transfer time.
+        int transferDuration = Math.max(walk.duration() + 2 * accessEgressTime, minimumTransferTime);
         return new TransferGenerator.Transfer(fromStop, toStop, transferDuration);
     }
 }

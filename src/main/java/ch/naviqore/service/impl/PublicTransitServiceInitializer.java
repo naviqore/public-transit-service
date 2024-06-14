@@ -80,7 +80,7 @@ public class PublicTransitServiceInitializer {
 
         // always create walking transfers between stops
         generators.add(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
-                config.getWalkingSearchRadius(), spatialStopIndex));
+                config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));
 
         return generators;
     }
