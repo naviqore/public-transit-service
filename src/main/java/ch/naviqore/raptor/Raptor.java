@@ -158,7 +158,6 @@ public class Raptor {
             expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0,
                     maxWalkingDuration, minTransferDuration, 1);
         }
-        int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -171,14 +170,16 @@ public class Raptor {
             earliestArrivalsPerRound.add(new Leg[stops.length]);
             Leg[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
 
-            Set<Integer> routesToScan = getRoutesToScan(markedStops);
+            int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
+
+            Set<Integer> routesToScan = getRoutesToScan(markedStops, earliestArrival, earliestArrivals,
+                    TimeType.DEPARTURE);
             log.debug("Routes to scan: {}", routesToScan);
 
             // scan routes
             for (int currentRouteIdx : routesToScan) {
                 scanRouteForward(currentRouteIdx, earliestArrivals, earliestArrivalsLastRound,
-                        earliestArrivalsThisRound, markedStops, markedStopsNext, earliestArrival, minTransferDuration);
-                earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
+                        earliestArrivalsThisRound, markedStops, markedStopsNext, minTransferDuration);
             }
 
             // relax footpaths for all markedStops
@@ -207,12 +208,11 @@ public class Raptor {
      * @param earliestArrivalsThisRound - The earliest arrival leg for each stop in the current round.
      * @param markedStops               - The set of marked stops from the previous round.
      * @param markedStopsNext           - The set of marked stops for the next round.
-     * @param earliestArrival           - The earliest arrival time at the target stops.
      * @param minTransferDuration       - The minimum transfer duration time.
      */
     private void scanRouteForward(int currentRouteIdx, int[] earliestArrivals, Leg[] earliestArrivalsLastRound,
                                   Leg[] earliestArrivalsThisRound, Set<Integer> markedStops,
-                                  Set<Integer> markedStopsNext, int earliestArrival, int minTransferDuration) {
+                                  Set<Integer> markedStopsNext, int minTransferDuration) {
         Route currentRoute = routes[currentRouteIdx];
         log.debug("Scanning route {}", currentRoute.id());
         final int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
@@ -229,7 +229,8 @@ public class Raptor {
 
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(stop, earliestStopArrival, markedStops, stopIdx, stopOffset, numberOfStops)) {
+                if (!canEnterAtStop(stop, earliestStopArrival, markedStops, stopIdx, stopOffset, numberOfStops,
+                        TimeType.DEPARTURE)) {
                     continue;
                 }
             } else {
@@ -237,8 +238,8 @@ public class Raptor {
                 // get time of arrival on current trip
                 StopTime stopTime = stopTimes[firstStopTimeIdx + activeTrip.tripOffset * numberOfStops + stopOffset];
                 if (!checkIfEarlierTripIsPossibleAndUpdateMarks(stopTime, activeTrip, stop, earliestStopArrival,
-                        earliestArrival, earliestArrivals, stopIdx, earliestArrivalsThisRound,
-                        earliestArrivalsLastRound, markedStopsNext, currentRouteIdx)) {
+                        earliestArrivals, stopIdx, earliestArrivalsThisRound, earliestArrivalsLastRound,
+                        markedStopsNext, currentRouteIdx)) {
                     continue;
                 }
             }
@@ -247,23 +248,64 @@ public class Raptor {
         }
     }
 
+    private void scanRouteBackward(int currentRouteIdx, int[] latestDepartures, Leg[] latestDeparturesLastRound,
+                                   Leg[] latestDeparturesThisRound, Set<Integer> markedStops,
+                                   Set<Integer> markedStopsNext, int minTransferDuration) {
+        Route currentRoute = routes[currentRouteIdx];
+        log.debug("Scanning route {} backwards", currentRoute.id());
+        final int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
+        final int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
+        final int numberOfStops = currentRoute.numberOfStops();
+
+        ActiveTrip activeTrip = null;
+
+        // iterate over stops in route
+        for (int stopOffset = numberOfStops - 1; stopOffset >= 0; stopOffset--) {
+            int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
+            Stop stop = stops[stopIdx];
+            int latestStopDeparture = latestDepartures[stopIdx];
+
+            // find first marked stop in route
+            if (activeTrip == null) {
+                if (!canEnterAtStop(stop, latestStopDeparture, markedStops, stopIdx, stopOffset, numberOfStops,
+                        TimeType.ARRIVAL)) {
+                    continue;
+                }
+            } else {
+                // in this case we are on a trip and need to check if arrival time has improved
+                // get time of arrival on current trip
+                StopTime stopTime = stopTimes[firstStopTimeIdx + activeTrip.tripOffset * numberOfStops + stopOffset];
+                if (!checkIfLaterTripIsPossibleAndUpdateMarks(stopTime, activeTrip, stop, latestStopDeparture,
+                        latestDepartures, stopIdx, latestDeparturesThisRound, latestDeparturesLastRound,
+                        markedStopsNext, currentRouteIdx)) {
+                    continue;
+                }
+            }
+            activeTrip = findLatestPossibleTrip(stopIdx, stop, stopOffset, currentRoute, latestDeparturesLastRound,
+                    minTransferDuration);
+        }
+
+    }
+
     /**
      * This method checks if a trip can be entered at the stop in the current round. A trip can be entered if the stop
-     * was reached in a previous round (earliestStopArrival != INFINITY), the stop is the last stop of a trip or (for
+     * was reached in a previous round, and is not the first (arrivalTime) / last (departureTime) stop of a trip or (for
      * performance reasons) assuming that this check is only run when not travelling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stop                - The stop to check if a trip can be entered.
-     * @param earliestStopArrival - The earliest arrival time at the stop.
-     * @param markedStops         - The set of marked stops from the previous round.
-     * @param stopIdx             - The index of the stop to check if a trip can be entered.
-     * @param stopOffset          - The offset of the stop in the route.
-     * @param numberOfStops       - The number of stops in the route.
+     * @param stop          - The stop to check if a trip can be entered.
+     * @param stopTime      - The time at the stop.
+     * @param markedStops   - The set of marked stops from the previous round.
+     * @param stopIdx       - The index of the stop to check if a trip can be entered.
+     * @param stopOffset    - The offset of the stop in the route.
+     * @param numberOfStops - The number of stops in the route.
+     * @param timeType      - The type of time to check for (arrival or departure).
      */
-    private boolean canEnterAtStop(Stop stop, int earliestStopArrival, Set<Integer> markedStops, int stopIdx,
-                                   int stopOffset, int numberOfStops) {
-        if (earliestStopArrival == INFINITY) {
-            // when current arrival is infinity (Integer.MAX_VALUE), then the stop cannot be reached
+    private boolean canEnterAtStop(Stop stop, int stopTime, Set<Integer> markedStops, int stopIdx, int stopOffset,
+                                   int numberOfStops, TimeType timeType) {
+
+        int unreachableValue = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+        if (stopTime == unreachableValue) {
             log.debug("Stop {} cannot be reached, continue", stop.id());
             return false;
         }
@@ -274,14 +316,18 @@ public class Raptor {
             return false;
         }
 
-        if (stopOffset + 1 == numberOfStops) {
+        if (timeType == TimeType.DEPARTURE && (stopOffset + 1 == numberOfStops)) {
             // last stop in route, does not make sense to check for trip to enter
             log.debug("Stop {} is last stop in route, continue", stop.id());
+            return false;
+        } else if (timeType == TimeType.ARRIVAL && (stopOffset == 0)) {
+            // first stop in route, does not make sense to check for trip to enter
+            log.debug("Stop {} is first stop in route, continue", stop.id());
             return false;
         }
 
         // got first marked stop in the route
-        log.debug("Got first entry point at stop {} at {}", stop.id(), earliestStopArrival);
+        log.debug("Got first entry point at stop {} at {}", stop.id(), stopTime);
 
         return true;
     }
@@ -297,7 +343,6 @@ public class Raptor {
      * @param activeTrip                - The active trip to check for an earlier trip.
      * @param stop                      - The stop to check for an earlier trip.
      * @param earliestStopArrival       - The earliest arrival time at the stop.
-     * @param earliestArrival           - The earliest arrival time at the target stops.
      * @param earliestArrivals          - The earliest arrival time for each stop.
      * @param stopIdx                   - The index of the stop to check for an earlier trip.
      * @param earliestArrivalsThisRound - The earliest arrival time for each stop in the current round.
@@ -307,21 +352,13 @@ public class Raptor {
      * @return true if an earlier trip is possible, false otherwise.
      */
     private boolean checkIfEarlierTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
-                                                               int earliestStopArrival, int earliestArrival,
-                                                               int[] earliestArrivals, int stopIdx,
-                                                               Leg[] earliestArrivalsThisRound,
+                                                               int earliestStopArrival, int[] earliestArrivals,
+                                                               int stopIdx, Leg[] earliestArrivalsThisRound,
                                                                Leg[] earliestArrivalsLastRound,
                                                                Set<Integer> markedStopsNext, int currentRouteIdx) {
 
         if (stopTime.arrival() < earliestStopArrival) {
             log.debug("Stop {} was improved", stop.id());
-
-            // check if search should be stopped after finding the best time
-            if (stopTime.arrival() >= earliestArrival) {
-                log.debug("Stop {} is not better than best time, continue", stop.id());
-                return false;
-            }
-
             // create a route leg
             earliestArrivals[stopIdx] = stopTime.arrival();
             earliestArrivalsThisRound[stopIdx] = new Leg(activeTrip.entryTime(), stopTime.arrival(), ArrivalType.ROUTE,
@@ -340,6 +377,33 @@ public class Raptor {
                 return false;
             } else {
                 log.debug("Checking for earlier trips at stop {}", stop.id());
+                return true;
+            }
+        }
+    }
+
+    private boolean checkIfLaterTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
+                                                             int latestStopDeparture, int[] latestDepartures,
+                                                             int stopIdx, Leg[] latestDeparturesThisRound,
+                                                             Leg[] latestDeparturesLastRound,
+                                                             Set<Integer> markedStopsNext, int currentRouteIdx) {
+
+        if (stopTime.departure() > latestStopDeparture) {
+            log.debug("Stop {} was improved", stop.id());
+            latestDepartures[stopIdx] = stopTime.departure();
+            latestDeparturesThisRound[stopIdx] = new Leg(stopTime.departure(), activeTrip.entryTime(),
+                    ArrivalType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLeg);
+            markedStopsNext.add(stopIdx);
+            return false;
+        } else {
+            log.debug("Stop {} was not improved", stop.id());
+            Leg previous = latestDeparturesLastRound[stopIdx];
+            if (previous == null || previous.departureTime <= stopTime.departure()) {
+                log.debug("Stop {} has been improved in same round, later trip not possible within this round",
+                        stop.id());
+                return false;
+            } else {
+                log.debug("Checking for later trips at stop {}", stop.id());
                 return true;
             }
         }
@@ -395,14 +459,76 @@ public class Raptor {
     }
 
     /**
+     * Find the latest possible trip on the route. This loops through all trips arriving at a given stop for a given
+     * route and returns details about the latest trip that can be taken (arriving before the departure time of the
+     * previous round at this stop and accounting for transfer constraints).
+     *
+     * @param stopIdx                   - The index of the stop to find the first possible trip from.
+     * @param stop                      - The stop to find the first possible trip from.
+     * @param stopOffset                - The offset of the stop in the route.
+     * @param route                     - The route to find the first possible trip on.
+     * @param latestDeparturesLastRound - The earliest arrival time for each stop in the last round.
+     * @param minTransferDuration       - The minimum transfer duration time, since this is intended as rest period it
+     *                                  is added to the walk time.
+     */
+    private @Nullable ActiveTrip findLatestPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route,
+                                                        Leg[] latestDeparturesLastRound, int minTransferDuration) {
+        int firstStopTimeIdx = route.firstStopTimeIdx();
+        int numberOfStops = route.numberOfStops();
+        int numberOfTrips = route.numberOfTrips();
+
+        int tripOffset = numberOfTrips - 1;
+        int entryTime = 0;
+        Leg previousLeg = latestDeparturesLastRound[stopIdx];
+
+        int latestArrivalTime = previousLeg.departureTime;
+        if (previousLeg.type == ArrivalType.ROUTE) {
+            latestArrivalTime -= Math.max(stop.sameStationTransferTime(), minTransferDuration);
+        }
+
+        while (tripOffset >= 0) {
+            StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
+            if (currentStopTime.arrival() <= latestArrivalTime) {
+                log.debug("Found active trip ({}) on route {}", tripOffset, route.id());
+                entryTime = currentStopTime.arrival();
+                break;
+            }
+            if (tripOffset > 0) {
+                tripOffset--;
+            } else {
+                // no active trip found
+                log.debug("No active trip found on route {}", route.id());
+                return null;
+            }
+        }
+
+        return new ActiveTrip(tripOffset, entryTime, previousLeg);
+    }
+
+    /**
      * Get all routes to scan from the marked stops.
      *
-     * @param markedStops - The set of marked stops from the previous round.
+     * @param markedStops        - The set of marked stops from the previous round.
+     * @param referenceTime      - The reference time to compare with the stop reference times. If the reference time is
+     *                           a departure time, then the stop reference time must be less than the reference time. If
+     *                           the reference time is an arrival time, then the stop reference time must be greater
+     *                           than the reference time.
+     * @param stopReferenceTimes - Lookup array for stop specific reference times.
+     * @param timeType           - The type of time to check for (arrival or departure).
      */
-    private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
+    private Set<Integer> getRoutesToScan(Set<Integer> markedStops, int referenceTime, int[] stopReferenceTimes,
+                                         TimeType timeType) {
         Set<Integer> routesToScan = new HashSet<>();
         for (int stopIdx : markedStops) {
+            int stopReferenceTime = stopReferenceTimes[stopIdx];
             Stop currentStop = stops[stopIdx];
+            if (timeType == TimeType.DEPARTURE && stopReferenceTime > referenceTime) {
+                log.debug("Stop {} is already too late, clearing mark", currentStop.id());
+                continue;
+            } else if (timeType == TimeType.ARRIVAL && stopReferenceTime < referenceTime) {
+                log.debug("Stop {} is already too early, clearing mark", currentStop.id());
+                continue;
+            }
             int stopRouteIdx = currentStop.stopRouteIdx();
             int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
             while (stopRouteIdx < stopRouteEndIdx) {
@@ -569,6 +695,11 @@ public class Raptor {
                     earliestArrivalsPerRound.get(round)[stopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
+    }
+
+    enum TimeType {
+        ARRIVAL,
+        DEPARTURE
     }
 
     /**
