@@ -70,8 +70,8 @@ public class Raptor {
         return routeLatestDeparture(createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime), config);
     }
 
-    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
-        return routeLatestDeparture(sourceStops, targetStopIds, new QueryConfig());
+    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStops) {
+        return routeLatestDeparture(sourceStops, targetStops, new QueryConfig());
     }
 
     public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStops,
@@ -106,7 +106,7 @@ public class Raptor {
             targetStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
             walkingDurationsToTarget = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
-            log.info("Routing latest departure from {} to {} arriving at {}", sourceStopIdxs, targetStopIdxs,
+            log.info("Routing latest departure from {} to {} arriving at {}", targetStopIdxs, sourceStopIdxs,
                     departureTimes);
         }
 
@@ -114,7 +114,11 @@ public class Raptor {
                 walkingDurationsToTarget, config, timeType);
 
         // get pareto-optimal solutions
-        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedTargetStopIdx, timeType);
+        if (timeType == TimeType.DEPARTURE) {
+            return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedTargetStopIdx, timeType);
+        } else {
+            return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedSourceStopIdx, timeType);
+        }
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
@@ -583,7 +587,7 @@ public class Raptor {
         int entryTime = 0;
         Leg previousLeg = latestDeparturesLastRound[stopIdx];
 
-        int latestArrivalTime = previousLeg.departureTime;
+        int latestArrivalTime = previousLeg.arrivalTime;
         if (previousLeg.type == ArrivalType.ROUTE) {
             latestArrivalTime -= Math.max(stop.sameStationTransferTime(), minTransferDuration);
         }
@@ -810,7 +814,7 @@ public class Raptor {
             return;
         }
 
-        int startTime = timeType == TimeType.DEPARTURE ? previousLeg.arrivalTime : previousLeg.departureTime;
+        int startTime = previousLeg.arrivalTime;
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
