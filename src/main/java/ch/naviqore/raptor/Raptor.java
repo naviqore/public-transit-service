@@ -522,10 +522,10 @@ public class Raptor {
         for (int stopIdx : markedStops) {
             int stopReferenceTime = stopReferenceTimes[stopIdx];
             Stop currentStop = stops[stopIdx];
-            if (timeType == TimeType.DEPARTURE && stopReferenceTime > referenceTime) {
+            if (timeType == TimeType.DEPARTURE && stopReferenceTime >= referenceTime) {
                 log.debug("Stop {} is already too late, clearing mark", currentStop.id());
                 continue;
-            } else if (timeType == TimeType.ARRIVAL && stopReferenceTime < referenceTime) {
+            } else if (timeType == TimeType.ARRIVAL && stopReferenceTime <= referenceTime) {
                 log.debug("Stop {} is already too early, clearing mark", currentStop.id());
                 continue;
             }
