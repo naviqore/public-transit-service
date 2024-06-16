@@ -58,20 +58,63 @@ public class Raptor {
 
     public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds,
                                                  QueryConfig config) {
-        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
-        Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStopIds);
-        InputValidator.validateStopPermutations(sourceStops, targetStopIds);
-        int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        int[] targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] walkingDurationsToTarget = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+        return route(sourceStops, targetStopIds, config, TimeType.DEPARTURE);
+    }
 
-        log.info("Routing earliest arrival from {} to {} at {}", sourceStopIdxs, targetStopIdxs, departureTimes);
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, targetStopIdxs, departureTimes,
-                walkingDurationsToTarget, config);
+    public List<Connection> routeLatestDeparture(String sourceStopId, String targetStopId, int arrivalTime) {
+        return routeLatestDeparture(createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime));
+    }
+
+    public List<Connection> routeLatestDeparture(String sourceStopId, String targetStopId, int arrivalTime,
+                                                 QueryConfig config) {
+        return routeLatestDeparture(createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime), config);
+    }
+
+    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
+        return routeLatestDeparture(sourceStops, targetStopIds, new QueryConfig());
+    }
+
+    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStops,
+                                                 QueryConfig config) {
+        return route(sourceStops, targetStops, config, TimeType.ARRIVAL);
+    }
+
+    private List<Connection> route(Map<String, Integer> sourceStops, Map<String, Integer> targetStops,
+                                   QueryConfig config, TimeType timeType) {
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+        Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStops);
+
+        int[] sourceStopIdxs;
+        int[] departureTimes;
+        int[] targetStopIdxs;
+        int[] walkingDurationsToTarget;
+
+        if (timeType == TimeType.DEPARTURE) {
+            InputValidator.validateStopPermutations(sourceStops, targetStops);
+            sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+            departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+            targetStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+            walkingDurationsToTarget = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+
+            log.info("Routing earliest arrival from {} to {} departing at {}", sourceStopIdxs, targetStopIdxs,
+                    departureTimes);
+        } else {
+            // has to be flipped because source stops only contain walking info and target stops contain arrival times
+            InputValidator.validateStopPermutations(targetStops, sourceStops);
+            sourceStopIdxs = validatedTargetStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+            departureTimes = validatedTargetStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+            targetStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
+            walkingDurationsToTarget = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+
+            log.info("Routing latest departure from {} to {} arriving at {}", sourceStopIdxs, targetStopIdxs,
+                    departureTimes);
+        }
+
+        List<Leg[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIdxs, targetStopIdxs, departureTimes,
+                walkingDurationsToTarget, config, timeType);
 
         // get pareto-optimal solutions
-        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, targetStopIdxs);
+        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedTargetStopIdx, timeType);
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
@@ -79,10 +122,18 @@ public class Raptor {
     }
 
     public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, QueryConfig config) {
+        return getIsoLines(sourceStops, config, TimeType.DEPARTURE);
+    }
+
+    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, QueryConfig config,
+                                               TimeType timeType) {
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] departureTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<Leg[]> earliestArrivalsPerRound = spawnFromSourceStop(sourceStopIdxs, departureTimes, config);
+        int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
+
+        List<Leg[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIdxs, new int[]{}, refStopTimes, new int[]{},
+                config, timeType);
+        ;
 
         Map<String, Connection> isoLines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
@@ -109,20 +160,15 @@ public class Raptor {
         return isoLines;
     }
 
-    // this implementation will spawn from source stop until all stops are reached with all pareto optimal connections
-    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdx, int[] departureTime, QueryConfig config) {
-        return spawnFromSourceStop(sourceStopIdx, new int[]{}, departureTime, new int[]{}, config);
-    }
-
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Leg[]> spawnFromSourceStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] departureTimes,
-                                            int[] walkingDurationsToTarget, QueryConfig config) {
+    private List<Leg[]> spawnFromStop(int[] sourceStopIdxs, int[] targetStopIdxs, int[] sourceTimes,
+                                      int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
         // initialization
-        final int[] earliestArrivals = new int[stops.length];
-        Arrays.fill(earliestArrivals, INFINITY);
+        final int[] bestTimeForStops = new int[stops.length];
+        Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
 
-        if (sourceStopIdxs.length != departureTimes.length) {
-            throw new IllegalArgumentException("Source stops and departure times must have the same size.");
+        if (sourceStopIdxs.length != sourceTimes.length) {
+            throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
         }
 
         if (targetStopIdxs.length != walkingDurationsToTarget.length) {
@@ -130,8 +176,16 @@ public class Raptor {
         }
 
         // This is used to determine the criteria for maximum travel time
-        int earliestDeparture = Arrays.stream(departureTimes).min().orElseThrow();
-        int latestAcceptedArrival = config.getMaximumTravelTime() == INFINITY ? INFINITY : earliestDeparture + config.getMaximumTravelTime();
+        int cutOffTime;
+        if (config.getMaximumTravelTime() == INFINITY) {
+            cutOffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+        } else if (timeType == TimeType.DEPARTURE) {
+            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
+            cutOffTime = earliestDeparture + config.getMaximumTravelTime();
+        } else {
+            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
+            cutOffTime = latestArrival - config.getMaximumTravelTime();
+        }
 
         int maxWalkingDuration = config.getMaximumWalkingDuration();
         int minTransferDuration = config.getMinimumTransferDuration();
@@ -143,21 +197,24 @@ public class Raptor {
             targetStops[i + 1] = walkingDurationsToTarget[index];
         }
 
-        final List<Leg[]> earliestArrivalsPerRound = new ArrayList<>();
-        earliestArrivalsPerRound.add(new Leg[stops.length]);
+        final List<Leg[]> bestStopLegsPerRound = new ArrayList<>();
+        bestStopLegsPerRound.add(new Leg[stops.length]);
         Set<Integer> markedStops = new HashSet<>();
 
         for (int i = 0; i < sourceStopIdxs.length; i++) {
-            earliestArrivals[sourceStopIdxs[i]] = departureTimes[i];
-            earliestArrivalsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, departureTimes[i], ArrivalType.INITIAL,
+            bestTimeForStops[sourceStopIdxs[i]] = sourceTimes[i];
+            bestStopLegsPerRound.getFirst()[sourceStopIdxs[i]] = new Leg(0, sourceTimes[i], ArrivalType.INITIAL,
                     NO_INDEX, NO_INDEX, sourceStopIdxs[i], null);
             markedStops.add(sourceStopIdxs[i]);
         }
 
         for (int sourceStopIdx : sourceStopIdxs) {
-            expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0,
-                    maxWalkingDuration, minTransferDuration, TimeType.DEPARTURE);
+            expandFootpathsFromStop(sourceStopIdx, bestTimeForStops, bestStopLegsPerRound, markedStops, 0,
+                    maxWalkingDuration, minTransferDuration, timeType);
         }
+
+        int bestTime = getBestTime(targetStops, bestStopLegsPerRound, cutOffTime, timeType);
+        markedStops = removeSubOptimalLegsForRound(bestTime, 0, timeType, bestStopLegsPerRound, markedStops);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -165,38 +222,72 @@ public class Raptor {
             log.debug("Scanning routes for round {}", round);
             Set<Integer> markedStopsNext = new HashSet<>();
 
-            // initialize the earliest arrivals for current round
-            Leg[] earliestArrivalsLastRound = earliestArrivalsPerRound.get(round - 1);
-            earliestArrivalsPerRound.add(new Leg[stops.length]);
-            Leg[] earliestArrivalsThisRound = earliestArrivalsPerRound.get(round);
+            Leg[] bestTimeLegsLastRound = bestStopLegsPerRound.get(round - 1);
+            bestStopLegsPerRound.add(new Leg[stops.length]);
+            Leg[] bestTimeLegsThisRound = bestStopLegsPerRound.get(round);
 
-            int earliestArrival = getEarliestArrivalTime(targetStops, earliestArrivals, latestAcceptedArrival);
-
-            Set<Integer> routesToScan = getRoutesToScan(markedStops, earliestArrival, earliestArrivals,
-                    TimeType.DEPARTURE);
+            Set<Integer> routesToScan = getRoutesToScan(markedStops);
             log.debug("Routes to scan: {}", routesToScan);
 
             // scan routes
             for (int currentRouteIdx : routesToScan) {
-                scanRouteForward(currentRouteIdx, earliestArrivals, earliestArrivalsLastRound,
-                        earliestArrivalsThisRound, markedStops, markedStopsNext, minTransferDuration);
+                if (timeType == TimeType.DEPARTURE) {
+                    scanRouteForward(currentRouteIdx, bestTimeForStops, bestTimeLegsLastRound, bestTimeLegsThisRound,
+                            markedStops, markedStopsNext, minTransferDuration);
+                } else {
+                    scanRouteBackward(currentRouteIdx, bestTimeForStops, bestTimeLegsLastRound, bestTimeLegsThisRound,
+                            markedStops, markedStopsNext, minTransferDuration);
+                }
             }
 
             // relax footpaths for all markedStops
             // temp variable to add any new stops to markedStopsNext
             Set<Integer> newStops = new HashSet<>();
             for (int stopIdx : markedStopsNext) {
-                expandFootpathsFromStop(stopIdx, earliestArrivals, earliestArrivalsPerRound, newStops, round,
-                        maxWalkingDuration, minTransferDuration, TimeType.DEPARTURE);
+                expandFootpathsFromStop(stopIdx, bestTimeForStops, bestStopLegsPerRound, newStops, round,
+                        maxWalkingDuration, minTransferDuration, timeType);
             }
             markedStopsNext.addAll(newStops);
 
             // prepare next round
-            markedStops = markedStopsNext;
+            bestTime = getBestTime(targetStops, bestStopLegsPerRound, cutOffTime, timeType);
+            markedStops = removeSubOptimalLegsForRound(bestTime, round, timeType, bestStopLegsPerRound,
+                    markedStopsNext);
             round++;
         }
 
-        return earliestArrivalsPerRound;
+        return bestStopLegsPerRound;
+    }
+
+    /**
+     * Nullify legs that are suboptimal for the current round. This method checks if the leg arrival time is worse than
+     * the optimal time mark and removes the mark for the next round and nullifies the leg in this case.
+     *
+     * @param bestTime             - The best time for the current round.
+     * @param round                - The round to remove suboptimal legs for.
+     * @param timeType             - The time type to check for.
+     * @param bestTimeLegsPerRound - The best time legs per round.
+     * @param markedStops          - The marked stops to check for suboptimal legs.
+     */
+    private Set<Integer> removeSubOptimalLegsForRound(int bestTime, int round, TimeType timeType,
+                                                      List<Leg[]> bestTimeLegsPerRound, Set<Integer> markedStops) {
+        if (bestTime == INFINITY || bestTime == -INFINITY) {
+            return markedStops;
+        }
+        Leg[] bestTimeLegsThisRound = bestTimeLegsPerRound.get(round);
+        Set<Integer> markedStopsClean = new HashSet<>();
+        for (int stopIdx : markedStops) {
+            if (bestTimeLegsThisRound[stopIdx] != null) {
+                if (timeType == TimeType.DEPARTURE && bestTimeLegsThisRound[stopIdx].arrivalTime > bestTime) {
+                    bestTimeLegsThisRound[stopIdx] = null;
+                } else if (timeType == TimeType.ARRIVAL && bestTimeLegsThisRound[stopIdx].arrivalTime < bestTime) {
+                    bestTimeLegsThisRound[stopIdx] = null;
+                } else {
+                    markedStopsClean.add(stopIdx);
+                }
+            }
+        }
+        return markedStopsClean;
     }
 
     /**
@@ -248,6 +339,17 @@ public class Raptor {
         }
     }
 
+    /**
+     * Scan a route in backward direction to find the latest departure times for each stop on route for given round.
+     *
+     * @param currentRouteIdx           - The index of the current route.
+     * @param latestDepartures          - The latest departure time for each stop.
+     * @param latestDeparturesLastRound - The latest departure leg for each stop in the last round.
+     * @param latestDeparturesThisRound - The latest departure leg for each stop in the current round.
+     * @param markedStops               - The set of marked stops from the previous round.
+     * @param markedStopsNext           - The set of marked stops for the next round.
+     * @param minTransferDuration       - The minimum transfer duration time.
+     */
     private void scanRouteBackward(int currentRouteIdx, int[] latestDepartures, Leg[] latestDeparturesLastRound,
                                    Leg[] latestDeparturesThisRound, Set<Integer> markedStops,
                                    Set<Integer> markedStopsNext, int minTransferDuration) {
@@ -391,14 +493,14 @@ public class Raptor {
         if (stopTime.departure() > latestStopDeparture) {
             log.debug("Stop {} was improved", stop.id());
             latestDepartures[stopIdx] = stopTime.departure();
-            latestDeparturesThisRound[stopIdx] = new Leg(stopTime.departure(), activeTrip.entryTime(),
+            latestDeparturesThisRound[stopIdx] = new Leg(activeTrip.entryTime(), stopTime.departure(),
                     ArrivalType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLeg);
             markedStopsNext.add(stopIdx);
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
             Leg previous = latestDeparturesLastRound[stopIdx];
-            if (previous == null || previous.departureTime <= stopTime.departure()) {
+            if (previous == null || previous.arrivalTime <= stopTime.departure()) {
                 log.debug("Stop {} has been improved in same round, later trip not possible within this round",
                         stop.id());
                 return false;
@@ -508,27 +610,12 @@ public class Raptor {
     /**
      * Get all routes to scan from the marked stops.
      *
-     * @param markedStops        - The set of marked stops from the previous round.
-     * @param referenceTime      - The reference time to compare with the stop reference times. If the reference time is
-     *                           a departure time, then the stop reference time must be less than the reference time. If
-     *                           the reference time is an arrival time, then the stop reference time must be greater
-     *                           than the reference time.
-     * @param stopReferenceTimes - Lookup array for stop specific reference times.
-     * @param timeType           - The type of time to check for (arrival or departure).
+     * @param markedStops - The set of marked stops from the previous round.
      */
-    private Set<Integer> getRoutesToScan(Set<Integer> markedStops, int referenceTime, int[] stopReferenceTimes,
-                                         TimeType timeType) {
+    private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
         Set<Integer> routesToScan = new HashSet<>();
         for (int stopIdx : markedStops) {
-            int stopReferenceTime = stopReferenceTimes[stopIdx];
             Stop currentStop = stops[stopIdx];
-            if (timeType == TimeType.DEPARTURE && stopReferenceTime >= referenceTime) {
-                log.debug("Stop {} is already too late, clearing mark", currentStop.id());
-                continue;
-            } else if (timeType == TimeType.ARRIVAL && stopReferenceTime <= referenceTime) {
-                log.debug("Stop {} is already too early, clearing mark", currentStop.id());
-                continue;
-            }
             int stopRouteIdx = currentStop.stopRouteIdx();
             int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
             while (stopRouteIdx < stopRouteEndIdx) {
@@ -540,42 +627,83 @@ public class Raptor {
     }
 
     /**
-     * Get the earliest arrival time at the target stops.
+     * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
+     * is departure, and the latest arrival time for each stop if the time type is arrival.
      *
-     * @param targetStops           - The target stops to reach.
-     * @param earliestArrivals      - The earliest arrival time for each stop.
-     * @param latestAcceptedArrival - The latest accepted arrival time.
+     * @param targetStops             - The target stops to reach.
+     * @param bestLegForStopsPerRound - The collection of all best legs for each stop in each round.
+     * @param cutOffValue             - The latest accepted arrival time.
      */
-    private int getEarliestArrivalTime(int[] targetStops, int[] earliestArrivals, int latestAcceptedArrival) {
-        int earliestArrival = latestAcceptedArrival;
+    private int getBestTime(int[] targetStops, List<Leg[]> bestLegForStopsPerRound, int cutOffValue,
+                            TimeType timeType) {
+        int bestTime = cutOffValue;
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
-            int earliestArrivalAtTarget = earliestArrivals[targetStopIdx];
+            int bestTimeForStop = getBestTimeForStop(targetStopIdx, bestLegForStopsPerRound, timeType);
 
-            // To Prevent Adding a number to Max Integer Value (resulting in a very small negative number)
-            if (earliestArrivalAtTarget == INFINITY) {
-                continue;
+            if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
+                bestTimeForStop += walkDurationToTarget;
+                bestTime = Math.min(bestTime, bestTimeForStop);
+            } else if (timeType == TimeType.ARRIVAL && bestTimeForStop != -INFINITY) {
+                bestTimeForStop -= walkDurationToTarget;
+                bestTime = Math.max(bestTime, bestTimeForStop);
             }
-
-            earliestArrival = Math.min(earliestArrival, earliestArrivalAtTarget + walkDurationToTarget);
         }
-        return earliestArrival;
+        return bestTime;
     }
 
-    private List<Connection> reconstructParetoOptimalSolutions(List<Leg[]> earliestArrivalsPerRound,
-                                                               int[] targetStopIdxs) {
+    private static int getBestTimeForStop(int stopIdx, List<Leg[]> bestLegForStopsPerRound, TimeType timeType) {
+        int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
+        int bestTime = timeFactor * INFINITY;
+        for (Leg[] legs : bestLegForStopsPerRound) {
+            if (legs[stopIdx] == null) {
+                continue;
+            }
+            Leg currentLeg = legs[stopIdx];
+            if (timeType == TimeType.DEPARTURE) {
+                if (currentLeg.arrivalTime < bestTime) {
+                    bestTime = currentLeg.arrivalTime;
+                }
+            } else {
+                if (currentLeg.arrivalTime > bestTime) {
+                    bestTime = currentLeg.arrivalTime;
+                }
+            }
+        }
+
+        return bestTime;
+    }
+
+    private List<Connection> reconstructParetoOptimalSolutions(List<Leg[]> bestTimeLegsPerRound,
+                                                               Map<Integer, Integer> targetStops, TimeType timeType) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
-        for (Leg[] legs : earliestArrivalsPerRound) {
+        for (Leg[] roundLegs : bestTimeLegsPerRound) {
 
             Leg leg = null;
+            int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
 
-            for (int targetStopIdx : targetStopIdxs) {
-                if (legs[targetStopIdx] != null) {
-                    if (leg == null || legs[targetStopIdx].arrivalTime < leg.arrivalTime) {
-                        leg = legs[targetStopIdx];
+            for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
+                int targetStopIdx = entry.getKey();
+                int targetStopWalkingTime = entry.getValue();
+                if (roundLegs[targetStopIdx] == null) {
+                    continue;
+                }
+                Leg currentLeg = roundLegs[targetStopIdx];
+
+                if (timeType == TimeType.DEPARTURE) {
+                    int actualArrivalTime = currentLeg.arrivalTime + targetStopWalkingTime;
+                    if (actualArrivalTime < bestTime) {
+                        leg = currentLeg;
+                        bestTime = actualArrivalTime;
+                    }
+                } else {
+                    int actualDepartureTime = currentLeg.arrivalTime - targetStopWalkingTime;
+                    if (actualDepartureTime > bestTime) {
+                        leg = currentLeg;
+                        bestTime = actualDepartureTime;
                     }
                 }
             }
@@ -602,11 +730,23 @@ public class Raptor {
             String routeId;
             String tripId = null;
             assert leg.previous != null;
-            String fromStopId = stops[leg.previous.stopIdx].id();
-            String toStopId = stops[leg.stopIdx].id();
+
+            String fromStopId;
+            String toStopId;
+            int departureTime;
+            int arrivalTime;
             Connection.LegType type;
-            int departureTime = leg.departureTime;
-            int arrivalTime = leg.arrivalTime;
+            if (leg.arrivalTime > leg.departureTime) {
+                fromStopId = stops[leg.previous.stopIdx].id();
+                toStopId = stops[leg.stopIdx].id();
+                departureTime = leg.departureTime;
+                arrivalTime = leg.arrivalTime;
+            } else {
+                fromStopId = stops[leg.stopIdx].id();
+                toStopId = stops[leg.previous.stopIdx].id();
+                departureTime = leg.arrivalTime;
+                arrivalTime = leg.departureTime;
+            }
 
             if (leg.type == ArrivalType.ROUTE) {
                 Route route = routes[leg.routeOrTransferIdx];
@@ -618,7 +758,7 @@ public class Raptor {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Connection.LegType.WALK_TRANSFER;
             } else {
-                throw new IllegalStateException("Unknown arrival type");
+                throw new IllegalStateException("Unknown leg type");
             }
 
             connection.addLeg(
