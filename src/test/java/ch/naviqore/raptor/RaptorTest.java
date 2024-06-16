@@ -41,8 +41,6 @@ class RaptorTest {
     @Nested
     class EarliestArrival {
 
-        private static final int DEPARTURE_TIME = 8 * RaptorTestBuilder.SECONDS_IN_HOUR;
-
         @Test
         void findConnectionsBetweenIntersectingRoutes(RaptorTestBuilder builder) {
             // Should return two pareto optimal connections:
@@ -95,7 +93,7 @@ class RaptorTest {
         void routeFromTwoSourceStopsWithSameDepartureTime(RaptorTestBuilder builder) {
             Raptor raptor = builder.buildWithDefaults();
 
-            Map<String, Integer> sourceStops = Map.of(STOP_A, DEPARTURE_TIME, STOP_B, EIGHT_AM);
+            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // fastest and only connection should be B -> H
@@ -254,6 +252,54 @@ class RaptorTest {
 
         }
 
+    }
+
+    @Nested
+    class LatestDeparture{
+
+        @Test
+        void findConnectionsBetweenIntersectingRoutes(RaptorTestBuilder builder) {
+            // Should return two pareto optimal connections:
+            // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
+            //  - Route R1-F from A to D
+            //  - Foot Transfer from D to N
+            //  - Route R3-F from N to Q
+
+            // 2. Connection (with three route legs and two transfers (same station) --> faster but more transfers)
+            //  - Route R1-F from A to F
+            //  - Route R4-R from F to P
+            //  - Route R3-F from P to Q
+            Raptor raptor = builder.buildWithDefaults();
+
+            List<Connection> connections = raptor.routeLatestDeparture(STOP_A, STOP_Q, NINE_AM);
+
+            // check if 2 connections were found
+            assertEquals(2, connections.size());
+            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, NINE_AM, 0, 1, 2);
+            Helpers.assertConnection(connections.get(1), STOP_A, STOP_Q, NINE_AM, 2, 0, 3);
+            EarliestArrival.Helpers.checkIfConnectionsAreParetoOptimal(connections);
+        }
+
+        private static class Helpers {
+
+            private static void assertConnection(Connection connection, String sourceStop, String targetStop,
+                                                 int arrivalTime, int numSameStationTransfers, int numWalkTransfers,
+                                                 int numTrips) {
+                assertEquals(sourceStop, connection.getFromStopId());
+                assertEquals(targetStop, connection.getToStopId());
+                assertTrue(connection.getArrivalTime() <= arrivalTime,
+                        "Arrival time should be smaller equal than searched for arrival time");
+
+                assertEquals(numSameStationTransfers, connection.getNumberOfSameStationTransfers(),
+                        "Number of same station transfers should match");
+                assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
+                        "Number of walk transfers should match");
+                assertEquals(numSameStationTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                        "Number of transfers should match");
+
+                assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
+            }
+        }
     }
 
     @Nested
