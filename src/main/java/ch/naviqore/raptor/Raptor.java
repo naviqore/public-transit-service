@@ -35,8 +35,8 @@ public class Raptor {
         this.routeStops = routeTraversal.routeStops();
     }
 
-    public static RaptorBuilder builder(int sameStationTransferTime) {
-        return new RaptorBuilder(sameStationTransferTime);
+    public static RaptorBuilder builder(int sameStopTransferTime) {
+        return new RaptorBuilder(sameStopTransferTime);
     }
 
     public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
@@ -264,7 +264,7 @@ public class Raptor {
 
                     int earliestDepartureTime = enteredAtArrival.arrivalTime;
                     if (enteredAtArrival.type == ArrivalType.ROUTE) {
-                        earliestDepartureTime += Math.max(stop.sameStationTransferTime(), minTransferDuration);
+                        earliestDepartureTime += Math.max(stop.sameStopTransferTime(), minTransferDuration);
                     }
 
                     while (tripOffset < numberOfTrips) {
@@ -416,17 +416,17 @@ public class Raptor {
      * stop, then the target stop is marked for the next round. And the improved arrival time is stored in the
      * earliestArrivals array and the earliestArrivalsPerRound list (including the new Transfer Leg).
      *
-     * @param stopIdx                  - The index of the stop to expand transfers from.
-     * @param earliestArrivals         - A array with the overall best arrival time for each stop, indexed by stop
-     *                                 index. Note: The arrival time is reduced by the same station transfer time for
-     *                                 transfers, to make them comparable with route arrivals.
-     * @param earliestArrivalsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
+     * @param stopIdx                  the index of the stop to expand transfers from.
+     * @param earliestArrivals         an array with the overall best arrival time for each stop, indexed by stop index.
+     *                                 Note: The arrival time is reduced by the same stops transfer time for transfers,
+     *                                 to make them comparable with route arrivals.
+     * @param earliestArrivalsPerRound a list of arrays with the best arrival time for each stop per round, indexed by
      *                                 round.
-     * @param markedStops              - A set of stop indices that have been marked for scanning in the next round.
-     * @param round                    - The current round to relax footpaths for.
-     * @param maxWalkingDuration       - The maximum walking duration to reach the target stop. If the walking duration
+     * @param markedStops              a set of stop indices that have been marked for scanning in the next round.
+     * @param round                    the current round to relax footpaths for.
+     * @param maxWalkingDuration       the maximum walking duration to reach the target stop. If the walking duration
      *                                 exceeds this value, the target stop is not reached.
-     * @param minTransferDuration      - The minimum transfer duration time, since this is intended as rest period it is
+     * @param minTransferDuration      the minimum transfer duration time, since this is intended as rest period it is
      *                                 added to the walk time.
      */
     private void expandFootpathsFromStop(int stopIdx, int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
@@ -456,7 +456,7 @@ public class Raptor {
             int newTargetStopArrivalTime = arrivalTime + transfer.duration() + minTransferDuration;
 
             // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced by the same stop transfer time
-            int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStationTransferTime();
+            int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStopTransferTime();
             if (earliestArrivals[transfer.targetStopIdx()] <= comparableNewTargetStopArrivalTime) {
                 continue;
             }
@@ -485,7 +485,7 @@ public class Raptor {
          */
         ROUTE,
         /**
-         * Uses a transfer between station (no same station transfers).
+         * Uses a transfer between stops (not a same stop transfer).
          */
         TRANSFER
 

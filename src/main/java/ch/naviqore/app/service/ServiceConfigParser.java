@@ -11,16 +11,26 @@ public class ServiceConfigParser {
 
     private final ServiceConfig serviceConfig;
 
-    public ServiceConfigParser(@Value("${gtfs.static.url}") String gtfsUrl,
-                               @Value("${transfer.time.minimum:120}") int minimumTransferTime,
-                               @Value("${transfer.defaultSameStationTransferTime:120}") int sameStationTransferTime,
-                               @Value("${walking.distance.maximum:500}") int maxWalkingDistance,
-                               @Value("${walking.speed:2500}") int walkingSpeed,
-                               @Value("${walking.calculator.type:BEE_LINE_DISTANCE}") String walkCalculatorTypeStr) {
-        ServiceConfig.WalkCalculatorType walkCalculatorType = ServiceConfig.WalkCalculatorType.valueOf(
-                walkCalculatorTypeStr.toUpperCase());
-        this.serviceConfig = new ServiceConfig(gtfsUrl, minimumTransferTime, maxWalkingDistance, walkingSpeed,
-                sameStationTransferTime, walkCalculatorType);
+    public ServiceConfigParser(@Value("${gtfs.static.uri}") String gtfsStaticUri,
+                               @Value("${gtfs.static.update.cron}") String gtfsStaticUpdateCron,
+                               @Value("${transfer.time.same.stop.default}") int transferTimeSameStopDefault,
+                               @Value("${transfer.time.between.stops.minimum}") int transferTimeBetweenStopsMinimum,
+                               @Value("${transfer.time.access.egress}") int transferTimeAccessEgress,
+                               @Value("${walking.search.radius}") int walkingSearchRadius,
+                               @Value("${walking.calculator.type}") String walkingCalculatorType,
+                               @Value("${walking.speed}") double walkingSpeed,
+                               @Value("${walking.duration.minimum}") int walkingDurationMinimum,
+                               @Value("${cache.size}") int cacheSize,
+                               @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
+
+        ServiceConfig.WalkCalculatorType walkCalculatorTypeEnum = ServiceConfig.WalkCalculatorType.valueOf(
+                walkingCalculatorType.toUpperCase());
+        ServiceConfig.CacheEvictionStrategy cacheEvictionStrategyEnum = ServiceConfig.CacheEvictionStrategy.valueOf(
+                cacheEvictionStrategy.toUpperCase());
+
+        this.serviceConfig = new ServiceConfig(gtfsStaticUri, gtfsStaticUpdateCron, transferTimeSameStopDefault,
+                transferTimeBetweenStopsMinimum, transferTimeAccessEgress, walkingSearchRadius, walkCalculatorTypeEnum,
+                walkingSpeed, walkingDurationMinimum, cacheSize, cacheEvictionStrategyEnum);
     }
 
 }
