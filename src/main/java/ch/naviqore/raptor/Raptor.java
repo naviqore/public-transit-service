@@ -156,7 +156,7 @@ public class Raptor {
 
         for (int sourceStopIdx : sourceStopIdxs) {
             expandFootpathsFromStop(sourceStopIdx, earliestArrivals, earliestArrivalsPerRound, markedStops, 0,
-                    maxWalkingDuration, minTransferDuration, 1);
+                    maxWalkingDuration, minTransferDuration, TimeType.DEPARTURE);
         }
 
         // continue with further rounds as long as there are new marked stops
@@ -187,7 +187,7 @@ public class Raptor {
             Set<Integer> newStops = new HashSet<>();
             for (int stopIdx : markedStopsNext) {
                 expandFootpathsFromStop(stopIdx, earliestArrivals, earliestArrivalsPerRound, newStops, round,
-                        maxWalkingDuration, minTransferDuration, 1);
+                        maxWalkingDuration, minTransferDuration, TimeType.DEPARTURE);
             }
             markedStopsNext.addAll(newStops);
 
@@ -640,37 +640,38 @@ public class Raptor {
      * stop, then the target stop is marked for the next round. And the improved arrival time is stored in the
      * earliestArrivals array and the earliestArrivalsPerRound list (including the new Transfer Leg).
      *
-     * @param stopIdx                  - The index of the stop to expand transfers from.
-     * @param earliestArrivals         - A array with the overall best arrival time for each stop, indexed by stop
-     *                                 index. Note: The arrival time is reduced by the same station transfer time for
-     *                                 transfers, to make them comparable with route arrivals.
-     * @param earliestArrivalsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
-     *                                 round.
-     * @param markedStops              - A set of stop indices that have been marked for scanning in the next round.
-     * @param round                    - The current round to relax footpaths for.
-     * @param maxWalkingDuration       - The maximum walking duration to reach the target stop. If the walking duration
-     *                                 exceeds this value, the target stop is not reached.
-     * @param minTransferDuration      - The minimum transfer duration time, since this is intended as rest period it is
-     *                                 added to the walk time.
-     * @param timeFactor               - The time factor to determine if the search is for earliest arrival (1) or
-     *                                 latest departure (-1).
+     * @param stopIdx               - The index of the stop to expand transfers from.
+     * @param referenceTimes        - A array with the overall best arrival time for each stop, indexed by stop index.
+     *                              Note: The arrival time is reduced by the same station transfer time for transfers,
+     *                              to make them comparable with route arrivals.
+     * @param referenceLegsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
+     *                              round.
+     * @param markedStops           - A set of stop indices that have been marked for scanning in the next round.
+     * @param round                 - The current round to relax footpaths for.
+     * @param maxWalkingDuration    - The maximum walking duration to reach the target stop. If the walking duration
+     *                              exceeds this value, the target stop is not reached.
+     * @param minTransferDuration   - The minimum transfer duration time, since this is intended as rest period it is
+     *                              added to the walk time.
+     * @param timeType              - The type of time to check for (arrival or departure), defines if stop is
+     *                              considered as arrival or departure stop.
      */
-    private void expandFootpathsFromStop(int stopIdx, int[] earliestArrivals, List<Leg[]> earliestArrivalsPerRound,
+    private void expandFootpathsFromStop(int stopIdx, int[] referenceTimes, List<Leg[]> referenceLegsPerRound,
                                          Set<Integer> markedStops, int round, int maxWalkingDuration,
-                                         int minTransferDuration, int timeFactor) {
+                                         int minTransferDuration, TimeType timeType) {
         // if stop has no transfers, then no footpaths can be expanded
         if (stops[stopIdx].numberOfTransfers() == 0) {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        Leg previousLeg = earliestArrivalsPerRound.get(round)[stopIdx];
+        Leg previousLeg = referenceLegsPerRound.get(round)[stopIdx];
 
         // do not relax footpath from stop that was only reached by footpath in the same round
         if (previousLeg == null || previousLeg.type == ArrivalType.TRANSFER) {
             return;
         }
 
-        int arrivalTime = timeFactor * previousLeg.arrivalTime();
+        int startTime = timeType == TimeType.DEPARTURE ? previousLeg.arrivalTime : previousLeg.departureTime;
+        int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
@@ -679,20 +680,24 @@ public class Raptor {
             if (maxWalkingDuration < duration) {
                 continue;
             }
-            int newTargetStopArrivalTime = arrivalTime + transfer.duration() + minTransferDuration;
+            int newTargetStopArrivalTime = startTime + timeDirection * (transfer.duration() + minTransferDuration);
 
-            // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced by the same stop transfer time
+            // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced (or increased in case of
+            // departure optimization) by the same stop transfer time
             int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStationTransferTime();
-            if (earliestArrivals[transfer.targetStopIdx()] <= comparableNewTargetStopArrivalTime) {
+            if (timeType == TimeType.DEPARTURE && referenceTimes[transfer.targetStopIdx()] <= comparableNewTargetStopArrivalTime) {
+                continue;
+            } else if (timeType == TimeType.ARRIVAL && referenceTimes[transfer.targetStopIdx()] >= comparableNewTargetStopArrivalTime) {
                 continue;
             }
 
             log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
 
-            earliestArrivals[transfer.targetStopIdx()] = comparableNewTargetStopArrivalTime;
-            earliestArrivalsPerRound.get(round)[transfer.targetStopIdx()] = new Leg(timeFactor * arrivalTime,
-                    timeFactor * newTargetStopArrivalTime, ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
-                    earliestArrivalsPerRound.get(round)[stopIdx]);
+            referenceTimes[transfer.targetStopIdx()] = comparableNewTargetStopArrivalTime;
+
+            referenceLegsPerRound.get(round)[transfer.targetStopIdx()] = new Leg(startTime, newTargetStopArrivalTime,
+                    ArrivalType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
+                    referenceLegsPerRound.get(round)[stopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
     }
