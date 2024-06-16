@@ -1,5 +1,6 @@
 package ch.naviqore.service.impl;
 
+import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -8,6 +9,7 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.service.repo.GtfsScheduleRepository;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,9 +31,18 @@ class PublicTransitServiceImplIT {
     private PublicTransitServiceImpl service;
 
     @BeforeEach
-    void setUp(@TempDir Path tempDir) throws IOException {
+    void setUp(@TempDir Path tempDir) throws IOException, InterruptedException {
         File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
-        service = new PublicTransitServiceImpl(new ServiceConfig(zipFile.getAbsolutePath()));
+
+        // implement repo for gtfs schedule file reader
+        GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());
+        PublicTransitServiceInitializer initializer = new PublicTransitServiceInitializer(
+                new ServiceConfig(zipFile.getAbsolutePath()), repo.get());
+
+        // create service from initialized data
+        service = new PublicTransitServiceImpl(initializer.getConfig(), initializer.getSchedule(),
+                initializer.getSpatialStopIndex(), initializer.getStopSearchIndex(), initializer.getWalkCalculator(),
+                initializer.getAdditionalTransfers());
     }
 
     @Nested

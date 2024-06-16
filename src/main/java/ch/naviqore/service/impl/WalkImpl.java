@@ -24,7 +24,7 @@ public class WalkImpl extends LegImpl implements Walk {
     private final Stop stop;
 
     /**
-     * Create a first or last mile walk between a station and a location.
+     * Create a first or last mile walk between a stop and a location.
      */
     WalkImpl(int distance, int duration, WalkType walkType, LocalDateTime departureTime, LocalDateTime arrivalTime,
              GeoCoordinate sourceLocation, GeoCoordinate targetLocation, @Nullable Stop stop) {

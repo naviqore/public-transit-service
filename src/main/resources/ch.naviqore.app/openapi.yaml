@@ -1,13 +1,13 @@
 openapi: 3.0.0
 info:
   title: Naviqore Public Transit API
-  version: 1.0.0
+  version: 0.2.1
   description: API for Public Transit Routing System
 paths:
   /schedule/stops/autocomplete:
     get:
-      summary: Autocomplete station names
-      description: Provides station names and their corresponding station IDs based on a partial input query.
+      summary: Autocomplete stop names
+      description: Provides stop names and their corresponding stop IDs based on a partial input query.
       tags:
         - schedule
       parameters:
@@ -16,12 +16,12 @@ paths:
           required: true
           schema:
             type: string
-          description: Partial name of the station to search for.
+          description: Partial name of the stop to search for.
         - name: limit
           in: query
           schema:
             type: integer
-          description: The maximum number of stations to return. Defaults to `10`.
+          description: The maximum number of stops to return. Defaults to `10`.
         - name: searchType
           in: query
           schema:
@@ -29,7 +29,7 @@ paths:
           description: The type of search to perform. Defaults to `FUZZY`.
       responses:
         '200':
-          description: A list of station names and IDs that match the query
+          description: A list of stop names and IDs that match the query
           content:
             application/json:
               schema:

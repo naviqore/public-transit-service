@@ -83,7 +83,7 @@ public class DtoMapper {
                 switch (walk.getWalkType()) {
                     case WalkType.LAST_MILE -> sourceStop = map(walk.getStop().get());
                     case WalkType.FIRST_MILE -> targetStop = map(walk.getStop().get());
-                    // a walk between two stations is a TransferLeg and not a Walk, therefore this case should not occur
+                    // a walk between two stops is a TransferLeg and not a Walk, therefore this case should not occur
                     case DIRECT -> throw new IllegalStateException(
                             "No stop should be present in a direct walk between two location.");
                 }

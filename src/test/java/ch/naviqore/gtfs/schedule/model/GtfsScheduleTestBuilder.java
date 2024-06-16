@@ -31,7 +31,7 @@ import java.util.*;
  *   <li><b>route2</b> - Everyday service, Underground system covering six stops (u1, u2, u3, u4, u5, u6)</li>
  *   <li><b>route3</b> - Weekday service, Bus between South-West, Main Station, and North-East (u5, s2, u2)</li>
  * </ul>
- * Stations:
+ * Stops:
  * <ul>
  *   <li><b>s1</b> - Other City (47.5, 7.5)</li>
  *   <li><b>s2</b> - Main Station (47.5, 8.5)</li>
@@ -48,8 +48,8 @@ import java.util.*;
  * </ul>
  * Transfers:
  * <ul>
- *   <li><b>u6-u5</b> - Minimum time transfer requiring 540 seconds, reflecting a downhill walking path between these stations.</li>
- *   <li><b>u5-u6</b> - Minimum time transfer requiring 600 seconds, reflecting an uphill walking path between these stations.</li>
+ *   <li><b>u6-u5</b> - Minimum time transfer requiring 540 seconds, reflecting a downhill walking path between these stops.</li>
+ *   <li><b>u5-u6</b> - Minimum time transfer requiring 600 seconds, reflecting an uphill walking path between these stops.</li>
  *   <li><b>u6</b> - Marking transfer at u6 as not possible, emphasizing route planning around unavailable transfers.</li>
  *   <li><b>u3</b> - Recommendation to transfer at u3 instead of u6 when traveling from East to West.</li>
  * </ul>

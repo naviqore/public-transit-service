@@ -35,8 +35,8 @@ public class Raptor {
         this.routeStops = routeTraversal.routeStops();
     }
 
-    public static RaptorBuilder builder(int sameStationTransferTime) {
-        return new RaptorBuilder(sameStationTransferTime);
+    public static RaptorBuilder builder(int sameStopTransferTime) {
+        return new RaptorBuilder(sameStopTransferTime);
     }
 
     public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
@@ -541,7 +541,7 @@ public class Raptor {
 
         int earliestDepartureTime = previousLeg.arrivalTime;
         if (previousLeg.type == ArrivalType.ROUTE) {
-            earliestDepartureTime += Math.max(stop.sameStationTransferTime(), minTransferDuration);
+            earliestDepartureTime += Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
 
         while (tripOffset < numberOfTrips) {
@@ -589,7 +589,7 @@ public class Raptor {
 
         int latestArrivalTime = previousLeg.arrivalTime;
         if (previousLeg.type == ArrivalType.ROUTE) {
-            latestArrivalTime -= Math.max(stop.sameStationTransferTime(), minTransferDuration);
+            latestArrivalTime -= Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
 
         while (tripOffset >= 0) {
@@ -786,7 +786,7 @@ public class Raptor {
      *
      * @param stopIdx               - The index of the stop to expand transfers from.
      * @param referenceTimes        - A array with the overall best arrival time for each stop, indexed by stop index.
-     *                              Note: The arrival time is reduced by the same station transfer time for transfers,
+     *                              Note: The arrival time is reduced by the same stop transfer time for transfers,
      *                              to make them comparable with route arrivals.
      * @param referenceLegsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
      *                              round.
@@ -828,7 +828,7 @@ public class Raptor {
 
             // For Comparison with Route Arrivals the Arrival Time by Transfer must be reduced (or increased in case of
             // departure optimization) by the same stop transfer time
-            int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStationTransferTime();
+            int comparableNewTargetStopArrivalTime = newTargetStopArrivalTime - targetStop.sameStopTransferTime();
             if (timeType == TimeType.DEPARTURE && referenceTimes[transfer.targetStopIdx()] <= comparableNewTargetStopArrivalTime) {
                 continue;
             } else if (timeType == TimeType.ARRIVAL && referenceTimes[transfer.targetStopIdx()] >= comparableNewTargetStopArrivalTime) {
@@ -865,7 +865,7 @@ public class Raptor {
          */
         ROUTE,
         /**
-         * Uses a transfer between station (no same station transfers).
+         * Uses a transfer between stops (not a same stop transfer).
          */
         TRANSFER
 
