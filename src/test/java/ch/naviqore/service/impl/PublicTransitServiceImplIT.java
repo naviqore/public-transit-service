@@ -168,8 +168,8 @@ class PublicTransitServiceImplIT {
 
             @Test
             void getIsolines_fromLocation() {
-                Map<Stop, Connection> connections = service.getIsolines(new GeoCoordinate(36.425288, -117.133162),
-                        LocalDateTime.of(2008, 5, 15, 8, 0), config);
+                Map<Stop, Connection> connections = service.getIsoLines(new GeoCoordinate(36.425288, -117.133162),
+                        LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
                 assertFalse(connections.isEmpty(), "Expected to find connections.");
             }
 

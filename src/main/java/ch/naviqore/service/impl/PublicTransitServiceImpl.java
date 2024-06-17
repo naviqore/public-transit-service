@@ -259,25 +259,25 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
+    public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
-                departureTime.toLocalTime().toSecondOfDay(), config.getMaximumWalkingDuration());
+                time.toLocalTime().toSecondOfDay(), config.getMaximumWalkingDuration());
 
-        Raptor raptor = cache.getRaptor(departureTime.toLocalDate());
+        Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, source, departureTime,
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, source, time,
                 config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime departureTime, ConnectionQueryConfig config) {
+    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
         Map<String, Integer> sourceStops = getAllChildStopsFromStop(source,
-                departureTime.toLocalTime().toSecondOfDay());
+                time.toLocalTime().toSecondOfDay());
 
-        Raptor raptor = cache.getRaptor(departureTime.toLocalDate());
+        Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, null, departureTime,
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, null, time,
                 config);
     }
 
