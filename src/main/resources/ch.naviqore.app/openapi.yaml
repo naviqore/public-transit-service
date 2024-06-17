@@ -175,12 +175,17 @@ paths:
           schema:
             type: number
           description: The longitude of the target stop, only used and required if no targetStopId is provided.
-        - name: departureDateTime
+        - name: dateTime
           in: query
           schema:
             type: string
             format: date-time
-          description: The departure datetime from the source stop. Defaults to the current time.
+          description: The datetime of the arrival or departure (see timeType). Defaults to the current time.
+        - name: timeType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TIME_TYPE'
+          description: The type of time provided (arrival or departure). Defaults to `DEPARTURE`.
         - name: maxWalkingDuration
           in: query
           schema:
@@ -236,12 +241,17 @@ paths:
           schema:
             type: number
           description: The longitude of the start position, only used and required if no stopId is provided.
-        - name: departureDateTime
+        - name: dateTime
           in: query
           schema:
             type: string
             format: date-time
-          description: The departure datetime from the stop. Defaults to the current time.
+          description: The datetime of the arrival or departure (see timeType). Defaults to the current time.
+        - name: timeType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TIME_TYPE'
+          description: The type of time provided (arrival or departure). Defaults to `DEPARTURE`.
         - name: maxWalkingDuration
           in: query
           schema:
@@ -391,3 +401,8 @@ components:
         - CONTAINS
         - ENDS_WITH
         - FUZZY
+    TIME_TYPE:
+      type: string
+      enum:
+        - DEPARTURE
+        - ARRIVAL

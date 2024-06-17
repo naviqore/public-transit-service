@@ -93,14 +93,15 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime departureTime,
+    public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
-        return delegate.getIsolines(source, departureTime, config);
+        return delegate.getIsoLines(source, time, timeType, config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime departureTime, ConnectionQueryConfig config) {
-        return delegate.getIsolines(source, departureTime, config);
+    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+                                             ConnectionQueryConfig config) {
+        return delegate.getIsoLines(source, time, timeType, config);
     }
 
     @Override
