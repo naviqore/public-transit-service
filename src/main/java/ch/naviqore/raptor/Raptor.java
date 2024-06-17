@@ -39,48 +39,30 @@ public class Raptor {
         return new RaptorBuilder(sameStopTransferTime);
     }
 
-    public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime) {
-        return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
+    private static int getBestTimeForStop(int stopIdx, List<Leg[]> bestLegForStopsPerRound, TimeType timeType) {
+        int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
+        int bestTime = timeFactor * INFINITY;
+        for (Leg[] legs : bestLegForStopsPerRound) {
+            if (legs[stopIdx] == null) {
+                continue;
+            }
+            Leg currentLeg = legs[stopIdx];
+            if (timeType == TimeType.DEPARTURE) {
+                if (currentLeg.arrivalTime < bestTime) {
+                    bestTime = currentLeg.arrivalTime;
+                }
+            } else {
+                if (currentLeg.arrivalTime > bestTime) {
+                    bestTime = currentLeg.arrivalTime;
+                }
+            }
+        }
+
+        return bestTime;
     }
 
-    public List<Connection> routeEarliestArrival(String sourceStopId, String targetStopId, int departureTime,
-                                                 QueryConfig config) {
-        return routeEarliestArrival(createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0), config);
-    }
-
-    private Map<String, Integer> createStopMap(String stopId, int value) {
-        return Map.of(stopId, value);
-    }
-
-    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds) {
-        return routeEarliestArrival(sourceStops, targetStopIds, new QueryConfig());
-    }
-
-    public List<Connection> routeEarliestArrival(Map<String, Integer> sourceStops, Map<String, Integer> targetStopIds,
-                                                 QueryConfig config) {
-        return route(sourceStops, targetStopIds, config, TimeType.DEPARTURE);
-    }
-
-    public List<Connection> routeLatestDeparture(String sourceStopId, String targetStopId, int arrivalTime) {
-        return routeLatestDeparture(createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime));
-    }
-
-    public List<Connection> routeLatestDeparture(String sourceStopId, String targetStopId, int arrivalTime,
-                                                 QueryConfig config) {
-        return routeLatestDeparture(createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime), config);
-    }
-
-    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStops) {
-        return routeLatestDeparture(sourceStops, targetStops, new QueryConfig());
-    }
-
-    public List<Connection> routeLatestDeparture(Map<String, Integer> sourceStops, Map<String, Integer> targetStops,
-                                                 QueryConfig config) {
-        return route(sourceStops, targetStops, config, TimeType.ARRIVAL);
-    }
-
-    private List<Connection> route(Map<String, Integer> sourceStops, Map<String, Integer> targetStops,
-                                   QueryConfig config, TimeType timeType) {
+    public List<Connection> route(Map<String, Integer> sourceStops, Map<String, Integer> targetStops, TimeType timeType,
+                                  QueryConfig config) {
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         Map<Integer, Integer> validatedTargetStopIdx = validator.validateStops(targetStops);
 
@@ -121,23 +103,14 @@ public class Raptor {
         }
     }
 
-    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops) {
-        return getIsoLines(sourceStops, new QueryConfig());
-    }
-
-    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, QueryConfig config) {
-        return getIsoLines(sourceStops, config, TimeType.DEPARTURE);
-    }
-
-    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, QueryConfig config,
-                                               TimeType timeType) {
+    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, TimeType timeType,
+                                               QueryConfig config) {
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
         int[] sourceStopIdxs = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<Leg[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIdxs, new int[]{}, refStopTimes, new int[]{},
                 config, timeType);
-        ;
 
         Map<String, Connection> isoLines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
@@ -657,28 +630,6 @@ public class Raptor {
         return bestTime;
     }
 
-    private static int getBestTimeForStop(int stopIdx, List<Leg[]> bestLegForStopsPerRound, TimeType timeType) {
-        int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
-        int bestTime = timeFactor * INFINITY;
-        for (Leg[] legs : bestLegForStopsPerRound) {
-            if (legs[stopIdx] == null) {
-                continue;
-            }
-            Leg currentLeg = legs[stopIdx];
-            if (timeType == TimeType.DEPARTURE) {
-                if (currentLeg.arrivalTime < bestTime) {
-                    bestTime = currentLeg.arrivalTime;
-                }
-            } else {
-                if (currentLeg.arrivalTime > bestTime) {
-                    bestTime = currentLeg.arrivalTime;
-                }
-            }
-        }
-
-        return bestTime;
-    }
-
     private List<Connection> reconstructParetoOptimalSolutions(List<Leg[]> bestTimeLegsPerRound,
                                                                Map<Integer, Integer> targetStops, TimeType timeType) {
         final List<Connection> connections = new ArrayList<>();
@@ -786,8 +737,8 @@ public class Raptor {
      *
      * @param stopIdx               - The index of the stop to expand transfers from.
      * @param referenceTimes        - A array with the overall best arrival time for each stop, indexed by stop index.
-     *                              Note: The arrival time is reduced by the same stop transfer time for transfers,
-     *                              to make them comparable with route arrivals.
+     *                              Note: The arrival time is reduced by the same stop transfer time for transfers, to
+     *                              make them comparable with route arrivals.
      * @param referenceLegsPerRound - A list of arrays with the best arrival time for each stop per round, indexed by
      *                              round.
      * @param markedStops           - A set of stop indices that have been marked for scanning in the next round.
@@ -844,11 +795,6 @@ public class Raptor {
                     referenceLegsPerRound.get(round)[stopIdx]);
             markedStops.add(transfer.targetStopIdx());
         }
-    }
-
-    enum TimeType {
-        ARRIVAL,
-        DEPARTURE
     }
 
     /**

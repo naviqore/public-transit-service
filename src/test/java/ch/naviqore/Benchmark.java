@@ -8,7 +8,9 @@ import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.Raptor;
+import ch.naviqore.raptor.TimeType;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
@@ -140,8 +142,10 @@ final class Benchmark {
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
             try {
-                List<Connection> connections = raptor.routeEarliestArrival(requests[i].sourceStop().getId(),
-                        requests[i].targetStop().getId(), requests[i].departureTime());
+                Map<String, Integer> sourceStops = Map.of(requests[i].sourceStop().getId(), requests[i].departureTime());
+                Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
+
+                List<Connection> connections = raptor.route(sourceStops, targetStops, TimeType.DEPARTURE, new QueryConfig());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {

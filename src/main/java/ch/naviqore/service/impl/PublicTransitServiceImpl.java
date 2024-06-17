@@ -162,6 +162,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                                             @Nullable ch.naviqore.gtfs.schedule.model.Stop targetStop,
                                             @Nullable GeoCoordinate targetLocation, LocalDateTime time,
                                             TimeType timeType, ConnectionQueryConfig config) {
+
         notYetImplementedCheck(timeType);
         int departureTime = time.toLocalTime().toSecondOfDay();
         Map<String, Integer> sourceStops;
@@ -191,7 +192,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         // query connection from raptor
         Raptor raptor = cache.getRaptor(time.toLocalDate());
-        List<ch.naviqore.raptor.Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
+        List<ch.naviqore.raptor.Connection> connections = raptor.route(sourceStops, targetStops, map(timeType),
                 map(config));
 
         // assemble connection results
@@ -261,24 +262,27 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     @Override
     public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
-        Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source,
-                time.toLocalTime().toSecondOfDay(), config.getMaximumWalkingDuration());
+        notYetImplementedCheck(timeType);
+
+        Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source, time.toLocalTime().toSecondOfDay(),
+                config.getMaximumWalkingDuration());
 
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, source, time,
-                config);
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), sourceStops, source,
+                time, config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
-        Map<String, Integer> sourceStops = getAllChildStopsFromStop(source,
-                time.toLocalTime().toSecondOfDay());
+    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+                                             ConnectionQueryConfig config) {
+        notYetImplementedCheck(timeType);
 
+        Map<String, Integer> sourceStops = getAllChildStopsFromStop(source, time.toLocalTime().toSecondOfDay());
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(config)), sourceStops, null, time,
-                config);
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), sourceStops, null,
+                time, config);
     }
 
     private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,
