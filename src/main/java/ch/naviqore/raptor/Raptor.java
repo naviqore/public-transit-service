@@ -115,7 +115,7 @@ public class Raptor {
                 }
             }
             if (earliestArrival != null) {
-                Connection connection = reconstructConnectionFromLeg(earliestArrival);
+                Connection connection = reconstructConnectionFromLeg(earliestArrival, timeType);
                 // A connection can be null, even though earliest arrival is not null --> INITIAL leg
                 if (connection != null) {
                     isoLines.put(stop.id(), connection);
@@ -536,7 +536,7 @@ public class Raptor {
                 continue;
             }
 
-            Connection connection = reconstructConnectionFromLeg(leg);
+            Connection connection = reconstructConnectionFromLeg(leg, timeType);
             if (connection != null) {
                 connections.add(connection);
             }
@@ -545,7 +545,7 @@ public class Raptor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLeg(Leg leg) {
+    private @Nullable Connection reconstructConnectionFromLeg(Leg leg, TimeType timeType){
         Connection connection = new Connection();
 
         // start from destination leg and follow legs back until the initial leg is reached
@@ -559,7 +559,7 @@ public class Raptor {
             int departureTime;
             int arrivalTime;
             Connection.LegType type;
-            if (leg.arrivalTime > leg.departureTime) {
+            if (timeType == TimeType.DEPARTURE) {
                 fromStopId = stops[leg.previous.stopIdx].id();
                 toStopId = stops[leg.stopIdx].id();
                 departureTime = leg.departureTime;
