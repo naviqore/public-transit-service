@@ -12,10 +12,10 @@ Accept: application/json
 
 ### Connection between two stops
 GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
-    departureDateTime=2010-01-01T01:10:01
+    dateTime=2010-01-01T01:10:01
 Accept: application/json
 
 ### Isoline from stop
 GET http://localhost:8080/routing/isolines?sourceStopId=STAGECOACH&maxTransferNumber=3&maxTravelTime=7200&
-    departureDateTime=2010-01-01T01:10:01
+    dateTime=2010-01-01T01:10:01
 Accept: application/json

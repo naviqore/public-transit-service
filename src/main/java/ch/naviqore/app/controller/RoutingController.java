@@ -9,6 +9,7 @@ import ch.naviqore.service.Stop;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -96,9 +97,7 @@ public class RoutingController {
             targetCoordinate = validateCoordinate(targetLatitude, targetLongitude);
         }
 
-        if (dateTime == null) {
-            dateTime = LocalDateTime.now();
-        }
+        dateTime = setToNowIfNull(dateTime);
 
         Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
         Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
@@ -112,17 +111,21 @@ public class RoutingController {
         if (sourceStop != null && targetStop != null) {
             connections = service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config);
         } else if (sourceStop != null) {
-            connections = service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType),
-                    config);
+            connections = service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config);
         } else if (targetStop != null) {
-            connections = service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType),
-                    config);
+            connections = service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config);
         } else {
-            connections = service.getConnections(sourceCoordinate, targetCoordinate, dateTime,
-                    map(timeType), config);
+            connections = service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config);
         }
 
         return connections.stream().map(DtoMapper::map).toList();
+    }
+
+    private static @NotNull LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            dateTime = LocalDateTime.now();
+        }
+        return dateTime;
     }
 
     @GetMapping("/isolines")
@@ -150,6 +153,8 @@ public class RoutingController {
         validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
                 maxTravelTime);
+
+        dateTime = setToNowIfNull(dateTime);
 
         Map<Stop, ch.naviqore.service.Connection> connections;
         if (sourceStop != null) {
