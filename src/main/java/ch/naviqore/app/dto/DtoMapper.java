@@ -1,6 +1,7 @@
 package ch.naviqore.app.dto;
 
 import ch.naviqore.service.SearchType;
+import ch.naviqore.service.TimeType;
 import ch.naviqore.service.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -44,6 +45,13 @@ public class DtoMapper {
             case ENDS_WITH -> SearchType.ENDS_WITH;
             case CONTAINS -> SearchType.CONTAINS;
             case EXACT -> SearchType.EXACT;
+        };
+    }
+
+    public static TimeType map(ch.naviqore.app.dto.TimeType timeType) {
+        return switch (timeType) {
+            case DEPARTURE -> TimeType.DEPARTURE;
+            case ARRIVAL -> TimeType.ARRIVAL;
         };
     }
 

@@ -108,6 +108,13 @@ final class TypeMapper {
                 config.getMaximumTransferNumber(), config.getMaximumTravelTime());
     }
 
+    public static ch.naviqore.raptor.TimeType map(TimeType timeType) {
+        return switch (timeType) {
+            case DEPARTURE -> ch.naviqore.raptor.TimeType.DEPARTURE;
+            case ARRIVAL -> ch.naviqore.raptor.TimeType.ARRIVAL;
+        };
+    }
+
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Connection.Leg leg, LocalDate date,
                                               GtfsSchedule schedule, int distance) {
         int duration = leg.arrivalTime() - leg.departureTime();

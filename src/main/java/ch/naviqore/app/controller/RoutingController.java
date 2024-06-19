@@ -3,12 +3,13 @@ package ch.naviqore.app.controller;
 import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.DtoMapper;
 import ch.naviqore.app.dto.EarliestArrival;
+import ch.naviqore.app.dto.TimeType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.Stop;
-import ch.naviqore.service.TimeType;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,6 +64,13 @@ public class RoutingController {
         }
     }
 
+    private static @NotNull LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            dateTime = LocalDateTime.now();
+        }
+        return dateTime;
+    }
+
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
@@ -70,7 +78,8 @@ public class RoutingController {
                                            @RequestParam(required = false) String targetStopId,
                                            @RequestParam(required = false, defaultValue = "-91.0") double targetLatitude,
                                            @RequestParam(required = false, defaultValue = "-181.0") double targetLongitude,
-                                           @RequestParam(required = false) LocalDateTime departureDateTime,
+                                           @RequestParam(required = false) LocalDateTime dateTime,
+                                           @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
@@ -95,9 +104,7 @@ public class RoutingController {
             targetCoordinate = validateCoordinate(targetLatitude, targetLongitude);
         }
 
-        if (departureDateTime == null) {
-            departureDateTime = LocalDateTime.now();
-        }
+        dateTime = setToNowIfNull(dateTime);
 
         Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
         Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
@@ -109,16 +116,13 @@ public class RoutingController {
         List<ch.naviqore.service.Connection> connections;
 
         if (sourceStop != null && targetStop != null) {
-            connections = service.getConnections(sourceStop, targetStop, departureDateTime, TimeType.DEPARTURE, config);
+            connections = service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config);
         } else if (sourceStop != null) {
-            connections = service.getConnections(sourceStop, targetCoordinate, departureDateTime, TimeType.DEPARTURE,
-                    config);
+            connections = service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config);
         } else if (targetStop != null) {
-            connections = service.getConnections(sourceCoordinate, targetStop, departureDateTime, TimeType.DEPARTURE,
-                    config);
+            connections = service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config);
         } else {
-            connections = service.getConnections(sourceCoordinate, targetCoordinate, departureDateTime,
-                    TimeType.DEPARTURE, config);
+            connections = service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config);
         }
 
         return connections.stream().map(DtoMapper::map).toList();
@@ -128,7 +132,8 @@ public class RoutingController {
     public List<EarliestArrival> getIsolines(@RequestParam(required = false) String sourceStopId,
                                              @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
                                              @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
-                                             @RequestParam(required = false) LocalDateTime departureDateTime,
+                                             @RequestParam(required = false) LocalDateTime dateTime,
+                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
                                              @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
@@ -149,11 +154,13 @@ public class RoutingController {
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
                 maxTravelTime);
 
+        dateTime = setToNowIfNull(dateTime);
+
         Map<Stop, ch.naviqore.service.Connection> connections;
         if (sourceStop != null) {
-            connections = service.getIsolines(sourceStop, departureDateTime, config);
+            connections = service.getIsoLines(sourceStop, dateTime, map(timeType), config);
         } else {
-            connections = service.getIsolines(sourceCoordinate, departureDateTime, config);
+            connections = service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config);
         }
 
         List<EarliestArrival> arrivals = new ArrayList<>();
