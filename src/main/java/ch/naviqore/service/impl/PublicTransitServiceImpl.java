@@ -255,8 +255,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), source,
-                time, config, timeType);
+        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), source, time, config,
+                timeType);
     }
 
     @Override

@@ -545,7 +545,7 @@ public class Raptor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLeg(Leg leg, TimeType timeType){
+    private @Nullable Connection reconstructConnectionFromLeg(Leg leg, TimeType timeType) {
         Connection connection = new Connection();
 
         // start from destination leg and follow legs back until the initial leg is reached

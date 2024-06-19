@@ -142,10 +142,12 @@ final class Benchmark {
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
             try {
-                Map<String, Integer> sourceStops = Map.of(requests[i].sourceStop().getId(), requests[i].departureTime());
+                Map<String, Integer> sourceStops = Map.of(requests[i].sourceStop().getId(),
+                        requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.route(sourceStops, targetStops, TimeType.DEPARTURE, new QueryConfig());
+                List<Connection> connections = raptor.route(sourceStops, targetStops, TimeType.DEPARTURE,
+                        new QueryConfig());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {

@@ -64,6 +64,13 @@ public class RoutingController {
         }
     }
 
+    private static @NotNull LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            dateTime = LocalDateTime.now();
+        }
+        return dateTime;
+    }
+
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
@@ -119,13 +126,6 @@ public class RoutingController {
         }
 
         return connections.stream().map(DtoMapper::map).toList();
-    }
-
-    private static @NotNull LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
-        if (dateTime == null) {
-            dateTime = LocalDateTime.now();
-        }
-        return dateTime;
     }
 
     @GetMapping("/isolines")
