@@ -73,11 +73,7 @@ public class PublicTransitServiceInitializer {
                                                                     KDTree<Stop> spatialStopIndex) {
         ArrayList<TransferGenerator> generators = new ArrayList<>();
 
-        // create same stop transfers if the default transfer time is greater than 0 seconds
-        if (config.getTransferTimeSameStopDefault() > 0) {
-            generators.add(new SameStopTransferGenerator(config.getTransferTimeSameStopDefault()));
-        }
-
+        // TODO: Allow deactivation of walk transfer generator through service config.
         // always create walking transfers between stops
         generators.add(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
                 config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));
