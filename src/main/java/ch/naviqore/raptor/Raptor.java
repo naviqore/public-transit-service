@@ -80,7 +80,8 @@ public class Raptor {
      */
     public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
-
+        checkNonNullStops(departureStops, "Departure");
+        checkNonNullStops(arrivalStops, "Arrival");
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
         return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
@@ -96,10 +97,18 @@ public class Raptor {
      */
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
+        checkNonNullStops(departureStops, "Departure");
+        checkNonNullStops(arrivalStops, "Arrival");
         log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
                 arrivalStops.keySet(), arrivalStops.values().stream().toList());
 
         return getConnections(arrivalStops, departureStops, TimeType.ARRIVAL, config);
+    }
+
+    private void checkNonNullStops(Map<String, ?> stops, String labelSource) {
+        if (stops == null) {
+            throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
+        }
     }
 
     /**
@@ -157,6 +166,7 @@ public class Raptor {
      */
     public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
+        checkNonNullStops(sourceStops, "Source");
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 mapLocalDateToSecondsOfDay(sourceStops));
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
@@ -825,9 +835,6 @@ public class Raptor {
          * @return a map of valid stop IDs and their corresponding departure / walk to target times.
          */
         private Map<Integer, Integer> validateStopsAndGetIndices(Map<String, Integer> stops) {
-            if (stops == null) {
-                throw new IllegalArgumentException("Stops must not be null.");
-            }
             if (stops.isEmpty()) {
                 throw new IllegalArgumentException("At least one stop ID must be provided.");
             }

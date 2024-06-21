@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,7 +48,7 @@ class RaptorTest {
 
         static Map<String, Connection> getIsoLines(Raptor raptor, Map<String, Integer> sourceStops,
                                                    QueryConfig config) {
-            return raptor.routeIsolines(sourceStops, TimeType.DEPARTURE, config);
+            return raptor.routeIsolines(createStopTimeMap(sourceStops), TimeType.DEPARTURE, config);
         }
 
         static List<Connection> routeEarliestArrival(Raptor raptor, String sourceStopId, String targetStopId,
@@ -72,7 +74,7 @@ class RaptorTest {
 
         static List<Connection> routeEarliestArrival(Raptor raptor, Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStopIds, QueryConfig config) {
-            return raptor.getConnections(sourceStops, targetStopIds, TimeType.DEPARTURE, config);
+            return raptor.routeEarliestArrival(createStopTimeMap(sourceStops), targetStopIds, config);
         }
 
         static List<Connection> routeLatestDeparture(Raptor raptor, String sourceStopId, String targetStopId,
@@ -88,7 +90,18 @@ class RaptorTest {
 
         static List<Connection> routeLatestDeparture(Raptor raptor, Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops, QueryConfig config) {
-            return raptor.getConnections(sourceStops, targetStops, TimeType.ARRIVAL, config);
+            return raptor.routeLatestDeparture(sourceStops, createStopTimeMap(targetStops), config);
+        }
+
+        static Map<String, LocalDateTime> createStopTimeMap(Map<String, Integer> sourceStops) {
+            if (sourceStops == null) {
+                return null;
+            }
+            return sourceStops.entrySet()
+                    .stream()
+                    .map(entry -> Map.entry(entry.getKey(),
+                            LocalDateTime.of(2021, 1, 1, 0, 0).plusSeconds(entry.getValue())))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         }
 
     }
@@ -884,16 +897,6 @@ class RaptorTest {
         }
 
         @Test
-        void throwErrorForInvalidDepartureTimeFromOneOfManySourceStops() {
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, Integer.MAX_VALUE);
-            Map<String, Integer> targetStops = Map.of(STOP_H, 0);
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> RaptorConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops),
-                    "Departure time has to be valid for all valid source stops");
-        }
-
-        @Test
         void notThrowErrorForValidAndNonExistingTargetStop() {
             Map<String, Integer> sourceStops = Map.of(STOP_H, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_A, 0, "NonExistentStop", 0);
@@ -950,16 +953,6 @@ class RaptorTest {
             assertThrows(IllegalArgumentException.class,
                     () -> RaptorConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops),
                     "Source and target stops cannot be null");
-        }
-
-        @Test
-        void throwErrorWhenDepartureTimeIsOutOfRange() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> RaptorConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_B, -1),
-                    "Departure time cannot be negative");
-            assertThrows(IllegalArgumentException.class,
-                    () -> RaptorConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_B,
-                            49 * RaptorTestBuilder.SECONDS_IN_HOUR), "Departure time cannot be greater than two days");
         }
 
         @Test

@@ -149,32 +149,34 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         return getConnections(null, source, schedule.getStops().get(target.getId()), null, time, timeType, config);
     }
 
-    private List<Connection> getConnections(@Nullable ch.naviqore.gtfs.schedule.model.Stop sourceStop,
-                                            @Nullable GeoCoordinate sourceLocation,
-                                            @Nullable ch.naviqore.gtfs.schedule.model.Stop targetStop,
-                                            @Nullable GeoCoordinate targetLocation, LocalDateTime time,
+    private List<Connection> getConnections(@Nullable ch.naviqore.gtfs.schedule.model.Stop departureStop,
+                                            @Nullable GeoCoordinate departureLocation,
+                                            @Nullable ch.naviqore.gtfs.schedule.model.Stop arrivalStop,
+                                            @Nullable GeoCoordinate arrivalLocation, LocalDateTime time,
                                             TimeType timeType, ConnectionQueryConfig config) {
 
-        int travelTime = time.toLocalTime().toSecondOfDay();
-        Map<String, Integer> sourceStops;
+        boolean isDeparture = timeType == TimeType.DEPARTURE;
+        ch.naviqore.gtfs.schedule.model.Stop sourceStop = isDeparture ? departureStop : arrivalStop;
+        GeoCoordinate sourceLocation = isDeparture ? departureLocation : arrivalLocation;
+        ch.naviqore.gtfs.schedule.model.Stop targetStop = isDeparture ? arrivalStop : departureStop;
+        GeoCoordinate targetLocation = isDeparture ? arrivalLocation : departureLocation;
+
+        Map<String, LocalDateTime> sourceStops;
         Map<String, Integer> targetStops;
 
-        int sourceDepartureTime = timeType == TimeType.DEPARTURE ? travelTime : 0;
         if (sourceStop != null) {
-            sourceStops = getAllChildStopsFromStop(map(sourceStop), sourceDepartureTime);
+            sourceStops = getAllChildStopsFromStop(map(sourceStop), time);
         } else if (sourceLocation != null) {
-            sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, sourceDepartureTime,
-                    config.getMaximumWalkingDuration());
+            sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, time, config.getMaximumWalkingDuration(),
+                    timeType);
         } else {
             throw new IllegalArgumentException("Either sourceStop or sourceLocation must be provided.");
         }
 
-        int targetArrivalTime = timeType == TimeType.ARRIVAL ? travelTime : 0;
         if (targetStop != null) {
-            targetStops = getAllChildStopsFromStop(map(targetStop), targetArrivalTime);
+            targetStops = getAllChildStopsFromStop(map(targetStop));
         } else if (targetLocation != null) {
-            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, targetArrivalTime,
-                    config.getMaximumWalkingDuration());
+            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, 0, config.getMaximumWalkingDuration());
         } else {
             throw new IllegalArgumentException("Either targetStop or targetLocation must be provided.");
         }
@@ -186,8 +188,12 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         // query connection from raptor
         Raptor raptor = cache.getRaptor(time.toLocalDate());
-        List<ch.naviqore.raptor.Connection> connections = raptor.getConnections(sourceStops, targetStops, map(timeType),
-                map(config));
+        List<ch.naviqore.raptor.Connection> connections;
+        if (isDeparture) {
+            connections = raptor.routeEarliestArrival(sourceStops, targetStops, map(config));
+        } else {
+            connections = raptor.routeLatestDeparture(targetStops, sourceStops, map(config));
+        }
 
         // assemble connection results
         List<Connection> result = new ArrayList<>();
@@ -219,6 +225,19 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         return result;
     }
 
+    public Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
+                                                                       int maxWalkDuration, TimeType timeType) {
+        int secondsOfDay = startTime.toLocalTime().toSecondOfDay();
+        Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, secondsOfDay,
+                maxWalkDuration);
+        return stopsWithWalkTime.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> timeType == TimeType.DEPARTURE ? startTime.plusSeconds(
+                                entry.getValue()) : startTime.minusSeconds(entry.getValue())));
+
+    }
+
     public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int startTimeInSeconds,
                                                                  int maxWalkDuration) {
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
@@ -238,11 +257,20 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         return stopsWithWalkTime;
     }
 
-    public Map<String, Integer> getAllChildStopsFromStop(Stop stop, int startTimeInSeconds) {
+    public Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
+        List<String> stopIds = getAllStopIdsForStop(stop);
+        Map<String, LocalDateTime> stopsWithWalkTime = new HashMap<>();
+        for (String stopId : stopIds) {
+            stopsWithWalkTime.put(stopId, time);
+        }
+        return stopsWithWalkTime;
+    }
+
+    public Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (String stopId : stopIds) {
-            stopsWithWalkTime.put(stopId, startTimeInSeconds);
+            stopsWithWalkTime.put(stopId, 0);
         }
         return stopsWithWalkTime;
     }
@@ -250,19 +278,19 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     @Override
     public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
-        Map<String, Integer> sourceStops = getStopsWithWalkTimeFromLocation(source, time.toLocalTime().toSecondOfDay(),
-                config.getMaximumWalkingDuration());
+        Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
+                config.getMaximumWalkingDuration(), timeType);
 
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), source, time, config,
-                timeType);
+        return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), source, time,
+                config, timeType);
     }
 
     @Override
     public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
-        Map<String, Integer> sourceStops = getAllChildStopsFromStop(source, time.toLocalTime().toSecondOfDay());
+        Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
         return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), null, time, config,

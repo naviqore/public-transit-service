@@ -10,7 +10,6 @@ import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.Raptor;
-import ch.naviqore.raptor.TimeType;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
@@ -125,8 +124,11 @@ final class Benchmark {
         for (int i = 0; i < SAMPLE_SIZE; i++) {
             int sourceIndex = random.nextInt(stopIds.size());
             int destinationIndex = getRandomDestinationIndex(stopIds.size(), sourceIndex, random);
+
+            LocalDateTime departureTime = SCHEDULE_DATE.atStartOfDay()
+                    .plusSeconds(random.nextInt(DEPARTURE_TIME_LIMIT));
             requests[i] = new RouteRequest(schedule.getStops().get(stopIds.get(sourceIndex)),
-                    schedule.getStops().get(stopIds.get(destinationIndex)), random.nextInt(DEPARTURE_TIME_LIMIT));
+                    schedule.getStops().get(stopIds.get(destinationIndex)), departureTime);
         }
         return requests;
     }
@@ -142,12 +144,11 @@ final class Benchmark {
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
             try {
-                Map<String, Integer> sourceStops = Map.of(requests[i].sourceStop().getId(),
+                Map<String, LocalDateTime> sourceStops = Map.of(requests[i].sourceStop().getId(),
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.getConnections(sourceStops, targetStops, TimeType.DEPARTURE,
-                        new QueryConfig());
+                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops, new QueryConfig());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {
@@ -179,7 +180,7 @@ final class Benchmark {
         long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
         return new RoutingResult(id, request.sourceStop().getId(), request.targetStop().getId(),
                 request.sourceStop().getName(), request.targetStop.getName(),
-                toLocalDatetime(request.departureTime).orElseThrow(), connections.size(), earliestDepartureTime,
+                request.departureTime, connections.size(), earliestDepartureTime,
                 earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers, beelineDistance,
                 processingTime);
     }
@@ -223,7 +224,7 @@ final class Benchmark {
         return Optional.of(new ServiceDayTime(seconds).toLocalDateTime(SCHEDULE_DATE));
     }
 
-    record RouteRequest(Stop sourceStop, Stop targetStop, int departureTime) {
+    record RouteRequest(Stop sourceStop, Stop targetStop, LocalDateTime departureTime) {
     }
 
     record RoutingResult(int id, String sourceStopId, String targetStopId, String sourceStopName, String targetStopName,
