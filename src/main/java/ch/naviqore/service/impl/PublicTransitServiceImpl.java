@@ -186,7 +186,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         // query connection from raptor
         Raptor raptor = cache.getRaptor(time.toLocalDate());
-        List<ch.naviqore.raptor.Connection> connections = raptor.route(sourceStops, targetStops, map(timeType),
+        List<ch.naviqore.raptor.Connection> connections = raptor.getConnections(sourceStops, targetStops, map(timeType),
                 map(config));
 
         // assemble connection results
@@ -255,7 +255,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), source, time, config,
+        return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), source, time, config,
                 timeType);
     }
 
@@ -265,7 +265,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> sourceStops = getAllChildStopsFromStop(source, time.toLocalTime().toSecondOfDay());
         Raptor raptor = cache.getRaptor(time.toLocalDate());
 
-        return mapToStopConnectionMap(raptor.getIsoLines(sourceStops, map(timeType), map(config)), null, time, config,
+        return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), null, time, config,
                 timeType);
     }
 

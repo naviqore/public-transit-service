@@ -1,9 +1,18 @@
 package ch.naviqore.raptor;
 
+import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+
+// TODO rename legs to labels
+// TODO Raptor is responsible for request and return result to client - pre- and post-processing
+// TODO RouteScanner is responsible for scanning routes and finding the best time for each stop
+// TODO FootPathRelaxer is responsible for relaxing footpaths
 
 /**
  * Raptor algorithm implementation
@@ -61,40 +70,95 @@ public class Raptor {
         return bestTime;
     }
 
-    public List<Connection> route(Map<String, Integer> sourceStops, Map<String, Integer> targetStops, TimeType timeType,
-                                  QueryConfig config) {
+    /**
+     * Routing the earliest arrival from departure stops to arrival. Given a set departure time.
+     *
+     * @param departureStops Map of stop ids and departure times
+     * @param arrivalStops   Map of stop ids and walking times to final destination
+     * @param config         Query configuration
+     * @return a list of pareto-optimal earliest arrival connections
+     */
+    public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
+                                                 Map<String, Integer> arrivalStops, QueryConfig config) {
 
-        // Determine the order of source and target stops based on the time type
-        Map<String, Integer> firstStops = (timeType == TimeType.DEPARTURE) ? sourceStops : targetStops;
-        Map<String, Integer> secondStops = (timeType == TimeType.DEPARTURE) ? targetStops : sourceStops;
+        log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
+                arrivalStops.keySet(), departureStops.values().stream().toList());
+        return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
+    }
 
-        Map<Integer, Integer> validatedFirstStops = validator.validateStops(firstStops);
-        Map<Integer, Integer> validatedSecondStops = validator.validateStops(secondStops);
+    /**
+     * Routing the latest departure from departure stops to arrival. Given a set arrival time.
+     *
+     * @param departureStops Map of stop ids and walking times from origin
+     * @param arrivalStops   Map of stop ids and arrival times
+     * @param config         Query configuration
+     * @return a list of pareto-optimal latest departure connections
+     */
+    public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
+                                                 Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
+        log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
+                arrivalStops.keySet(), arrivalStops.values().stream().toList());
 
-        InputValidator.validateStopPermutations(firstStops, secondStops);
-        int[] sourceStopIndices = validatedFirstStops.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] departureTimes = validatedFirstStops.values().stream().mapToInt(Integer::intValue).toArray();
-        int[] targetStopIndices = validatedSecondStops.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] walkingDurationsToTarget = validatedSecondStops.values().stream().mapToInt(Integer::intValue).toArray();
+        return getConnections(arrivalStops, departureStops, TimeType.ARRIVAL, config);
+    }
 
-        if (timeType == TimeType.DEPARTURE) {
-            log.info("Routing earliest arrival from {} to {} departing at {}", sourceStopIndices, targetStopIndices,
-                    departureTimes);
-        } else {
-            log.info("Routing latest departure from {} to {} arriving at {}", targetStopIndices, sourceStopIndices,
-                    departureTimes);
-        }
+    /**
+     * This is the main method to route from source to target stops. The method will spawn from the source stops and
+     * expand footpaths and routes until the target stops are reached. The method will return the pareto-optimal
+     * connections.
+     * <p>
+     * Note, in case the time type is arrival, the source stop is the arrival stop (last stop of the connection) and the
+     * route is calculated backwards in time, searching for the latest possible departure at the departure stop (target
+     * stops).
+     *
+     * @param sourceStops is a map of stop ids and departure/arrival times depending on the time type
+     * @param targetStops is a map of stop ids and walking durations to target stops
+     * @param timeType    is the type of time to route for (arrival or departure)
+     * @param config      is the query configuration
+     * @return a list of pareto-optimal connections
+     */
+    private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
+                                            TimeType timeType, QueryConfig config) {
 
-        List<Leg[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices, departureTimes,
+        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateToSecondsOfDay(sourceStops);
+
+        Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
+        Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
+
+        InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
+        int[] sourceStopIndices = validatedSourceStops.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] sourceTimes = validatedSourceStops.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
+        int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
+
+        List<Leg[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
 
         // get pareto-optimal solutions
-        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedSecondStops, timeType);
+        return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedTargetStops, timeType);
     }
 
-    public Map<String, Connection> getIsoLines(Map<String, Integer> sourceStops, TimeType timeType,
-                                               QueryConfig config) {
-        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStops(sourceStops);
+    private static @NotNull Map<String, Integer> mapLocalDateToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
+        return sourceStops.entrySet()
+                .stream()
+                .map(e -> Map.entry(e.getKey(), e.getValue().toLocalTime().toSecondOfDay()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    }
+
+    /**
+     * Route isolines from source stops. Given a set of departure or arrival times, the method will return the earliest
+     * arrival or latest departure connections for each stop.
+     *
+     * @param sourceStops is a map of stop ids and departure/arrival times
+     * @param timeType    is the type of time to route for (arrival or departure)
+     * @param config      is the query configuration
+     * @return a pareto-optimal connection for each stop
+     */
+    public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
+                                                 QueryConfig config) {
+        Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
+                mapLocalDateToSecondsOfDay(sourceStops));
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
@@ -141,18 +205,7 @@ public class Raptor {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
-        // The cut-off time is the latest allowed arrival / the earliest allowed departure time, if a stop is reached
-        // after/before (depending on timeType), the stop is no longer considered for further expansion.
-        int cutOffTime;
-        if (config.getMaximumTravelTime() == INFINITY) {
-            cutOffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
-        } else if (timeType == TimeType.DEPARTURE) {
-            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
-            cutOffTime = earliestDeparture + config.getMaximumTravelTime();
-        } else {
-            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
-            cutOffTime = latestArrival - config.getMaximumTravelTime();
-        }
+        final int cutOffTime = getCutOffTime(sourceTimes, config, timeType);
 
         int maxWalkingDuration = config.getMaximumWalkingDuration();
         int minTransferDuration = config.getMinimumTransferDuration();
@@ -219,6 +272,29 @@ public class Raptor {
         }
 
         return bestStopLegsPerRound;
+    }
+
+    /**
+     * The cut-off time is the latest allowed arrival / the earliest allowed departure time, if a stop is reached
+     * after/before (depending on timeType), the stop is no longer considered for further expansion.
+     *
+     * @param sourceTimes
+     * @param config
+     * @param timeType
+     * @return
+     */
+    private static int getCutOffTime(int[] sourceTimes, QueryConfig config, TimeType timeType) {
+        int cutOffTime;
+        if (config.getMaximumTravelTime() == INFINITY) {
+            cutOffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+        } else if (timeType == TimeType.DEPARTURE) {
+            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
+            cutOffTime = earliestDeparture + config.getMaximumTravelTime();
+        } else {
+            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
+            cutOffTime = latestArrival - config.getMaximumTravelTime();
+        }
+        return cutOffTime;
     }
 
     /**
@@ -748,7 +824,7 @@ public class Raptor {
          * @param stops the stops to validate.
          * @return a map of valid stop IDs and their corresponding departure / walk to target times.
          */
-        private Map<Integer, Integer> validateStops(Map<String, Integer> stops) {
+        private Map<Integer, Integer> validateStopsAndGetIndices(Map<String, Integer> stops) {
             if (stops == null) {
                 throw new IllegalArgumentException("Stops must not be null.");
             }

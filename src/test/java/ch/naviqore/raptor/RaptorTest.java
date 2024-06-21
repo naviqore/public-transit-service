@@ -46,7 +46,7 @@ class RaptorTest {
 
         static Map<String, Connection> getIsoLines(Raptor raptor, Map<String, Integer> sourceStops,
                                                    QueryConfig config) {
-            return raptor.getIsoLines(sourceStops, TimeType.DEPARTURE, config);
+            return raptor.routeIsolines(sourceStops, TimeType.DEPARTURE, config);
         }
 
         static List<Connection> routeEarliestArrival(Raptor raptor, String sourceStopId, String targetStopId,
@@ -72,7 +72,7 @@ class RaptorTest {
 
         static List<Connection> routeEarliestArrival(Raptor raptor, Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStopIds, QueryConfig config) {
-            return raptor.route(sourceStops, targetStopIds, TimeType.DEPARTURE, config);
+            return raptor.getConnections(sourceStops, targetStopIds, TimeType.DEPARTURE, config);
         }
 
         static List<Connection> routeLatestDeparture(Raptor raptor, String sourceStopId, String targetStopId,
@@ -88,7 +88,7 @@ class RaptorTest {
 
         static List<Connection> routeLatestDeparture(Raptor raptor, Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops, QueryConfig config) {
-            return raptor.route(sourceStops, targetStops, TimeType.ARRIVAL, config);
+            return raptor.getConnections(sourceStops, targetStops, TimeType.ARRIVAL, config);
         }
 
     }
@@ -512,18 +512,18 @@ class RaptorTest {
         private static class Helpers {
 
             private static void assertConnection(Connection connection, String sourceStop, String targetStop,
-                                                 int arrivalTime, int numSameStationTransfers, int numWalkTransfers,
+                                                 int arrivalTime, int numSameStopTransfers, int numWalkTransfers,
                                                  int numTrips) {
                 assertEquals(sourceStop, connection.getFromStopId());
                 assertEquals(targetStop, connection.getToStopId());
                 assertTrue(connection.getArrivalTime() <= arrivalTime,
                         "Arrival time should be smaller equal than searched for arrival time");
 
-                assertEquals(numSameStationTransfers, connection.getNumberOfSameStopTransfers(),
+                assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
                         "Number of same station transfers should match");
                 assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
                         "Number of walk transfers should match");
-                assertEquals(numSameStationTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
                         "Number of transfers should match");
 
                 assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");

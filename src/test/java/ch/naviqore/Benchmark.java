@@ -146,7 +146,7 @@ final class Benchmark {
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.route(sourceStops, targetStops, TimeType.DEPARTURE,
+                List<Connection> connections = raptor.getConnections(sourceStops, targetStops, TimeType.DEPARTURE,
                         new QueryConfig());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);

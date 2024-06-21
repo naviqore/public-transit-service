@@ -5,6 +5,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+// TODO remove duplicated step of generating same stop transfers
+
 /**
  * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
  * are correctly added and validated before constructing the Raptor model:
