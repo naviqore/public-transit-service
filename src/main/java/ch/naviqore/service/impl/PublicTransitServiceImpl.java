@@ -176,7 +176,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         if (targetStop != null) {
             targetStops = getAllChildStopsFromStop(map(targetStop));
         } else if (targetLocation != null) {
-            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, 0, config.getMaximumWalkingDuration());
+            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, config.getMaximumWalkingDuration());
         } else {
             throw new IllegalArgumentException("Either targetStop or targetLocation must be provided.");
         }
@@ -227,9 +227,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     public Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
                                                                        int maxWalkDuration, TimeType timeType) {
-        int secondsOfDay = startTime.toLocalTime().toSecondOfDay();
-        Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, secondsOfDay,
-                maxWalkDuration);
+        Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, maxWalkDuration);
         return stopsWithWalkTime.entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
@@ -238,8 +236,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     }
 
-    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int startTimeInSeconds,
-                                                                 int maxWalkDuration) {
+    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
                 spatialStopIndex.rangeSearch(location, config.getWalkingSearchRadius()));
 
@@ -251,7 +248,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         for (ch.naviqore.gtfs.schedule.model.Stop stop : nearestStops) {
             int walkDuration = walkCalculator.calculateWalk(location, stop.getCoordinate()).duration();
             if (walkDuration <= maxWalkDuration) {
-                stopsWithWalkTime.put(stop.getId(), startTimeInSeconds + walkDuration);
+                stopsWithWalkTime.put(stop.getId(), walkDuration);
             }
         }
         return stopsWithWalkTime;
@@ -259,11 +256,11 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     public Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
         List<String> stopIds = getAllStopIdsForStop(stop);
-        Map<String, LocalDateTime> stopsWithWalkTime = new HashMap<>();
+        Map<String, LocalDateTime> stopWithDateTime = new HashMap<>();
         for (String stopId : stopIds) {
-            stopsWithWalkTime.put(stopId, time);
+            stopWithDateTime.put(stopId, time);
         }
-        return stopsWithWalkTime;
+        return stopWithDateTime;
     }
 
     public Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
