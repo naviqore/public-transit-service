@@ -51,56 +51,11 @@ public class Raptor {
         return new RaptorBuilder(sameStopTransferTime);
     }
 
-    private static int getBestTimeForStop(int stopIdx, List<Label[]> bestLabelsPerRound, TimeType timeType) {
-        int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
-        int bestTime = timeFactor * INFINITY;
-        for (Label[] labels : bestLabelsPerRound) {
-            if (labels[stopIdx] == null) {
-                continue;
-            }
-            Label currentLabel = labels[stopIdx];
-            if (timeType == TimeType.DEPARTURE) {
-                if (currentLabel.targetTime < bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
-            } else {
-                if (currentLabel.targetTime > bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
-            }
-        }
-
-        return bestTime;
-    }
-
     private static Map<String, Integer> mapLocalDateTimeToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
         return sourceStops.entrySet()
                 .stream()
                 .map(e -> Map.entry(e.getKey(), e.getValue().toLocalTime().toSecondOfDay()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    /**
-     * The cut-off time is the latest allowed arrival / the earliest allowed departure time, if a stop is reached
-     * after/before (depending on timeType), the stop is no longer considered for further expansion.
-     *
-     * @param sourceTimes the source times to calculate the cut-off time from.
-     * @param config      the query configuration.
-     * @param timeType    the time type to calculate the cut-off time for.
-     * @return the cut-off time.
-     */
-    private static int getCutOffTime(int[] sourceTimes, QueryConfig config, TimeType timeType) {
-        int cutOffTime;
-        if (config.getMaximumTravelTime() == INFINITY) {
-            cutOffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
-        } else if (timeType == TimeType.DEPARTURE) {
-            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
-            cutOffTime = earliestDeparture + config.getMaximumTravelTime();
-        } else {
-            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
-            cutOffTime = latestArrival - config.getMaximumTravelTime();
-        }
-        return cutOffTime;
     }
 
     private static void checkNonNullStops(Map<String, ?> stops, String labelSource) {
@@ -123,6 +78,7 @@ public class Raptor {
         checkNonNullStops(arrivalStops, "Arrival");
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
+
         return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
     }
 
@@ -228,51 +184,24 @@ public class Raptor {
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
     private List<Label[]> spawnFromStop(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
                                         int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
-        // initialization
-        final int[] bestTimeForStops = new int[stops.length];
-        Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
 
-        if (sourceStopIndices.length != sourceTimes.length) {
-            throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
-        }
+        Objective objective = new Objective(stopContext, sourceStopIndices, targetStopIndices, sourceTimes,
+                walkingDurationsToTarget, config, timeType);
 
-        if (targetStopIndices.length != walkingDurationsToTarget.length) {
-            throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
-        }
-
-        final int cutOffTime = getCutOffTime(sourceTimes, config, timeType);
-
-        int[] targetStops = new int[targetStopIndices.length * 2];
-        for (int i = 0; i < targetStops.length; i += 2) {
-            int index = (int) Math.ceil(i / 2.0);
-            targetStops[i] = targetStopIndices[index];
-            targetStops[i + 1] = walkingDurationsToTarget[index];
-        }
-
-        final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-        bestLabelsPerRound.add(new Label[stops.length]);
-        Set<Integer> markedStops = new HashSet<>();
-
-        for (int i = 0; i < sourceStopIndices.length; i++) {
-            bestTimeForStops[sourceStopIndices[i]] = sourceTimes[i];
-            bestLabelsPerRound.getFirst()[sourceStopIndices[i]] = new Label(0, sourceTimes[i], LabelType.INITIAL,
-                    NO_INDEX, NO_INDEX, sourceStopIndices[i], null);
-            markedStops.add(sourceStopIndices[i]);
-        }
+        Set<Integer> markedStops = objective.initialize();
 
         // initialize footpath relaxer for this query
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, routeTraversal, bestLabelsPerRound,
-                bestTimeForStops, timeType, config);
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, routeTraversal,
+                objective.getBestLabelsPerRound(), objective.getBestTimeForStops(), timeType, config);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         markedStops.addAll(footpathRelaxer.initialRelax(sourceStopIndices));
 
-        int bestTime = getBestTime(targetStops, bestLabelsPerRound, cutOffTime, timeType);
-        markedStops = removeSubOptimalLabelsForRound(bestTime, 0, timeType, bestLabelsPerRound, markedStops);
+        markedStops = objective.removeSubOptimalLabelsForRound(0, markedStops);
 
         // initialize route scanner with best times
-        RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, bestLabelsPerRound, bestTimeForStops,
-                timeType, config);
+        RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, objective.getBestLabelsPerRound(),
+                objective.getBestTimeForStops(), timeType, config);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -284,72 +213,11 @@ public class Raptor {
             markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
 
             // prepare next round
-            bestTime = getBestTime(targetStops, bestLabelsPerRound, cutOffTime, timeType);
-            markedStops = removeSubOptimalLabelsForRound(bestTime, round, timeType, bestLabelsPerRound,
-                    markedStopsNext);
+            markedStops = objective.removeSubOptimalLabelsForRound(round, markedStopsNext);
             round++;
         }
 
-        return bestLabelsPerRound;
-    }
-
-    /**
-     * Nullify labels that are suboptimal for the current round. This method checks if the label time is worse than the
-     * optimal time mark and removes the mark for the next round and nullifies the label in this case.
-     *
-     * @param bestTime           - The best time for the current round.
-     * @param round              - The round to remove suboptimal labels for.
-     * @param timeType           - The time type to check for.
-     * @param bestLabelsPerRound - The best time labels per round.
-     * @param markedStops        - The marked stops to check for suboptimal labels.
-     */
-    private Set<Integer> removeSubOptimalLabelsForRound(int bestTime, int round, TimeType timeType,
-                                                        List<Label[]> bestLabelsPerRound, Set<Integer> markedStops) {
-        if (bestTime == INFINITY || bestTime == -INFINITY) {
-            return markedStops;
-        }
-        Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
-        Set<Integer> markedStopsClean = new HashSet<>();
-        for (int stopIdx : markedStops) {
-            if (bestLabelsThisRound[stopIdx] != null) {
-                if (timeType == TimeType.DEPARTURE && bestLabelsThisRound[stopIdx].targetTime > bestTime) {
-                    bestLabelsThisRound[stopIdx] = null;
-                } else if (timeType == TimeType.ARRIVAL && bestLabelsThisRound[stopIdx].targetTime < bestTime) {
-                    bestLabelsThisRound[stopIdx] = null;
-                } else {
-                    markedStopsClean.add(stopIdx);
-                }
-            }
-        }
-        return markedStopsClean;
-    }
-
-    /**
-     * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
-     * is departure, and the latest arrival time for each stop if the time type is arrival.
-     *
-     * @param targetStops               - The target stops to reach.
-     * @param bestLabelForStopsPerRound - The collection of all best labels for each stop in each round.
-     * @param cutOffValue               - The latest accepted target time.
-     */
-    private int getBestTime(int[] targetStops, List<Label[]> bestLabelForStopsPerRound, int cutOffValue,
-                            TimeType timeType) {
-        int bestTime = cutOffValue;
-        for (int i = 0; i < targetStops.length; i += 2) {
-            int targetStopIdx = targetStops[i];
-            int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = getBestTimeForStop(targetStopIdx, bestLabelForStopsPerRound, timeType);
-
-            if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
-                bestTimeForStop += walkDurationToTarget;
-                bestTime = Math.min(bestTime, bestTimeForStop);
-            } else if (timeType == TimeType.ARRIVAL && bestTimeForStop != -INFINITY) {
-                bestTimeForStop -= walkDurationToTarget;
-                bestTime = Math.max(bestTime, bestTimeForStop);
-            }
-        }
-
-        return bestTime;
+        return objective.getBestLabelsPerRound();
     }
 
     private List<Connection> reconstructParetoOptimalSolutions(List<Label[]> bestLabelsPerRound,
