@@ -32,7 +32,6 @@ class Objective {
     /**
      * The global best time per stop.
      */
-    @Getter
     private final int[] bestTimeForStops;
 
     /**
@@ -102,7 +101,7 @@ class Objective {
     }
 
     /**
-     * Adds a new round layer to the best labels per round list.
+     * Adds a new round with empty labels.
      */
     void addNewRound() {
         bestLabelsPerRound.add(new Label[stops.length]);
@@ -127,15 +126,19 @@ class Objective {
         }
 
         // set empty labels for first round
-        this.bestLabelsPerRound.add(new Label[stops.length]);
+        addNewRound();
 
-        // set initial labels and mark source stops
+        // set initial labels, best time and mark source stops
         Set<Integer> markedStops = new HashSet<>();
         for (int i = 0; i < sourceStopIndices.length; i++) {
-            bestTimeForStops[sourceStopIndices[i]] = sourceTimes[i];
-            bestLabelsPerRound.getFirst()[sourceStopIndices[i]] = new Label(0, sourceTimes[i], LabelType.INITIAL,
-                    NO_INDEX, NO_INDEX, sourceStopIndices[i], null);
-            markedStops.add(sourceStopIndices[i]);
+            int currentStopIdx = sourceStopIndices[i];
+            int targetTime = sourceTimes[i];
+
+            Label label = new Label(0, targetTime, LabelType.INITIAL, NO_INDEX, NO_INDEX, currentStopIdx, null);
+            setLabel(0, currentStopIdx, label);
+            setBestTime(currentStopIdx, targetTime);
+
+            markedStops.add(currentStopIdx);
         }
 
         return markedStops;
@@ -159,9 +162,9 @@ class Objective {
         Set<Integer> markedStopsClean = new HashSet<>();
         for (int stopIdx : markedStops) {
             if (bestLabelsThisRound[stopIdx] != null) {
-                if (timeType == TimeType.DEPARTURE && bestLabelsThisRound[stopIdx].targetTime() > bestTime) {
+                if (timeType == TimeType.DEPARTURE && bestLabelsThisRound[stopIdx].targetTime > bestTime) {
                     bestLabelsThisRound[stopIdx] = null;
-                } else if (timeType == TimeType.ARRIVAL && bestLabelsThisRound[stopIdx].targetTime() < bestTime) {
+                } else if (timeType == TimeType.ARRIVAL && bestLabelsThisRound[stopIdx].targetTime < bestTime) {
                     bestLabelsThisRound[stopIdx] = null;
                 } else {
                     markedStopsClean.add(stopIdx);
@@ -219,8 +222,7 @@ class Objective {
     }
 
     private int getBestTimeForStop(int stopIdx) {
-        int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
-        int bestTime = timeFactor * INFINITY;
+        int bestTime = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
 
         for (Label[] labels : bestLabelsPerRound) {
             if (labels[stopIdx] == null) {
@@ -229,12 +231,12 @@ class Objective {
 
             Label currentLabel = labels[stopIdx];
             if (timeType == TimeType.DEPARTURE) {
-                if (currentLabel.targetTime() < bestTime) {
-                    bestTime = currentLabel.targetTime();
+                if (currentLabel.targetTime < bestTime) {
+                    bestTime = currentLabel.targetTime;
                 }
             } else {
-                if (currentLabel.targetTime() > bestTime) {
-                    bestTime = currentLabel.targetTime();
+                if (currentLabel.targetTime > bestTime) {
+                    bestTime = currentLabel.targetTime;
                 }
             }
         }
