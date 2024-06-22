@@ -21,8 +21,7 @@ class RouteScanner {
     private final Route[] routes;
     private final RouteStop[] routeStops;
 
-    private final List<Raptor.Label[]> bestLabelsPerRound;
-    private final int[] bestTimeForStops;
+    private final Objective objective;
 
     /**
      * the minimum transfer duration time, since this is intended as rest period it is added to the walk time.
@@ -31,15 +30,11 @@ class RouteScanner {
     private final TimeType timeType;
 
     /**
-     * @param stopContext        the stop context data structure.
-     * @param routeTraversal     the route traversal data structure.
-     * @param bestLabelsPerRound the prepared layer from raptor wo keep track of the best labels per round.
-     * @param bestTimeForStops   the global best time per stop.
-     * @param timeType           the type of time to check for (arrival or departure).
-     * @param config             the query configuration.
+     * @param stopContext    the stop context data structure.
+     * @param routeTraversal the route traversal data structure.
+     * @param objective      the best time per stop and label per stop and round.
      */
-    RouteScanner(StopContext stopContext, RouteTraversal routeTraversal, List<Raptor.Label[]> bestLabelsPerRound,
-                 int[] bestTimeForStops, TimeType timeType, QueryConfig config) {
+    RouteScanner(StopContext stopContext, RouteTraversal routeTraversal, Objective objective) {
         // constant data structures
         this.stops = stopContext.stops();
         this.stopRoutes = stopContext.stopRoutes();
@@ -47,11 +42,10 @@ class RouteScanner {
         this.routes = routeTraversal.routes();
         this.routeStops = routeTraversal.routeStops();
         // variable labels and best times (note: will vary also outside of scanner, due to footpath relaxation)
-        this.bestLabelsPerRound = bestLabelsPerRound;
-        this.bestTimeForStops = bestTimeForStops;
+        this.objective = objective;
         // constant configuration of scanner
-        this.minTransferDuration = config.getMinimumTransferDuration();
-        this.timeType = timeType;
+        this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();
+        this.timeType = objective.getTimeType();
     }
 
     /**
@@ -65,6 +59,7 @@ class RouteScanner {
         log.debug("Scanning routes for round {}", round);
         Set<Integer> markedStopsNext = new HashSet<>();
 
+        List<Raptor.Label[]> bestLabelsPerRound = objective.getBestLabelsPerRound();
         Raptor.Label[] bestLabelsLastRound = bestLabelsPerRound.get(round - 1);
         bestLabelsPerRound.add(new Raptor.Label[stops.length]);
         Raptor.Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
@@ -74,8 +69,7 @@ class RouteScanner {
 
         // scan selected routes
         for (int currentRouteIdx : routesToScan) {
-            scanRoute(currentRouteIdx, bestTimeForStops, bestLabelsLastRound, bestLabelsThisRound, markedStops,
-                    markedStopsNext);
+            scanRoute(currentRouteIdx, bestLabelsLastRound, bestLabelsThisRound, markedStops, markedStopsNext);
         }
 
         return markedStopsNext;
@@ -104,14 +98,13 @@ class RouteScanner {
      * Scan a route in time type applicable direction to find the best times for each stop on route for given round.
      *
      * @param currentRouteIdx     the index of the current route.
-     * @param bestTimes           the best time for each stop.
      * @param bestLabelsLastRound the best label for each stop in the last round.
      * @param bestLabelsThisRound the best label for each stop in the current round.
      * @param markedStops         the set of marked stops from the previous round.
      * @param markedStopsNext     the set of marked stops for the next round.
      */
-    private void scanRoute(int currentRouteIdx, int[] bestTimes, Raptor.Label[] bestLabelsLastRound,
-                           Raptor.Label[] bestLabelsThisRound, Set<Integer> markedStops, Set<Integer> markedStopsNext) {
+    private void scanRoute(int currentRouteIdx, Raptor.Label[] bestLabelsLastRound, Raptor.Label[] bestLabelsThisRound,
+                           Set<Integer> markedStops, Set<Integer> markedStopsNext) {
 
         boolean forward = timeType == TimeType.DEPARTURE;
         Route currentRoute = routes[currentRouteIdx];
@@ -129,7 +122,7 @@ class RouteScanner {
         for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += step) {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
-            int bestStopTime = bestTimes[stopIdx];
+            int bestStopTime = objective.getBestTime(stopIdx);
 
             // find first marked stop in route
             if (activeTrip == null) {
@@ -139,8 +132,8 @@ class RouteScanner {
             } else {
                 // in this case we are on a trip and need to check if time has improved
                 StopTime stopTimeObj = stopTimes[firstStopTimeIdx + activeTrip.tripOffset * numberOfStops + stopOffset];
-                if (!checkIfTripIsPossibleAndUpdateMarks(stopTimeObj, activeTrip, stop, bestStopTime, bestTimes,
-                        stopIdx, bestLabelsThisRound, bestLabelsLastRound, markedStopsNext, currentRouteIdx)) {
+                if (!checkIfTripIsPossibleAndUpdateMarks(stopTimeObj, activeTrip, stop, bestStopTime, stopIdx,
+                        bestLabelsThisRound, bestLabelsLastRound, markedStopsNext, currentRouteIdx)) {
                     continue;
                 }
             }
@@ -203,7 +196,6 @@ class RouteScanner {
      * @param activeTrip          the active trip to check for an earlier or later trip.
      * @param stop                the stop to check for an earlier or later trip.
      * @param bestStopTime        the earliest or latest time at the stop based on the TimeType.
-     * @param bestTimes           the earliest or latest time for each stop based on the TimeType.
      * @param stopIdx             the index of the stop to check for an earlier or later trip.
      * @param bestLabelsThisRound the best label for each stop in the current round based on the TimeType.
      * @param bestLabelsLastRound the best label for each stop in the last round based on the TimeType.
@@ -212,7 +204,7 @@ class RouteScanner {
      * @return true if an earlier or later trip is possible, false otherwise.
      */
     private boolean checkIfTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
-                                                        int bestStopTime, int[] bestTimes, int stopIdx,
+                                                        int bestStopTime, int stopIdx,
                                                         Raptor.Label[] bestLabelsThisRound,
                                                         Raptor.Label[] bestLabelsLastRound,
                                                         Set<Integer> markedStopsNext, int currentRouteIdx) {
@@ -221,7 +213,8 @@ class RouteScanner {
 
         if (isImproved) {
             log.debug("Stop {} was improved", stop.id());
-            bestTimes[stopIdx] = (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure();
+            objective.setBestTime(stopIdx,
+                    (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure());
             bestLabelsThisRound[stopIdx] = new Raptor.Label(activeTrip.entryTime(),
                     (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure(),
                     Raptor.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);

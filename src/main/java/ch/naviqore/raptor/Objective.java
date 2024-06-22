@@ -21,7 +21,9 @@ class Objective {
     private final int[] sourceTimes;
     private final int[] walkingDurationsToTarget;
 
+    @Getter
     private final QueryConfig config;
+    @Getter
     private final TimeType timeType;
 
     private final int[] targetStops;
@@ -39,6 +41,16 @@ class Objective {
     @Getter
     private final List<Raptor.Label[]> bestLabelsPerRound;
 
+    /**
+     * @param stopContext
+     * @param sourceStopIndices
+     * @param targetStopIndices
+     * @param sourceTimes
+     * @param walkingDurationsToTarget
+     * @param timeType                 the type of time to check for (arrival or departure), defines if stop is
+     *                                 considered as arrival or departure stop.
+     * @param config                   the query configuration.
+     */
     Objective(StopContext stopContext, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
               int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
 
@@ -62,6 +74,22 @@ class Objective {
 
         this.targetStops = new int[targetStopIndices.length * 2];
         this.cutOffTime = determineCutOffTime();
+    }
+
+    Raptor.Label getLabel(int round, int stopIdx) {
+        return bestLabelsPerRound.get(round)[stopIdx];
+    }
+
+    void setLabel(int round, int stopIdx, Raptor.Label label) {
+        bestLabelsPerRound.get(round)[stopIdx] = label;
+    }
+
+    int getBestTime(int stopIdx) {
+        return bestTimeForStops[stopIdx];
+    }
+
+    void setBestTime(int stopIdx, int time) {
+        bestTimeForStops[stopIdx] = time;
     }
 
     /**
@@ -105,7 +133,7 @@ class Objective {
      * @param markedStops the marked stops to check for suboptimal labels.
      */
     Set<Integer> removeSubOptimalLabelsForRound(int round, Set<Integer> markedStops) {
-        int bestTime = getBestTime();
+        int bestTime = getBestTimeForAllTargetStops();
 
         if (bestTime == INFINITY || bestTime == -INFINITY) {
             return markedStops;
@@ -154,7 +182,7 @@ class Objective {
      * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
      * is departure, and the latest arrival time for each stop if the time type is arrival.
      */
-    private int getBestTime() {
+    private int getBestTimeForAllTargetStops() {
         int bestTime = cutOffTime;
 
         for (int i = 0; i < targetStops.length; i += 2) {

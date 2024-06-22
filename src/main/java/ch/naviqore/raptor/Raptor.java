@@ -184,24 +184,16 @@ public class Raptor {
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
     private List<Label[]> spawnFromStop(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
                                         int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
-
+        // set up new query objective, footpath relaxer and route scanner
         Objective objective = new Objective(stopContext, sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
-
-        Set<Integer> markedStops = objective.initialize();
-
-        // initialize footpath relaxer for this query
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, routeTraversal,
-                objective.getBestLabelsPerRound(), objective.getBestTimeForStops(), timeType, config);
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, objective);
+        RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, objective);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
+        Set<Integer> markedStops = objective.initialize();
         markedStops.addAll(footpathRelaxer.initialRelax(sourceStopIndices));
-
         markedStops = objective.removeSubOptimalLabelsForRound(0, markedStops);
-
-        // initialize route scanner with best times
-        RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, objective.getBestLabelsPerRound(),
-                objective.getBestTimeForStops(), timeType, config);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;

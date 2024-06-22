@@ -4,7 +4,6 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static ch.naviqore.raptor.Raptor.NO_INDEX;
@@ -14,14 +13,8 @@ public class FootpathRelaxer {
 
     private final Transfer[] transfers;
     private final Stop[] stops;
-    private final int[] stopRoutes;
 
-    private final StopTime[] stopTimes;
-    private final Route[] routes;
-    private final RouteStop[] routeStops;
-
-    private final List<Raptor.Label[]> bestLabelsPerRound;
-    private final int[] bestTimeForStops;
+    private final Objective objective;
 
     /**
      * The minimum transfer duration time, since this is intended as rest period (e.g. coffee break) it is added to the
@@ -36,30 +29,19 @@ public class FootpathRelaxer {
     private final TimeType timeType;
 
     /**
-     * @param stopContext        the stop context data structure.
-     * @param routeTraversal     the route traversal data structure.
-     * @param bestLabelsPerRound the prepared layer from raptor wo keep track of the best labels per round.
-     * @param bestTimeForStops   the global best time per stop.
-     * @param timeType           the type of time to check for (arrival or departure), defines if stop is considered as
-     *                           arrival or departure stop.
-     * @param config             the query configuration.
+     * @param stopContext the stop context data structure.
+     * @param objective   the best time per stop and label per stop and round.
      */
-    FootpathRelaxer(StopContext stopContext, RouteTraversal routeTraversal, List<Raptor.Label[]> bestLabelsPerRound,
-                    int[] bestTimeForStops, TimeType timeType, QueryConfig config) {
+    FootpathRelaxer(StopContext stopContext, Objective objective) {
         // constant data structures
         this.transfers = stopContext.transfers();
         this.stops = stopContext.stops();
-        this.stopRoutes = stopContext.stopRoutes();
-        this.stopTimes = routeTraversal.stopTimes();
-        this.routes = routeTraversal.routes();
-        this.routeStops = routeTraversal.routeStops();
-        // variable labels and best times (note: will vary also outside of relaxer, due to route scanning)
-        this.bestLabelsPerRound = bestLabelsPerRound;
-        this.bestTimeForStops = bestTimeForStops;
+        // note: objective will vary also outside of relaxer, due to route scanning
+        this.objective = objective;
         // constant configuration of scanner
-        this.minTransferDuration = config.getMinimumTransferDuration();
-        this.maxWalkingDuration = config.getMaximumWalkingDuration();
-        this.timeType = timeType;
+        this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();
+        this.maxWalkingDuration = objective.getConfig().getMaximumWalkingDuration();
+        this.timeType = objective.getTimeType();
     }
 
     /**
@@ -113,7 +95,7 @@ public class FootpathRelaxer {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        Raptor.Label previousLabel = bestLabelsPerRound.get(round)[stopIdx];
+        Raptor.Label previousLabel = objective.getLabel(round, stopIdx);
 
         // do not relax footpath from stop that was only reached by footpath in the same round
         if (previousLabel == null || previousLabel.type() == Raptor.LabelType.TRANSFER) {
@@ -140,17 +122,19 @@ public class FootpathRelaxer {
             int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= bestTimeForStops[transfer.targetStopIdx()] * timeDirection) {
+            if (comparableTargetTime * timeDirection >= objective.getBestTime(
+                    transfer.targetStopIdx()) * timeDirection) {
                 continue;
             }
 
             log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
             // update best times with comparable target time
-            bestTimeForStops[transfer.targetStopIdx()] = comparableTargetTime;
+            objective.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
-            bestLabelsPerRound.get(round)[transfer.targetStopIdx()] = new Raptor.Label(sourceTime, targetTime,
-                    Raptor.LabelType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
-                    bestLabelsPerRound.get(round)[stopIdx]);
+            Raptor.Label label = new Raptor.Label(sourceTime, targetTime, Raptor.LabelType.TRANSFER, i, NO_INDEX,
+                    transfer.targetStopIdx(), objective.getLabel(round, stopIdx));
+            objective.setLabel(round, transfer.targetStopIdx(), label);
+            // mark stop as improved
             markedStops.add(transfer.targetStopIdx());
         }
     }
