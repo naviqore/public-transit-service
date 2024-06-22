@@ -40,7 +40,7 @@ class RouteScanner {
         this.stopTimes = raptor.getRouteTraversal().stopTimes();
         this.routes = raptor.getRouteTraversal().routes();
         this.routeStops = raptor.getRouteTraversal().routeStops();
-        // variable labels and best times (note: will vary also outside of scanner, due to footpath relaxation)
+        // note: objective will change also outside of scanner, due to footpath relaxation
         this.objective = objective;
         // constant configuration of scanner
         this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();

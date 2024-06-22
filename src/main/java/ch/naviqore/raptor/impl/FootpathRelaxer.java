@@ -37,9 +37,9 @@ class FootpathRelaxer {
         // constant data structures
         this.transfers = raptor.getStopContext().transfers();
         this.stops = raptor.getStopContext().stops();
-        // note: objective will vary also outside of relaxer, due to route scanning
+        // note: objective will change also outside of relaxer, due to route scanning
         this.objective = objective;
-        // constant configuration of scanner
+        // constant configuration of relaxer
         this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();
         this.maxWalkingDuration = objective.getConfig().getMaximumWalkingDuration();
         this.timeType = objective.getTimeType();
