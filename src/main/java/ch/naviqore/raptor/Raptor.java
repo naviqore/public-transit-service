@@ -1,7 +1,6 @@
 package ch.naviqore.raptor;
 
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
@@ -75,12 +74,11 @@ public class Raptor {
         return bestTime;
     }
 
-    private static @NotNull Map<String, Integer> mapLocalDateToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
+    private static Map<String, Integer> mapLocalDateTimeToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
         return sourceStops.entrySet()
                 .stream()
                 .map(e -> Map.entry(e.getKey(), e.getValue().toLocalTime().toSecondOfDay()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
     }
 
     /**
@@ -104,6 +102,12 @@ public class Raptor {
             cutOffTime = latestArrival - config.getMaximumTravelTime();
         }
         return cutOffTime;
+    }
+
+    private static void checkNonNullStops(Map<String, ?> stops, String labelSource) {
+        if (stops == null) {
+            throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
+        }
     }
 
     /**
@@ -154,7 +158,7 @@ public class Raptor {
                                                  QueryConfig config) {
         checkNonNullStops(sourceStops, "Source");
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
-                mapLocalDateToSecondsOfDay(sourceStops));
+                mapLocalDateTimeToSecondsOfDay(sourceStops));
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
@@ -186,12 +190,6 @@ public class Raptor {
         return isolines;
     }
 
-    private void checkNonNullStops(Map<String, ?> stops, String labelSource) {
-        if (stops == null) {
-            throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
-        }
-    }
-
     /**
      * This is the main method to route from source to target stops. The method will spawn from the source stops and
      * expand footpaths and routes until the target stops are reached. The method will return the pareto-optimal
@@ -210,7 +208,7 @@ public class Raptor {
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
 
-        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateToSecondsOfDay(sourceStops);
+        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateTimeToSecondsOfDay(sourceStops);
 
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
@@ -266,10 +264,12 @@ public class Raptor {
             markedStops.add(sourceStopIndices[i]);
         }
 
-        for (int sourceStopIdx : sourceStopIndices) {
-            expandFootpathsFromStop(sourceStopIdx, bestTimeForStops, bestLabelsPerRound, markedStops, 0,
-                    maxWalkingDuration, minTransferDuration, timeType);
-        }
+        // initialize footpath relaxer for this query
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, routeTraversal, bestLabelsPerRound,
+                bestTimeForStops, timeType, config);
+
+        // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
+        markedStops.addAll(footpathRelaxer.relax(0, sourceStopIndices));
 
         int bestTime = getBestTime(targetStops, bestLabelsPerRound, cutOffTime, timeType);
         markedStops = removeSubOptimalLabelsForRound(bestTime, 0, timeType, bestLabelsPerRound, markedStops);
@@ -281,16 +281,11 @@ public class Raptor {
         // continue with further rounds as long as there are new marked stops
         int round = 1;
         while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
+            // scan all routs and mark stops that have improved
             Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
 
-            // relax footpaths for all markedStops
-            // temp variable to add any new stops to markedStopsNext
-            Set<Integer> newStops = new HashSet<>();
-            for (int stopIdx : markedStopsNext) {
-                expandFootpathsFromStop(stopIdx, bestTimeForStops, bestLabelsPerRound, newStops, round,
-                        maxWalkingDuration, minTransferDuration, timeType);
-            }
-            markedStopsNext.addAll(newStops);
+            // relax footpaths for all newly marked stops
+            markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
 
             // prepare next round
             bestTime = getBestTime(targetStops, bestLabelsPerRound, cutOffTime, timeType);
@@ -597,74 +592,6 @@ public class Raptor {
             return null;
         }
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
-    }
-
-    /**
-     * Expands all transfers between stops from a given stop. If a transfer improves the target time at the target stop,
-     * then the target stop is marked for the next round. And the improved target time is stored in the bestTimes array
-     * and the bestLabelPerRound list (including the new transfer label).
-     *
-     * @param stopIdx             the index of the stop to expand transfers from.
-     * @param bestTimes           an array with the overall best time for each stop, indexed by stop index. Note: The
-     *                            best time is reduced by the same stop transfer time for transfers, to make them
-     *                            comparable with route arrivals.
-     * @param bestLabelsPerRound  a list of arrays with the best label for each stop per round, indexed by round.
-     * @param markedStops         a set of stop indices that have been marked for scanning in the next round.
-     * @param round               the current round to relax footpaths for.
-     * @param maxWalkingDuration  the maximum walking duration to reach the target stop. If the walking duration exceeds
-     *                            this value, the target stop is not reached.
-     * @param minTransferDuration the minimum transfer duration time, since this is intended as rest period (e.g. coffee
-     *                            break) it is added to the walk time.
-     * @param timeType            the type of time to check for (arrival or departure), defines if stop is considered as
-     *                            arrival or departure stop.
-     */
-    private void expandFootpathsFromStop(int stopIdx, int[] bestTimes, List<Label[]> bestLabelsPerRound,
-                                         Set<Integer> markedStops, int round, int maxWalkingDuration,
-                                         int minTransferDuration, TimeType timeType) {
-        // if stop has no transfers, then no footpaths can be expanded
-        if (stops[stopIdx].numberOfTransfers() == 0) {
-            return;
-        }
-        Stop sourceStop = stops[stopIdx];
-        Label previousLabel = bestLabelsPerRound.get(round)[stopIdx];
-
-        // do not relax footpath from stop that was only reached by footpath in the same round
-        if (previousLabel == null || previousLabel.type == LabelType.TRANSFER) {
-            return;
-        }
-
-        int sourceTime = previousLabel.targetTime;
-        int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
-
-        for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
-            Transfer transfer = transfers[i];
-            Stop targetStop = stops[transfer.targetStopIdx()];
-            int duration = transfer.duration();
-            if (maxWalkingDuration < duration) {
-                continue;
-            }
-
-            // calculate the target time for the transfer in the given time direction
-            int targetTime = sourceTime + timeDirection * (transfer.duration() + minTransferDuration);
-
-            // subtract the same stop transfer time from the walk transfer target time. This accounts for the case when
-            // the walk transfer would allow to catch an earlier trip, since the route target time does not yet include
-            // the same stop transfer time.
-            int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
-
-            // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= bestTimes[transfer.targetStopIdx()] * timeDirection) {
-                continue;
-            }
-
-            log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
-            // update best times with comparable target time
-            bestTimes[transfer.targetStopIdx()] = comparableTargetTime;
-            // add real target time to label
-            bestLabelsPerRound.get(round)[transfer.targetStopIdx()] = new Label(sourceTime, targetTime,
-                    LabelType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(), bestLabelsPerRound.get(round)[stopIdx]);
-            markedStops.add(transfer.targetStopIdx());
-        }
     }
 
     /**
