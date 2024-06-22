@@ -55,16 +55,11 @@ class RouteScanner {
      * @return the marked stops for the next round.
      */
     Set<Integer> scan(int round, Set<Integer> markedStops) {
-        log.debug("Scanning routes for round {}", round);
-        Set<Integer> markedStopsNext = new HashSet<>();
-
-        // TODO: Move to main loop in Raptor
-        objective.addNewRound();
-
         Set<Integer> routesToScan = getRoutesToScan(markedStops);
-        log.debug("Routes to scan: {}", routesToScan);
+        log.debug("Scanning routes for round {} ({})", round, routesToScan);
 
-        // scan selected routes
+        // scan selected routes and mark stops with improved times
+        Set<Integer> markedStopsNext = new HashSet<>();
         for (int currentRouteIdx : routesToScan) {
             scanRoute(currentRouteIdx, round, markedStops, markedStopsNext);
         }
