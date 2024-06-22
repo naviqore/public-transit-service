@@ -243,9 +243,6 @@ public class Raptor {
 
         final int cutOffTime = getCutOffTime(sourceTimes, config, timeType);
 
-        int maxWalkingDuration = config.getMaximumWalkingDuration();
-        int minTransferDuration = config.getMinimumTransferDuration();
-
         int[] targetStops = new int[targetStopIndices.length * 2];
         for (int i = 0; i < targetStops.length; i += 2) {
             int index = (int) Math.ceil(i / 2.0);
@@ -276,7 +273,7 @@ public class Raptor {
 
         // initialize route scanner with best times
         RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, bestLabelsPerRound, bestTimeForStops,
-                minTransferDuration, timeType);
+                timeType, config);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;

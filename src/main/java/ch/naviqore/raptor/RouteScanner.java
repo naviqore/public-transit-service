@@ -23,20 +23,23 @@ class RouteScanner {
 
     private final List<Raptor.Label[]> bestLabelsPerRound;
     private final int[] bestTimeForStops;
+
+    /**
+     * the minimum transfer duration time, since this is intended as rest period it is added to the walk time.
+     */
     private final int minTransferDuration;
     private final TimeType timeType;
 
     /**
-     * @param stopContext         the stop context data structure.
-     * @param routeTraversal      the route traversal data structure.
-     * @param bestLabelsPerRound  the prepared layer from raptor wo keep track of the best labels per round.
-     * @param bestTimeForStops    the global best time per stop.
-     * @param minTransferDuration the minimum transfer duration time, since this is intended as rest period it is added
-     *                            to the walk time.
-     * @param timeType            the type of time to check for (arrival or departure).
+     * @param stopContext        the stop context data structure.
+     * @param routeTraversal     the route traversal data structure.
+     * @param bestLabelsPerRound the prepared layer from raptor wo keep track of the best labels per round.
+     * @param bestTimeForStops   the global best time per stop.
+     * @param timeType           the type of time to check for (arrival or departure).
+     * @param config             the query configuration.
      */
     RouteScanner(StopContext stopContext, RouteTraversal routeTraversal, List<Raptor.Label[]> bestLabelsPerRound,
-                 int[] bestTimeForStops, int minTransferDuration, TimeType timeType) {
+                 int[] bestTimeForStops, TimeType timeType, QueryConfig config) {
         // constant data structures
         this.stops = stopContext.stops();
         this.stopRoutes = stopContext.stopRoutes();
@@ -47,7 +50,7 @@ class RouteScanner {
         this.bestLabelsPerRound = bestLabelsPerRound;
         this.bestTimeForStops = bestTimeForStops;
         // constant configuration of scanner
-        this.minTransferDuration = minTransferDuration;
+        this.minTransferDuration = config.getMinimumTransferDuration();
         this.timeType = timeType;
     }
 
