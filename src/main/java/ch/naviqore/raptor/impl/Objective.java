@@ -16,8 +16,8 @@ class Objective {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
-    private final Stop[] stops;
 
+    private final int stopSize;
     private final int[] sourceStopIndices;
     private final int[] targetStopIndices;
     private final int[] sourceTimes;
@@ -43,7 +43,7 @@ class Objective {
     private final List<Label[]> bestLabelsPerRound;
 
     /**
-     * @param stopContext              the stop context.
+     * @param stopSize                 the number of stops in the stop context.
      * @param sourceStopIndices        the indices of the source stops.
      * @param targetStopIndices        the indices of the target stops.
      * @param sourceTimes              the start times at the source stops.
@@ -52,7 +52,7 @@ class Objective {
      *                                 considered as arrival or departure stop.
      * @param config                   the query configuration.
      */
-    Objective(StopContext stopContext, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+    Objective(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
               int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
@@ -63,14 +63,14 @@ class Objective {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
-        this.stops = stopContext.stops();
+        this.stopSize = stopSize;
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
         this.walkingDurationsToTarget = walkingDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
-        this.bestTimeForStops = new int[stops.length];
+        this.bestTimeForStops = new int[stopSize];
         this.bestLabelsPerRound = new ArrayList<>();
 
         this.targetStops = new int[targetStopIndices.length * 2];
@@ -106,7 +106,7 @@ class Objective {
      * Adds a new round with empty labels.
      */
     void addNewRound() {
-        bestLabelsPerRound.add(new Label[stops.length]);
+        bestLabelsPerRound.add(new Label[stopSize]);
     }
 
     /**

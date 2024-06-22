@@ -124,8 +124,8 @@ class Raptor implements RaptorAlgorithm {
                                                   int[] walkingDurationsToTarget, QueryConfig config,
                                                   TimeType timeType) {
         // set up new query objective, footpath relaxer and route scanner
-        Objective objective = new Objective(stopContext, sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType);
+        Objective objective = new Objective(stopContext.stops().length, sourceStopIndices, targetStopIndices,
+                sourceTimes, walkingDurationsToTarget, config, timeType);
         FootpathRelaxer footpathRelaxer = new FootpathRelaxer(this, objective);
         RouteScanner routeScanner = new RouteScanner(this, objective);
 
