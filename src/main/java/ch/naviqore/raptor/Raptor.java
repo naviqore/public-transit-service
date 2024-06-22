@@ -2,6 +2,7 @@ package ch.naviqore.raptor;
 
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDateTime;
@@ -14,13 +15,6 @@ import java.util.stream.Collectors;
 @Log4j2
 public class Raptor {
 
-    private final InputValidator validator = new InputValidator();
-    // lookup
-    private final Map<String, Integer> stopsToIdx;
-    // stop context
-
-    // TODO: Store data structures, remove extracted above when everything is refactored
-
     @Getter(AccessLevel.PACKAGE)
     private final Lookup lookup;
 
@@ -30,12 +24,13 @@ public class Raptor {
     @Getter(AccessLevel.PACKAGE)
     private final RouteTraversal routeTraversal;
 
+    private final InputValidator validator;
+
     Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        // TODO: Try to avoid extraction of data structure here if not needed.
-        this.stopsToIdx = lookup.stops();
+        validator = new InputValidator(lookup.stops());
     }
 
     public static RaptorBuilder builder(int sameStopTransferTime) {
@@ -49,12 +44,6 @@ public class Raptor {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    private static void checkNonNullStops(Map<String, ?> stops, String labelSource) {
-        if (stops == null) {
-            throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
-        }
-    }
-
     /**
      * Routing the earliest arrival from departure stops to arrival. Given a set departure time.
      *
@@ -65,8 +54,8 @@ public class Raptor {
      */
     public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
-        checkNonNullStops(departureStops, "Departure");
-        checkNonNullStops(arrivalStops, "Arrival");
+        InputValidator.checkNonNullStops(departureStops, "Departure");
+        InputValidator.checkNonNullStops(arrivalStops, "Arrival");
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
 
@@ -83,8 +72,8 @@ public class Raptor {
      */
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
-        checkNonNullStops(departureStops, "Departure");
-        checkNonNullStops(arrivalStops, "Arrival");
+        InputValidator.checkNonNullStops(departureStops, "Departure");
+        InputValidator.checkNonNullStops(arrivalStops, "Arrival");
         log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
                 arrivalStops.keySet(), arrivalStops.values().stream().toList());
 
@@ -102,7 +91,7 @@ public class Raptor {
      */
     public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
-        checkNonNullStops(sourceStops, "Source");
+        InputValidator.checkNonNullStops(sourceStops, "Source");
 
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 mapLocalDateTimeToSecondsOfDay(sourceStops));
@@ -137,8 +126,8 @@ public class Raptor {
 
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
-
         InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
+
         int[] sourceStopIndices = validatedSourceStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] sourceTimes = validatedSourceStops.values().stream().mapToInt(Integer::intValue).toArray();
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
@@ -147,7 +136,6 @@ public class Raptor {
         List<Objective.Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
 
-        // get pareto-optimal solutions
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops);
     }
@@ -159,8 +147,8 @@ public class Raptor {
         // set up new query objective, footpath relaxer and route scanner
         Objective objective = new Objective(stopContext, sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopContext, objective);
-        RouteScanner routeScanner = new RouteScanner(stopContext, routeTraversal, objective);
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(this, objective);
+        RouteScanner routeScanner = new RouteScanner(this, objective);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = objective.initialize();
@@ -190,10 +178,19 @@ public class Raptor {
     /**
      * Validate inputs to raptor.
      */
-    private class InputValidator {
+    @RequiredArgsConstructor
+    private static class InputValidator {
         private static final int MIN_DEPARTURE_TIME = 0;
         private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
         private static final int MIN_WALKING_TIME_TO_TARGET = 0;
+
+        private final Map<String, Integer> stopsToIdx;
+
+        private static void checkNonNullStops(Map<String, ?> stops, String labelSource) {
+            if (stops == null) {
+                throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
+            }
+        }
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
