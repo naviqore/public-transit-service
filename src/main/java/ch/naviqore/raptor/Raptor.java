@@ -8,7 +8,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 // TODO Raptor is responsible for request and return result to client - pre- and post-processing
-// TODO FootPathRelaxer is responsible for relaxing footpaths
 
 /**
  * Raptor algorithm implementation
