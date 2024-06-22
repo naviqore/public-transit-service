@@ -266,7 +266,7 @@ public class Raptor {
                 bestTimeForStops, timeType, config);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        markedStops.addAll(footpathRelaxer.relax(0, sourceStopIndices));
+        markedStops.addAll(footpathRelaxer.initialRelax(sourceStopIndices));
 
         int bestTime = getBestTime(targetStops, bestLabelsPerRound, cutOffTime, timeType);
         markedStops = removeSubOptimalLabelsForRound(bestTime, 0, timeType, bestLabelsPerRound, markedStops);

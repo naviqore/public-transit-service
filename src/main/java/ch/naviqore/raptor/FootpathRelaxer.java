@@ -63,30 +63,31 @@ public class FootpathRelaxer {
     }
 
     /**
-     * Relax all footpaths from source stops.
+     * Relax all footpaths from all initial source stops.
      *
-     * @param round       the current round.
      * @param stopIndices the indices of the stops to be relaxed.
      * @return returns the newly marked stops due to the relaxation.
      */
-    Set<Integer> relax(int round, int[] stopIndices) {
+    Set<Integer> initialRelax(int[] stopIndices) {
+        log.debug("Initial relaxing of footpaths for source stops");
         Set<Integer> newlyMarkedStops = new HashSet<>();
 
         for (int sourceStopIdx : stopIndices) {
-            expandFootpathsFromStop(sourceStopIdx, round, newlyMarkedStops);
+            expandFootpathsFromStop(sourceStopIdx, 0, newlyMarkedStops);
         }
 
         return newlyMarkedStops;
     }
 
     /**
-     * Relax all footpaths from source stops.
+     * Relax all footpaths from marked stops.
      *
      * @param round       the current round.
      * @param stopIndices the indices of the stops to be relaxed.
      * @return returns the newly marked stops due to the relaxation.
      */
     Set<Integer> relax(int round, Collection<Integer> stopIndices) {
+        log.debug("Relaxing footpaths for round {}", round);
         Set<Integer> newlyMarkedStops = new HashSet<>();
 
         for (int sourceStopIdx : stopIndices) {
