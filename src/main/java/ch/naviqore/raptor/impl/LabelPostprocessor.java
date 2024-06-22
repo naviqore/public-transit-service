@@ -1,5 +1,8 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Leg;
+import ch.naviqore.raptor.TimeType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -119,7 +122,7 @@ class LabelPostprocessor {
     }
 
     private @Nullable Connection reconstructConnectionFromLabel(Objective.Label label) {
-        Connection connection = new Connection();
+        ConnectionImpl connection = new ConnectionImpl();
 
         ArrayList<Objective.Label> labels = new ArrayList<>();
         while (label.type() != Objective.LabelType.INITIAL) {
@@ -141,7 +144,7 @@ class LabelPostprocessor {
             String toStopId;
             int departureTime;
             int arrivalTime;
-            Connection.LegType type;
+            Leg.Type type;
             if (timeType == TimeType.DEPARTURE) {
                 fromStopId = stops[currentLabel.previous().stopIdx()].id();
                 toStopId = stops[currentLabel.stopIdx()].id();
@@ -158,17 +161,16 @@ class LabelPostprocessor {
                 Route route = routes[currentLabel.routeOrTransferIdx()];
                 routeId = route.id();
                 tripId = route.tripIds()[currentLabel.tripOffset()];
-                type = Connection.LegType.ROUTE;
+                type = Leg.Type.ROUTE;
 
             } else if (currentLabel.type() == Objective.LabelType.TRANSFER) {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
-                type = Connection.LegType.WALK_TRANSFER;
+                type = Leg.Type.WALK_TRANSFER;
             } else {
                 throw new IllegalStateException("Unknown label type");
             }
 
-            connection.addLeg(
-                    new Connection.Leg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
+            connection.addLeg(new LegImpl(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }
 
         // initialize connection: Reverse order of legs and add connection

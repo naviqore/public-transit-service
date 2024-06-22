@@ -1,5 +1,7 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.QueryConfig;
+import ch.naviqore.raptor.TimeType;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;

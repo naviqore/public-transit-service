@@ -2,7 +2,7 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.raptor.Raptor;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -187,7 +187,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
 
         // query connection from raptor
-        Raptor raptor = cache.getRaptor(time.toLocalDate());
+        RaptorAlgorithm raptor = cache.getRaptor(time.toLocalDate());
         List<ch.naviqore.raptor.Connection> connections;
         if (isDeparture) {
             connections = raptor.routeEarliestArrival(sourceStops, targetStops, map(config));
@@ -278,7 +278,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
                 config.getMaximumWalkingDuration(), timeType);
 
-        Raptor raptor = cache.getRaptor(time.toLocalDate());
+        RaptorAlgorithm raptor = cache.getRaptor(time.toLocalDate());
 
         return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), source, time,
                 config, timeType);
@@ -288,7 +288,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
-        Raptor raptor = cache.getRaptor(time.toLocalDate());
+        RaptorAlgorithm raptor = cache.getRaptor(time.toLocalDate());
 
         return mapToStopConnectionMap(raptor.routeIsolines(sourceStops, map(timeType), map(config)), null, time, config,
                 timeType);
@@ -407,7 +407,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
      */
     private class RaptorCache {
 
-        private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Calendar>, Raptor> raptorCache;
+        private final EvictionCache<Set<ch.naviqore.gtfs.schedule.model.Calendar>, RaptorAlgorithm> raptorCache;
         private final EvictionCache<LocalDate, Set<ch.naviqore.gtfs.schedule.model.Calendar>> activeServices;
 
         /**
@@ -420,7 +420,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
 
         // get cached or create and cache new raptor instance, based on the active calendars on a date
-        private Raptor getRaptor(LocalDate date) {
+        private RaptorAlgorithm getRaptor(LocalDate date) {
             Set<ch.naviqore.gtfs.schedule.model.Calendar> activeServices = this.activeServices.computeIfAbsent(date,
                     () -> getActiveServices(date));
             return raptorCache.computeIfAbsent(activeServices,

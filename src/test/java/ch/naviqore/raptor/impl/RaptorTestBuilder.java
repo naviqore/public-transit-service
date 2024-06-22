@@ -1,5 +1,6 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
@@ -54,9 +55,9 @@ public class RaptorTestBuilder {
     private final List<Transfer> transfers = new ArrayList<>();
     private int sameStopTransferTime = 120;
 
-    private static Raptor build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                int sameStopTransferTime) {
-        RaptorBuilder builder = Raptor.builder(sameStopTransferTime);
+    private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
+                                         int sameStopTransferTime) {
+        RaptorBuilder builder = new RaptorBuilder(sameStopTransferTime);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -169,11 +170,11 @@ public class RaptorTestBuilder {
         return this;
     }
 
-    public Raptor build() {
+    public RaptorAlgorithm build() {
         return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStopTransferTime);
     }
 
-    public Raptor buildWithDefaults() {
+    public RaptorAlgorithm buildWithDefaults() {
         return this.withAddRoute1_AG()
                 .withAddRoute2_HL()
                 .withAddRoute3_MQ()

@@ -1,15 +1,16 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.TimeType;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.Objective.NO_INDEX;
+import static ch.naviqore.raptor.impl.Objective.NO_INDEX;
 
 @Log4j2
-public class FootpathRelaxer {
+class FootpathRelaxer {
 
     private final Transfer[] transfers;
     private final Stop[] stops;

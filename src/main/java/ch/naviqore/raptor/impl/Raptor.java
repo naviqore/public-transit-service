@@ -1,5 +1,9 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.QueryConfig;
+import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.raptor.TimeType;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +17,7 @@ import java.util.stream.Collectors;
  * Raptor algorithm implementation
  */
 @Log4j2
-public class Raptor {
+class Raptor implements RaptorAlgorithm {
 
     @Getter(AccessLevel.PACKAGE)
     private final Lookup lookup;
@@ -33,10 +37,6 @@ public class Raptor {
         validator = new InputValidator(lookup.stops());
     }
 
-    public static RaptorBuilder builder(int sameStopTransferTime) {
-        return new RaptorBuilder(sameStopTransferTime);
-    }
-
     private static Map<String, Integer> mapLocalDateTimeToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
         return sourceStops.entrySet()
                 .stream()
@@ -44,14 +44,7 @@ public class Raptor {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    /**
-     * Routing the earliest arrival from departure stops to arrival. Given a set departure time.
-     *
-     * @param departureStops Map of stop ids and departure times
-     * @param arrivalStops   Map of stop ids and walking times to final destination
-     * @param config         Query configuration
-     * @return a list of pareto-optimal earliest arrival connections
-     */
+    @Override
     public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullStops(departureStops, "Departure");
@@ -63,14 +56,7 @@ public class Raptor {
         return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
     }
 
-    /**
-     * Routing the latest departure from departure stops to arrival. Given a set arrival time.
-     *
-     * @param departureStops Map of stop ids and walking times from origin
-     * @param arrivalStops   Map of stop ids and arrival times
-     * @param config         Query configuration
-     * @return a list of pareto-optimal latest departure connections
-     */
+    @Override
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullStops(departureStops, "Departure");
@@ -82,15 +68,7 @@ public class Raptor {
         return getConnections(arrivalStops, departureStops, TimeType.ARRIVAL, config);
     }
 
-    /**
-     * Route isolines from source stops. Given a set of departure or arrival times, the method will return the earliest
-     * arrival or latest departure connections for each stop.
-     *
-     * @param sourceStops is a map of stop ids and departure/arrival times
-     * @param timeType    is the type of time to route for (arrival or departure)
-     * @param config      is the query configuration
-     * @return a pareto-optimal connection for each stop
-     */
+    @Override
     public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
         InputValidator.checkNonNullStops(sourceStops, "Source");

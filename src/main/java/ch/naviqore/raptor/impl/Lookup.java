@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
 import java.util.Map;
 

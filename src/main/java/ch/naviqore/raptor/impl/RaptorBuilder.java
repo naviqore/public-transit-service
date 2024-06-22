@@ -1,5 +1,6 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
+import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,7 +35,7 @@ public class RaptorBuilder {
     int routeStopSize = 0;
     int transferSize = 0;
 
-    RaptorBuilder(int defaultSameStopTransferTime) {
+    public RaptorBuilder(int defaultSameStopTransferTime) {
         this.defaultSameStopTransferTime = defaultSameStopTransferTime;
     }
 
@@ -107,7 +108,7 @@ public class RaptorBuilder {
         return this;
     }
 
-    public Raptor build() {
+    public RaptorAlgorithm build() {
         log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 

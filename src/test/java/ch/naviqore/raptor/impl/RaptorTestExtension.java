@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
