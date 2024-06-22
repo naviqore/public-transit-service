@@ -51,7 +51,7 @@ class FootpathRelaxer {
      * @param stopIndices the indices of the stops to be relaxed.
      * @return returns the newly marked stops due to the relaxation.
      */
-    Set<Integer> initialRelax(int[] stopIndices) {
+    Set<Integer> relaxInitial(int[] stopIndices) {
         log.debug("Initial relaxing of footpaths for source stops");
         Set<Integer> newlyMarkedStops = new HashSet<>();
 

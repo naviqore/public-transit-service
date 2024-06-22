@@ -131,7 +131,7 @@ class Raptor implements RaptorAlgorithm {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = objective.initialize();
-        markedStops.addAll(footpathRelaxer.initialRelax(sourceStopIndices));
+        markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
         markedStops = objective.removeSubOptimalLabelsForRound(0, markedStops);
 
         // continue with further rounds as long as there are new marked stops
