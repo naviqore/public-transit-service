@@ -166,7 +166,7 @@ public class RaptorBuilder {
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
-                    numberOfTransfers == 0 ? Raptor.NO_INDEX : transferIdx, numberOfTransfers);
+                    numberOfTransfers == 0 ? Objective.NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any
             if (currentTransfers != null) {

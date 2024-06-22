@@ -2,11 +2,9 @@ package ch.naviqore.raptor;
 
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-
-import static ch.naviqore.raptor.Raptor.INFINITY;
-import static ch.naviqore.raptor.Raptor.NO_INDEX;
 
 /**
  * The objective stores the progress of the raptor algorithm. Each request needs a new objective instance.
@@ -14,6 +12,8 @@ import static ch.naviqore.raptor.Raptor.NO_INDEX;
 @Log4j2
 class Objective {
 
+    public final static int INFINITY = Integer.MAX_VALUE;
+    public final static int NO_INDEX = -1;
     private final Stop[] stops;
 
     private final int[] sourceStopIndices;
@@ -39,14 +39,14 @@ class Objective {
      * The best labels per stop and round.
      */
     @Getter
-    private final List<Raptor.Label[]> bestLabelsPerRound;
+    private final List<Label[]> bestLabelsPerRound;
 
     /**
-     * @param stopContext
-     * @param sourceStopIndices
-     * @param targetStopIndices
-     * @param sourceTimes
-     * @param walkingDurationsToTarget
+     * @param stopContext              the stop context.
+     * @param sourceStopIndices        the indices of the source stops.
+     * @param targetStopIndices        the indices of the target stops.
+     * @param sourceTimes              the start times at the source stops.
+     * @param walkingDurationsToTarget the walking durations to the target stops.
      * @param timeType                 the type of time to check for (arrival or departure), defines if stop is
      *                                 considered as arrival or departure stop.
      * @param config                   the query configuration.
@@ -76,11 +76,11 @@ class Objective {
         this.cutOffTime = determineCutOffTime();
     }
 
-    Raptor.Label getLabel(int round, int stopIdx) {
+    Label getLabel(int round, int stopIdx) {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
 
-    void setLabel(int round, int stopIdx, Raptor.Label label) {
+    void setLabel(int round, int stopIdx, Label label) {
         bestLabelsPerRound.get(round)[stopIdx] = label;
     }
 
@@ -111,14 +111,14 @@ class Objective {
         }
 
         // set empty labels for first round
-        this.bestLabelsPerRound.add(new Raptor.Label[stops.length]);
+        this.bestLabelsPerRound.add(new Label[stops.length]);
 
         // set initial labels and mark source stops
         Set<Integer> markedStops = new HashSet<>();
         for (int i = 0; i < sourceStopIndices.length; i++) {
             bestTimeForStops[sourceStopIndices[i]] = sourceTimes[i];
-            bestLabelsPerRound.getFirst()[sourceStopIndices[i]] = new Raptor.Label(0, sourceTimes[i],
-                    Raptor.LabelType.INITIAL, NO_INDEX, NO_INDEX, sourceStopIndices[i], null);
+            bestLabelsPerRound.getFirst()[sourceStopIndices[i]] = new Label(0, sourceTimes[i], LabelType.INITIAL,
+                    NO_INDEX, NO_INDEX, sourceStopIndices[i], null);
             markedStops.add(sourceStopIndices[i]);
         }
 
@@ -139,7 +139,7 @@ class Objective {
             return markedStops;
         }
 
-        Raptor.Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
+        Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
         Set<Integer> markedStopsClean = new HashSet<>();
         for (int stopIdx : markedStops) {
             if (bestLabelsThisRound[stopIdx] != null) {
@@ -206,12 +206,12 @@ class Objective {
         int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
         int bestTime = timeFactor * INFINITY;
 
-        for (Raptor.Label[] labels : bestLabelsPerRound) {
+        for (Label[] labels : bestLabelsPerRound) {
             if (labels[stopIdx] == null) {
                 continue;
             }
 
-            Raptor.Label currentLabel = labels[stopIdx];
+            Label currentLabel = labels[stopIdx];
             if (timeType == TimeType.DEPARTURE) {
                 if (currentLabel.targetTime() < bestTime) {
                     bestTime = currentLabel.targetTime();
@@ -226,4 +226,38 @@ class Objective {
         return bestTime;
     }
 
+    /**
+     * Arrival type of the label.
+     */
+    enum LabelType {
+
+        /**
+         * First label in the connection, so there is no previous label set.
+         */
+        INITIAL,
+        /**
+         * A route label uses a public transit trip in the network.
+         */
+        ROUTE,
+        /**
+         * Uses a transfer between stops (not a same stop transfer).
+         */
+        TRANSFER
+
+    }
+
+    /**
+     * A label is a part of a connection in the same mode (PT or walk).
+     *
+     * @param sourceTime         the source time of the label in seconds after midnight.
+     * @param targetTime         the target time of the label in seconds after midnight.
+     * @param type               the type of the label, can be INITIAL, ROUTE or TRANSFER.
+     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
+     * @param tripOffset         the trip offset on the current route (or NO_INDEX).
+     * @param stopIdx            the target stop of the label.
+     * @param previous           the previous label, null if it is the initial label.
+     */
+    record Label(int sourceTime, int targetTime, LabelType type, int routeOrTransferIdx, int tripOffset, int stopIdx,
+                 @Nullable Label previous) {
+    }
 }

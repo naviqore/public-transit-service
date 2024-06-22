@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.Raptor.NO_INDEX;
+import static ch.naviqore.raptor.Objective.NO_INDEX;
 
 @Log4j2
 public class FootpathRelaxer {
@@ -95,10 +95,10 @@ public class FootpathRelaxer {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        Raptor.Label previousLabel = objective.getLabel(round, stopIdx);
+        Objective.Label previousLabel = objective.getLabel(round, stopIdx);
 
         // do not relax footpath from stop that was only reached by footpath in the same round
-        if (previousLabel == null || previousLabel.type() == Raptor.LabelType.TRANSFER) {
+        if (previousLabel == null || previousLabel.type() == Objective.LabelType.TRANSFER) {
             return;
         }
 
@@ -131,8 +131,8 @@ public class FootpathRelaxer {
             // update best times with comparable target time
             objective.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
-            Raptor.Label label = new Raptor.Label(sourceTime, targetTime, Raptor.LabelType.TRANSFER, i, NO_INDEX,
-                    transfer.targetStopIdx(), objective.getLabel(round, stopIdx));
+            Objective.Label label = new Objective.Label(sourceTime, targetTime, Objective.LabelType.TRANSFER, i,
+                    NO_INDEX, transfer.targetStopIdx(), objective.getLabel(round, stopIdx));
             objective.setLabel(round, transfer.targetStopIdx(), label);
             // mark stop as improved
             markedStops.add(transfer.targetStopIdx());

@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static ch.naviqore.raptor.Raptor.INFINITY;
+import static ch.naviqore.raptor.Objective.INFINITY;
 
 /**
  * Scans routes, which are passing marked stops, for each round.
@@ -59,10 +59,10 @@ class RouteScanner {
         log.debug("Scanning routes for round {}", round);
         Set<Integer> markedStopsNext = new HashSet<>();
 
-        List<Raptor.Label[]> bestLabelsPerRound = objective.getBestLabelsPerRound();
-        Raptor.Label[] bestLabelsLastRound = bestLabelsPerRound.get(round - 1);
-        bestLabelsPerRound.add(new Raptor.Label[stops.length]);
-        Raptor.Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
+        List<Objective.Label[]> bestLabelsPerRound = objective.getBestLabelsPerRound();
+        Objective.Label[] bestLabelsLastRound = bestLabelsPerRound.get(round - 1);
+        bestLabelsPerRound.add(new Objective.Label[stops.length]);
+        Objective.Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
 
         Set<Integer> routesToScan = getRoutesToScan(markedStops);
         log.debug("Routes to scan: {}", routesToScan);
@@ -103,8 +103,9 @@ class RouteScanner {
      * @param markedStops         the set of marked stops from the previous round.
      * @param markedStopsNext     the set of marked stops for the next round.
      */
-    private void scanRoute(int currentRouteIdx, Raptor.Label[] bestLabelsLastRound, Raptor.Label[] bestLabelsThisRound,
-                           Set<Integer> markedStops, Set<Integer> markedStopsNext) {
+    private void scanRoute(int currentRouteIdx, Objective.Label[] bestLabelsLastRound,
+                           Objective.Label[] bestLabelsThisRound, Set<Integer> markedStops,
+                           Set<Integer> markedStopsNext) {
 
         boolean forward = timeType == TimeType.DEPARTURE;
         Route currentRoute = routes[currentRouteIdx];
@@ -205,8 +206,8 @@ class RouteScanner {
      */
     private boolean checkIfTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
                                                         int bestStopTime, int stopIdx,
-                                                        Raptor.Label[] bestLabelsThisRound,
-                                                        Raptor.Label[] bestLabelsLastRound,
+                                                        Objective.Label[] bestLabelsThisRound,
+                                                        Objective.Label[] bestLabelsLastRound,
                                                         Set<Integer> markedStopsNext, int currentRouteIdx) {
 
         boolean isImproved = (timeType == TimeType.DEPARTURE) ? stopTime.arrival() < bestStopTime : stopTime.departure() > bestStopTime;
@@ -215,14 +216,15 @@ class RouteScanner {
             log.debug("Stop {} was improved", stop.id());
             objective.setBestTime(stopIdx,
                     (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure());
-            bestLabelsThisRound[stopIdx] = new Raptor.Label(activeTrip.entryTime(),
+            bestLabelsThisRound[stopIdx] = new Objective.Label(activeTrip.entryTime(),
                     (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure(),
-                    Raptor.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
+                    Objective.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx,
+                    activeTrip.previousLabel);
             markedStopsNext.add(stopIdx);
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
-            Raptor.Label previous = bestLabelsLastRound[stopIdx];
+            Objective.Label previous = bestLabelsLastRound[stopIdx];
             boolean isImprovedInSameRound = (timeType == TimeType.DEPARTURE) ? previous == null || previous.targetTime() >= stopTime.arrival() : previous == null || previous.targetTime() <= stopTime.departure();
             if (isImprovedInSameRound) {
                 log.debug("Stop {} has been improved in same round, trip not possible within this round", stop.id());
@@ -246,7 +248,7 @@ class RouteScanner {
      * @param timesLastRound the earliest arrival or latest departure time for each stop in the last round.
      */
     private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route,
-                                                  Raptor.Label[] timesLastRound) {
+                                                  Objective.Label[] timesLastRound) {
 
         int firstStopTimeIdx = route.firstStopTimeIdx();
         int numberOfStops = route.numberOfStops();
@@ -254,11 +256,11 @@ class RouteScanner {
 
         int tripOffset = (timeType == TimeType.DEPARTURE) ? 0 : numberOfTrips - 1;
         int entryTime = 0;
-        Raptor.Label previousLabel = timesLastRound[stopIdx];
+        Objective.Label previousLabel = timesLastRound[stopIdx];
 
         // this is the reference time, where we can depart after or arrive earlier
         int referenceTime = previousLabel.targetTime();
-        if (previousLabel.type() == Raptor.LabelType.ROUTE) {
+        if (previousLabel.type() == Objective.LabelType.ROUTE) {
             referenceTime += (timeType == TimeType.DEPARTURE) ? Math.max(stop.sameStopTransferTime(),
                     minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
@@ -282,6 +284,6 @@ class RouteScanner {
         return new ActiveTrip(tripOffset, entryTime, previousLabel);
     }
 
-    private record ActiveTrip(int tripOffset, int entryTime, Raptor.Label previousLabel) {
+    private record ActiveTrip(int tripOffset, int entryTime, Objective.Label previousLabel) {
     }
 }

@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 @Log4j2
 public class Raptor {
 
-    public final static int INFINITY = Integer.MAX_VALUE;
-    public final static int NO_INDEX = -1;
     private final InputValidator validator = new InputValidator();
     // lookup
     private final Map<String, Integer> stopsToIdx;
@@ -117,26 +115,26 @@ public class Raptor {
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, new int[]{}, refStopTimes, new int[]{},
-                config, timeType);
+        List<Objective.Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, new int[]{}, refStopTimes,
+                new int[]{}, config, timeType);
 
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
-            Label bestLabelForStop = null;
+            Objective.Label bestLabelForStop = null;
 
             // search best label for stop in all rounds
-            for (Label[] labels : bestLabelsPerRound) {
+            for (Objective.Label[] labels : bestLabelsPerRound) {
                 if (labels[i] != null) {
                     if (bestLabelForStop == null) {
                         bestLabelForStop = labels[i];
-                    } else if (labels[i].targetTime < bestLabelForStop.targetTime) {
+                    } else if (labels[i].targetTime() < bestLabelForStop.targetTime()) {
                         bestLabelForStop = labels[i];
                     }
                 }
             }
 
-            if (bestLabelForStop != null && bestLabelForStop.type != LabelType.INITIAL) {
+            if (bestLabelForStop != null && bestLabelForStop.type() != Objective.LabelType.INITIAL) {
                 Connection connection = reconstructConnectionFromLabel(bestLabelForStop, timeType);
                 isolines.put(stop.id(), connection);
             }
@@ -174,16 +172,17 @@ public class Raptor {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<Label[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType);
+        List<Objective.Label[]> earliestArrivalsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices,
+                sourceTimes, walkingDurationsToTarget, config, timeType);
 
         // get pareto-optimal solutions
         return reconstructParetoOptimalSolutions(earliestArrivalsPerRound, validatedTargetStops, timeType);
     }
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Label[]> spawnFromStop(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-                                        int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
+    private List<Objective.Label[]> spawnFromStop(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+                                                  int[] walkingDurationsToTarget, QueryConfig config,
+                                                  TimeType timeType) {
         // set up new query objective, footpath relaxer and route scanner
         Objective objective = new Objective(stopContext, sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
@@ -212,15 +211,15 @@ public class Raptor {
         return objective.getBestLabelsPerRound();
     }
 
-    private List<Connection> reconstructParetoOptimalSolutions(List<Label[]> bestLabelsPerRound,
+    private List<Connection> reconstructParetoOptimalSolutions(List<Objective.Label[]> bestLabelsPerRound,
                                                                Map<Integer, Integer> targetStops, TimeType timeType) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
-        for (Label[] labels : bestLabelsPerRound) {
+        for (Objective.Label[] labels : bestLabelsPerRound) {
 
-            Label label = null;
-            int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+            Objective.Label label = null;
+            int bestTime = timeType == TimeType.DEPARTURE ? Objective.INFINITY : -Objective.INFINITY;
 
             for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
                 int targetStopIdx = entry.getKey();
@@ -228,16 +227,16 @@ public class Raptor {
                 if (labels[targetStopIdx] == null) {
                     continue;
                 }
-                Label currentLabel = labels[targetStopIdx];
+                Objective.Label currentLabel = labels[targetStopIdx];
 
                 if (timeType == TimeType.DEPARTURE) {
-                    int actualArrivalTime = currentLabel.targetTime + targetStopWalkingTime;
+                    int actualArrivalTime = currentLabel.targetTime() + targetStopWalkingTime;
                     if (actualArrivalTime < bestTime) {
                         label = currentLabel;
                         bestTime = actualArrivalTime;
                     }
                 } else {
-                    int actualDepartureTime = currentLabel.targetTime - targetStopWalkingTime;
+                    int actualDepartureTime = currentLabel.targetTime() - targetStopWalkingTime;
                     if (actualDepartureTime > bestTime) {
                         label = currentLabel;
                         bestTime = actualDepartureTime;
@@ -259,14 +258,14 @@ public class Raptor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLabel(Label label, TimeType timeType) {
+    private @Nullable Connection reconstructConnectionFromLabel(Objective.Label label, TimeType timeType) {
         Connection connection = new Connection();
 
-        ArrayList<Label> labels = new ArrayList<>();
-        while (label.type != LabelType.INITIAL) {
-            assert label.previous != null;
+        ArrayList<Objective.Label> labels = new ArrayList<>();
+        while (label.type() != Objective.LabelType.INITIAL) {
+            assert label.previous() != null;
             labels.add(label);
-            label = label.previous;
+            label = label.previous();
         }
 
         // check if first two labels can be combined (transfer + route) due to the same stop transfer penalty for route
@@ -274,34 +273,34 @@ public class Raptor {
         maybeCombineFirstTwoLabels(labels, timeType);
         maybeCombineLastTwoLabels(labels, timeType);
 
-        for (Label currentLabel : labels) {
+        for (Objective.Label currentLabel : labels) {
             String routeId;
             String tripId = null;
-            assert currentLabel.previous != null;
+            assert currentLabel.previous() != null;
             String fromStopId;
             String toStopId;
             int departureTime;
             int arrivalTime;
             Connection.LegType type;
             if (timeType == TimeType.DEPARTURE) {
-                fromStopId = stops[currentLabel.previous.stopIdx].id();
-                toStopId = stops[currentLabel.stopIdx].id();
-                departureTime = currentLabel.sourceTime;
-                arrivalTime = currentLabel.targetTime;
+                fromStopId = stops[currentLabel.previous().stopIdx()].id();
+                toStopId = stops[currentLabel.stopIdx()].id();
+                departureTime = currentLabel.sourceTime();
+                arrivalTime = currentLabel.targetTime();
             } else {
-                fromStopId = stops[currentLabel.stopIdx].id();
-                toStopId = stops[currentLabel.previous.stopIdx].id();
-                departureTime = currentLabel.targetTime;
-                arrivalTime = currentLabel.sourceTime;
+                fromStopId = stops[currentLabel.stopIdx()].id();
+                toStopId = stops[currentLabel.previous().stopIdx()].id();
+                departureTime = currentLabel.targetTime();
+                arrivalTime = currentLabel.sourceTime();
             }
 
-            if (currentLabel.type == LabelType.ROUTE) {
-                Route route = routes[currentLabel.routeOrTransferIdx];
+            if (currentLabel.type() == Objective.LabelType.ROUTE) {
+                Route route = routes[currentLabel.routeOrTransferIdx()];
                 routeId = route.id();
-                tripId = route.tripIds()[currentLabel.tripOffset];
+                tripId = route.tripIds()[currentLabel.tripOffset()];
                 type = Connection.LegType.ROUTE;
 
-            } else if (currentLabel.type == LabelType.TRANSFER) {
+            } else if (currentLabel.type() == Objective.LabelType.TRANSFER) {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Connection.LegType.WALK_TRANSFER;
             } else {
@@ -338,7 +337,7 @@ public class Raptor {
      * @param labels   the list of labels to check for combination.
      * @param timeType the type of time to check for (arrival or departure).
      */
-    private void maybeCombineFirstTwoLabels(ArrayList<Label> labels, TimeType timeType) {
+    private void maybeCombineFirstTwoLabels(ArrayList<Objective.Label> labels, TimeType timeType) {
         maybeCombineLabels(labels, timeType, true);
     }
 
@@ -361,7 +360,7 @@ public class Raptor {
      * @param labels   the list of labels to check for combination.
      * @param timeType the type of time to check for (arrival or departure).
      */
-    private void maybeCombineLastTwoLabels(ArrayList<Label> labels, TimeType timeType) {
+    private void maybeCombineLastTwoLabels(ArrayList<Objective.Label> labels, TimeType timeType) {
         maybeCombineLabels(labels, timeType, false);
     }
 
@@ -374,7 +373,7 @@ public class Raptor {
      * @param fromStart if true, the first two labels are checked, if false, the last two labels (first two legs of
      *                  connection) are checked.
      */
-    private void maybeCombineLabels(ArrayList<Label> labels, TimeType timeType, boolean fromStart) {
+    private void maybeCombineLabels(ArrayList<Objective.Label> labels, TimeType timeType, boolean fromStart) {
         if (labels.size() < 2) {
             return;
         }
@@ -383,23 +382,24 @@ public class Raptor {
         int transferLabelIndex = fromStart ? 0 : labels.size() - 1;
         int routeLabelIndex = fromStart ? 1 : labels.size() - 2;
 
-        Label transferLabel = labels.get(transferLabelIndex);
-        Label routeLabel = labels.get(routeLabelIndex);
+        Objective.Label transferLabel = labels.get(transferLabelIndex);
+        Objective.Label routeLabel = labels.get(routeLabelIndex);
 
         // check if the labels are of the correct type else they cannot be combined
-        if (transferLabel.type != LabelType.TRANSFER || routeLabel.type != LabelType.ROUTE) {
+        if (transferLabel.type() != Objective.LabelType.TRANSFER || routeLabel.type() != Objective.LabelType.ROUTE) {
             return;
         }
 
         int stopIdx;
         if (fromStart) {
-            stopIdx = transferLabel.stopIdx;
+            stopIdx = transferLabel.stopIdx();
         } else {
-            assert transferLabel.previous != null;
-            stopIdx = transferLabel.previous.stopIdx;
+            assert transferLabel.previous() != null;
+            stopIdx = transferLabel.previous().stopIdx();
         }
 
-        StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel.routeOrTransferIdx, routeLabel.tripOffset);
+        StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel.routeOrTransferIdx(),
+                routeLabel.tripOffset());
 
         // if stopTime is null, then the stop is not part of the trip of the route label
         if (stopTime == null) {
@@ -411,7 +411,7 @@ public class Raptor {
         int routeTime = fromStart ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
 
         // this is the best time achieved with the route / transfer combination
-        int referenceTime = fromStart ? timeDirection * transferLabel.targetTime : timeDirection * transferLabel.sourceTime;
+        int referenceTime = fromStart ? timeDirection * transferLabel.targetTime() : timeDirection * transferLabel.sourceTime();
 
         // if the best time is not improved, then the labels should not be combined
         if (fromStart ? (timeDirection * routeTime > referenceTime) : (timeDirection * routeTime < referenceTime)) {
@@ -420,14 +420,16 @@ public class Raptor {
 
         // combine and replace labels
         if (fromStart) {
-            Label combinedLabel = new Label(routeLabel.sourceTime, routeTime, LabelType.ROUTE,
-                    routeLabel.routeOrTransferIdx, routeLabel.tripOffset, transferLabel.stopIdx, routeLabel.previous);
+            Objective.Label combinedLabel = new Objective.Label(routeLabel.sourceTime(), routeTime,
+                    Objective.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
+                    transferLabel.stopIdx(), routeLabel.previous());
             labels.removeFirst();
             labels.removeFirst();
             labels.addFirst(combinedLabel);
         } else {
-            Label combinedLabel = new Label(routeTime, routeLabel.targetTime, LabelType.ROUTE,
-                    routeLabel.routeOrTransferIdx, routeLabel.tripOffset, routeLabel.stopIdx, transferLabel.previous);
+            Objective.Label combinedLabel = new Objective.Label(routeTime, routeLabel.targetTime(),
+                    Objective.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
+                    routeLabel.stopIdx(), transferLabel.previous());
             labels.removeLast();
             labels.removeLast();
             labels.addLast(combinedLabel);
@@ -448,41 +450,6 @@ public class Raptor {
             return null;
         }
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
-    }
-
-    /**
-     * Arrival type of the label.
-     */
-    enum LabelType {
-
-        /**
-         * First label in the connection, so there is no previous label set.
-         */
-        INITIAL,
-        /**
-         * A route label uses a public transit trip in the network.
-         */
-        ROUTE,
-        /**
-         * Uses a transfer between stops (not a same stop transfer).
-         */
-        TRANSFER
-
-    }
-
-    /**
-     * A label is a part of a connection in the same mode (PT or walk).
-     *
-     * @param sourceTime         the source time of the label in seconds after midnight.
-     * @param targetTime         the target time of the label in seconds after midnight.
-     * @param type               the type of the label, can be INITIAL, ROUTE or TRANSFER.
-     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
-     * @param tripOffset         the trip offset on the current route (or NO_INDEX).
-     * @param stopIdx            the target stop of the label.
-     * @param previous           the previous label, null if it is the initial label.
-     */
-    record Label(int sourceTime, int targetTime, LabelType type, int routeOrTransferIdx, int tripOffset, int stopIdx,
-                 @Nullable Raptor.Label previous) {
     }
 
     /**
