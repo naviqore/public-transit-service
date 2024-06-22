@@ -5,7 +5,6 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.config.ServiceConfig;
-import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;

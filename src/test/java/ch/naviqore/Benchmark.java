@@ -179,10 +179,9 @@ final class Benchmark {
                 request.sourceStop.getCoordinate().distanceTo(request.targetStop.getCoordinate()));
         long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
         return new RoutingResult(id, request.sourceStop().getId(), request.targetStop().getId(),
-                request.sourceStop().getName(), request.targetStop.getName(),
-                request.departureTime, connections.size(), earliestDepartureTime,
-                earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers, beelineDistance,
-                processingTime);
+                request.sourceStop().getName(), request.targetStop.getName(), request.departureTime, connections.size(),
+                earliestDepartureTime, earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers,
+                beelineDistance, processingTime);
     }
 
     private static void writeResultsToCsv(RoutingResult[] results) throws IOException {
