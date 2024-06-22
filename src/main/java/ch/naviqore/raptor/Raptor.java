@@ -56,6 +56,7 @@ public class Raptor {
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullStops(departureStops, "Departure");
         InputValidator.checkNonNullStops(arrivalStops, "Arrival");
+
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
 
@@ -74,6 +75,7 @@ public class Raptor {
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullStops(departureStops, "Departure");
         InputValidator.checkNonNullStops(arrivalStops, "Arrival");
+
         log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
                 arrivalStops.keySet(), arrivalStops.values().stream().toList());
 
@@ -93,11 +95,12 @@ public class Raptor {
                                                  QueryConfig config) {
         InputValidator.checkNonNullStops(sourceStops, "Source");
 
+        log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 mapLocalDateTimeToSecondsOfDay(sourceStops));
+
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-
         List<Objective.Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, new int[]{}, refStopTimes,
                 new int[]{}, config, timeType);
 
@@ -121,9 +124,7 @@ public class Raptor {
      */
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
-
         Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateTimeToSecondsOfDay(sourceStops);
-
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
         InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
