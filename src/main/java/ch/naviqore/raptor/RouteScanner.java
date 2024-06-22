@@ -4,7 +4,6 @@ import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static ch.naviqore.raptor.Objective.INFINITY;
@@ -59,17 +58,15 @@ class RouteScanner {
         log.debug("Scanning routes for round {}", round);
         Set<Integer> markedStopsNext = new HashSet<>();
 
-        List<Objective.Label[]> bestLabelsPerRound = objective.getBestLabelsPerRound();
-        Objective.Label[] bestLabelsLastRound = bestLabelsPerRound.get(round - 1);
-        bestLabelsPerRound.add(new Objective.Label[stops.length]);
-        Objective.Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
+        // TODO: Move to main loop in Raptor
+        objective.addNewRound();
 
         Set<Integer> routesToScan = getRoutesToScan(markedStops);
         log.debug("Routes to scan: {}", routesToScan);
 
         // scan selected routes
         for (int currentRouteIdx : routesToScan) {
-            scanRoute(currentRouteIdx, bestLabelsLastRound, bestLabelsThisRound, markedStops, markedStopsNext);
+            scanRoute(currentRouteIdx, round, markedStops, markedStopsNext);
         }
 
         return markedStopsNext;
@@ -97,15 +94,14 @@ class RouteScanner {
     /**
      * Scan a route in time type applicable direction to find the best times for each stop on route for given round.
      *
-     * @param currentRouteIdx     the index of the current route.
-     * @param bestLabelsLastRound the best label for each stop in the last round.
-     * @param bestLabelsThisRound the best label for each stop in the current round.
-     * @param markedStops         the set of marked stops from the previous round.
-     * @param markedStopsNext     the set of marked stops for the next round.
+     * @param currentRouteIdx the index of the current route.
+     * @param round           the current round.
+     * @param markedStops     the set of marked stops from the previous round.
+     * @param markedStopsNext the set of marked stops for the next round.
      */
-    private void scanRoute(int currentRouteIdx, Objective.Label[] bestLabelsLastRound,
-                           Objective.Label[] bestLabelsThisRound, Set<Integer> markedStops,
-                           Set<Integer> markedStopsNext) {
+    private void scanRoute(int currentRouteIdx, int round, Set<Integer> markedStops, Set<Integer> markedStopsNext) {
+
+        final int lastRound = round - 1;
 
         boolean forward = timeType == TimeType.DEPARTURE;
         Route currentRoute = routes[currentRouteIdx];
@@ -133,12 +129,12 @@ class RouteScanner {
             } else {
                 // in this case we are on a trip and need to check if time has improved
                 StopTime stopTimeObj = stopTimes[firstStopTimeIdx + activeTrip.tripOffset * numberOfStops + stopOffset];
-                if (!checkIfTripIsPossibleAndUpdateMarks(stopTimeObj, activeTrip, stop, bestStopTime, stopIdx,
-                        bestLabelsThisRound, bestLabelsLastRound, markedStopsNext, currentRouteIdx)) {
+                if (!checkIfTripIsPossibleAndUpdateMarks(stopTimeObj, activeTrip, stop, bestStopTime, stopIdx, round,
+                        lastRound, markedStopsNext, currentRouteIdx)) {
                     continue;
                 }
             }
-            activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, bestLabelsLastRound);
+            activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
         }
     }
 
@@ -193,21 +189,17 @@ class RouteScanner {
      * <p>If the time was not improved, an additional check will be needed to figure out if an earlier or later trip
      * from the stop is possible within the current round, thus the method returns true.</p>
      *
-     * @param stopTime            the stop time to check for an earlier or later trip.
-     * @param activeTrip          the active trip to check for an earlier or later trip.
-     * @param stop                the stop to check for an earlier or later trip.
-     * @param bestStopTime        the earliest or latest time at the stop based on the TimeType.
-     * @param stopIdx             the index of the stop to check for an earlier or later trip.
-     * @param bestLabelsThisRound the best label for each stop in the current round based on the TimeType.
-     * @param bestLabelsLastRound the best label for each stop in the last round based on the TimeType.
-     * @param markedStopsNext     the set of marked stops for the next round.
-     * @param currentRouteIdx     the index of the current route.
+     * @param stopTime        the stop time to check for an earlier or later trip.
+     * @param activeTrip      the active trip to check for an earlier or later trip.
+     * @param stop            the stop to check for an earlier or later trip.
+     * @param bestStopTime    the earliest or latest time at the stop based on the TimeType.
+     * @param stopIdx         the index of the stop to check for an earlier or later trip.
+     * @param markedStopsNext the set of marked stops for the next round.
+     * @param currentRouteIdx the index of the current route.
      * @return true if an earlier or later trip is possible, false otherwise.
      */
     private boolean checkIfTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
-                                                        int bestStopTime, int stopIdx,
-                                                        Objective.Label[] bestLabelsThisRound,
-                                                        Objective.Label[] bestLabelsLastRound,
+                                                        int bestStopTime, int stopIdx, int thisRound, int lastRound,
                                                         Set<Integer> markedStopsNext, int currentRouteIdx) {
 
         boolean isImproved = (timeType == TimeType.DEPARTURE) ? stopTime.arrival() < bestStopTime : stopTime.departure() > bestStopTime;
@@ -216,15 +208,19 @@ class RouteScanner {
             log.debug("Stop {} was improved", stop.id());
             objective.setBestTime(stopIdx,
                     (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure());
-            bestLabelsThisRound[stopIdx] = new Objective.Label(activeTrip.entryTime(),
+
+            Objective.Label label = new Objective.Label(activeTrip.entryTime(),
                     (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure(),
                     Objective.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx,
                     activeTrip.previousLabel);
+            objective.setLabel(thisRound, stopIdx, label);
             markedStopsNext.add(stopIdx);
+
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
-            Objective.Label previous = bestLabelsLastRound[stopIdx];
+            Objective.Label previous = objective.getLabel(lastRound, stopIdx);
+
             boolean isImprovedInSameRound = (timeType == TimeType.DEPARTURE) ? previous == null || previous.targetTime() >= stopTime.arrival() : previous == null || previous.targetTime() <= stopTime.departure();
             if (isImprovedInSameRound) {
                 log.debug("Stop {} has been improved in same round, trip not possible within this round", stop.id());
@@ -241,14 +237,13 @@ class RouteScanner {
      * given route and returns details about the first or last trip that can be taken (departing after or arriving
      * before the time of the previous round at this stop and accounting for transfer constraints).
      *
-     * @param stopIdx        the index of the stop to find the possible trip from.
-     * @param stop           the stop to find the possible trip from.
-     * @param stopOffset     the offset of the stop in the route.
-     * @param route          the route to find the possible trip on.
-     * @param timesLastRound the earliest arrival or latest departure time for each stop in the last round.
+     * @param stopIdx    the index of the stop to find the possible trip from.
+     * @param stop       the stop to find the possible trip from.
+     * @param stopOffset the offset of the stop in the route.
+     * @param route      the route to find the possible trip on.
+     * @param lastRound  the last round.
      */
-    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route,
-                                                  Objective.Label[] timesLastRound) {
+    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route, int lastRound) {
 
         int firstStopTimeIdx = route.firstStopTimeIdx();
         int numberOfStops = route.numberOfStops();
@@ -256,7 +251,7 @@ class RouteScanner {
 
         int tripOffset = (timeType == TimeType.DEPARTURE) ? 0 : numberOfTrips - 1;
         int entryTime = 0;
-        Objective.Label previousLabel = timesLastRound[stopIdx];
+        Objective.Label previousLabel = objective.getLabel(lastRound, stopIdx);
 
         // this is the reference time, where we can depart after or arrive earlier
         int referenceTime = previousLabel.targetTime();

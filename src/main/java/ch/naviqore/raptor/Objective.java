@@ -80,16 +80,32 @@ class Objective {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
 
+    /**
+     * Sets a new label for a stop and round.
+     */
     void setLabel(int round, int stopIdx, Label label) {
         bestLabelsPerRound.get(round)[stopIdx] = label;
     }
 
+    /**
+     * Get global best time of a stop.
+     */
     int getBestTime(int stopIdx) {
         return bestTimeForStops[stopIdx];
     }
 
+    /**
+     * Set the global best time for a stop.
+     */
     void setBestTime(int stopIdx, int time) {
         bestTimeForStops[stopIdx] = time;
+    }
+
+    /**
+     * Adds a new round layer to the best labels per round list.
+     */
+    void addNewRound() {
+        bestLabelsPerRound.add(new Label[stops.length]);
     }
 
     /**
