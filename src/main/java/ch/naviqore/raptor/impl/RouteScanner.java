@@ -70,7 +70,7 @@ class RouteScanner {
     /**
      * Get all routes to scan from the marked stops.
      *
-     * @param markedStops - The set of marked stops from the previous round.
+     * @param markedStops the set of marked stops from the previous round.
      */
     private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
         Set<Integer> routesToScan = new HashSet<>();
