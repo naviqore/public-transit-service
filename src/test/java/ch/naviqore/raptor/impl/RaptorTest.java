@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -100,9 +101,12 @@ class RaptorTest {
             }
             return sourceStops.entrySet()
                     .stream()
-                    .map(entry -> Map.entry(entry.getKey(),
-                            LocalDateTime.of(2021, 1, 1, 0, 0).plusSeconds(entry.getValue())))
+                    .map(entry -> Map.entry(entry.getKey(), convertUnixTimestampToLocalDateTime(entry.getValue())))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+
+        static LocalDateTime convertUnixTimestampToLocalDateTime(int unixTimestamp) {
+            return LocalDateTime.ofEpochSecond(unixTimestamp, 0, ZoneOffset.UTC);
         }
 
     }

@@ -3,6 +3,9 @@ package ch.naviqore.raptor.impl;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -79,8 +82,8 @@ public class RaptorTestBuilder {
 
             // add trips
             int tripCount = 0;
-            int time = dayStart * SECONDS_IN_HOUR + route.firstDepartureOffset * 60;
-            while (time < dayEnd * SECONDS_IN_HOUR) {
+            int timestamp = dayStart * SECONDS_IN_HOUR + route.firstDepartureOffset * 60;
+            while (timestamp < dayEnd * SECONDS_IN_HOUR) {
 
                 // add trips
                 String tripIdF = String.format("%s-F-%s", route.id, tripCount);
@@ -89,23 +92,23 @@ public class RaptorTestBuilder {
                 tripCount++;
 
                 // add stop times
-                int departureTime = time;
+                int departureTimestamp = timestamp;
                 // first stop of trip has no arrival time
-                int arrivalTime = departureTime;
+                int arrivalTimestamp = departureTimestamp;
                 for (int i = 0; i < route.stops.size(); i++) {
                     if (i + 1 == route.stops.size()) {
                         // last stop of trip has no departure time
-                        departureTime = arrivalTime;
+                        departureTimestamp = arrivalTimestamp;
                     }
-                    builder.addStopTime(routeIdF, tripIdF, i, route.stops.get(i), arrivalTime, departureTime);
-                    builder.addStopTime(routeIdR, tripIdR, i, route.stops.get(route.stops.size() - 1 - i), arrivalTime,
-                            departureTime);
+                    builder.addStopTime(routeIdF, tripIdF, i, route.stops.get(i), arrivalTimestamp, departureTimestamp);
+                    builder.addStopTime(routeIdR, tripIdR, i, route.stops.get(route.stops.size() - 1 - i),
+                            arrivalTimestamp, departureTimestamp);
 
-                    arrivalTime = departureTime + route.travelTimeBetweenStops * 60;
-                    departureTime = arrivalTime + route.dwellTimeAtSTop * 60;
+                    arrivalTimestamp = departureTimestamp + route.travelTimeBetweenStops * 60;
+                    departureTimestamp = arrivalTimestamp + route.dwellTimeAtSTop * 60;
                 }
 
-                time += route.headWayTime * 60;
+                timestamp += route.headWayTime * 60;
             }
         }
 
