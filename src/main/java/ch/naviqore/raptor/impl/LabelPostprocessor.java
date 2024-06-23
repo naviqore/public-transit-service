@@ -201,7 +201,9 @@ class LabelPostprocessor {
      * time or departure time), however, if the transfer reaches a nearby stop and the second leg (second last label) is
      * a route trip that could have also been entered at the source stop, it is possible that the overall travel time
      * can be reduced by combining the two labels. The earliest arrival time or latest departure time is not changed by
-     * this operation, but the travel time is reduced.
+     * this operation, but the travel time is reduced. If the labels cannot be combined because the route trip does not
+     * pass through the source stop, the transfer label is shifted in time that there is no idleTime between the
+     * transfer and the route trip (see maybeShiftSourceTransferCloserToFirstRoute).
      * <p>
      * Example: if the departure time is set to 5 am at Stop A and a connection to stop C is queried, the algorithm will
      * relax footpaths from Stop A at 5 am and reach Stop B at 5:05 am. However, the earliest trip on the route
@@ -221,18 +223,18 @@ class LabelPostprocessor {
      * Implementation for the two method above (maybeCombineFirstTwoLabels and maybeCombineLastTwoLabels). For more info
      * see the documentation of the two methods.
      *
-     * @param labels    the list of labels to check for combination.
-     * @param fromStart if true, the first two labels are checked, if false, the last two labels (first two legs of
-     *                  connection) are checked.
+     * @param labels     the list of labels to check for combination.
+     * @param fromTarget if true, the first two labels are checked, if false, the last two labels (first two legs of
+     *                   connection) are checked. Note the first two labels are the two labels closest to the target!
      */
-    private void maybeCombineLabels(ArrayList<Objective.Label> labels, boolean fromStart) {
+    private void maybeCombineLabels(ArrayList<Objective.Label> labels, boolean fromTarget) {
         if (labels.size() < 2) {
             return;
         }
 
         // define the indices of the labels to check (first two or last two)
-        int transferLabelIndex = fromStart ? 0 : labels.size() - 1;
-        int routeLabelIndex = fromStart ? 1 : labels.size() - 2;
+        int transferLabelIndex = fromTarget ? 0 : labels.size() - 1;
+        int routeLabelIndex = fromTarget ? 1 : labels.size() - 2;
 
         Objective.Label transferLabel = labels.get(transferLabelIndex);
         Objective.Label routeLabel = labels.get(routeLabelIndex);
@@ -243,7 +245,7 @@ class LabelPostprocessor {
         }
 
         int stopIdx;
-        if (fromStart) {
+        if (fromTarget) {
             stopIdx = transferLabel.stopIdx();
         } else {
             assert transferLabel.previous() != null;
@@ -255,23 +257,26 @@ class LabelPostprocessor {
 
         // if stopTime is null, then the stop is not part of the trip of the route label
         if (stopTime == null) {
+            if (!fromTarget) {
+                maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
+            }
             return;
         }
 
         boolean isDeparture = timeType == TimeType.DEPARTURE;
         int timeDirection = isDeparture ? 1 : -1;
-        int routeTime = fromStart ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
+        int routeTime = fromTarget ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
 
         // this is the best time achieved with the route / transfer combination
-        int referenceTime = fromStart ? timeDirection * transferLabel.targetTime() : timeDirection * transferLabel.sourceTime();
+        int referenceTime = fromTarget ? timeDirection * transferLabel.targetTime() : timeDirection * transferLabel.sourceTime();
 
         // if the best time is not improved, then the labels should not be combined
-        if (fromStart ? (timeDirection * routeTime > referenceTime) : (timeDirection * routeTime < referenceTime)) {
+        if (fromTarget ? (timeDirection * routeTime > referenceTime) : (timeDirection * routeTime < referenceTime)) {
             return;
         }
 
         // combine and replace labels
-        if (fromStart) {
+        if (fromTarget) {
             Objective.Label combinedLabel = new Objective.Label(routeLabel.sourceTime(), routeTime,
                     Objective.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
                     transferLabel.stopIdx(), routeLabel.previous());
@@ -285,6 +290,31 @@ class LabelPostprocessor {
             labels.removeLast();
             labels.removeLast();
             labels.addLast(combinedLabel);
+        }
+    }
+
+    /**
+     * This method checks if there is idle time between the source transfer (note this method expects that is only
+     * applied on source labels of type transfer) and the first route label. If there is idle time, i.e. the transfer
+     * arrives/leaves not directly before/after the route departs/arrives, then the transfer label can be shifted to the
+     * route label (shortening the travel time).
+     *
+     * @param labels             the list of all labels for the connection
+     * @param transferLabel      the source transfer label
+     * @param routeLabel         the following route label
+     * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
+     */
+    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<Objective.Label> labels,
+                                                            Objective.Label transferLabel, Objective.Label routeLabel,
+                                                            int transferLabelIndex) {
+        // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can
+        // be shifted to the route label (shortening the travel time)
+        int idleTime = routeLabel.sourceTime() - transferLabel.targetTime();
+        if (idleTime != 0) {
+            labels.set(transferLabelIndex,
+                    new Objective.Label(transferLabel.sourceTime() + idleTime, transferLabel.targetTime() + idleTime,
+                            Objective.LabelType.TRANSFER, transferLabel.routeOrTransferIdx(),
+                            transferLabel.tripOffset(), transferLabel.stopIdx(), transferLabel.previous()));
         }
     }
 
