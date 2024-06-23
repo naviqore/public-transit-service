@@ -46,19 +46,7 @@ class LabelPostprocessor {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
-            Objective.Label bestLabelForStop = null;
-
-            // search best label for stop in all rounds
-            for (Objective.Label[] labels : bestLabelsPerRound) {
-                if (labels[i] != null) {
-                    if (bestLabelForStop == null) {
-                        bestLabelForStop = labels[i];
-                    } else if (labels[i].targetTime() < bestLabelForStop.targetTime()) {
-                        bestLabelForStop = labels[i];
-                    }
-                }
-            }
-
+            Objective.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
             if (bestLabelForStop != null && bestLabelForStop.type() != Objective.LabelType.INITIAL) {
                 Connection connection = reconstructConnectionFromLabel(bestLabelForStop);
                 isolines.put(stop.id(), connection);
@@ -309,6 +297,23 @@ class LabelPostprocessor {
             return null;
         }
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
+    }
+
+    private @Nullable Objective.Label getBestLabelForStop(List<Objective.Label[]> bestLabelsPerRound, int stopIdx) {
+        Objective.Label bestLabelForStop = null;
+        int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
+
+        // search best label for stop in all rounds
+        for (Objective.Label[] labels : bestLabelsPerRound) {
+            if (labels[stopIdx] != null) {
+                if (bestLabelForStop == null) {
+                    bestLabelForStop = labels[stopIdx];
+                } else if (timeDirection * labels[stopIdx].targetTime() < timeDirection * bestLabelForStop.targetTime()) {
+                    bestLabelForStop = labels[stopIdx];
+                }
+            }
+        }
+        return bestLabelForStop;
     }
 
 }
