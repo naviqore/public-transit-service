@@ -10,7 +10,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -37,10 +41,10 @@ class Raptor implements RaptorAlgorithm {
         validator = new InputValidator(lookup.stops());
     }
 
-    private static Map<String, Integer> mapLocalDateTimeToSecondsOfDay(Map<String, LocalDateTime> sourceStops) {
+    private static Map<String, Integer> mapLocalDateTimeToUnixTimestamp(Map<String, LocalDateTime> sourceStops) {
         return sourceStops.entrySet()
                 .stream()
-                .map(e -> Map.entry(e.getKey(), e.getValue().toLocalTime().toSecondOfDay()))
+                .map(e -> Map.entry(e.getKey(), (int) e.getValue().toEpochSecond(ZoneOffset.UTC)))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
@@ -75,7 +79,7 @@ class Raptor implements RaptorAlgorithm {
 
         log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
-                mapLocalDateTimeToSecondsOfDay(sourceStops));
+                mapLocalDateTimeToUnixTimestamp(sourceStops));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
@@ -102,7 +106,7 @@ class Raptor implements RaptorAlgorithm {
      */
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
-        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateTimeToSecondsOfDay(sourceStops);
+        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateTimeToUnixTimestamp(sourceStops);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
         InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
@@ -159,8 +163,7 @@ class Raptor implements RaptorAlgorithm {
      */
     @RequiredArgsConstructor
     private static class InputValidator {
-        private static final int MIN_DEPARTURE_TIME = 0;
-        private static final int MAX_DEPARTURE_TIME = 48 * 60 * 60; // 48 hours
+        private static final int MIN_SOURCE_STOP_TIMESTAMP = 0;
         private static final int MIN_WALKING_TIME_TO_TARGET = 0;
 
         private final Map<String, Integer> stopsToIdx;
@@ -173,7 +176,7 @@ class Raptor implements RaptorAlgorithm {
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
-            sourceStops.values().forEach(InputValidator::validateDepartureTime);
+            sourceStops.values().forEach(InputValidator::validateSourceStopTimestamps);
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
 
             // ensure departure and arrival stops are not the same
@@ -182,13 +185,12 @@ class Raptor implements RaptorAlgorithm {
             if (!intersection.isEmpty()) {
                 throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
             }
-
         }
 
-        private static void validateDepartureTime(int departureTime) {
-            if (departureTime < MIN_DEPARTURE_TIME || departureTime > MAX_DEPARTURE_TIME) {
+        private static void validateSourceStopTimestamps(int timestamp) {
+            if (timestamp < MIN_SOURCE_STOP_TIMESTAMP) {
                 throw new IllegalArgumentException(
-                        "Departure time must be between " + MIN_DEPARTURE_TIME + " and " + MAX_DEPARTURE_TIME + " seconds.");
+                        "Source stop timestamp must be greater or equal to " + MIN_SOURCE_STOP_TIMESTAMP + " seconds.");
             }
         }
 
@@ -220,7 +222,7 @@ class Raptor implements RaptorAlgorithm {
                 int time = entry.getValue();
 
                 if (stopsToIdx.containsKey(stopId)) {
-                    validateDepartureTime(time);
+                    validateSourceStopTimestamps(time);
                     validStopIds.put(stopsToIdx.get(stopId), time);
                 } else {
                     log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());

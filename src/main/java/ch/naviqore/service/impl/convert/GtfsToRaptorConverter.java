@@ -8,6 +8,7 @@ import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +47,8 @@ public class GtfsToRaptorConverter {
 
     public RaptorAlgorithm convert(LocalDate date) {
         List<Trip> activeTrips = schedule.getActiveTrips(date);
+        // TODO: Decide if long should be used for unix timestamps, else it will only work until January 18, 2038
+        int unixTimestampOfDay = (int) date.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
         log.info("Converting {} active trips from GTFS schedule to Raptor model", activeTrips.size());
 
         for (Trip trip : activeTrips) {
@@ -73,7 +76,8 @@ public class GtfsToRaptorConverter {
             for (int i = 0; i < stopTimes.size(); i++) {
                 StopTime stopTime = stopTimes.get(i);
                 builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
-                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
+                        unixTimestampOfDay + stopTime.arrival().getTotalSeconds(),
+                        unixTimestampOfDay + stopTime.departure().getTotalSeconds());
             }
         }
 
