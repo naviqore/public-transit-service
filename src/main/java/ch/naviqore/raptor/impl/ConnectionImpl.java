@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,10 +25,10 @@ class ConnectionImpl implements Connection {
         if (!current.getToStopId().equals(next.getFromStopId())) {
             throw new IllegalStateException("Legs are not connected: " + current + " -> " + next);
         }
-        if (current.getArrivalTime() < current.getDepartureTime()) {
+        if (current.getArrivalTime().isBefore(current.getDepartureTime())) {
             throw new IllegalStateException("Arrival time must be after departure time: " + current);
         }
-        if (current.getArrivalTime() > next.getDepartureTime()) {
+        if (current.getArrivalTime().isAfter(next.getDepartureTime())) {
             throw new IllegalStateException(
                     "Arrival time must be before next departure time: " + current + " -> " + next);
         }
@@ -51,16 +53,16 @@ class ConnectionImpl implements Connection {
 
     @Override
     public int compareTo(@NotNull Connection other) {
-        return Integer.compare(this.getArrivalTime(), other.getArrivalTime());
+        return getArrivalTime().compareTo(other.getArrivalTime());
     }
 
     @Override
-    public int getDepartureTime() {
+    public LocalDateTime getDepartureTime() {
         return legs.getFirst().getDepartureTime();
     }
 
     @Override
-    public int getArrivalTime() {
+    public LocalDateTime getArrivalTime() {
         return legs.getLast().getArrivalTime();
     }
 
@@ -75,8 +77,8 @@ class ConnectionImpl implements Connection {
     }
 
     @Override
-    public int getDuration() {
-        return getArrivalTime() - getDepartureTime();
+    public int getDurationInSeconds() {
+        return (int) Duration.between(getDepartureTime(), getArrivalTime()).getSeconds();
     }
 
     @Override

@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -47,7 +48,7 @@ import java.util.*;
 final class Benchmark {
 
     // dataset
-    private static final Dataset DATASET = Dataset.SWITZERLAND;
+    private static final Dataset DATASET = Dataset.ZURICH_TRAMS;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
 
     // sampling
@@ -57,7 +58,7 @@ final class Benchmark {
      */
     private static final int DEPARTURE_TIME_LIMIT = 8 * 60 * 60;
     private static final long RANDOM_SEED = 1234;
-    private static final int SAMPLE_SIZE = 10000;
+    private static final int SAMPLE_SIZE = 100;
 
     // constants
     private static final long MONITORING_INTERVAL_MS = 30000;
@@ -161,12 +162,14 @@ final class Benchmark {
 
     private static RoutingResult toResult(int id, RouteRequest request, List<Connection> connections, long startTime,
                                           long endTime) {
-        Optional<LocalDateTime> earliestDepartureTime = toLocalDatetime(
-                connections.stream().mapToInt(Connection::getDepartureTime).min().orElse(NOT_AVAILABLE));
-        Optional<LocalDateTime> earliestArrivalTime = toLocalDatetime(
-                connections.stream().mapToInt(Connection::getArrivalTime).min().orElse(NOT_AVAILABLE));
-        int minDuration = connections.stream().mapToInt(Connection::getDuration).min().orElse(NOT_AVAILABLE);
-        int maxDuration = connections.stream().mapToInt(Connection::getDuration).max().orElse(NOT_AVAILABLE);
+        Optional<LocalDateTime> earliestDepartureTime = connections.stream()
+                .map(Connection::getDepartureTime)
+                .min(Comparator.naturalOrder());
+        Optional<LocalDateTime> earliestArrivalTime = connections.stream()
+                .map(Connection::getArrivalTime)
+                .min(Comparator.naturalOrder());
+        int minDuration = connections.stream().mapToInt(Connection::getDurationInSeconds).min().orElse(NOT_AVAILABLE);
+        int maxDuration = connections.stream().mapToInt(Connection::getDurationInSeconds).max().orElse(NOT_AVAILABLE);
         int minTransfers = connections.stream()
                 .mapToInt(Connection::getNumberOfTotalTransfers)
                 .min()
@@ -214,13 +217,6 @@ final class Benchmark {
                         result.maxTransfers, result.beelineDistance, result.processingTime);
             }
         }
-    }
-
-    private static Optional<LocalDateTime> toLocalDatetime(int seconds) {
-        if (seconds == NOT_AVAILABLE) {
-            return Optional.empty();
-        }
-        return Optional.of(new ServiceDayTime(seconds).toLocalDateTime(SCHEDULE_DATE));
     }
 
     record RouteRequest(Stop sourceStop, Stop targetStop, LocalDateTime departureTime) {

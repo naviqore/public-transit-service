@@ -5,6 +5,8 @@ import ch.naviqore.raptor.Leg;
 import ch.naviqore.raptor.TimeType;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -130,19 +132,19 @@ class LabelPostprocessor {
             assert currentLabel.previous() != null;
             String fromStopId;
             String toStopId;
-            int departureTime;
-            int arrivalTime;
+            int departureTimestamp;
+            int arrivalTimestamp;
             Leg.Type type;
             if (timeType == TimeType.DEPARTURE) {
                 fromStopId = stops[currentLabel.previous().stopIdx()].id();
                 toStopId = stops[currentLabel.stopIdx()].id();
-                departureTime = currentLabel.sourceTime();
-                arrivalTime = currentLabel.targetTime();
+                departureTimestamp = currentLabel.sourceTime();
+                arrivalTimestamp = currentLabel.targetTime();
             } else {
                 fromStopId = stops[currentLabel.stopIdx()].id();
                 toStopId = stops[currentLabel.previous().stopIdx()].id();
-                departureTime = currentLabel.targetTime();
-                arrivalTime = currentLabel.sourceTime();
+                departureTimestamp = currentLabel.targetTime();
+                arrivalTimestamp = currentLabel.sourceTime();
             }
 
             if (currentLabel.type() == Objective.LabelType.ROUTE) {
@@ -157,6 +159,9 @@ class LabelPostprocessor {
             } else {
                 throw new IllegalStateException("Unknown label type");
             }
+
+            LocalDateTime departureTime = LocalDateTime.ofEpochSecond(departureTimestamp, 0, ZoneOffset.UTC);
+            LocalDateTime arrivalTime = LocalDateTime.ofEpochSecond(arrivalTimestamp, 0, ZoneOffset.UTC);
 
             connection.addLeg(new LegImpl(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }

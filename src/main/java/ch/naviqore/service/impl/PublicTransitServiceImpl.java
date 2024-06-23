@@ -1,7 +1,6 @@
 package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -203,13 +202,11 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             Walk lastMile = null;
 
             if (sourceStop == null) {
-                LocalDateTime departureTime = time.toLocalDate()
-                        .atTime(new ServiceDayTime(connection.getDepartureTime()).toLocalTime());
+                LocalDateTime departureTime = connection.getDepartureTime();
                 firstMile = getFirstWalk(sourceLocation, connection.getFromStopId(), departureTime);
             }
             if (targetStop == null) {
-                LocalDateTime arrivalTime = time.toLocalDate()
-                        .atTime(new ServiceDayTime(connection.getArrivalTime()).toLocalTime());
+                LocalDateTime arrivalTime = connection.getArrivalTime();
                 lastMile = getLastWalk(targetLocation, connection.getToStopId(), arrivalTime);
             }
 
@@ -305,13 +302,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             Walk firstMile = null;
             Walk lastMile = null;
             if (timeType == TimeType.DEPARTURE && source != null) {
-                LocalDateTime departureTime = startTime.toLocalDate()
-                        .atTime(new ServiceDayTime(connection.getDepartureTime()).toLocalTime());
-                firstMile = getFirstWalk(source, connection.getFromStopId(), departureTime);
+                firstMile = getFirstWalk(source, connection.getFromStopId(), connection.getDepartureTime());
             } else if (timeType == TimeType.ARRIVAL && source != null) {
-                LocalDateTime arrivalTime = startTime.toLocalDate()
-                        .atTime(new ServiceDayTime(connection.getDepartureTime()).toLocalTime());
-                lastMile = getLastWalk(source, connection.getFromStopId(), arrivalTime);
+                lastMile = getLastWalk(source, connection.getFromStopId(), connection.getDepartureTime());
             }
 
             Stop stop = map(schedule.getStops().get(entry.getKey()));

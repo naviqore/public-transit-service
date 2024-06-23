@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -91,14 +92,15 @@ final class TypeMapper {
     }
 
     public static Leg map(ch.naviqore.raptor.Leg leg, LocalDate date, GtfsSchedule schedule) {
-        int duration = leg.getArrivalTime() - leg.getDepartureTime();
+        int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
         int distance = (int) Math.round(sourceStop.getLocation().distanceTo(targetStop.getLocation()));
 
         return switch (leg.getType()) {
-            case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.getDepartureTime(), date),
-                    toLocalDateTime(leg.getArrivalTime(), date), sourceStop, targetStop);
+            case WALK_TRANSFER ->
+                    new TransferImpl(distance, duration, leg.getDepartureTime(), leg.getArrivalTime(), sourceStop,
+                            targetStop);
             case ROUTE -> createPublicTransitLeg(leg, date, schedule, distance);
         };
     }
@@ -117,7 +119,7 @@ final class TypeMapper {
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, LocalDate date, GtfsSchedule schedule,
                                               int distance) {
-        int duration = leg.getArrivalTime() - leg.getDepartureTime();
+        int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.getTripId());
         Trip trip = map(gtfsTrip, date);
 
@@ -131,14 +133,14 @@ final class TypeMapper {
             var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
             // if the from stop id and the departure time matches, set the departure stop time
             if (gtfsStopTime.stop().getId().equals(leg.getFromStopId()) && gtfsStopTime.departure()
-                    .getTotalSeconds() == leg.getDepartureTime()) {
+                    .getTotalSeconds() == getSecondsOfDay(leg.getDepartureTime(), date)) {
                 departure = trip.getStopTimes().get(i);
                 continue;
             }
 
             // if the to stop id and the arrival time matches, set the arrival stop time
             if (gtfsStopTime.stop().getId().equals(leg.getToStopId()) && gtfsStopTime.arrival()
-                    .getTotalSeconds() == leg.getArrivalTime()) {
+                    .getTotalSeconds() == getSecondsOfDay(leg.getArrivalTime(), date)) {
                 arrival = trip.getStopTimes().get(i);
                 break;
             }
@@ -150,7 +152,7 @@ final class TypeMapper {
         return new PublicTransitLegImpl(distance, duration, trip, departure, arrival);
     }
 
-    private static LocalDateTime toLocalDateTime(int secondsOfDay, LocalDate date) {
-        return new ServiceDayTime(secondsOfDay).toLocalDateTime(date);
+    private static int getSecondsOfDay(LocalDateTime time, LocalDate refDay) {
+        return (int) Duration.between(refDay.atStartOfDay(), time).toSeconds();
     }
 }
