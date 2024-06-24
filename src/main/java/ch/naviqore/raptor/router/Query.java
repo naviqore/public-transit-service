@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;
@@ -9,10 +9,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * The objective stores the progress of the raptor algorithm. Each request needs a new objective instance.
+ * The query stores the progress of the raptor algorithm. Each request needs a new query instance.
  */
 @Log4j2
-class Objective {
+class Query {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
@@ -29,7 +29,7 @@ class Objective {
     private final TimeType timeType;
 
     private final int[] targetStops;
-    private final int cutOffTime;
+    private final int cutoffTime;
 
     /**
      * The global best time per stop.
@@ -52,8 +52,8 @@ class Objective {
      *                                 considered as arrival or departure stop.
      * @param config                   the query configuration.
      */
-    Objective(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-              int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
+    Query(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
@@ -74,7 +74,7 @@ class Objective {
         this.bestLabelsPerRound = new ArrayList<>();
 
         this.targetStops = new int[targetStopIndices.length * 2];
-        this.cutOffTime = determineCutOffTime();
+        this.cutoffTime = determineCutoffTime();
     }
 
     Label getLabel(int round, int stopIdx) {
@@ -153,7 +153,7 @@ class Objective {
      * @param round       the round to remove suboptimal labels for.
      * @param markedStops the marked stops to check for suboptimal labels.
      */
-    Set<Integer> removeSubOptimalLabelsForRound(int round, Set<Integer> markedStops) {
+    Set<Integer> removeSuboptimalLabelsForRound(int round, Set<Integer> markedStops) {
         int bestTime = getBestTimeForAllTargetStops();
 
         if (bestTime == INFINITY || bestTime == -INFINITY) {
@@ -183,20 +183,20 @@ class Objective {
      *
      * @return the cut-off time.
      */
-    private int determineCutOffTime() {
-        int cutOffTime;
+    private int determineCutoffTime() {
+        int cutoffTime;
 
         if (config.getMaximumTravelTime() == INFINITY) {
-            cutOffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+            cutoffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
         } else if (timeType == TimeType.DEPARTURE) {
             int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
-            cutOffTime = earliestDeparture + config.getMaximumTravelTime();
+            cutoffTime = earliestDeparture + config.getMaximumTravelTime();
         } else {
             int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
-            cutOffTime = latestArrival - config.getMaximumTravelTime();
+            cutoffTime = latestArrival - config.getMaximumTravelTime();
         }
 
-        return cutOffTime;
+        return cutoffTime;
     }
 
     /**
@@ -204,7 +204,7 @@ class Objective {
      * is departure, and the latest arrival time for each stop if the time type is arrival.
      */
     private int getBestTimeForAllTargetStops() {
-        int bestTime = cutOffTime;
+        int bestTime = cutoffTime;
 
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];

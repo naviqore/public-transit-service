@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;

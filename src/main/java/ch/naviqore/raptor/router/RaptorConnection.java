@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.Leg;
@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-class ConnectionImpl implements Connection {
+class RaptorConnection implements Connection, Comparable<Connection> {
 
     private List<Leg> legs = new ArrayList<>();
 

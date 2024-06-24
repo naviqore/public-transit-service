@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.Leg;
 import lombok.AccessLevel;
@@ -14,7 +14,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-class LegImpl implements Leg {
+class RaptorLeg implements Leg {
 
     private final String routeId;
     private final @Nullable String tripId;
