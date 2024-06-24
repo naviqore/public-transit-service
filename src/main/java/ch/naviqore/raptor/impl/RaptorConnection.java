@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-class ConnectionImpl implements Connection {
+class RaptorConnection implements Connection {
 
     private List<Leg> legs = new ArrayList<>();
 

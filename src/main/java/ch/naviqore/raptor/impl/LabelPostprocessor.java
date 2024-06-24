@@ -110,7 +110,7 @@ class LabelPostprocessor {
     }
 
     private @Nullable Connection reconstructConnectionFromLabel(Objective.Label label) {
-        ConnectionImpl connection = new ConnectionImpl();
+        RaptorConnection connection = new RaptorConnection();
 
         ArrayList<Objective.Label> labels = new ArrayList<>();
         while (label.type() != Objective.LabelType.INITIAL) {
@@ -158,7 +158,7 @@ class LabelPostprocessor {
                 throw new IllegalStateException("Unknown label type");
             }
 
-            connection.addLeg(new LegImpl(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
+            connection.addLeg(new RaptorLeg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }
 
         // initialize connection: Reverse order of legs and add connection
