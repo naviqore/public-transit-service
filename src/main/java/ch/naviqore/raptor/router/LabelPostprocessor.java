@@ -303,20 +303,14 @@ class LabelPostprocessor {
 
     private @Nullable StopLabelsAndTimes.Label getBestLabelForStop(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
                                                                    int stopIdx) {
-        StopLabelsAndTimes.Label bestLabelForStop = null;
-        int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
-
-        // search best label for stop in all rounds
-        for (StopLabelsAndTimes.Label[] labels : bestLabelsPerRound) {
-            if (labels[stopIdx] != null) {
-                if (bestLabelForStop == null) {
-                    bestLabelForStop = labels[stopIdx];
-                } else if (timeDirection * labels[stopIdx].targetTime() < timeDirection * bestLabelForStop.targetTime()) {
-                    bestLabelForStop = labels[stopIdx];
-                }
+        // Loop through the list in reverse order since the first occurrence will be the best target time
+        for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
+            StopLabelsAndTimes.Label label = bestLabelsPerRound.get(i)[stopIdx];
+            if (label != null) {
+                return label;
             }
         }
-        return bestLabelForStop;
+        return null;
     }
 
 }

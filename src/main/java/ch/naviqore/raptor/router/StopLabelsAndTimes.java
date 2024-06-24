@@ -69,26 +69,14 @@ final class StopLabelsAndTimes {
      * different label types (transfer vs. route), as the same stop transfer time is not considered.
      */
     int getActualBestTime(int stopIdx) {
-        int bestTime = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
-
-        for (Label[] labels : bestLabelsPerRound) {
-            if (labels[stopIdx] == null) {
-                continue;
-            }
-
-            Label currentLabel = labels[stopIdx];
-            if (timeType == TimeType.DEPARTURE) {
-                if (currentLabel.targetTime < bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
-            } else {
-                if (currentLabel.targetTime > bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
+        for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
+            Label label = bestLabelsPerRound.get(i)[stopIdx];
+            if (label != null) {
+                return label.targetTime;
             }
         }
 
-        return bestTime;
+        return (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
     }
 
     /**
