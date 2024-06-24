@@ -18,7 +18,8 @@ public interface RaptorAlgorithm {
      * @param departureStops Map of stop ids and departure times
      * @param arrivalStops   Map of stop ids and walking times to final destination
      * @param config         Query configuration
-     * @return a list of pareto-optimal earliest arrival connections
+     * @return a list of pareto-optimal earliest arrival connections sorted in ascending order by the number of route
+     * legs (rounds)
      */
     List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops, Map<String, Integer> arrivalStops,
                                           QueryConfig config);
@@ -29,7 +30,8 @@ public interface RaptorAlgorithm {
      * @param departureStops Map of stop ids and walking times from origin
      * @param arrivalStops   Map of stop ids and arrival times
      * @param config         Query configuration
-     * @return a list of pareto-optimal latest departure connections
+     * @return a list of pareto-optimal latest departure connections sorted in ascending order by the number of route
+     * legs (rounds)
      */
     List<Connection> routeLatestDeparture(Map<String, Integer> departureStops, Map<String, LocalDateTime> arrivalStops,
                                           QueryConfig config);
@@ -41,7 +43,7 @@ public interface RaptorAlgorithm {
      * @param sourceStops is a map of stop ids and departure/arrival times
      * @param timeType    is the type of time to route for (arrival or departure)
      * @param config      is the query configuration
-     * @return a pareto-optimal connection for each stop
+     * @return the earliest arrival (timeType=departure) or latest departure (timeType=arrival) connection for each stop
      */
     Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                           QueryConfig config);
