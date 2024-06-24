@@ -30,13 +30,13 @@ class FootpathRelaxer {
     private final TimeType timeType;
 
     /**
-     * @param raptor    the current raptor instance for access to the data structures.
-     * @param objective the best time per stop and label per stop and round.
+     * @param raptorRouter the current raptor instance for access to the data structures.
+     * @param objective    the best time per stop and label per stop and round.
      */
-    FootpathRelaxer(Raptor raptor, Objective objective) {
+    FootpathRelaxer(RaptorRouter raptorRouter, Objective objective) {
         // constant data structures
-        this.transfers = raptor.getStopContext().transfers();
-        this.stops = raptor.getStopContext().stops();
+        this.transfers = raptorRouter.getStopContext().transfers();
+        this.stops = raptorRouter.getStopContext().stops();
         // note: objective will change also outside of relaxer, due to route scanning
         this.objective = objective;
         // constant configuration of relaxer

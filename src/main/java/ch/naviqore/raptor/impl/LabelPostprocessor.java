@@ -25,14 +25,14 @@ class LabelPostprocessor {
     /**
      * Postprocessor to convert labels into connections
      *
-     * @param raptor   the current raptor instance for access to the data structures.
-     * @param timeType the time type (arrival or departure).
+     * @param raptorRouter the current raptor instance for access to the data structures.
+     * @param timeType     the time type (arrival or departure).
      */
-    LabelPostprocessor(Raptor raptor, TimeType timeType) {
-        this.stops = raptor.getStopContext().stops();
-        this.stopTimes = raptor.getRouteTraversal().stopTimes();
-        this.routes = raptor.getRouteTraversal().routes();
-        this.routeStops = raptor.getRouteTraversal().routeStops();
+    LabelPostprocessor(RaptorRouter raptorRouter, TimeType timeType) {
+        this.stops = raptorRouter.getStopContext().stops();
+        this.stopTimes = raptorRouter.getRouteTraversal().stopTimes();
+        this.routes = raptorRouter.getRouteTraversal().routes();
+        this.routeStops = raptorRouter.getRouteTraversal().routeStops();
         this.timeType = timeType;
     }
 

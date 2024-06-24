@@ -40,7 +40,7 @@ import java.util.Set;
  * </ul>
  */
 @NoArgsConstructor
-public class RaptorTestBuilder {
+public class RaptorRouterTestBuilder {
 
     static final int SECONDS_IN_HOUR = 3600;
     static final int DAY_START_HOUR = 5;
@@ -57,7 +57,7 @@ public class RaptorTestBuilder {
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
                                          int sameStopTransferTime) {
-        RaptorBuilder builder = new RaptorBuilder(sameStopTransferTime);
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -117,55 +117,56 @@ public class RaptorTestBuilder {
         return builder.build();
     }
 
-    public RaptorTestBuilder withAddRoute1_AG() {
+    public RaptorRouterTestBuilder withAddRoute1_AG() {
         return withAddRoute1_AG(DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
     }
 
-    public RaptorTestBuilder withAddRoute1_AG(int offset, int headway, int travelTime, int dwellTime) {
+    public RaptorRouterTestBuilder withAddRoute1_AG(int offset, int headway, int travelTime, int dwellTime) {
         return withAddRoute1_AG("R1", offset, headway, travelTime, dwellTime);
     }
 
-    public RaptorTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime, int dwellTime) {
+    public RaptorRouterTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime,
+                                                    int dwellTime) {
         routes.add(
                 new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), offset, headway, travelTime, dwellTime));
         return this;
     }
 
-    public RaptorTestBuilder withAddRoute2_HL() {
+    public RaptorRouterTestBuilder withAddRoute2_HL() {
         routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L")));
         return this;
     }
 
-    public RaptorTestBuilder withAddRoute3_MQ() {
+    public RaptorRouterTestBuilder withAddRoute3_MQ() {
         routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q")));
         return this;
     }
 
-    public RaptorTestBuilder withAddRoute4_RS() {
+    public RaptorRouterTestBuilder withAddRoute4_RS() {
         routes.add(new Route("R4", List.of("R", "P", "F", "S")));
         return this;
     }
 
-    public RaptorTestBuilder withAddRoute5_AH_selfIntersecting() {
+    public RaptorRouterTestBuilder withAddRoute5_AH_selfIntersecting() {
         routes.add(new Route("R5", List.of("A", "B", "C", "D", "E", "F", "P", "O", "N", "K", "J", "I", "B", "H")));
         return this;
     }
 
-    public RaptorTestBuilder withAddTransfer1_ND() {
+    public RaptorRouterTestBuilder withAddTransfer1_ND() {
         return withAddTransfer1_ND(60);
     }
 
-    public RaptorTestBuilder withAddTransfer1_ND(int duration) {
+    public RaptorRouterTestBuilder withAddTransfer1_ND(int duration) {
         transfers.add(new Transfer("N", "D", duration));
         return this;
     }
 
-    public RaptorTestBuilder withAddTransfer2_LR() {
+    public RaptorRouterTestBuilder withAddTransfer2_LR() {
         transfers.add(new Transfer("L", "R", 30));
         return this;
     }
 
-    public RaptorTestBuilder withSameStopTransferTime(int time) {
+    public RaptorRouterTestBuilder withSameStopTransferTime(int time) {
         this.sameStopTransferTime = time;
         return this;
     }

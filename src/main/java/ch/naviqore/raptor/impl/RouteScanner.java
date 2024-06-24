@@ -30,16 +30,16 @@ class RouteScanner {
     private final TimeType timeType;
 
     /**
-     * @param raptor    the current raptor instance for access to the data structures.
-     * @param objective the best time per stop and label per stop and round.
+     * @param raptorRouter the current raptor instance for access to the data structures.
+     * @param objective    the best time per stop and label per stop and round.
      */
-    RouteScanner(Raptor raptor, Objective objective) {
+    RouteScanner(RaptorRouter raptorRouter, Objective objective) {
         // constant data structures
-        this.stops = raptor.getStopContext().stops();
-        this.stopRoutes = raptor.getStopContext().stopRoutes();
-        this.stopTimes = raptor.getRouteTraversal().stopTimes();
-        this.routes = raptor.getRouteTraversal().routes();
-        this.routeStops = raptor.getRouteTraversal().routeStops();
+        this.stops = raptorRouter.getStopContext().stops();
+        this.stopRoutes = raptorRouter.getStopContext().stopRoutes();
+        this.stopTimes = raptorRouter.getRouteTraversal().stopTimes();
+        this.routes = raptorRouter.getRouteTraversal().routes();
+        this.routeStops = raptorRouter.getRouteTraversal().routeStops();
         // note: objective will change also outside of scanner, due to footpath relaxation
         this.objective = objective;
         // constant configuration of scanner

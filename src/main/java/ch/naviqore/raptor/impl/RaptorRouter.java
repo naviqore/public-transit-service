@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * Raptor algorithm implementation
  */
 @Log4j2
-class Raptor implements RaptorAlgorithm {
+class RaptorRouter implements RaptorAlgorithm {
 
     @Getter(AccessLevel.PACKAGE)
     private final Lookup lookup;
@@ -30,7 +30,7 @@ class Raptor implements RaptorAlgorithm {
 
     private final InputValidator validator;
 
-    Raptor(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
@@ -79,7 +79,7 @@ class Raptor implements RaptorAlgorithm {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<Objective.Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, new int[]{}, refStopTimes,
+        List<Objective.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, new int[]{}, refStopTimes,
                 new int[]{}, config, timeType);
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound);
@@ -112,7 +112,7 @@ class Raptor implements RaptorAlgorithm {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<Objective.Label[]> bestLabelsPerRound = spawnFromStop(sourceStopIndices, targetStopIndices, sourceTimes,
+        List<Objective.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
@@ -120,9 +120,9 @@ class Raptor implements RaptorAlgorithm {
     }
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Objective.Label[]> spawnFromStop(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-                                                  int[] walkingDurationsToTarget, QueryConfig config,
-                                                  TimeType timeType) {
+    private List<Objective.Label[]> spawnFromStops(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+                                                   int[] walkingDurationsToTarget, QueryConfig config,
+                                                   TimeType timeType) {
         // set up new query objective, footpath relaxer and route scanner
         Objective objective = new Objective(stopContext.stops().length, sourceStopIndices, targetStopIndices,
                 sourceTimes, walkingDurationsToTarget, config, timeType);
