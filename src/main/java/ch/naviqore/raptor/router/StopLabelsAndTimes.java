@@ -9,9 +9,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The objective stores the current best labels and times of the raptor routing algorithm.
+ * This object stores the current best labels and times of the raptor routing algorithm for a query instance.
  */
-final class Objective {
+final class StopLabelsAndTimes {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
@@ -25,7 +25,7 @@ final class Objective {
     private final int stopSize;
     private final TimeType timeType;
 
-    Objective(int stopSize, TimeType timeType) {
+    StopLabelsAndTimes(int stopSize, TimeType timeType) {
         this.stopSize = stopSize;
         this.timeType = timeType;
 

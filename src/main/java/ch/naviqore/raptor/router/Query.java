@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.Objective.INFINITY;
+import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 
 /**
  * The query represents a request to the raptor router and coordinates the routing logic. Each request needs a new query
@@ -29,7 +29,7 @@ class Query {
 
     private final int[] targetStops;
     private final int cutoffTime;
-    private final Objective objective;
+    private final StopLabelsAndTimes stopLabelsAndTimes;
 
     /**
      * @param raptorData               the current raptor data structures.
@@ -61,13 +61,12 @@ class Query {
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
-        // set up new query objective to be minimized (travel time and transfers)
-        objective = new Objective(raptorData.getStopContext().stops().length, timeType);
+        stopLabelsAndTimes = new StopLabelsAndTimes(raptorData.getStopContext().stops().length, timeType);
     }
 
     /**
      * Main control flow of the routing algorithm. Spawns from source stops, coordinates route scanning, footpath
-     * relaxation, and objective updates in the correct order.
+     * relaxation, and time/label updates in the correct order.
      * <p>
      * The process starts by relaxing all source stops and adding the newly improved stops by relaxation to the set of
      * marked stops. It then iterates through rounds of route scanning and footpath relaxation until no new stops are
@@ -81,12 +80,12 @@ class Query {
      *     <li>Prepare for the next round by removing suboptimal labels.</li>
      * </ul>
      */
-    List<Objective.Label[]> run() {
-        // set up footpath relaxer and route scanner and inject query objective
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(objective, raptorData,
+    List<StopLabelsAndTimes.Label[]> run() {
+        // set up footpath relaxer and route scanner and inject stop labels and times
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData,
                 config.getMinimumTransferDuration(), config.getMaximumWalkingDuration(), timeType);
-        RouteScanner routeScanner = new RouteScanner(objective, raptorData, config.getMinimumTransferDuration(),
-                timeType);
+        RouteScanner routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData,
+                config.getMinimumTransferDuration(), timeType);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = initialize();
@@ -97,7 +96,7 @@ class Query {
         int round = 1;
         while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
             // add label layer for new round
-            objective.addNewRound();
+            stopLabelsAndTimes.addNewRound();
 
             // scan all routs and mark stops that have improved
             Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
@@ -110,16 +109,16 @@ class Query {
             round++;
         }
 
-        return objective.getBestLabelsPerRound();
+        return stopLabelsAndTimes.getBestLabelsPerRound();
     }
 
     /**
-     * Set up the initial objective for a new query.
+     * Set up the best times per stop and best labels per round for a new query.
      *
      * @return the initially marked stops.
      */
     Set<Integer> initialize() {
-        log.info("Initializing objective (global best times per stop and best labels per round)");
+        log.info("Initializing global best times per stop and best labels per round");
 
         // fill target stops
         for (int i = 0; i < targetStops.length; i += 2) {
@@ -134,10 +133,11 @@ class Query {
             int currentStopIdx = sourceStopIndices[i];
             int targetTime = sourceTimes[i];
 
-            Objective.Label label = new Objective.Label(0, targetTime, Objective.LabelType.INITIAL, Objective.NO_INDEX,
-                    Objective.NO_INDEX, currentStopIdx, null);
-            objective.setLabel(0, currentStopIdx, label);
-            objective.setBestTime(currentStopIdx, targetTime);
+            StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(0, targetTime,
+                    StopLabelsAndTimes.LabelType.INITIAL, StopLabelsAndTimes.NO_INDEX, StopLabelsAndTimes.NO_INDEX,
+                    currentStopIdx, null);
+            stopLabelsAndTimes.setLabel(0, currentStopIdx, label);
+            stopLabelsAndTimes.setBestTime(currentStopIdx, targetTime);
 
             markedStops.add(currentStopIdx);
         }
@@ -161,12 +161,12 @@ class Query {
 
         Set<Integer> markedStopsClean = new HashSet<>();
         for (int stopIdx : markedStops) {
-            Objective.Label label = objective.getLabel(round, stopIdx);
+            StopLabelsAndTimes.Label label = stopLabelsAndTimes.getLabel(round, stopIdx);
             if (label != null) {
                 if (timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) {
-                    objective.setLabel(round, stopIdx, null);
+                    stopLabelsAndTimes.setLabel(round, stopIdx, null);
                 } else if (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime) {
-                    objective.setLabel(round, stopIdx, null);
+                    stopLabelsAndTimes.setLabel(round, stopIdx, null);
                 } else {
                     markedStopsClean.add(stopIdx);
                 }
@@ -186,7 +186,7 @@ class Query {
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = objective.getActualBestTime(targetStopIdx);
+            int bestTimeForStop = stopLabelsAndTimes.getActualBestTime(targetStopIdx);
 
             if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
                 bestTimeForStop += walkDurationToTarget;

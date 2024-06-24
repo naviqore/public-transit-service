@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-import static ch.naviqore.raptor.router.Objective.NO_INDEX;
+import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 
 // TODO remove duplicated step of generating same stop transfers
 

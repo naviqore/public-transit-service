@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.Objective.NO_INDEX;
+import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 
 @Log4j2
 class FootpathRelaxer {
@@ -19,10 +19,10 @@ class FootpathRelaxer {
     private final int maxWalkingDuration;
     private final TimeType timeType;
 
-    private final Objective objective;
+    private final StopLabelsAndTimes stopLabelsAndTimes;
 
     /**
-     * @param objective               the best time per stop and label per stop and round.
+     * @param stopLabelsAndTimes      the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time, since this is intended as rest period (e.g.
      *                                coffee break) it is added to the walk time.
@@ -30,8 +30,8 @@ class FootpathRelaxer {
      *                                exceeds this value, the target stop is not reached.
      * @param timeType                the time type (arrival or departure).
      */
-    FootpathRelaxer(Objective objective, RaptorData raptorData, int minimumTransferDuration, int maximumWalkingDuration,
-                    TimeType timeType) {
+    FootpathRelaxer(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,
+                    int maximumWalkingDuration, TimeType timeType) {
         // constant data structures
         this.transfers = raptorData.getStopContext().transfers();
         this.stops = raptorData.getStopContext().stops();
@@ -39,8 +39,8 @@ class FootpathRelaxer {
         this.minTransferDuration = minimumTransferDuration;
         this.maxWalkingDuration = maximumWalkingDuration;
         this.timeType = timeType;
-        // note: objective will change also outside of relaxer, due to route scanning
-        this.objective = objective;
+        // note: will also change outside of relaxer, due to route scanning
+        this.stopLabelsAndTimes = stopLabelsAndTimes;
     }
 
     /**
@@ -94,10 +94,10 @@ class FootpathRelaxer {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        Objective.Label previousLabel = objective.getLabel(round, stopIdx);
+        StopLabelsAndTimes.Label previousLabel = stopLabelsAndTimes.getLabel(round, stopIdx);
 
         // do not relax footpath from stop that was only reached by footpath in the same round
-        if (previousLabel == null || previousLabel.type() == Objective.LabelType.TRANSFER) {
+        if (previousLabel == null || previousLabel.type() == StopLabelsAndTimes.LabelType.TRANSFER) {
             return;
         }
 
@@ -121,18 +121,19 @@ class FootpathRelaxer {
             int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= objective.getComparableBestTime(
+            if (comparableTargetTime * timeDirection >= stopLabelsAndTimes.getComparableBestTime(
                     transfer.targetStopIdx()) * timeDirection) {
                 continue;
             }
 
             log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
             // update best times with comparable target time
-            objective.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
+            stopLabelsAndTimes.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
-            Objective.Label label = new Objective.Label(sourceTime, targetTime, Objective.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), objective.getLabel(round, stopIdx));
-            objective.setLabel(round, transfer.targetStopIdx(), label);
+            StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(sourceTime, targetTime,
+                    StopLabelsAndTimes.LabelType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
+                    stopLabelsAndTimes.getLabel(round, stopIdx));
+            stopLabelsAndTimes.setLabel(round, transfer.targetStopIdx(), label);
             // mark stop as improved
             markedStops.add(transfer.targetStopIdx());
         }
