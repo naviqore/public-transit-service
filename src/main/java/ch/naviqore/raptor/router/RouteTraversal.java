@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.router;
 
 /**
  * Memory optimized itinerant data structure for efficient route traversal

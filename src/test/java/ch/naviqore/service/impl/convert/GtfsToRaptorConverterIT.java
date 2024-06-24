@@ -3,7 +3,7 @@ package ch.naviqore.service.impl.convert;
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.Raptor;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,7 +30,7 @@ class GtfsToRaptorConverterIT {
     @Test
     void shouldConvertGtfsScheduleToRaptor() {
         GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, SAME_STOP_TRANSFER_TIME);
-        Raptor raptor = mapper.convert(DATE);
+        RaptorAlgorithm raptor = mapper.convert(DATE);
         assertThat(raptor).isNotNull();
     }
 }

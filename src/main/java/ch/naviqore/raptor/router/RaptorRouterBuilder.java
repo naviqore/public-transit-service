@@ -1,9 +1,14 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.router;
 
+import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+
+import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
+
+// TODO remove duplicated step of generating same stop transfers
 
 /**
  * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
@@ -19,7 +24,7 @@ import java.util.*;
  * @author munterfi
  */
 @Log4j2
-public class RaptorBuilder {
+public class RaptorRouterBuilder {
 
     private final int defaultSameStopTransferTime;
     private final Map<String, Integer> stops = new HashMap<>();
@@ -32,11 +37,11 @@ public class RaptorBuilder {
     int routeStopSize = 0;
     int transferSize = 0;
 
-    RaptorBuilder(int defaultSameStopTransferTime) {
+    public RaptorRouterBuilder(int defaultSameStopTransferTime) {
         this.defaultSameStopTransferTime = defaultSameStopTransferTime;
     }
 
-    public RaptorBuilder addStop(String id) {
+    public RaptorRouterBuilder addStop(String id) {
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
@@ -48,7 +53,7 @@ public class RaptorBuilder {
         return this;
     }
 
-    public RaptorBuilder addRoute(String id, List<String> stopIds) {
+    public RaptorRouterBuilder addRoute(String id, List<String> stopIds) {
         if (routeBuilders.containsKey(id)) {
             throw new IllegalArgumentException("Route " + id + " already exists");
         }
@@ -67,13 +72,13 @@ public class RaptorBuilder {
         return this;
     }
 
-    public RaptorBuilder addTrip(String tripId, String routeId) {
+    public RaptorRouterBuilder addTrip(String tripId, String routeId) {
         getRouteBuilder(routeId).addTrip(tripId);
         return this;
     }
 
-    public RaptorBuilder addStopTime(String routeId, String tripId, int position, String stopId, int arrival,
-                                     int departure) {
+    public RaptorRouterBuilder addStopTime(String routeId, String tripId, int position, String stopId, int arrival,
+                                           int departure) {
         StopTime stopTime = new StopTime(arrival, departure);
         getRouteBuilder(routeId).addStopTime(tripId, position, stopId, stopTime);
         stopTimeSize++;
@@ -81,7 +86,7 @@ public class RaptorBuilder {
         return this;
     }
 
-    public RaptorBuilder addTransfer(String sourceStopId, String targetStopId, int duration) {
+    public RaptorRouterBuilder addTransfer(String sourceStopId, String targetStopId, int duration) {
         log.debug("Adding transfer: sourceStopId={}, targetStopId={}, duration={}", sourceStopId, targetStopId,
                 duration);
 
@@ -105,7 +110,7 @@ public class RaptorBuilder {
         return this;
     }
 
-    public Raptor build() {
+    public RaptorAlgorithm build() {
         log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 
@@ -115,7 +120,7 @@ public class RaptorBuilder {
         StopContext stopContext = buildStopContext(lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
 
-        return new Raptor(lookup, stopContext, routeTraversal);
+        return new RaptorRouter(lookup, stopContext, routeTraversal);
     }
 
     private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
@@ -164,7 +169,7 @@ public class RaptorBuilder {
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
-                    numberOfTransfers == 0 ? Raptor.NO_INDEX : transferIdx, numberOfTransfers);
+                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any
             if (currentTransfers != null) {

@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.router;
 
 record StopTime(int arrival, int departure) {
 

@@ -9,8 +9,7 @@ import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
-import ch.naviqore.raptor.Raptor;
-import ch.naviqore.raptor.TimeType;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
@@ -72,7 +71,7 @@ final class Benchmark {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
-        Raptor raptor = initializeRaptor(schedule);
+        RaptorAlgorithm raptor = initializeRaptor(schedule);
         RouteRequest[] requests = sampleRouteRequests(schedule);
         RoutingResult[] results = processRequests(raptor, requests);
         writeResultsToCsv(results);
@@ -85,7 +84,7 @@ final class Benchmark {
         return schedule;
     }
 
-    private static Raptor initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
+    private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
         // TODO: This should be implemented in the new integration service and should not need to run everytime a raptor
         //  instance is created. Ideally this will be handled as an attribute with a list of transfer generators. With
         //  this approach, transfers can be generated according to different rules with the first applicable one taking
@@ -98,7 +97,7 @@ final class Benchmark {
         SameStopTransferGenerator sameStopTransferGenerator = new SameStopTransferGenerator(SAME_STOP_TRANSFER_TIME);
         additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
 
-        Raptor raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
+        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
                 SAME_STOP_TRANSFER_TIME).convert(SCHEDULE_DATE);
         manageResources();
         return raptor;
@@ -125,8 +124,11 @@ final class Benchmark {
         for (int i = 0; i < SAMPLE_SIZE; i++) {
             int sourceIndex = random.nextInt(stopIds.size());
             int destinationIndex = getRandomDestinationIndex(stopIds.size(), sourceIndex, random);
+
+            LocalDateTime departureTime = SCHEDULE_DATE.atStartOfDay()
+                    .plusSeconds(random.nextInt(DEPARTURE_TIME_LIMIT));
             requests[i] = new RouteRequest(schedule.getStops().get(stopIds.get(sourceIndex)),
-                    schedule.getStops().get(stopIds.get(destinationIndex)), random.nextInt(DEPARTURE_TIME_LIMIT));
+                    schedule.getStops().get(stopIds.get(destinationIndex)), departureTime);
         }
         return requests;
     }
@@ -137,17 +139,16 @@ final class Benchmark {
         return index;
     }
 
-    private static RoutingResult[] processRequests(Raptor raptor, RouteRequest[] requests) {
+    private static RoutingResult[] processRequests(RaptorAlgorithm raptor, RouteRequest[] requests) {
         RoutingResult[] responses = new RoutingResult[requests.length];
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
             try {
-                Map<String, Integer> sourceStops = Map.of(requests[i].sourceStop().getId(),
+                Map<String, LocalDateTime> sourceStops = Map.of(requests[i].sourceStop().getId(),
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.route(sourceStops, targetStops, TimeType.DEPARTURE,
-                        new QueryConfig());
+                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops, new QueryConfig());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {
@@ -178,10 +179,9 @@ final class Benchmark {
                 request.sourceStop.getCoordinate().distanceTo(request.targetStop.getCoordinate()));
         long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
         return new RoutingResult(id, request.sourceStop().getId(), request.targetStop().getId(),
-                request.sourceStop().getName(), request.targetStop.getName(),
-                toLocalDatetime(request.departureTime).orElseThrow(), connections.size(), earliestDepartureTime,
-                earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers, beelineDistance,
-                processingTime);
+                request.sourceStop().getName(), request.targetStop.getName(), request.departureTime, connections.size(),
+                earliestDepartureTime, earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers,
+                beelineDistance, processingTime);
     }
 
     private static void writeResultsToCsv(RoutingResult[] results) throws IOException {
@@ -223,7 +223,7 @@ final class Benchmark {
         return Optional.of(new ServiceDayTime(seconds).toLocalDateTime(SCHEDULE_DATE));
     }
 
-    record RouteRequest(Stop sourceStop, Stop targetStop, int departureTime) {
+    record RouteRequest(Stop sourceStop, Stop targetStop, LocalDateTime departureTime) {
     }
 
     record RoutingResult(int id, String sourceStopId, String targetStopId, String sourceStopName, String targetStopName,

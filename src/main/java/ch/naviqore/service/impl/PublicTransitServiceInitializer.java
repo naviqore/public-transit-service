@@ -5,7 +5,6 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.config.ServiceConfig;
-import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
@@ -73,11 +72,7 @@ public class PublicTransitServiceInitializer {
                                                                     KDTree<Stop> spatialStopIndex) {
         ArrayList<TransferGenerator> generators = new ArrayList<>();
 
-        // create same stop transfers if the default transfer time is greater than 0 seconds
-        if (config.getTransferTimeSameStopDefault() > 0) {
-            generators.add(new SameStopTransferGenerator(config.getTransferTimeSameStopDefault()));
-        }
-
+        // TODO: Allow deactivation of walk transfer generator through service config.
         // always create walking transfers between stops
         generators.add(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
                 config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));

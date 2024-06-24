@@ -25,6 +25,6 @@ public interface TransferGenerator {
      * {@link GtfsToRaptorConverter}, as source to provide additional generated transfers not present in the
      * {@link GtfsSchedule} schedule.
      */
-    public record Transfer(Stop from, Stop to, int duration) {
+    record Transfer(Stop from, Stop to, int duration) {
     }
 }

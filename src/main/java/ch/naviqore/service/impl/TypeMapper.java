@@ -79,7 +79,7 @@ final class TypeMapper {
             legs.addFirst(firstMile);
         }
 
-        for (ch.naviqore.raptor.Connection.Leg leg : connection.getLegs()) {
+        for (ch.naviqore.raptor.Leg leg : connection.getLegs()) {
             legs.add(map(leg, date, schedule));
         }
 
@@ -90,15 +90,15 @@ final class TypeMapper {
         return new ConnectionImpl(legs);
     }
 
-    public static Leg map(ch.naviqore.raptor.Connection.Leg leg, LocalDate date, GtfsSchedule schedule) {
-        int duration = leg.arrivalTime() - leg.departureTime();
-        Stop sourceStop = map(schedule.getStops().get(leg.fromStopId()));
-        Stop targetStop = map(schedule.getStops().get(leg.toStopId()));
+    public static Leg map(ch.naviqore.raptor.Leg leg, LocalDate date, GtfsSchedule schedule) {
+        int duration = leg.getArrivalTime() - leg.getDepartureTime();
+        Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
+        Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
         int distance = (int) Math.round(sourceStop.getLocation().distanceTo(targetStop.getLocation()));
 
-        return switch (leg.type()) {
-            case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.departureTime(), date),
-                    toLocalDateTime(leg.arrivalTime(), date), sourceStop, targetStop);
+        return switch (leg.getType()) {
+            case WALK_TRANSFER -> new TransferImpl(distance, duration, toLocalDateTime(leg.getDepartureTime(), date),
+                    toLocalDateTime(leg.getArrivalTime(), date), sourceStop, targetStop);
             case ROUTE -> createPublicTransitLeg(leg, date, schedule, distance);
         };
     }
@@ -115,10 +115,10 @@ final class TypeMapper {
         };
     }
 
-    private static Leg createPublicTransitLeg(ch.naviqore.raptor.Connection.Leg leg, LocalDate date,
-                                              GtfsSchedule schedule, int distance) {
-        int duration = leg.arrivalTime() - leg.departureTime();
-        ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.tripId());
+    private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, LocalDate date, GtfsSchedule schedule,
+                                              int distance) {
+        int duration = leg.getArrivalTime() - leg.getDepartureTime();
+        ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.getTripId());
         Trip trip = map(gtfsTrip, date);
 
         assert gtfsTrip.getStopTimes().size() == trip.getStopTimes()
@@ -130,15 +130,15 @@ final class TypeMapper {
         for (int i = 0; i < gtfsTrip.getStopTimes().size(); i++) {
             var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
             // if the from stop id and the departure time matches, set the departure stop time
-            if (gtfsStopTime.stop().getId().equals(leg.fromStopId()) && gtfsStopTime.departure()
-                    .getTotalSeconds() == leg.departureTime()) {
+            if (gtfsStopTime.stop().getId().equals(leg.getFromStopId()) && gtfsStopTime.departure()
+                    .getTotalSeconds() == leg.getDepartureTime()) {
                 departure = trip.getStopTimes().get(i);
                 continue;
             }
 
             // if the to stop id and the arrival time matches, set the arrival stop time
-            if (gtfsStopTime.stop().getId().equals(leg.toStopId()) && gtfsStopTime.arrival()
-                    .getTotalSeconds() == leg.arrivalTime()) {
+            if (gtfsStopTime.stop().getId().equals(leg.getToStopId()) && gtfsStopTime.arrival()
+                    .getTotalSeconds() == leg.getArrivalTime()) {
                 arrival = trip.getStopTimes().get(i);
                 break;
             }

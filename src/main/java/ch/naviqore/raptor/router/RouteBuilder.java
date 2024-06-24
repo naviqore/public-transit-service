@@ -1,4 +1,4 @@
-package ch.naviqore.raptor;
+package ch.naviqore.raptor.router;
 
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
