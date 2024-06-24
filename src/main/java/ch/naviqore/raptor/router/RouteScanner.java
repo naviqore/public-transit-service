@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.Objective.INFINITY;
+import static ch.naviqore.raptor.router.Query.INFINITY;
 
 /**
  * Scans routes, which are passing marked stops, for each round.
@@ -21,7 +21,7 @@ class RouteScanner {
     private final Route[] routes;
     private final RouteStop[] routeStops;
 
-    private final Objective objective;
+    private final Query query;
 
     /**
      * the minimum transfer duration time, since this is intended as rest period it is added to the walk time.
@@ -31,9 +31,9 @@ class RouteScanner {
 
     /**
      * @param raptorRouter the current raptor instance for access to the data structures.
-     * @param objective    the best time per stop and label per stop and round.
+     * @param query        the best time per stop and label per stop and round.
      */
-    RouteScanner(RaptorRouter raptorRouter, Objective objective) {
+    RouteScanner(RaptorRouter raptorRouter, Query query) {
         // constant data structures
         this.stops = raptorRouter.getStopContext().stops();
         this.stopRoutes = raptorRouter.getStopContext().stopRoutes();
@@ -41,10 +41,10 @@ class RouteScanner {
         this.routes = raptorRouter.getRouteTraversal().routes();
         this.routeStops = raptorRouter.getRouteTraversal().routeStops();
         // note: objective will change also outside of scanner, due to footpath relaxation
-        this.objective = objective;
+        this.query = query;
         // constant configuration of scanner
-        this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();
-        this.timeType = objective.getTimeType();
+        this.minTransferDuration = query.getConfig().getMinimumTransferDuration();
+        this.timeType = query.getTimeType();
     }
 
     /**
@@ -114,7 +114,7 @@ class RouteScanner {
         for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += step) {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
-            int bestStopTime = objective.getBestTime(stopIdx);
+            int bestStopTime = query.getBestTime(stopIdx);
 
             // find first marked stop in route
             if (activeTrip == null) {
@@ -201,20 +201,18 @@ class RouteScanner {
 
         if (isImproved) {
             log.debug("Stop {} was improved", stop.id());
-            objective.setBestTime(stopIdx,
-                    (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure());
+            query.setBestTime(stopIdx, (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure());
 
-            Objective.Label label = new Objective.Label(activeTrip.entryTime(),
-                    (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure(),
-                    Objective.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx,
-                    activeTrip.previousLabel);
-            objective.setLabel(thisRound, stopIdx, label);
+            Query.Label label = new Query.Label(activeTrip.entryTime(),
+                    (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure(), Query.LabelType.ROUTE,
+                    currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
+            query.setLabel(thisRound, stopIdx, label);
             markedStopsNext.add(stopIdx);
 
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
-            Objective.Label previous = objective.getLabel(lastRound, stopIdx);
+            Query.Label previous = query.getLabel(lastRound, stopIdx);
 
             boolean isImprovedInSameRound = (timeType == TimeType.DEPARTURE) ? previous == null || previous.targetTime() >= stopTime.arrival() : previous == null || previous.targetTime() <= stopTime.departure();
             if (isImprovedInSameRound) {
@@ -246,11 +244,11 @@ class RouteScanner {
 
         int tripOffset = (timeType == TimeType.DEPARTURE) ? 0 : numberOfTrips - 1;
         int entryTime = 0;
-        Objective.Label previousLabel = objective.getLabel(lastRound, stopIdx);
+        Query.Label previousLabel = query.getLabel(lastRound, stopIdx);
 
         // this is the reference time, where we can depart after or arrive earlier
         int referenceTime = previousLabel.targetTime();
-        if (previousLabel.type() == Objective.LabelType.ROUTE) {
+        if (previousLabel.type() == Query.LabelType.ROUTE) {
             referenceTime += (timeType == TimeType.DEPARTURE) ? Math.max(stop.sameStopTransferTime(),
                     minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
@@ -274,6 +272,6 @@ class RouteScanner {
         return new ActiveTrip(tripOffset, entryTime, previousLabel);
     }
 
-    private record ActiveTrip(int tripOffset, int entryTime, Objective.Label previousLabel) {
+    private record ActiveTrip(int tripOffset, int entryTime, Query.Label previousLabel) {
     }
 }

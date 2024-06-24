@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.Objective.NO_INDEX;
+import static ch.naviqore.raptor.router.Query.NO_INDEX;
 
 @Log4j2
 class FootpathRelaxer {
@@ -15,7 +15,7 @@ class FootpathRelaxer {
     private final Transfer[] transfers;
     private final Stop[] stops;
 
-    private final Objective objective;
+    private final Query query;
 
     /**
      * The minimum transfer duration time, since this is intended as rest period (e.g. coffee break) it is added to the
@@ -31,18 +31,18 @@ class FootpathRelaxer {
 
     /**
      * @param raptorRouter the current raptor instance for access to the data structures.
-     * @param objective    the best time per stop and label per stop and round.
+     * @param query        the best time per stop and label per stop and round.
      */
-    FootpathRelaxer(RaptorRouter raptorRouter, Objective objective) {
+    FootpathRelaxer(RaptorRouter raptorRouter, Query query) {
         // constant data structures
         this.transfers = raptorRouter.getStopContext().transfers();
         this.stops = raptorRouter.getStopContext().stops();
         // note: objective will change also outside of relaxer, due to route scanning
-        this.objective = objective;
+        this.query = query;
         // constant configuration of relaxer
-        this.minTransferDuration = objective.getConfig().getMinimumTransferDuration();
-        this.maxWalkingDuration = objective.getConfig().getMaximumWalkingDuration();
-        this.timeType = objective.getTimeType();
+        this.minTransferDuration = query.getConfig().getMinimumTransferDuration();
+        this.maxWalkingDuration = query.getConfig().getMaximumWalkingDuration();
+        this.timeType = query.getTimeType();
     }
 
     /**
@@ -96,10 +96,10 @@ class FootpathRelaxer {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        Objective.Label previousLabel = objective.getLabel(round, stopIdx);
+        Query.Label previousLabel = query.getLabel(round, stopIdx);
 
         // do not relax footpath from stop that was only reached by footpath in the same round
-        if (previousLabel == null || previousLabel.type() == Objective.LabelType.TRANSFER) {
+        if (previousLabel == null || previousLabel.type() == Query.LabelType.TRANSFER) {
             return;
         }
 
@@ -123,18 +123,17 @@ class FootpathRelaxer {
             int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= objective.getBestTime(
-                    transfer.targetStopIdx()) * timeDirection) {
+            if (comparableTargetTime * timeDirection >= query.getBestTime(transfer.targetStopIdx()) * timeDirection) {
                 continue;
             }
 
             log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
             // update best times with comparable target time
-            objective.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
+            query.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
-            Objective.Label label = new Objective.Label(sourceTime, targetTime, Objective.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), objective.getLabel(round, stopIdx));
-            objective.setLabel(round, transfer.targetStopIdx(), label);
+            Query.Label label = new Query.Label(sourceTime, targetTime, Query.LabelType.TRANSFER, i, NO_INDEX,
+                    transfer.targetStopIdx(), query.getLabel(round, stopIdx));
+            query.setLabel(round, transfer.targetStopIdx(), label);
             // mark stop as improved
             markedStops.add(transfer.targetStopIdx());
         }

@@ -79,7 +79,7 @@ class RaptorRouter implements RaptorAlgorithm {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<Objective.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, new int[]{}, refStopTimes,
+        List<Query.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, new int[]{}, refStopTimes,
                 new int[]{}, config, timeType);
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound);
@@ -112,7 +112,7 @@ class RaptorRouter implements RaptorAlgorithm {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<Objective.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, targetStopIndices, sourceTimes,
+        List<Query.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType);
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
@@ -120,25 +120,24 @@ class RaptorRouter implements RaptorAlgorithm {
     }
 
     // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Objective.Label[]> spawnFromStops(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-                                                   int[] walkingDurationsToTarget, QueryConfig config,
-                                                   TimeType timeType) {
+    private List<Query.Label[]> spawnFromStops(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+                                               int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
         // set up new query objective, footpath relaxer and route scanner
-        Objective objective = new Objective(stopContext.stops().length, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType);
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(this, objective);
-        RouteScanner routeScanner = new RouteScanner(this, objective);
+        Query query = new Query(stopContext.stops().length, sourceStopIndices, targetStopIndices, sourceTimes,
+                walkingDurationsToTarget, config, timeType);
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(this, query);
+        RouteScanner routeScanner = new RouteScanner(this, query);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        Set<Integer> markedStops = objective.initialize();
+        Set<Integer> markedStops = query.initialize();
         markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
-        markedStops = objective.removeSubOptimalLabelsForRound(0, markedStops);
+        markedStops = query.removeSubOptimalLabelsForRound(0, markedStops);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
         while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
             // add label layer for new round
-            objective.addNewRound();
+            query.addNewRound();
 
             // scan all routs and mark stops that have improved
             Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
@@ -147,11 +146,11 @@ class RaptorRouter implements RaptorAlgorithm {
             markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
 
             // prepare next round
-            markedStops = objective.removeSubOptimalLabelsForRound(round, markedStopsNext);
+            markedStops = query.removeSubOptimalLabelsForRound(round, markedStopsNext);
             round++;
         }
 
-        return objective.getBestLabelsPerRound();
+        return query.getBestLabelsPerRound();
     }
 
     /**

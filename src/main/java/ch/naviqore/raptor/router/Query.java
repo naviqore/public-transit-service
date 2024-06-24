@@ -9,10 +9,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * The objective stores the progress of the raptor algorithm. Each request needs a new objective instance.
+ * The query stores the progress of the raptor algorithm. Each request needs a new query instance.
  */
 @Log4j2
-class Objective {
+class Query {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
@@ -52,8 +52,8 @@ class Objective {
      *                                 considered as arrival or departure stop.
      * @param config                   the query configuration.
      */
-    Objective(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-              int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
+    Query(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
