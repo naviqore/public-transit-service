@@ -121,7 +121,7 @@ class FootpathRelaxer {
             int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= objective.getBestTime(
+            if (comparableTargetTime * timeDirection >= objective.getComparableBestTime(
                     transfer.targetStopIdx()) * timeDirection) {
                 continue;
             }

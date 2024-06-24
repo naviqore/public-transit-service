@@ -186,7 +186,7 @@ class Query {
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = objective.getBestTime_REMOVE(targetStopIdx);
+            int bestTimeForStop = objective.getActualBestTime(targetStopIdx);
 
             if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
                 bestTimeForStop += walkDurationToTarget;

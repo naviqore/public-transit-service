@@ -116,7 +116,7 @@ class RouteScanner {
         for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += step) {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
-            int bestStopTime = objective.getBestTime(stopIdx);
+            int bestStopTime = objective.getComparableBestTime(stopIdx);
 
             // find first marked stop in route
             if (activeTrip == null) {

@@ -56,17 +56,19 @@ final class Objective {
     }
 
     /**
-     * Get global best time of a stop.
+     * Get global best time of a stop for comparison. The comparison of arrival/departures requires that the same stop
+     * transfer time is subtracted (departure) or added (arrival) to the actual target time, so that the comparison is
+     * correct with route target times.
      */
-    int getBestTime(int stopIdx) {
+    int getComparableBestTime(int stopIdx) {
         return bestTimeForStops[stopIdx];
     }
 
-    // TODO: Strangely if this method is changed with the method above in 'getBestTimeForAllTargetStops' in the Query
-    //  class, the two footpath only tests fail. It think we maybe forget to update the best times after footpath
-    //  relaxation. Since we track the best times, this method should not be necessary and can be removed if everything
-    //  is updated correctly.
-    int getBestTime_REMOVE(int stopIdx) {
+    /**
+     * Get the actual best time of a stop. This is the actual target time. This should not be used to compare times of
+     * different label types (transfer vs. route), as the same stop transfer time is not considered.
+     */
+    int getActualBestTime(int stopIdx) {
         int bestTime = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
 
         for (Label[] labels : bestLabelsPerRound) {
