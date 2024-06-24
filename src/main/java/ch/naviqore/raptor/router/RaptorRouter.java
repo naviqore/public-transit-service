@@ -131,7 +131,7 @@ class RaptorRouter implements RaptorAlgorithm {
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = query.initialize();
         markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
-        markedStops = query.removeSubOptimalLabelsForRound(0, markedStops);
+        markedStops = query.removeSuboptimalLabelsForRound(0, markedStops);
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -146,7 +146,7 @@ class RaptorRouter implements RaptorAlgorithm {
             markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
 
             // prepare next round
-            markedStops = query.removeSubOptimalLabelsForRound(round, markedStopsNext);
+            markedStops = query.removeSuboptimalLabelsForRound(round, markedStopsNext);
             round++;
         }
 
