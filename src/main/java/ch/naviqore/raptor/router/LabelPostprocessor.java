@@ -301,7 +301,8 @@ class LabelPostprocessor {
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
     }
 
-    private @Nullable StopLabelsAndTimes.Label getBestLabelForStop(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound, int stopIdx) {
+    private @Nullable StopLabelsAndTimes.Label getBestLabelForStop(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
+                                                                   int stopIdx) {
         StopLabelsAndTimes.Label bestLabelForStop = null;
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
