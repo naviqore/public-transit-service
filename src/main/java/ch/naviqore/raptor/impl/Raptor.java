@@ -177,9 +177,7 @@ class Raptor implements RaptorAlgorithm {
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
 
             // ensure departure and arrival stops are not the same
-            Set<String> intersection = sourceStops.keySet();
-            intersection.retainAll(targetStops.keySet());
-            if (!intersection.isEmpty()) {
+            if (!Collections.disjoint(sourceStops.keySet(), targetStops.keySet())) {
                 throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
             }
 
