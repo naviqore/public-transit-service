@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * A connection is a sequence of legs to travel from an origin stop to destination stop.
  */
-public interface Connection extends Comparable<Connection> {
+public interface Connection {
 
     int getDepartureTime();
 
