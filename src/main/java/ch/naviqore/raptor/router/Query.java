@@ -2,57 +2,45 @@ package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static ch.naviqore.raptor.router.Objective.INFINITY;
 
 /**
- * The query stores the progress of the raptor algorithm. Each request needs a new query instance.
+ * The query represents a request to the raptor router and coordinates the routing logic. Each request needs a new query
+ * instance.
  */
 @Log4j2
 class Query {
 
-    public final static int INFINITY = Integer.MAX_VALUE;
-    public final static int NO_INDEX = -1;
-
-    private final int stopSize;
     private final int[] sourceStopIndices;
     private final int[] targetStopIndices;
     private final int[] sourceTimes;
     private final int[] walkingDurationsToTarget;
 
-    @Getter
+    private final RaptorData raptorData;
     private final QueryConfig config;
-    @Getter
     private final TimeType timeType;
 
     private final int[] targetStops;
     private final int cutoffTime;
+    private final Objective objective;
 
     /**
-     * The global best time per stop.
-     */
-    private final int[] bestTimeForStops;
-
-    /**
-     * The best labels per stop and round.
-     */
-    @Getter
-    private final List<Label[]> bestLabelsPerRound;
-
-    /**
-     * @param stopSize                 the number of stops in the stop context.
+     * @param raptorData               the current raptor data structures.
      * @param sourceStopIndices        the indices of the source stops.
      * @param targetStopIndices        the indices of the target stops.
      * @param sourceTimes              the start times at the source stops.
      * @param walkingDurationsToTarget the walking durations to the target stops.
-     * @param timeType                 the type of time to check for (arrival or departure), defines if stop is
-     *                                 considered as arrival or departure stop.
+     * @param timeType                 the time type (arrival or departure) of the query.
      * @param config                   the query configuration.
      */
-    Query(int stopSize, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
+    Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
           int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
@@ -63,50 +51,66 @@ class Query {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
-        this.stopSize = stopSize;
+        this.raptorData = raptorData;
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
         this.walkingDurationsToTarget = walkingDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
-        this.bestTimeForStops = new int[stopSize];
-        this.bestLabelsPerRound = new ArrayList<>();
 
-        this.targetStops = new int[targetStopIndices.length * 2];
-        this.cutoffTime = determineCutoffTime();
-    }
-
-    Label getLabel(int round, int stopIdx) {
-        return bestLabelsPerRound.get(round)[stopIdx];
+        targetStops = new int[targetStopIndices.length * 2];
+        cutoffTime = determineCutoffTime();
+        // set up new query objective to be minimized (travel time and transfers)
+        objective = new Objective(raptorData.getStopContext().stops().length, timeType);
     }
 
     /**
-     * Sets a new label for a stop and round.
+     * Main control flow of the routing algorithm. Spawns from source stops, coordinates route scanning, footpath
+     * relaxation, and objective updates in the correct order.
+     * <p>
+     * The process starts by relaxing all source stops and adding the newly improved stops by relaxation to the set of
+     * marked stops. It then iterates through rounds of route scanning and footpath relaxation until no new stops are
+     * marked or the maximum number of transfers is reached.
+     * <p>
+     * Each round includes the following steps:
+     * <ul>
+     *     <li>Add a new label layer for the current round.</li>
+     *     <li>Scan all routes and mark stops that have improved.</li>
+     *     <li>Relax footpaths for all newly marked stops.</li>
+     *     <li>Prepare for the next round by removing suboptimal labels.</li>
+     * </ul>
      */
-    void setLabel(int round, int stopIdx, Label label) {
-        bestLabelsPerRound.get(round)[stopIdx] = label;
-    }
+    List<Objective.Label[]> run() {
+        // set up footpath relaxer and route scanner and inject query objective
+        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(objective, raptorData,
+                config.getMinimumTransferDuration(), config.getMaximumWalkingDuration(), timeType);
+        RouteScanner routeScanner = new RouteScanner(objective, raptorData, config.getMinimumTransferDuration(),
+                timeType);
 
-    /**
-     * Get global best time of a stop.
-     */
-    int getBestTime(int stopIdx) {
-        return bestTimeForStops[stopIdx];
-    }
+        // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
+        Set<Integer> markedStops = initialize();
+        markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
+        markedStops = removeSuboptimalLabelsForRound(0, markedStops);
 
-    /**
-     * Set the global best time for a stop.
-     */
-    void setBestTime(int stopIdx, int time) {
-        bestTimeForStops[stopIdx] = time;
-    }
+        // continue with further rounds as long as there are new marked stops
+        int round = 1;
+        while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
+            // add label layer for new round
+            objective.addNewRound();
 
-    /**
-     * Adds a new round with empty labels.
-     */
-    void addNewRound() {
-        bestLabelsPerRound.add(new Label[stopSize]);
+            // scan all routs and mark stops that have improved
+            Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
+
+            // relax footpaths for all newly marked stops
+            markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
+
+            // prepare next round
+            markedStops = removeSuboptimalLabelsForRound(round, markedStopsNext);
+            round++;
+        }
+
+        return objective.getBestLabelsPerRound();
     }
 
     /**
@@ -117,9 +121,6 @@ class Query {
     Set<Integer> initialize() {
         log.info("Initializing objective (global best times per stop and best labels per round)");
 
-        // set best times to zero
-        Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
-
         // fill target stops
         for (int i = 0; i < targetStops.length; i += 2) {
             int index = (int) Math.ceil(i / 2.0);
@@ -127,18 +128,16 @@ class Query {
             targetStops[i + 1] = walkingDurationsToTarget[index];
         }
 
-        // set empty labels for first round
-        addNewRound();
-
         // set initial labels, best time and mark source stops
         Set<Integer> markedStops = new HashSet<>();
         for (int i = 0; i < sourceStopIndices.length; i++) {
             int currentStopIdx = sourceStopIndices[i];
             int targetTime = sourceTimes[i];
 
-            Label label = new Label(0, targetTime, LabelType.INITIAL, NO_INDEX, NO_INDEX, currentStopIdx, null);
-            setLabel(0, currentStopIdx, label);
-            setBestTime(currentStopIdx, targetTime);
+            Objective.Label label = new Objective.Label(0, targetTime, Objective.LabelType.INITIAL, Objective.NO_INDEX,
+                    Objective.NO_INDEX, currentStopIdx, null);
+            objective.setLabel(0, currentStopIdx, label);
+            objective.setBestTime(currentStopIdx, targetTime);
 
             markedStops.add(currentStopIdx);
         }
@@ -160,14 +159,14 @@ class Query {
             return markedStops;
         }
 
-        Label[] bestLabelsThisRound = bestLabelsPerRound.get(round);
         Set<Integer> markedStopsClean = new HashSet<>();
         for (int stopIdx : markedStops) {
-            if (bestLabelsThisRound[stopIdx] != null) {
-                if (timeType == TimeType.DEPARTURE && bestLabelsThisRound[stopIdx].targetTime > bestTime) {
-                    bestLabelsThisRound[stopIdx] = null;
-                } else if (timeType == TimeType.ARRIVAL && bestLabelsThisRound[stopIdx].targetTime < bestTime) {
-                    bestLabelsThisRound[stopIdx] = null;
+            Objective.Label label = objective.getLabel(round, stopIdx);
+            if (label != null) {
+                if (timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) {
+                    objective.setLabel(round, stopIdx, null);
+                } else if (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime) {
+                    objective.setLabel(round, stopIdx, null);
                 } else {
                     markedStopsClean.add(stopIdx);
                 }
@@ -175,6 +174,30 @@ class Query {
         }
 
         return markedStopsClean;
+    }
+
+    /**
+     * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
+     * is departure, and the latest arrival time for each stop if the time type is arrival.
+     */
+    private int getBestTimeForAllTargetStops() {
+        int bestTime = cutoffTime;
+
+        for (int i = 0; i < targetStops.length; i += 2) {
+            int targetStopIdx = targetStops[i];
+            int walkDurationToTarget = targetStops[i + 1];
+            int bestTimeForStop = objective.getBestTime_REMOVE(targetStopIdx);
+
+            if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
+                bestTimeForStop += walkDurationToTarget;
+                bestTime = Math.min(bestTime, bestTimeForStop);
+            } else if (timeType == TimeType.ARRIVAL && bestTimeForStop != -INFINITY) {
+                bestTimeForStop -= walkDurationToTarget;
+                bestTime = Math.max(bestTime, bestTimeForStop);
+            }
+        }
+
+        return bestTime;
     }
 
     /**
@@ -199,85 +222,4 @@ class Query {
         return cutoffTime;
     }
 
-    /**
-     * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
-     * is departure, and the latest arrival time for each stop if the time type is arrival.
-     */
-    private int getBestTimeForAllTargetStops() {
-        int bestTime = cutoffTime;
-
-        for (int i = 0; i < targetStops.length; i += 2) {
-            int targetStopIdx = targetStops[i];
-            int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = getBestTimeForStop(targetStopIdx);
-
-            if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
-                bestTimeForStop += walkDurationToTarget;
-                bestTime = Math.min(bestTime, bestTimeForStop);
-            } else if (timeType == TimeType.ARRIVAL && bestTimeForStop != -INFINITY) {
-                bestTimeForStop -= walkDurationToTarget;
-                bestTime = Math.max(bestTime, bestTimeForStop);
-            }
-        }
-
-        return bestTime;
-    }
-
-    private int getBestTimeForStop(int stopIdx) {
-        int bestTime = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
-
-        for (Label[] labels : bestLabelsPerRound) {
-            if (labels[stopIdx] == null) {
-                continue;
-            }
-
-            Label currentLabel = labels[stopIdx];
-            if (timeType == TimeType.DEPARTURE) {
-                if (currentLabel.targetTime < bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
-            } else {
-                if (currentLabel.targetTime > bestTime) {
-                    bestTime = currentLabel.targetTime;
-                }
-            }
-        }
-
-        return bestTime;
-    }
-
-    /**
-     * Arrival type of the label.
-     */
-    enum LabelType {
-
-        /**
-         * First label in the connection, so there is no previous label set.
-         */
-        INITIAL,
-        /**
-         * A route label uses a public transit trip in the network.
-         */
-        ROUTE,
-        /**
-         * Uses a transfer between stops (not a same stop transfer).
-         */
-        TRANSFER
-
-    }
-
-    /**
-     * A label is a part of a connection in the same mode (PT or walk).
-     *
-     * @param sourceTime         the source time of the label in seconds after midnight.
-     * @param targetTime         the target time of the label in seconds after midnight.
-     * @param type               the type of the label, can be INITIAL, ROUTE or TRANSFER.
-     * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
-     * @param tripOffset         the trip offset on the current route (or NO_INDEX).
-     * @param stopIdx            the target stop of the label.
-     * @param previous           the previous label, null if it is the initial label.
-     */
-    record Label(int sourceTime, int targetTime, LabelType type, int routeOrTransferIdx, int tripOffset, int stopIdx,
-                 @Nullable Label previous) {
-    }
 }
