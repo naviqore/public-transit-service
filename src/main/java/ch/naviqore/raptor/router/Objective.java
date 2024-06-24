@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;

@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.Leg;

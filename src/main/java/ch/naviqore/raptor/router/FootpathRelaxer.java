@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.log4j.Log4j2;
@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.impl.Objective.NO_INDEX;
+import static ch.naviqore.raptor.router.Objective.NO_INDEX;
 
 @Log4j2
 class FootpathRelaxer {

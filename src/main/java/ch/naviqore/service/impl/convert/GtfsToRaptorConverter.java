@@ -3,7 +3,7 @@ package ch.naviqore.service.impl.convert;
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.raptor.impl.RaptorRouterBuilder;
+import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.log4j.Log4j2;
 

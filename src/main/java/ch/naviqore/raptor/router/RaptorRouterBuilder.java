@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.impl;
+package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.extern.log4j.Log4j2;
