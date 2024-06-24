@@ -4,7 +4,6 @@ import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.TimeType;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -18,15 +17,15 @@ import java.util.stream.Collectors;
  * Raptor algorithm implementation
  */
 @Log4j2
-class RaptorRouter implements RaptorAlgorithm {
+class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private final Lookup lookup;
 
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private final StopContext stopContext;
 
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private final RouteTraversal routeTraversal;
 
     private final InputValidator validator;
@@ -80,8 +79,8 @@ class RaptorRouter implements RaptorAlgorithm {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<Query.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, new int[]{}, refStopTimes,
-                new int[]{}, config, timeType);
+        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
+                refStopTimes, new int[]{}, config, timeType).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound);
     }
@@ -113,45 +112,11 @@ class RaptorRouter implements RaptorAlgorithm {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<Query.Label[]> bestLabelsPerRound = spawnFromStops(sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType);
+        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
+                sourceTimes, walkingDurationsToTarget, config, timeType).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops);
-    }
-
-    // if targetStopIdx is not empty, then the search will stop when target stop cannot be pareto optimized
-    private List<Query.Label[]> spawnFromStops(int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-                                               int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
-        // set up new query objective, footpath relaxer and route scanner
-        Query query = new Query(stopContext.stops().length, sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType);
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(this, query);
-        RouteScanner routeScanner = new RouteScanner(this, query);
-
-        // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        Set<Integer> markedStops = query.initialize();
-        markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
-        markedStops = query.removeSuboptimalLabelsForRound(0, markedStops);
-
-        // continue with further rounds as long as there are new marked stops
-        int round = 1;
-        while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
-            // add label layer for new round
-            query.addNewRound();
-
-            // scan all routs and mark stops that have improved
-            Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
-
-            // relax footpaths for all newly marked stops
-            markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
-
-            // prepare next round
-            markedStops = query.removeSuboptimalLabelsForRound(round, markedStopsNext);
-            round++;
-        }
-
-        return query.getBestLabelsPerRound();
     }
 
     /**

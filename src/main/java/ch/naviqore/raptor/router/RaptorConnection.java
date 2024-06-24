@@ -6,7 +6,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -17,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-class RaptorConnection implements Connection, Comparable<Connection> {
+class RaptorConnection implements Connection {
 
     private List<Leg> legs = new ArrayList<>();
 
@@ -49,11 +48,6 @@ class RaptorConnection implements Connection, Comparable<Connection> {
         }
         // make legs immutable and remove unnecessary allocated memory
         this.legs = List.copyOf(legs);
-    }
-
-    @Override
-    public int compareTo(@NotNull Connection other) {
-        return getArrivalTime().compareTo(other.getArrivalTime());
     }
 
     @Override

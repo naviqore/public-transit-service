@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
+
 // TODO remove duplicated step of generating same stop transfers
 
 /**
@@ -167,7 +169,7 @@ public class RaptorRouterBuilder {
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
-                    numberOfTransfers == 0 ? Query.NO_INDEX : transferIdx, numberOfTransfers);
+                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any
             if (currentTransfers != null) {
