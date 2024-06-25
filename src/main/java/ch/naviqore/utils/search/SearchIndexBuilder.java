@@ -1,13 +1,13 @@
 package ch.naviqore.utils.search;
 
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Builder class for creating a SearchIndex with key-value pairs.
  *
  * @param <T> the type of objects to be indexed.
  */
-@Log4j2
+@Slf4j
 public class SearchIndexBuilder<T> {
 
     private final CompressedTrie<SearchIndex.Entry<T>> suffixTrie = new CompressedTrie<>();

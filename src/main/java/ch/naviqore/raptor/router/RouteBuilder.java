@@ -1,6 +1,6 @@
 package ch.naviqore.raptor.router;
 
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -15,7 +15,7 @@ import java.util.*;
  *     <li>In the final route container all trips are sorted according to their departure time.</li>
  * </ul>
  */
-@Log4j2
+@Slf4j
 class RouteBuilder {
 
     private final String routeId;

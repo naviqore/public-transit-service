@@ -2,7 +2,7 @@ package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -15,7 +15,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
  * The query represents a request to the raptor router and coordinates the routing logic. Each request needs a new query
  * instance.
  */
-@Log4j2
+@Slf4j
 class Query {
 
     private final int[] sourceStopIndices;

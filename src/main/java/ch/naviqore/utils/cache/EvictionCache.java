@@ -1,7 +1,7 @@
 package ch.naviqore.utils.cache;
 
 import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@Log4j2
+@Slf4j
 public class EvictionCache<K, V> {
     @Getter
     private final int size;

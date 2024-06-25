@@ -4,7 +4,7 @@ import ch.naviqore.app.dto.*;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +17,7 @@ import static ch.naviqore.app.dto.DtoMapper.map;
 
 @RestController
 @RequestMapping("/schedule")
-@Log4j2
+@Slf4j
 public class ScheduleController {
 
     private final ScheduleInformationService service;
