@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * Benchmark data provider
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-@Log4j2
+@Slf4j
 public final class BenchmarkData {
 
     private static final Path DATA_DIRECTORY = Path.of("benchmark/input");

@@ -4,7 +4,7 @@ import ch.naviqore.gtfs.schedule.model.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  *
  * @author munterfi
  */
-@Log4j2
+@Slf4j
 public class GtfsRoutePartitioner {
 
     private final Map<Route, Map<String, SubRoute>> subRoutes = new HashMap<>();

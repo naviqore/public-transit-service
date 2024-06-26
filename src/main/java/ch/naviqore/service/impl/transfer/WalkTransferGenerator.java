@@ -4,7 +4,7 @@ import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.spatial.index.KDTree;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.Map;
  * Implements a transfer generator that creates minimum time transfers between stops where the {@link GtfsSchedule} does
  * not provide a transfer for and the distance is within walking distance.
  */
-@Log4j2
+@Slf4j
 public class WalkTransferGenerator implements TransferGenerator {
 
     private final WalkCalculator walkCalculator;

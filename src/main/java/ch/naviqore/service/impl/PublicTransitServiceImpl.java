@@ -17,7 +17,7 @@ import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 import static ch.naviqore.service.impl.TypeMapper.createWalk;
 import static ch.naviqore.service.impl.TypeMapper.map;
 
-@Log4j2
+@Slf4j
 public class PublicTransitServiceImpl implements PublicTransitService {
 
     private final ServiceConfig config;

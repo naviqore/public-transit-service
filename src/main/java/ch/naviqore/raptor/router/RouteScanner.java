@@ -1,7 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.TimeType;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -12,7 +12,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 /**
  * Scans routes, which are passing marked stops, for each round.
  */
-@Log4j2
+@Slf4j
 class RouteScanner {
 
     private final Stop[] stops;

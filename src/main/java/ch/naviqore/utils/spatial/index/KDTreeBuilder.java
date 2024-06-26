@@ -4,7 +4,7 @@ import ch.naviqore.utils.spatial.Coordinate;
 import ch.naviqore.utils.spatial.Location;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,7 +13,7 @@ import java.util.List;
 import static ch.naviqore.utils.spatial.index.KDTree.getAxis;
 
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
-@Log4j2
+@Slf4j
 public class KDTreeBuilder<T extends Location<?>> {
 
     private ArrayList<T> locations = new ArrayList<>();

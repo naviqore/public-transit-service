@@ -2,7 +2,7 @@ package ch.naviqore.utils.search;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Set;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @param <T> the type of objects to be indexed.
  */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-@Log4j2
+@Slf4j
 public class SearchIndex<T> {
 
     private final Trie<Entry<T>> suffixTrie;
