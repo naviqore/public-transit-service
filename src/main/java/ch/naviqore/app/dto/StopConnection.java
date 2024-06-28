@@ -9,11 +9,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode
 @ToString
 @Getter
-public class EarliestArrival {
+public class StopConnection {
 
     private final Stop stop;
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private final LocalDateTime arrivalTime;
+    private final Leg connectingLeg;
     private final Connection connection;
 
 }

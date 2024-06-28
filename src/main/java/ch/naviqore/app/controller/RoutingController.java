@@ -2,7 +2,7 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.DtoMapper;
-import ch.naviqore.app.dto.EarliestArrival;
+import ch.naviqore.app.dto.StopConnection;
 import ch.naviqore.app.dto.TimeType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.Stop;
@@ -129,15 +129,16 @@ public class RoutingController {
     }
 
     @GetMapping("/isolines")
-    public List<EarliestArrival> getIsolines(@RequestParam(required = false) String sourceStopId,
-                                             @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
-                                             @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
-                                             @RequestParam(required = false) LocalDateTime dateTime,
-                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                             @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
-                                             @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
-                                             @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
-                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
+    public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
+                                            @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
+                                            @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
+                                            @RequestParam(required = false) LocalDateTime dateTime,
+                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
+                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
+                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
+                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
+                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                            @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
         GeoCoordinate sourceCoordinate = null;
         if (sourceStopId == null) {
@@ -163,12 +164,12 @@ public class RoutingController {
             connections = service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config);
         }
 
-        List<EarliestArrival> arrivals = new ArrayList<>();
+        List<StopConnection> arrivals = new ArrayList<>();
 
         for (Map.Entry<Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
             Stop stop = entry.getKey();
             ch.naviqore.service.Connection connection = entry.getValue();
-            arrivals.add(map(stop, connection));
+            arrivals.add(map(stop, connection, map(timeType), returnConnections));
         }
 
         return arrivals;

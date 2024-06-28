@@ -6,6 +6,7 @@ import ch.naviqore.service.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -60,8 +61,62 @@ public class DtoMapper {
         return new Connection(legs);
     }
 
-    public static EarliestArrival map(ch.naviqore.service.Stop stop, ch.naviqore.service.Connection connection) {
-        return new EarliestArrival(map(stop), connection.getArrivalTime(), map(connection));
+    public static StopConnection map(ch.naviqore.service.Stop stop, ch.naviqore.service.Connection serviceConnection,
+                                     TimeType timeType, boolean returnConnections) {
+
+        Connection connection = map(serviceConnection);
+        Leg connectingLeg;
+
+        if (timeType == TimeType.DEPARTURE) {
+            connectingLeg = connection.getLegs().getLast();
+            // create a leg from stop before arrival stop (on trip) to the arrival stop
+            if (connectingLeg.getTrip() != null) {
+                int stopTimeIndex = findStopTimeIndexInTrip(connectingLeg.getTrip(), connectingLeg.getToStop(),
+                        connectingLeg.getArrivalTime(), TimeType.ARRIVAL);
+                StopTime sourceStopTime = connectingLeg.getTrip().getStopTimes().get(stopTimeIndex - 1);
+                connectingLeg = new Leg(connectingLeg.getType(), sourceStopTime.getStop().getCoordinates(),
+                        connectingLeg.getTo(), sourceStopTime.getStop(), connectingLeg.getToStop(),
+                        sourceStopTime.getDepartureTime(), connectingLeg.getArrivalTime(), connectingLeg.getTrip());
+            }
+        } else {
+            connectingLeg = connection.getLegs().getFirst();
+            // create a leg from the departure stop to the first stop on the trip
+            if (connectingLeg.getTrip() != null) {
+                int stopTimeIndex = findStopTimeIndexInTrip(connectingLeg.getTrip(), connectingLeg.getFromStop(),
+                        connectingLeg.getDepartureTime(), TimeType.DEPARTURE);
+                StopTime targetStopTime = connectingLeg.getTrip().getStopTimes().get(stopTimeIndex + 1);
+                connectingLeg = new Leg(connectingLeg.getType(), connectingLeg.getFrom(),
+                        targetStopTime.getStop().getCoordinates(), connectingLeg.getFromStop(),
+                        targetStopTime.getStop(), connectingLeg.getDepartureTime(), targetStopTime.getArrivalTime(),
+                        connectingLeg.getTrip());
+            }
+        }
+
+        if( connectingLeg.getTrip() != null && ! returnConnections ) {
+            // nullify stop times from trips if connections are not requested (reducing payload)
+            Trip reducedTrip = new Trip(connectingLeg.getTrip().getHeadSign(), connectingLeg.getTrip().getRoute(),
+                    null);
+            connectingLeg = new Leg(connectingLeg.getType(), connectingLeg.getFrom(), connectingLeg.getTo(),
+                    connectingLeg.getFromStop(), connectingLeg.getToStop(), connectingLeg.getDepartureTime(),
+                    connectingLeg.getArrivalTime(), reducedTrip);
+        }
+
+        return new StopConnection(map(stop), connectingLeg, returnConnections ? connection : null);
+    }
+
+    private static int findStopTimeIndexInTrip(Trip trip, Stop stop, LocalDateTime time, TimeType timeType) {
+        List<StopTime> stopTimes = trip.getStopTimes();
+        for (int i = 0; i < stopTimes.size(); i++) {
+            StopTime stopTime = stopTimes.get(i);
+            if (stopTime.getStop().equals(stop)) {
+                if (timeType == TimeType.DEPARTURE && stopTime.getDepartureTime().equals(time)) {
+                    return i;
+                } else if (timeType == TimeType.ARRIVAL && stopTime.getArrivalTime().equals(time)) {
+                    return i;
+                }
+            }
+        }
+        throw new IllegalStateException("Stop time not found in trip.");
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {
