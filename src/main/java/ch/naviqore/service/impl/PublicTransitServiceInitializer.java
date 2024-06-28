@@ -16,13 +16,13 @@ import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
 @RequiredArgsConstructor
 @Getter(AccessLevel.PACKAGE)
-@Log4j2
+@Slf4j
 public class PublicTransitServiceInitializer {
 
     private final ServiceConfig config;

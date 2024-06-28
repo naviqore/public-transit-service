@@ -5,7 +5,7 @@ import ch.naviqore.gtfs.schedule.type.ExceptionType;
 import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.gtfs.schedule.type.TransferType;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVRecord;
 
 import java.time.DayOfWeek;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
  *
  * @author munterfi
  */
-@Log4j2
+@Slf4j
 class GtfsScheduleParser {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");

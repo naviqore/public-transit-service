@@ -6,7 +6,7 @@ import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.TimeType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -16,7 +16,7 @@ import java.util.*;
 /**
  * Raptor algorithm implementation
  */
-@Log4j2
+@Slf4j
 class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
     @Getter

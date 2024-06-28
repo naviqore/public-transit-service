@@ -11,7 +11,7 @@ import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.service.repo.GtfsScheduleRepository;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@Log4j2
+@Slf4j
 public class PublicTransitSpringService implements PublicTransitService {
 
     private final ServiceConfig config;

@@ -2,13 +2,13 @@ package ch.naviqore.service.impl.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Log4j2
+@Slf4j
 public class SameStopTransferGenerator implements TransferGenerator {
 
     private final int minimumTransferTime;

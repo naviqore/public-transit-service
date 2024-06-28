@@ -3,7 +3,7 @@ package ch.naviqore.gtfs.schedule;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import lombok.NoArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -30,7 +30,7 @@ import java.util.zip.ZipFile;
  * @author munterfi
  */
 @NoArgsConstructor
-@Log4j2
+@Slf4j
 public class GtfsScheduleReader {
 
     private static final String ZIP_FILE_EXTENSION = ".zip";

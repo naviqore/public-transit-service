@@ -1,6 +1,6 @@
 package ch.naviqore.utils.network;
 
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.URI;
@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * Downloading files from a specified URL. Ensures that the directory exists before downloading and provides an option
  * to overwrite existing files.
  */
-@Log4j2
+@Slf4j
 public final class FileDownloader {
 
     private final HttpClient httpClient;

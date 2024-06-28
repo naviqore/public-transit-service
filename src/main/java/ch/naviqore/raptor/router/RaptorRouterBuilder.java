@@ -1,7 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -23,7 +23,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
  *
  * @author munterfi
  */
-@Log4j2
+@Slf4j
 public class RaptorRouterBuilder {
 
     private final int defaultSameStopTransferTime;

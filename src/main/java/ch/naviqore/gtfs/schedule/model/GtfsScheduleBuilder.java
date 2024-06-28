@@ -8,7 +8,7 @@ import ch.naviqore.utils.cache.ValueObjectCache;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.DayOfWeek;
@@ -25,7 +25,7 @@ import java.util.*;
  * @author munterfi
  */
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
-@Log4j2
+@Slf4j
 public class GtfsScheduleBuilder {
 
     private final ValueObjectCache<LocalDate> localDateCache = new ValueObjectCache<>();

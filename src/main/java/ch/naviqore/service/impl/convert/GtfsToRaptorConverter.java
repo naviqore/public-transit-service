@@ -5,7 +5,7 @@ import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * @author munterfi
  */
-@Log4j2
+@Slf4j
 public class GtfsToRaptorConverter {
 
     private final Set<GtfsRoutePartitioner.SubRoute> addedSubRoutes = new HashSet<>();
@@ -102,15 +102,17 @@ public class GtfsToRaptorConverter {
             }
         }
 
+        // add additional transfers
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
 
+            // TODO: Just overwrite with precedence order, avoid costly lookups
             if (schedule.getStops()
                     .get(transfer.from().getId())
                     .getTransfers()
                     .stream()
                     .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
                             .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
-                log.warn(
+                log.debug(
                         "Omit adding additional transfer from {} to {} with duration {} as it has already been defined",
                         transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;

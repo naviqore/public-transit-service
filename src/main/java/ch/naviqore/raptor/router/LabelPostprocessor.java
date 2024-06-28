@@ -259,8 +259,11 @@ class LabelPostprocessor {
         StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel.routeOrTransferIdx(),
                 routeLabel.tripOffset());
 
-        // if stopTime is null, then the stop is not part of the trip of the route label
-        if (stopTime == null) {
+        // if stopTime is null, then the stop is not part of the trip of the route label, if stop time is not null, then
+        // check if the temporal order of the stop time and the route label is correct (e.g. for time type departure the
+        // stop time departure must be before the route label target time)
+        if (stopTime == null || (fromTarget ? canStopTimeBeSource(stopTime, routeLabel.targetTime(),
+                timeType) : canStopTimeBeTarget(stopTime, routeLabel.sourceTime(), timeType))) {
             if (!fromTarget) {
                 maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
             }
@@ -321,11 +324,45 @@ class LabelPostprocessor {
                     transferLabel.routeOrTransferIdx(), transferLabel.tripOffset(), transferLabel.stopIdx(),
                     transferLabel.previous()));
         }
+
+    }
+
+    /**
+     * Check if the stop time can be the source of the route target time. This is the case if the stop time departure is
+     * before the route target time for departure time type and the stop time arrival is after the route target time for
+     * arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeTargetTime the target time of the route, of the potential source stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the source of the route target time, false otherwise.
+     */
+    private boolean canStopTimeBeSource(StopTime stopTime, int routeTargetTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.departure() >= routeTargetTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeTargetTime;
+    }
+
+    /**
+     * Check if the stop time can be the target of the route source time. This is the case if the stop time arrival is
+     * after the route source time for departure time type and the stop time departure is before the route source time
+     * for arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeSourceTime the source time of the route, of the potential target stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the target of the route source time, false otherwise.
+     */
+    private boolean canStopTimeBeTarget(StopTime stopTime, int routeSourceTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.arrival() >= routeSourceTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.departure() <= routeSourceTime;
     }
 
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
         int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
         int numberOfStops = routes[routeIdx].numberOfStops();
+
         int stopOffset = -1;
         for (int i = 0; i < numberOfStops; i++) {
             if (routeStops[routes[routeIdx].firstRouteStopIdx() + i].stopIndex() == stopIdx) {
@@ -333,9 +370,11 @@ class LabelPostprocessor {
                 break;
             }
         }
+
         if (stopOffset == -1) {
             return null;
         }
+
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
     }
 
