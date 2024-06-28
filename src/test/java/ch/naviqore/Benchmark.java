@@ -48,7 +48,7 @@ import java.util.*;
 final class Benchmark {
 
     // dataset
-    private static final Dataset DATASET = Dataset.ZURICH_TRAMS;
+    private static final Dataset DATASET = Dataset.SWITZERLAND;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
 
     // sampling
@@ -58,7 +58,7 @@ final class Benchmark {
      */
     private static final int DEPARTURE_TIME_LIMIT = 8 * 60 * 60;
     private static final long RANDOM_SEED = 1234;
-    private static final int SAMPLE_SIZE = 100;
+    private static final int SAMPLE_SIZE = 10_000;
 
     // constants
     private static final long MONITORING_INTERVAL_MS = 30000;
