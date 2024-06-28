@@ -262,8 +262,8 @@ class LabelPostprocessor {
         // if stopTime is null, then the stop is not part of the trip of the route label, if stop time is not null, then
         // check if the temporal order of the stop time and the route label is correct (e.g. for time type departure the
         // stop time departure must be before the route label target time)
-        if (stopTime == null || (fromTarget ? canStopTimeBeSource(stopTime, routeLabel.targetTime(),
-                timeType) : canStopTimeBeTarget(stopTime, routeLabel.sourceTime(), timeType))) {
+        if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel.targetTime(),
+                timeType) : !canStopTimeBeSource(stopTime, routeLabel.sourceTime(), timeType))) {
             if (!fromTarget) {
                 maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
             }
@@ -338,7 +338,7 @@ class LabelPostprocessor {
      * @return true if the stop time can be the source of the route target time, false otherwise.
      */
     private boolean canStopTimeBeSource(StopTime stopTime, int routeTargetTime, TimeType timeType) {
-        if (timeType == TimeType.DEPARTURE && stopTime.departure() >= routeTargetTime) {
+        if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeTargetTime) {
             return true;
         } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeTargetTime;
     }

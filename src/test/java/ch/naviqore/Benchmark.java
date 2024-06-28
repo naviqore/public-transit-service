@@ -6,7 +6,6 @@ import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
@@ -29,7 +28,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
