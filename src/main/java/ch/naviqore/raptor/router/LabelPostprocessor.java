@@ -256,7 +256,8 @@ class LabelPostprocessor {
         }
 
         // when walking goes against the trip direction, combining is not possible
-        if (fromStart ? stopTime.arrival() < routeLabel.targetTime() : stopTime.departure() > routeLabel.sourceTime()) {
+        if (fromStart ? canStopTimeBeSource(stopTime, routeLabel.targetTime(), timeType) : canStopTimeBeTarget(stopTime,
+                routeLabel.sourceTime(), timeType)) {
             return;
         }
 
@@ -288,6 +289,38 @@ class LabelPostprocessor {
             labels.removeLast();
             labels.addLast(combinedLabel);
         }
+    }
+
+    /**
+     * Check if the stop time can be the source of the route target time. This is the case if the stop time departure is
+     * before the route target time for departure time type and the stop time arrival is after the route target time for
+     * arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeTargetTime the target time of the route, of the potential source stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the source of the route target time, false otherwise.
+     */
+    private boolean canStopTimeBeSource(StopTime stopTime, int routeTargetTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeTargetTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeTargetTime;
+    }
+
+    /**
+     * Check if the stop time can be the target of the route source time. This is the case if the stop time arrival is
+     * after the route source time for departure time type and the stop time departure is before the route source time
+     * for arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeSourceTime the source time of the route, of the potential target stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the target of the route source time, false otherwise.
+     */
+    private boolean canStopTimeBeTarget(StopTime stopTime, int routeSourceTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.arrival() >= routeSourceTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.departure() <= routeSourceTime;
     }
 
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
