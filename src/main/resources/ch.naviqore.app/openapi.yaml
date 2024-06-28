@@ -404,7 +404,6 @@ components:
         - STARTS_WITH
         - CONTAINS
         - ENDS_WITH
-        - FUZZY
     TIME_TYPE:
       type: string
       enum:
