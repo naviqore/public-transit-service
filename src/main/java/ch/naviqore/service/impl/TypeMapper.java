@@ -1,7 +1,6 @@
 package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;

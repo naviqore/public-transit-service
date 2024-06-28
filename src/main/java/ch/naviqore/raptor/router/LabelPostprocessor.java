@@ -5,8 +5,8 @@ import ch.naviqore.raptor.Leg;
 import ch.naviqore.raptor.TimeType;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,13 +46,14 @@ class LabelPostprocessor {
      * @param bestLabelsPerRound the best labels per round.
      * @return a map containing the best connection to reach all stops.
      */
-    Map<String, Connection> reconstructIsolines(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound) {
+    Map<String, Connection> reconstructIsolines(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
+                                                LocalDate referenceDate) {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
             StopLabelsAndTimes.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
             if (bestLabelForStop != null && bestLabelForStop.type() != StopLabelsAndTimes.LabelType.INITIAL) {
-                Connection connection = reconstructConnectionFromLabel(bestLabelForStop);
+                Connection connection = reconstructConnectionFromLabel(bestLabelForStop, referenceDate);
                 isolines.put(stop.id(), connection);
             }
         }
@@ -67,7 +68,7 @@ class LabelPostprocessor {
      * @return a list of pareto-optimal connections.
      */
     List<Connection> reconstructParetoOptimalSolutions(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
-                                                       Map<Integer, Integer> targetStops) {
+                                                       Map<Integer, Integer> targetStops, LocalDate referenceDate) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
@@ -104,7 +105,7 @@ class LabelPostprocessor {
                 continue;
             }
 
-            Connection connection = reconstructConnectionFromLabel(label);
+            Connection connection = reconstructConnectionFromLabel(label, referenceDate);
             if (connection != null) {
                 connections.add(connection);
             }
@@ -113,7 +114,8 @@ class LabelPostprocessor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLabel(StopLabelsAndTimes.Label label) {
+    private @Nullable Connection reconstructConnectionFromLabel(StopLabelsAndTimes.Label label,
+                                                                LocalDate referenceDate) {
         RaptorConnection connection = new RaptorConnection();
 
         ArrayList<StopLabelsAndTimes.Label> labels = new ArrayList<>();
@@ -162,8 +164,8 @@ class LabelPostprocessor {
                 throw new IllegalStateException("Unknown label type");
             }
 
-            LocalDateTime departureTime = LocalDateTime.ofEpochSecond(departureTimestamp, 0, ZoneOffset.UTC);
-            LocalDateTime arrivalTime = LocalDateTime.ofEpochSecond(arrivalTimestamp, 0, ZoneOffset.UTC);
+            LocalDateTime departureTime = DateTimeUtils.convertToLocalDateTime(departureTimestamp, referenceDate);
+            LocalDateTime arrivalTime = DateTimeUtils.convertToLocalDateTime(arrivalTimestamp, referenceDate);
 
             connection.addLeg(new RaptorLeg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }
@@ -279,9 +281,9 @@ class LabelPostprocessor {
 
         // combine and replace labels
         if (fromTarget) {
-            StopLabelsAndTimes.Label combinedLabel = new StopLabelsAndTimes.Label(routeLabel.sourceTime(), routeTime, StopLabelsAndTimes.LabelType.ROUTE,
-                    routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(), transferLabel.stopIdx(),
-                    routeLabel.previous());
+            StopLabelsAndTimes.Label combinedLabel = new StopLabelsAndTimes.Label(routeLabel.sourceTime(), routeTime,
+                    StopLabelsAndTimes.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
+                    transferLabel.stopIdx(), routeLabel.previous());
             labels.removeFirst();
             labels.removeFirst();
             labels.addFirst(combinedLabel);
@@ -306,16 +308,18 @@ class LabelPostprocessor {
      * @param routeLabel         the following route label
      * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
      */
-    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<StopLabelsAndTimes.Label> labels, StopLabelsAndTimes.Label transferLabel,
-                                                            StopLabelsAndTimes.Label routeLabel, int transferLabelIndex) {
+    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<StopLabelsAndTimes.Label> labels,
+                                                            StopLabelsAndTimes.Label transferLabel,
+                                                            StopLabelsAndTimes.Label routeLabel,
+                                                            int transferLabelIndex) {
         // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can
         // be shifted to the route label (shortening the travel time)
         int idleTime = routeLabel.sourceTime() - transferLabel.targetTime();
         if (idleTime != 0) {
-            labels.set(transferLabelIndex,
-                    new StopLabelsAndTimes.Label(transferLabel.sourceTime() + idleTime, transferLabel.targetTime() + idleTime,
-                            StopLabelsAndTimes.LabelType.TRANSFER, transferLabel.routeOrTransferIdx(), transferLabel.tripOffset(),
-                            transferLabel.stopIdx(), transferLabel.previous()));
+            labels.set(transferLabelIndex, new StopLabelsAndTimes.Label(transferLabel.sourceTime() + idleTime,
+                    transferLabel.targetTime() + idleTime, StopLabelsAndTimes.LabelType.TRANSFER,
+                    transferLabel.routeOrTransferIdx(), transferLabel.tripOffset(), transferLabel.stopIdx(),
+                    transferLabel.previous()));
         }
     }
 

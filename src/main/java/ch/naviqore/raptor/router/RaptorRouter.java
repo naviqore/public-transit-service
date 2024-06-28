@@ -8,10 +8,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Raptor algorithm implementation
@@ -37,18 +37,11 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         validator = new InputValidator(lookup.stops());
     }
 
-    private static Map<String, Integer> mapLocalDateTimeToUnixTimestamp(Map<String, LocalDateTime> sourceStops) {
-        return sourceStops.entrySet()
-                .stream()
-                .map(e -> Map.entry(e.getKey(), (int) e.getValue().toEpochSecond(ZoneOffset.UTC)))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
     @Override
     public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
-        InputValidator.checkNonNullStops(departureStops, "Departure");
-        InputValidator.checkNonNullStops(arrivalStops, "Arrival");
+        InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
+        InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
 
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
@@ -59,8 +52,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Override
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
-        InputValidator.checkNonNullStops(departureStops, "Departure");
-        InputValidator.checkNonNullStops(arrivalStops, "Arrival");
+        InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
+        InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
 
         log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
                 arrivalStops.keySet(), arrivalStops.values().stream().toList());
@@ -71,18 +64,20 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Override
     public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
-        InputValidator.checkNonNullStops(sourceStops, "Source");
+        InputValidator.checkNonNullOrEmptyStops(sourceStops, "Source");
+        InputValidator.validateSourceStopTimes(sourceStops);
 
         log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
+        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
-                mapLocalDateTimeToUnixTimestamp(sourceStops));
+                DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops, referenceDate));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
                 refStopTimes, new int[]{}, config, timeType).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound);
+        return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
 
     /**
@@ -102,7 +97,10 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
      */
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
-        Map<String, Integer> sourceStopsSecondsOfDay = mapLocalDateTimeToUnixTimestamp(sourceStops);
+        InputValidator.validateSourceStopTimes(sourceStops);
+        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        Map<String, Integer> sourceStopsSecondsOfDay = DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops,
+                referenceDate);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
         InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
@@ -116,7 +114,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 sourceTimes, walkingDurationsToTarget, config, timeType).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
-                validatedTargetStops);
+                validatedTargetStops, referenceDate);
     }
 
     /**
@@ -124,32 +122,41 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
      */
     @RequiredArgsConstructor
     private static class InputValidator {
-        private static final int MIN_SOURCE_STOP_TIMESTAMP = 0;
         private static final int MIN_WALKING_TIME_TO_TARGET = 0;
+        private static final int MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES = 24 * 60 * 60;
 
         private final Map<String, Integer> stopsToIdx;
 
-        private static void checkNonNullStops(Map<String, ?> stops, String labelSource) {
+        private static void checkNonNullOrEmptyStops(Map<String, ?> stops, String labelSource) {
             if (stops == null) {
                 throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
+            }
+            if (stops.isEmpty()) {
+                throw new IllegalArgumentException(String.format("%s stops must not be empty.", labelSource));
+            }
+        }
+
+        private static void validateSourceStopTimes(Map<String, LocalDateTime> sourceStops) {
+            // check that no null values are present
+            if (sourceStops.values().stream().anyMatch(Objects::isNull)) {
+                throw new IllegalArgumentException("Source stop times must not be null.");
+            }
+
+            // get min and max values
+            LocalDateTime min = sourceStops.values().stream().min(LocalDateTime::compareTo).orElseThrow();
+            LocalDateTime max = sourceStops.values().stream().max(LocalDateTime::compareTo).orElseThrow();
+            if (Duration.between(min, max).getSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
+                throw new IllegalArgumentException("Difference between source stop times must be less than 24 hours.");
             }
         }
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
-            sourceStops.values().forEach(InputValidator::validateSourceStopTimestamps);
             targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
 
             // ensure departure and arrival stops are not the same
             if (!Collections.disjoint(sourceStops.keySet(), targetStops.keySet())) {
                 throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
-            }
-        }
-
-        private static void validateSourceStopTimestamps(int timestamp) {
-            if (timestamp < MIN_SOURCE_STOP_TIMESTAMP) {
-                throw new IllegalArgumentException(
-                        "Source stop timestamp must be greater or equal to " + MIN_SOURCE_STOP_TIMESTAMP + " seconds.");
             }
         }
 
@@ -181,7 +188,6 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 int time = entry.getValue();
 
                 if (stopsToIdx.containsKey(stopId)) {
-                    validateSourceStopTimestamps(time);
                     validStopIds.put(stopsToIdx.get(stopId), time);
                 } else {
                     log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());

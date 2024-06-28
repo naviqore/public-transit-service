@@ -38,7 +38,7 @@ class RaptorRouterTest {
     private static final String STOP_Q = "Q";
     private static final String STOP_S = "S";
 
-    private static final LocalDateTime START_OF_DAY = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+    private static final LocalDateTime START_OF_DAY = LocalDateTime.of(2021, 1, 1, 0, 0);
     private static final LocalDateTime FIVE_AM = START_OF_DAY.plusHours(5);
     private static final LocalDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
     private static final LocalDateTime NINE_AM = START_OF_DAY.plusHours(9);
@@ -112,6 +112,7 @@ class RaptorRouterTest {
 
             assertFalse(connection.getDepartureTime().isBefore(requestedDepartureTime),
                     "Departure time should be greater equal than searched for departure time");
+            assertNotNull(connection.getArrivalTime(), "Arrival time should not be null");
 
             assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
                     "Number of same stop transfers should match");
@@ -130,6 +131,7 @@ class RaptorRouterTest {
             assertEquals(sourceStop, connection.getFromStopId());
             assertEquals(targetStop, connection.getToStopId());
 
+            assertNotNull(connection.getDepartureTime(), "Departure time should not be null");
             assertFalse(connection.getArrivalTime().isAfter(requestedArrivalTime),
                     "Arrival time should be smaller equal than searched for arrival time");
 
@@ -799,8 +801,8 @@ class RaptorRouterTest {
                     assertFalse(connection.getDepartureTime().isBefore(requestedDepartureTime),
                             String.format("Connection should have departure time equal or after %d:00",
                                     requestedDepartureTime.getHour()));
-                    assertTrue(connection.getArrivalTime().toEpochSecond(ZoneOffset.UTC) < Integer.MAX_VALUE,
-                            "Connection should have arrival time before infinity");
+                    assertNotNull(connection.getArrivalTime(), "Connection should have arrival time");
+                    assertNotNull(connection.getDepartureTime(), "Connection should have departure time");
                     assertEquals(connection.getFromStopId(), sourceStop, "From stop should be " + sourceStop);
                     assertEquals(connection.getToStopId(), stop, "To stop should be " + stop);
                 }
@@ -818,8 +820,7 @@ class RaptorRouterTest {
                     assertFalse(entry.getValue().getArrivalTime().isBefore(EIGHT_AM),
                             "Arrival time should be greater than or equal to departure time");
                     assertTrue(arrivalTimeStamp < INFINITY, "Arrival time should be less than INFINITY");
-                    assertEquals(STOP_A, entry.getValue().getFromStopId(),
-                            "From stop should be source stop");
+                    assertEquals(STOP_A, entry.getValue().getFromStopId(), "From stop should be source stop");
                     assertEquals(entry.getKey(), entry.getValue().getToStopId(), "To stop should be key of map entry");
                 }
             }
