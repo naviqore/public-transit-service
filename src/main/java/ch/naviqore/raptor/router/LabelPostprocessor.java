@@ -255,6 +255,11 @@ class LabelPostprocessor {
             return;
         }
 
+        // when walking goes against the trip direction, combining is not possible
+        if (fromStart ? stopTime.arrival() < routeLabel.targetTime() : stopTime.departure() > routeLabel.sourceTime()) {
+            return;
+        }
+
         boolean isDeparture = timeType == TimeType.DEPARTURE;
         int timeDirection = isDeparture ? 1 : -1;
         int routeTime = fromStart ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
@@ -288,6 +293,7 @@ class LabelPostprocessor {
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
         int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
         int numberOfStops = routes[routeIdx].numberOfStops();
+
         int stopOffset = -1;
         for (int i = 0; i < numberOfStops; i++) {
             if (routeStops[routes[routeIdx].firstRouteStopIdx() + i].stopIndex() == stopIdx) {
@@ -295,9 +301,11 @@ class LabelPostprocessor {
                 break;
             }
         }
+
         if (stopOffset == -1) {
             return null;
         }
+
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
     }
 
