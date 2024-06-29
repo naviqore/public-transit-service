@@ -5,6 +5,8 @@ import ch.naviqore.raptor.Leg;
 import ch.naviqore.raptor.TimeType;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,13 +46,14 @@ class LabelPostprocessor {
      * @param bestLabelsPerRound the best labels per round.
      * @return a map containing the best connection to reach all stops.
      */
-    Map<String, Connection> reconstructIsolines(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound) {
+    Map<String, Connection> reconstructIsolines(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
+                                                LocalDate referenceDate) {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
             StopLabelsAndTimes.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
             if (bestLabelForStop != null && bestLabelForStop.type() != StopLabelsAndTimes.LabelType.INITIAL) {
-                Connection connection = reconstructConnectionFromLabel(bestLabelForStop);
+                Connection connection = reconstructConnectionFromLabel(bestLabelForStop, referenceDate);
                 isolines.put(stop.id(), connection);
             }
         }
@@ -65,7 +68,7 @@ class LabelPostprocessor {
      * @return a list of pareto-optimal connections.
      */
     List<Connection> reconstructParetoOptimalSolutions(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
-                                                       Map<Integer, Integer> targetStops) {
+                                                       Map<Integer, Integer> targetStops, LocalDate referenceDate) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
@@ -102,7 +105,7 @@ class LabelPostprocessor {
                 continue;
             }
 
-            Connection connection = reconstructConnectionFromLabel(label);
+            Connection connection = reconstructConnectionFromLabel(label, referenceDate);
             if (connection != null) {
                 connections.add(connection);
             }
@@ -111,7 +114,8 @@ class LabelPostprocessor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLabel(StopLabelsAndTimes.Label label) {
+    private @Nullable Connection reconstructConnectionFromLabel(StopLabelsAndTimes.Label label,
+                                                                LocalDate referenceDate) {
         RaptorConnection connection = new RaptorConnection();
 
         ArrayList<StopLabelsAndTimes.Label> labels = new ArrayList<>();
@@ -132,19 +136,19 @@ class LabelPostprocessor {
             assert currentLabel.previous() != null;
             String fromStopId;
             String toStopId;
-            int departureTime;
-            int arrivalTime;
+            int departureTimestamp;
+            int arrivalTimestamp;
             Leg.Type type;
             if (timeType == TimeType.DEPARTURE) {
                 fromStopId = stops[currentLabel.previous().stopIdx()].id();
                 toStopId = stops[currentLabel.stopIdx()].id();
-                departureTime = currentLabel.sourceTime();
-                arrivalTime = currentLabel.targetTime();
+                departureTimestamp = currentLabel.sourceTime();
+                arrivalTimestamp = currentLabel.targetTime();
             } else {
                 fromStopId = stops[currentLabel.stopIdx()].id();
                 toStopId = stops[currentLabel.previous().stopIdx()].id();
-                departureTime = currentLabel.targetTime();
-                arrivalTime = currentLabel.sourceTime();
+                departureTimestamp = currentLabel.targetTime();
+                arrivalTimestamp = currentLabel.sourceTime();
             }
 
             if (currentLabel.type() == StopLabelsAndTimes.LabelType.ROUTE) {
@@ -159,6 +163,9 @@ class LabelPostprocessor {
             } else {
                 throw new IllegalStateException("Unknown label type");
             }
+
+            LocalDateTime departureTime = DateTimeUtils.convertToLocalDateTime(departureTimestamp, referenceDate);
+            LocalDateTime arrivalTime = DateTimeUtils.convertToLocalDateTime(arrivalTimestamp, referenceDate);
 
             connection.addLeg(new RaptorLeg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }
@@ -198,7 +205,9 @@ class LabelPostprocessor {
      * time or departure time), however, if the transfer reaches a nearby stop and the second leg (second last label) is
      * a route trip that could have also been entered at the source stop, it is possible that the overall travel time
      * can be reduced by combining the two labels. The earliest arrival time or latest departure time is not changed by
-     * this operation, but the travel time is reduced.
+     * this operation, but the travel time is reduced. If the labels cannot be combined because the route trip does not
+     * pass through the source stop, the transfer label is shifted in time that there is no idleTime between the
+     * transfer and the route trip (see maybeShiftSourceTransferCloserToFirstRoute).
      * <p>
      * Example: if the departure time is set to 5 am at Stop A and a connection to stop C is queried, the algorithm will
      * relax footpaths from Stop A at 5 am and reach Stop B at 5:05 am. However, the earliest trip on the route
@@ -218,18 +227,18 @@ class LabelPostprocessor {
      * Implementation for the two method above (maybeCombineFirstTwoLabels and maybeCombineLastTwoLabels). For more info
      * see the documentation of the two methods.
      *
-     * @param labels    the list of labels to check for combination.
-     * @param fromStart if true, the first two labels are checked, if false, the last two labels (first two legs of
-     *                  connection) are checked.
+     * @param labels     the list of labels to check for combination.
+     * @param fromTarget if true, the first two labels are checked, if false, the last two labels (first two legs of
+     *                   connection) are checked. Note the first two labels are the two labels closest to the target!
      */
-    private void maybeCombineLabels(ArrayList<StopLabelsAndTimes.Label> labels, boolean fromStart) {
+    private void maybeCombineLabels(ArrayList<StopLabelsAndTimes.Label> labels, boolean fromTarget) {
         if (labels.size() < 2) {
             return;
         }
 
         // define the indices of the labels to check (first two or last two)
-        int transferLabelIndex = fromStart ? 0 : labels.size() - 1;
-        int routeLabelIndex = fromStart ? 1 : labels.size() - 2;
+        int transferLabelIndex = fromTarget ? 0 : labels.size() - 1;
+        int routeLabelIndex = fromTarget ? 1 : labels.size() - 2;
 
         StopLabelsAndTimes.Label transferLabel = labels.get(transferLabelIndex);
         StopLabelsAndTimes.Label routeLabel = labels.get(routeLabelIndex);
@@ -240,7 +249,7 @@ class LabelPostprocessor {
         }
 
         int stopIdx;
-        if (fromStart) {
+        if (fromTarget) {
             stopIdx = transferLabel.stopIdx();
         } else {
             assert transferLabel.previous() != null;
@@ -250,25 +259,31 @@ class LabelPostprocessor {
         StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel.routeOrTransferIdx(),
                 routeLabel.tripOffset());
 
-        // if stopTime is null, then the stop is not part of the trip of the route label
-        if (stopTime == null) {
+        // if stopTime is null, then the stop is not part of the trip of the route label, if stop time is not null, then
+        // check if the temporal order of the stop time and the route label is correct (e.g. for time type departure the
+        // stop time departure must be before the route label target time)
+        if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel.targetTime(),
+                timeType) : !canStopTimeBeSource(stopTime, routeLabel.sourceTime(), timeType))) {
+            if (!fromTarget) {
+                maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
+            }
             return;
         }
 
         boolean isDeparture = timeType == TimeType.DEPARTURE;
         int timeDirection = isDeparture ? 1 : -1;
-        int routeTime = fromStart ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
+        int routeTime = fromTarget ? (isDeparture ? stopTime.arrival() : stopTime.departure()) : (isDeparture ? stopTime.departure() : stopTime.arrival());
 
         // this is the best time achieved with the route / transfer combination
-        int referenceTime = fromStart ? timeDirection * transferLabel.targetTime() : timeDirection * transferLabel.sourceTime();
+        int referenceTime = fromTarget ? timeDirection * transferLabel.targetTime() : timeDirection * transferLabel.sourceTime();
 
         // if the best time is not improved, then the labels should not be combined
-        if (fromStart ? (timeDirection * routeTime > referenceTime) : (timeDirection * routeTime < referenceTime)) {
+        if (fromTarget ? (timeDirection * routeTime > referenceTime) : (timeDirection * routeTime < referenceTime)) {
             return;
         }
 
         // combine and replace labels
-        if (fromStart) {
+        if (fromTarget) {
             StopLabelsAndTimes.Label combinedLabel = new StopLabelsAndTimes.Label(routeLabel.sourceTime(), routeTime,
                     StopLabelsAndTimes.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
                     transferLabel.stopIdx(), routeLabel.previous());
@@ -285,9 +300,69 @@ class LabelPostprocessor {
         }
     }
 
+    /**
+     * This method checks if there is idle time between the source transfer (note this method expects that is only
+     * applied on source labels of type transfer) and the first route label. If there is idle time, i.e. the transfer
+     * arrives/leaves not directly before/after the route departs/arrives, then the transfer label can be shifted to the
+     * route label (shortening the travel time).
+     *
+     * @param labels             the list of all labels for the connection
+     * @param transferLabel      the source transfer label
+     * @param routeLabel         the following route label
+     * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
+     */
+    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<StopLabelsAndTimes.Label> labels,
+                                                            StopLabelsAndTimes.Label transferLabel,
+                                                            StopLabelsAndTimes.Label routeLabel,
+                                                            int transferLabelIndex) {
+        // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can
+        // be shifted to the route label (shortening the travel time)
+        int idleTime = routeLabel.sourceTime() - transferLabel.targetTime();
+        if (idleTime != 0) {
+            labels.set(transferLabelIndex, new StopLabelsAndTimes.Label(transferLabel.sourceTime() + idleTime,
+                    transferLabel.targetTime() + idleTime, StopLabelsAndTimes.LabelType.TRANSFER,
+                    transferLabel.routeOrTransferIdx(), transferLabel.tripOffset(), transferLabel.stopIdx(),
+                    transferLabel.previous()));
+        }
+
+    }
+
+    /**
+     * Check if the stop time can be the source of the route target time. This is the case if the stop time departure is
+     * before the route target time for departure time type and the stop time arrival is after the route target time for
+     * arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeTargetTime the target time of the route, of the potential source stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the source of the route target time, false otherwise.
+     */
+    private boolean canStopTimeBeSource(StopTime stopTime, int routeTargetTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeTargetTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeTargetTime;
+    }
+
+    /**
+     * Check if the stop time can be the target of the route source time. This is the case if the stop time arrival is
+     * after the route source time for departure time type and the stop time departure is before the route source time
+     * for arrival time type.
+     *
+     * @param stopTime        the stop time to check.
+     * @param routeSourceTime the source time of the route, of the potential target stop time.
+     * @param timeType        the time type (arrival or departure).
+     * @return true if the stop time can be the target of the route source time, false otherwise.
+     */
+    private boolean canStopTimeBeTarget(StopTime stopTime, int routeSourceTime, TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.arrival() >= routeSourceTime) {
+            return true;
+        } else return timeType == TimeType.ARRIVAL && stopTime.departure() <= routeSourceTime;
+    }
+
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
         int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
         int numberOfStops = routes[routeIdx].numberOfStops();
+
         int stopOffset = -1;
         for (int i = 0; i < numberOfStops; i++) {
             if (routeStops[routes[routeIdx].firstRouteStopIdx() + i].stopIndex() == stopIdx) {
@@ -295,9 +370,11 @@ class LabelPostprocessor {
                 break;
             }
         }
+
         if (stopOffset == -1) {
             return null;
         }
+
         return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
     }
 

@@ -102,15 +102,17 @@ public class GtfsToRaptorConverter {
             }
         }
 
+        // add additional transfers
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
 
+            // TODO: Just overwrite with precedence order, avoid costly lookups
             if (schedule.getStops()
                     .get(transfer.from().getId())
                     .getTransfers()
                     .stream()
                     .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
                             .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
-                log.warn(
+                log.debug(
                         "Omit adding additional transfer from {} to {} with duration {} as it has already been defined",
                         transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;
