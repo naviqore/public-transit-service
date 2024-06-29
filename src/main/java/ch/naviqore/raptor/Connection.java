@@ -1,5 +1,6 @@
 package ch.naviqore.raptor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -7,15 +8,15 @@ import java.util.List;
  */
 public interface Connection {
 
-    int getDepartureTime();
+    LocalDateTime getDepartureTime();
 
-    int getArrivalTime();
+    LocalDateTime getArrivalTime();
 
     String getFromStopId();
 
     String getToStopId();
 
-    int getDuration();
+    int getDurationInSeconds();
 
     List<Leg> getWalkTransfers();
 

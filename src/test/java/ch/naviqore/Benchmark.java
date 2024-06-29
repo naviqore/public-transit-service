@@ -6,7 +6,6 @@ import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Trip;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
@@ -57,7 +56,7 @@ final class Benchmark {
      */
     private static final int DEPARTURE_TIME_LIMIT = 8 * 60 * 60;
     private static final long RANDOM_SEED = 1234;
-    private static final int SAMPLE_SIZE = 10000;
+    private static final int SAMPLE_SIZE = 10_000;
 
     // constants
     private static final long MONITORING_INTERVAL_MS = 30000;
@@ -161,12 +160,14 @@ final class Benchmark {
 
     private static RoutingResult toResult(int id, RouteRequest request, List<Connection> connections, long startTime,
                                           long endTime) {
-        Optional<LocalDateTime> earliestDepartureTime = toLocalDatetime(
-                connections.stream().mapToInt(Connection::getDepartureTime).min().orElse(NOT_AVAILABLE));
-        Optional<LocalDateTime> earliestArrivalTime = toLocalDatetime(
-                connections.stream().mapToInt(Connection::getArrivalTime).min().orElse(NOT_AVAILABLE));
-        int minDuration = connections.stream().mapToInt(Connection::getDuration).min().orElse(NOT_AVAILABLE);
-        int maxDuration = connections.stream().mapToInt(Connection::getDuration).max().orElse(NOT_AVAILABLE);
+        Optional<LocalDateTime> earliestDepartureTime = connections.stream()
+                .map(Connection::getDepartureTime)
+                .min(Comparator.naturalOrder());
+        Optional<LocalDateTime> earliestArrivalTime = connections.stream()
+                .map(Connection::getArrivalTime)
+                .min(Comparator.naturalOrder());
+        int minDuration = connections.stream().mapToInt(Connection::getDurationInSeconds).min().orElse(NOT_AVAILABLE);
+        int maxDuration = connections.stream().mapToInt(Connection::getDurationInSeconds).max().orElse(NOT_AVAILABLE);
         int minTransfers = connections.stream()
                 .mapToInt(Connection::getNumberOfTotalTransfers)
                 .min()
@@ -214,13 +215,6 @@ final class Benchmark {
                         result.maxTransfers, result.beelineDistance, result.processingTime);
             }
         }
-    }
-
-    private static Optional<LocalDateTime> toLocalDatetime(int seconds) {
-        if (seconds == NOT_AVAILABLE) {
-            return Optional.empty();
-        }
-        return Optional.of(new ServiceDayTime(seconds).toLocalDateTime(SCHEDULE_DATE));
     }
 
     record RouteRequest(Stop sourceStop, Stop targetStop, LocalDateTime departureTime) {
