@@ -25,29 +25,18 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 public class RoutingControllerTest {
 
-    @Mock
-    private PublicTransitService publicTransitService;
+    private final DummyService dummyService = new DummyService();
 
-    @InjectMocks
-    private RoutingController routingController;
+    private final RoutingController routingController = new RoutingController(dummyService);
 
     @Test
     void testGetConnections_WithValidSourceAndTargetStopIds() throws StopNotFoundException {
         // Arrange
-        String sourceStopId = "sourceStopId";
-        String targetStopId = "targetStopId";
+        String sourceStopId = "A";
+        String targetStopId = "G";
         LocalDateTime departureDateTime = LocalDateTime.now();
-
-        Stop sourceStop = mock(Stop.class);
-        Stop targetStop = mock(Stop.class);
-
-        when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
-        when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
-        when(publicTransitService.getConnections(eq(sourceStop), eq(targetStop), any(), any(), any())).thenReturn(
-                Collections.emptyList());
 
         // Act
         List<Connection> connections = routingController.getConnections(sourceStopId, -1.0, -1.0, targetStopId, -1.0,
@@ -62,14 +51,8 @@ public class RoutingControllerTest {
         // Arrange
         double sourceLatitude = 46.2044;
         double sourceLongitude = 6.1432;
-        String targetStopId = "targetStopId";
+        String targetStopId = "G";
         LocalDateTime departureDateTime = LocalDateTime.now();
-
-        Stop targetStop = mock(Stop.class);
-
-        when(publicTransitService.getStopById(targetStopId)).thenReturn(targetStop);
-        when(publicTransitService.getConnections(any(GeoCoordinate.class), eq(targetStop), any(), any(),
-                any())).thenReturn(Collections.emptyList());
 
         // Act
         List<Connection> connections = routingController.getConnections(null, sourceLatitude, sourceLongitude,
@@ -83,9 +66,7 @@ public class RoutingControllerTest {
     void testGetConnections_InvalidStopId() throws StopNotFoundException {
         // Arrange
         String invalidStopId = "invalidStopId";
-        String targetStopId = "targetStopId";
-
-        when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
+        String targetStopId = "G";
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
@@ -171,14 +152,8 @@ public class RoutingControllerTest {
     @Test
     void testGetIsoLines() throws StopNotFoundException {
         // Arrange
-        String sourceStopId = "sourceStopId";
+        String sourceStopId = "A";
         LocalDateTime time = LocalDateTime.now();
-
-        Stop sourceStop = mock(Stop.class);
-
-        when(publicTransitService.getStopById(sourceStopId)).thenReturn(sourceStop);
-        when(publicTransitService.getIsoLines(eq(sourceStop), eq(time), any(), any())).thenReturn(
-                Collections.emptyMap());
 
         // Act
         List<StopConnection> connections = routingController.getIsolines(sourceStopId, -1.0, -1.0, time,
@@ -192,7 +167,6 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidSourceStopId() throws StopNotFoundException {
         // Arrange
         String invalidStopId = "invalidStopId";
-        when(publicTransitService.getStopById(invalidStopId)).thenThrow(new StopNotFoundException(invalidStopId));
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
