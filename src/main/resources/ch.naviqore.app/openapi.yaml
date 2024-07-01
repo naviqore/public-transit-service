@@ -272,6 +272,11 @@ paths:
           schema:
             type: integer
           description: The minimum transfer time between trips in seconds. Defaults to `0`.
+        - name: returnConnections
+          in: query
+          schema:
+            type: boolean
+          description: Whether to return the connections for each reachable stop, else the connection field will be null. Defaults to `false`.
       responses:
         '200':
           description: A list of stop and fastest connection pairs for each reachable stop.
@@ -280,7 +285,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EarliestArrival'
+                  $ref: '#/components/schemas/StopConnection'
         '400':
           description: Invalid input parameters
         '404':
@@ -346,14 +351,13 @@ components:
           format: date-time
         trip:
           $ref: '#/components/schemas/Trip'
-    EarliestArrival:
+    StopConnection:
       type: object
       properties:
         stop:
           $ref: '#/components/schemas/Stop'
-        arrivalTime:
-          type: string
-          format: date-time
+        connectingLeg:
+          $ref: '#/components/schemas/Leg'
         connection:
           $ref: '#/components/schemas/Connection'
     Coordinate:
@@ -400,7 +404,6 @@ components:
         - STARTS_WITH
         - CONTAINS
         - ENDS_WITH
-        - FUZZY
     TIME_TYPE:
       type: string
       enum:
