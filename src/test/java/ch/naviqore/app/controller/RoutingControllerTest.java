@@ -1,29 +1,15 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.StopConnection;
-import ch.naviqore.app.dto.TimeType;
-import ch.naviqore.service.PublicTransitService;
-import ch.naviqore.service.Stop;
-import ch.naviqore.service.exception.StopNotFoundException;
+import ch.naviqore.app.dto.*;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class RoutingControllerTest {
 
@@ -32,7 +18,7 @@ public class RoutingControllerTest {
     private final RoutingController routingController = new RoutingController(dummyService);
 
     @Test
-    void testGetConnections_WithValidSourceAndTargetStopIds() throws StopNotFoundException {
+    void testGetConnections_WithValidSourceAndTargetStopIds() {
         // Arrange
         String sourceStopId = "A";
         String targetStopId = "G";
@@ -47,7 +33,7 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetConnections_WithoutSourceStopIdButWithCoordinates() throws StopNotFoundException {
+    void testGetConnections_WithoutSourceStopIdButWithCoordinates() {
         // Arrange
         double sourceLatitude = 46.2044;
         double sourceLongitude = 6.1432;
@@ -63,7 +49,7 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetConnections_InvalidStopId() throws StopNotFoundException {
+    void testGetConnections_InvalidStopId() {
         // Arrange
         String invalidStopId = "invalidStopId";
         String targetStopId = "G";
@@ -150,21 +136,235 @@ public class RoutingControllerTest {
     }
 
     @Test
-    void testGetIsoLines() throws StopNotFoundException {
+    void testGetIsoLines_fromStopReturnConnectionsFalse() {
         // Arrange
         String sourceStopId = "A";
         LocalDateTime time = LocalDateTime.now();
 
         // Act
-        List<StopConnection> connections = routingController.getIsolines(sourceStopId, -1.0, -1.0, time,
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, time,
                 TimeType.DEPARTURE, 30, 2, 120, 5, false);
 
-        // Assert
-        assertNotNull(connections);
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+            // because returnConnections == false
+            assertNull(stopConnection.getConnection());
+            Trip trip = stopConnection.getConnectingLeg().getTrip();
+            if (trip != null) {
+                assertNull(trip.getStopTimes());
+            }
+        }
     }
 
     @Test
-    void testGetIsoLines_InvalidSourceStopId() throws StopNotFoundException {
+    void testGetIsoLines_fromStopReturnConnectionsTrue() {
+        // Arrange
+        String sourceStopId = "A";
+        // This tests if the time is set to now if null
+        LocalDateTime expectedStartTime = LocalDateTime.now();
+
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, null,
+                TimeType.DEPARTURE, 30, 2, 120, 5, true);
+
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+            // because returnConnections == true
+            assertNotNull(stopConnection.getConnection());
+            assertEquals(stopConnection.getStop(), stopConnection.getConnection().getLegs().getLast().getToStop());
+            Connection connection = stopConnection.getConnection();
+            // make sure each connection has a departure time after/equal the expected start time
+            assertFalse(connection.getLegs().getFirst().getDepartureTime().isBefore(expectedStartTime));
+            assertEquals(connection.getLegs().getFirst().getFromStop().getId(), sourceStopId);
+
+            Trip trip = stopConnection.getConnectingLeg().getTrip();
+            if (trip != null) {
+                List<StopTime> stopTimes = trip.getStopTimes();
+                assertNotNull(stopTimes);
+                // find index of the stopConnection.getStop() in the stopTimes
+                int index = -1;
+                for (int i = 0; i < stopTimes.size(); i++) {
+                    if (stopTimes.get(i).getStop().equals(stopConnection.getStop())) {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index == -1) {
+                    fail("Stop not found in trip stop times");
+                }
+                // check if the previous stop in the connecting leg is the same as the previous stop in the trip
+                assertEquals(stopTimes.get(index - 1).getStop(), stopConnection.getConnectingLeg().getFromStop());
+            }
+        }
+    }
+
+    @Test
+    void testGetIsoLines_fromCoordinatesReturnConnectionsFalse() {
+        // Arrange
+        double sourceLatitude = 46.2044;
+        double sourceLongitude = 6.1432;
+        LocalDateTime time = LocalDateTime.now();
+
+        // Act
+        List<StopConnection> stopConnections = routingController.getIsolines(null, sourceLatitude, sourceLongitude,
+                time, TimeType.DEPARTURE, 30, 2, 120, 5, false);
+
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+            // because returnConnections == false
+            assertNull(stopConnection.getConnection());
+            Trip trip = stopConnection.getConnectingLeg().getTrip();
+            if (trip != null) {
+                assertNull(trip.getStopTimes());
+            }
+        }
+    }
+
+    @Test
+    void testGetIsoLines_fromCoordinateReturnConnectionsTrue() {
+        // Arrange
+        GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
+        // This tests if the time is set to now if null
+        LocalDateTime expectedStartTime = LocalDateTime.now();
+
+        List<StopConnection> stopConnections = routingController.getIsolines(null, sourceCoordinate.latitude(),
+                sourceCoordinate.longitude(), null, TimeType.DEPARTURE, 30, 2, 120, 5, true);
+
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+            // because returnConnections == true
+            assertNotNull(stopConnection.getConnection());
+            assertEquals(stopConnection.getStop(), stopConnection.getConnection().getLegs().getLast().getToStop());
+            Connection connection = stopConnection.getConnection();
+            // make sure each connection has a departure time after/equal the expected start time
+            assertFalse(connection.getLegs().getFirst().getDepartureTime().isBefore(expectedStartTime));
+            assertNull(connection.getLegs().getFirst().getFromStop());
+            assertEquals(connection.getLegs().getFirst().getFrom(), sourceCoordinate);
+
+            Trip trip = stopConnection.getConnectingLeg().getTrip();
+            if (trip != null) {
+                List<StopTime> stopTimes = trip.getStopTimes();
+                assertNotNull(stopTimes);
+                // find index of the stopConnection.getStop() in the stopTimes
+                int index = -1;
+                for (int i = 0; i < stopTimes.size(); i++) {
+                    if (stopTimes.get(i).getStop().equals(stopConnection.getStop())) {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index == -1) {
+                    fail("Stop not found in trip stop times");
+                }
+                // check if the previous stop in the connecting leg is the same as the previous stop in the trip
+                assertEquals(stopTimes.get(index - 1).getStop(), stopConnection.getConnectingLeg().getFromStop());
+            }
+        }
+    }
+
+    @Test
+    void testGetIsoLines_fromStopReturnConnectionsTrueTimeTypeArrival() {
+        // Arrange
+        String sourceStopId = "G";
+
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, null,
+                TimeType.ARRIVAL, 30, 2, 120, 5, true);
+
+        // This tests if the time is set to now if null
+        LocalDateTime expectedArrivalTime = LocalDateTime.now();
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            Leg connectingLeg = stopConnection.getConnectingLeg();
+            Connection connection = stopConnection.getConnection();
+
+            assertEquals(stopConnection.getStop(), connectingLeg.getFromStop());
+            // because returnConnections == true
+            assertNotNull(connection);
+            assertEquals(stopConnection.getStop(), connection.getLegs().getFirst().getFromStop());
+
+            // make sure each connection has an arrival time after/equal the expected start time
+            assertFalse(connection.getLegs().getLast().getArrivalTime().isAfter(expectedArrivalTime));
+            assertEquals(connection.getLegs().getLast().getToStop().getId(), sourceStopId);
+
+            Trip trip = connectingLeg.getTrip();
+            if (trip != null) {
+                List<StopTime> stopTimes = trip.getStopTimes();
+                assertNotNull(stopTimes);
+                // find index of the stopConnection.getStop() in the stopTimes
+                int index = -1;
+                for (int i = 0; i < stopTimes.size(); i++) {
+                    if (stopTimes.get(i).getStop().equals(stopConnection.getStop())) {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index == -1) {
+                    fail("Stop not found in trip stop times");
+                }
+                // check if the target stop in the connecting leg is the same as the next stop in the trip
+                assertEquals(stopTimes.get(index + 1).getStop(), connectingLeg.getToStop());
+            }
+        }
+    }
+
+    @Test
+    void testGetIsoLines_fromCoordinateReturnConnectionsTrueTimeTypeArrival() {
+        // Arrange
+        GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
+
+        List<StopConnection> stopConnections = routingController.getIsolines(null, sourceCoordinate.latitude(),
+                sourceCoordinate.longitude(), null, TimeType.ARRIVAL, 30, 2, 120, 5, true);
+
+        // This tests if the time is set to now if null
+        LocalDateTime expectedArrivalTime = LocalDateTime.now();
+        assertNotNull(stopConnections);
+
+        for (StopConnection stopConnection : stopConnections) {
+            Leg connectingLeg = stopConnection.getConnectingLeg();
+            Connection connection = stopConnection.getConnection();
+
+            assertEquals(stopConnection.getStop(), connectingLeg.getFromStop());
+            // because returnConnections == true
+            assertNotNull(connection);
+            assertEquals(stopConnection.getStop(), connection.getLegs().getFirst().getFromStop());
+            assertEquals(sourceCoordinate, connection.getLegs().getLast().getTo());
+            // should be walk transfer from location without stop object
+            assertNull(connection.getLegs().getLast().getToStop());
+
+            // make sure each connection has an arrival time before/equal the expected start time
+            assertFalse(connection.getLegs().getLast().getArrivalTime().isAfter(expectedArrivalTime));
+
+            Trip trip = connectingLeg.getTrip();
+            if (trip != null) {
+                List<StopTime> stopTimes = trip.getStopTimes();
+                assertNotNull(stopTimes);
+                // find index of the stopConnection.getStop() in the stopTimes
+                int index = -1;
+                for (int i = 0; i < stopTimes.size(); i++) {
+                    if (stopTimes.get(i).getStop().equals(stopConnection.getStop())) {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index == -1) {
+                    fail("Stop not found in trip stop times");
+                }
+                // check if the target stop in the connecting leg is the same as the next stop in the trip
+                assertEquals(stopTimes.get(index + 1).getStop(), connectingLeg.getToStop());
+            }
+        }
+    }
+
+    @Test
+    void testGetIsoLines_InvalidSourceStopId() {
         // Arrange
         String invalidStopId = "invalidStopId";
 
