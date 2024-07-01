@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,74 +38,124 @@ class RaptorRouterTest {
     private static final String STOP_Q = "Q";
     private static final String STOP_S = "S";
 
-    private static final int FIVE_AM = 5 * RaptorRouterTestBuilder.SECONDS_IN_HOUR;
-    private static final int EIGHT_AM = 8 * RaptorRouterTestBuilder.SECONDS_IN_HOUR;
-    private static final int NINE_AM = 9 * RaptorRouterTestBuilder.SECONDS_IN_HOUR;
+    private static final LocalDateTime START_OF_DAY = LocalDateTime.of(2021, 1, 1, 0, 0);
+    private static final LocalDateTime FIVE_AM = START_OF_DAY.plusHours(5);
+    private static final LocalDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
+    private static final LocalDateTime NINE_AM = START_OF_DAY.plusHours(9);
 
     static class ConvenienceMethods {
 
-        static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, Integer> sourceStops) {
+        static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops) {
             return getIsoLines(raptor, sourceStops, new QueryConfig());
         }
 
-        static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
+        static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
                                                    QueryConfig config) {
-            return raptor.routeIsolines(createStopTimeMap(sourceStops), TimeType.DEPARTURE, config);
+            return raptor.routeIsolines(sourceStops, TimeType.DEPARTURE, config);
         }
 
         static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                     int departureTime) {
+                                                     LocalDateTime departureTime) {
             return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime),
                     createStopMap(targetStopId, 0));
         }
 
         static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                     int departureTime, QueryConfig config) {
+                                                     LocalDateTime departureTime, QueryConfig config) {
             return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime),
                     createStopMap(targetStopId, 0), config);
+        }
+
+        static Map<String, LocalDateTime> createStopMap(String stopId, LocalDateTime value) {
+            return Map.of(stopId, value);
         }
 
         static Map<String, Integer> createStopMap(String stopId, int value) {
             return Map.of(stopId, value);
         }
 
-        static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
+        static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
                                                      Map<String, Integer> targetStopIds) {
             return routeEarliestArrival(raptor, sourceStops, targetStopIds, new QueryConfig());
         }
 
-        static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
+        static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
                                                      Map<String, Integer> targetStopIds, QueryConfig config) {
-            return raptor.routeEarliestArrival(createStopTimeMap(sourceStops), targetStopIds, config);
+            return raptor.routeEarliestArrival(sourceStops, targetStopIds, config);
         }
 
         static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                     int arrivalTime) {
+                                                     LocalDateTime arrivalTime) {
             return routeLatestDeparture(raptor, createStopMap(sourceStopId, 0),
                     createStopMap(targetStopId, arrivalTime));
         }
 
         static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
-                                                     Map<String, Integer> targetStops) {
+                                                     Map<String, LocalDateTime> targetStops) {
             return routeLatestDeparture(raptor, sourceStops, targetStops, new QueryConfig());
         }
 
         static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
-                                                     Map<String, Integer> targetStops, QueryConfig config) {
-            return raptor.routeLatestDeparture(sourceStops, createStopTimeMap(targetStops), config);
+                                                     Map<String, LocalDateTime> targetStops, QueryConfig config) {
+            return raptor.routeLatestDeparture(sourceStops, targetStops, config);
         }
 
-        static Map<String, LocalDateTime> createStopTimeMap(Map<String, Integer> sourceStops) {
-            if (sourceStops == null) {
-                return null;
+    }
+
+    static class Helpers {
+        private static void assertEarliestArrivalConnection(Connection connection, String sourceStop, String targetStop,
+                                                            LocalDateTime requestedDepartureTime,
+                                                            int numSameStopTransfers, int numWalkTransfers,
+                                                            int numTrips) {
+            assertEquals(sourceStop, connection.getFromStopId());
+            assertEquals(targetStop, connection.getToStopId());
+
+            assertFalse(connection.getDepartureTime().isBefore(requestedDepartureTime),
+                    "Departure time should be greater equal than searched for departure time");
+            assertNotNull(connection.getArrivalTime(), "Arrival time should not be null");
+
+            assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
+                    "Number of same stop transfers should match");
+            assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
+                    "Number of walk transfers should match");
+            assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                    "Number of transfers should match");
+
+            assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
+        }
+
+        private static void assertLatestDepartureConnection(Connection connection, String sourceStop, String targetStop,
+                                                            LocalDateTime requestedArrivalTime,
+                                                            int numSameStopTransfers, int numWalkTransfers,
+                                                            int numTrips) {
+            assertEquals(sourceStop, connection.getFromStopId());
+            assertEquals(targetStop, connection.getToStopId());
+
+            assertNotNull(connection.getDepartureTime(), "Departure time should not be null");
+            assertFalse(connection.getArrivalTime().isAfter(requestedArrivalTime),
+                    "Arrival time should be smaller equal than searched for arrival time");
+
+            assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
+                    "Number of same station transfers should match");
+            assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
+                    "Number of walk transfers should match");
+            assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
+                    "Number of transfers should match");
+
+            assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
+        }
+
+        private static void checkIfConnectionsAreParetoOptimal(List<Connection> connections) {
+            Connection previousConnection = connections.getFirst();
+            for (int i = 1; i < connections.size(); i++) {
+                Connection currentConnection = connections.get(i);
+                assertTrue(previousConnection.getDurationInSeconds() > currentConnection.getDurationInSeconds(),
+                        "Previous connection should be slower than current connection");
+                assertTrue(previousConnection.getRouteLegs().size() < currentConnection.getRouteLegs().size(),
+                        "Previous connection should have fewer route legs than current connection");
+                previousConnection = currentConnection;
             }
-            return sourceStops.entrySet()
-                    .stream()
-                    .map(entry -> Map.entry(entry.getKey(),
-                            LocalDateTime.of(2021, 1, 1, 0, 0).plusSeconds(entry.getValue())))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         }
-
     }
 
     @Nested
@@ -128,8 +179,8 @@ class RaptorRouterTest {
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
+            Helpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
             Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
@@ -139,7 +190,7 @@ class RaptorRouterTest {
 
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_B, EIGHT_AM);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_B, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_B, EIGHT_AM, 0, 0, 1);
         }
 
         @Test
@@ -151,9 +202,9 @@ class RaptorRouterTest {
             assertEquals(2, connections.size());
 
             // First Connection Should have no transfers but ride the entire loop (slow)
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_H, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_H, EIGHT_AM, 0, 0, 1);
             // Second Connection Should Change at Stop B and take the earlier trip of the same route there (faster)
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2);
+            Helpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2);
 
             Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
@@ -162,29 +213,29 @@ class RaptorRouterTest {
         void routeFromTwoSourceStopsWithSameDepartureTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // fastest and only connection should be B -> H
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_B, STOP_H, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, EIGHT_AM, 0, 0, 1);
         }
 
         @Test
         void routeFromTwoSourceStopsWithLaterDepartureTimeOnCloserStop(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, NINE_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, NINE_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // B -> H has no transfers but later arrival time (due to departure time one hour later)
             // A -> H has one transfer but earlier arrival time
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops);
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2);
-            assertTrue(connections.getFirst().getArrivalTime() > connections.get(1).getArrivalTime(),
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2);
+            assertTrue(connections.getFirst().getArrivalTime().isAfter(connections.get(1).getArrivalTime()),
                     "Connection from A should arrive earlier than connection from B");
         }
 
@@ -192,20 +243,20 @@ class RaptorRouterTest {
         void routeFromStopToTwoTargetStopsNoWalkTimeToTarget(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_F, 0, STOP_S, 0);
 
             // fastest and only connection should be A -> F
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
         }
 
         @Test
         void routeFromStopToTwoTargetStopsWithWalkTimeToTarget(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
             // Add one-hour walk time to target from stop F and no extra walk time from stop S
             Map<String, Integer> targetStops = Map.of(STOP_F, RaptorRouterTestBuilder.SECONDS_IN_HOUR, STOP_S, 0);
 
@@ -213,8 +264,8 @@ class RaptorRouterTest {
             // walk time to target, the connection A -> S should be faster (no additional walk time)
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops);
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_S, EIGHT_AM, 1, 0, 2);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_S, EIGHT_AM, 1, 0, 2);
 
             // Note since the required walk time to target is not added as a leg, the solutions will not be pareto
             // optimal without additional post-processing.
@@ -241,7 +292,7 @@ class RaptorRouterTest {
 
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_N, STOP_D, EIGHT_AM);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0, 1, 0);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0, 1, 0);
         }
 
         @Test
@@ -256,12 +307,12 @@ class RaptorRouterTest {
             // Both Routes leave at 8:00 at Stop A, but R1 arrives at G at 8:35 whereas R1X arrives at G at 8:23
             // R1X should be taken
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
             // check arrival time at 8:23
-            assertEquals(EIGHT_AM + 23 * 60, connection.getArrivalTime());
+            assertEquals(EIGHT_AM.plusMinutes(23), connection.getArrivalTime());
             // check that R1X(-F for forward) route was used
             assertEquals("R1X-F", connection.getRouteLegs().getFirst().getRouteId());
         }
@@ -277,48 +328,14 @@ class RaptorRouterTest {
             // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 8:15 from Stop A and
             // arrives at G at 8:38. R1 should be used.
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
             // check arrival time at 8:35
-            assertEquals(EIGHT_AM + 35 * 60, connection.getArrivalTime());
+            assertEquals(EIGHT_AM.plusMinutes(35), connection.getArrivalTime());
             // check that R1(-F for forward) route was used
             assertEquals("R1-F", connection.getRouteLegs().getFirst().getRouteId());
-        }
-
-        private static class Helpers {
-
-            private static void assertConnection(Connection connection, String sourceStop, String targetStop,
-                                                 int departureTime, int numSameStopTransfers, int numWalkTransfers,
-                                                 int numTrips) {
-                assertEquals(sourceStop, connection.getFromStopId());
-                assertEquals(targetStop, connection.getToStopId());
-                assertTrue(connection.getDepartureTime() >= departureTime,
-                        "Departure time should be greater equal than searched for departure time");
-
-                assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
-                        "Number of same stop transfers should match");
-                assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
-                        "Number of walk transfers should match");
-                assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
-                        "Number of transfers should match");
-
-                assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
-            }
-
-            private static void checkIfConnectionsAreParetoOptimal(List<Connection> connections) {
-                Connection previousConnection = connections.getFirst();
-                for (int i = 1; i < connections.size(); i++) {
-                    Connection currentConnection = connections.get(i);
-                    assertTrue(previousConnection.getDuration() > currentConnection.getDuration(),
-                            "Previous connection should be slower than current connection");
-                    assertTrue(previousConnection.getRouteLegs().size() < currentConnection.getRouteLegs().size(),
-                            "Previous connection should have fewer route legs than current connection");
-                    previousConnection = currentConnection;
-                }
-            }
-
         }
 
     }
@@ -344,9 +361,9 @@ class RaptorRouterTest {
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, NINE_AM, 0, 1, 2);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_Q, NINE_AM, 2, 0, 3);
-            EarliestArrival.Helpers.checkIfConnectionsAreParetoOptimal(connections);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_Q, NINE_AM, 0, 1, 2);
+            Helpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_Q, NINE_AM, 2, 0, 3);
+            Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
         @Test
@@ -355,7 +372,7 @@ class RaptorRouterTest {
 
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, STOP_A, STOP_B, NINE_AM);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_B, NINE_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_B, NINE_AM, 0, 0, 1);
         }
 
         @Test
@@ -367,11 +384,11 @@ class RaptorRouterTest {
             assertEquals(2, connections.size());
 
             // First Connection Should have no transfers but ride the entire loop (slow)
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_H, NINE_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_H, NINE_AM, 0, 0, 1);
             // Second Connection Should Change at Stop B and take the earlier trip of the same route there (faster)
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2);
+            Helpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2);
 
-            EarliestArrival.Helpers.checkIfConnectionsAreParetoOptimal(connections);
+            Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
         @Test
@@ -379,12 +396,12 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0, STOP_B, 0);
-            Map<String, Integer> targetStops = Map.of(STOP_H, NINE_AM);
+            Map<String, LocalDateTime> targetStops = Map.of(STOP_H, NINE_AM);
 
             // fastest and only connection should be B -> H
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, sourceStops, targetStops);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
         }
 
         @Test
@@ -392,14 +409,14 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0, STOP_B, RaptorRouterTestBuilder.SECONDS_IN_HOUR);
-            Map<String, Integer> targetStops = Map.of(STOP_H, NINE_AM);
+            Map<String, LocalDateTime> targetStops = Map.of(STOP_H, NINE_AM);
 
             // B -> H has no transfers but (theoretical) worse departure time (due to extra one-hour walk time)
             // A -> H has one transfer but (theoretical) better departure time (no additional walk time
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, sourceStops, targetStops);
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2);
         }
 
         @Test
@@ -407,12 +424,12 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
-            Map<String, Integer> targetStops = Map.of(STOP_F, NINE_AM, STOP_S, NINE_AM);
+            Map<String, LocalDateTime> targetStops = Map.of(STOP_F, NINE_AM, STOP_S, NINE_AM);
 
             // fastest and only connection should be A -> F
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, sourceStops, targetStops);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_F, NINE_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, NINE_AM, 0, 0, 1);
         }
 
         @Test
@@ -421,14 +438,14 @@ class RaptorRouterTest {
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
             // Add one-hour walk time to target from stop F and no extra walk time from stop S
-            Map<String, Integer> targetStops = Map.of(STOP_F, EIGHT_AM, STOP_S, NINE_AM);
+            Map<String, LocalDateTime> targetStops = Map.of(STOP_F, EIGHT_AM, STOP_S, NINE_AM);
 
             // since F is closer to A than S, the fastest connection should be A -> F, but because of the hour
             // earlier arrival time, the connection A -> S should be faster (no additional walk time)
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, sourceStops, targetStops);
             assertEquals(2, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
-            Helpers.assertConnection(connections.get(1), STOP_A, STOP_S, NINE_AM, 1, 0, 2);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_S, NINE_AM, 1, 0, 2);
         }
 
         @Test
@@ -452,7 +469,7 @@ class RaptorRouterTest {
 
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, STOP_N, STOP_D, NINE_AM);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_N, STOP_D, NINE_AM, 0, 1, 0);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_N, STOP_D, NINE_AM, 0, 1, 0);
         }
 
         @Test
@@ -465,15 +482,15 @@ class RaptorRouterTest {
 
             // Both Routes arrive at 8:35 at Stop G, but R1 leaves A at 8:00 whereas R1X leaves at A at 8:12
             // R1X should be taken
-            int arrivalTime = EIGHT_AM + 35 * 60;
+            LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
             List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, STOP_A, STOP_G, arrivalTime);
 
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1);
             // check departure at 8:12
             Connection connection = connections.getFirst();
-            assertEquals(EIGHT_AM + 12 * 60, connection.getDepartureTime());
-            // check arrival time at 8:23
+            assertEquals(EIGHT_AM.plusMinutes(12), connection.getDepartureTime());
+            // check arrival time at 8:35
             assertEquals(arrivalTime, connection.getArrivalTime());
             // check that R1X(-F for forward) route was used
             assertEquals("R1X-F", connection.getRouteLegs().getFirst().getRouteId());
@@ -489,9 +506,9 @@ class RaptorRouterTest {
 
             // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 7:45 from Stop A and
             // arrives at G at 8:08. R1 should be used.
-            int arrivalTime = EIGHT_AM + 35 * 60;
+            LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
             assertEquals(1, connections.size());
-            Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1);
+            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
@@ -499,27 +516,6 @@ class RaptorRouterTest {
             assertEquals(arrivalTime, connection.getArrivalTime());
             // check that R1(-F for forward) route was used
             assertEquals("R1-F", connection.getRouteLegs().getFirst().getRouteId());
-        }
-
-        private static class Helpers {
-
-            private static void assertConnection(Connection connection, String sourceStop, String targetStop,
-                                                 int arrivalTime, int numSameStopTransfers, int numWalkTransfers,
-                                                 int numTrips) {
-                assertEquals(sourceStop, connection.getFromStopId());
-                assertEquals(targetStop, connection.getToStopId());
-                assertTrue(connection.getArrivalTime() <= arrivalTime,
-                        "Arrival time should be smaller equal than searched for arrival time");
-
-                assertEquals(numSameStopTransfers, connection.getNumberOfSameStopTransfers(),
-                        "Number of same station transfers should match");
-                assertEquals(numWalkTransfers, connection.getWalkTransfers().size(),
-                        "Number of walk transfers should match");
-                assertEquals(numSameStopTransfers + numWalkTransfers, connection.getNumberOfTotalTransfers(),
-                        "Number of transfers should match");
-
-                assertEquals(numTrips, connection.getRouteLegs().size(), "Number of trips should match");
-            }
         }
     }
 
@@ -552,9 +548,9 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
-            assertEquals(FIVE_AM + 19 * 60, connections.getFirst().getDepartureTime());
 
-            assertNotEquals(FIVE_AM + 24 * 60, connections.getFirst().getLegs().get(1).getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(19), connections.getFirst().getDepartureTime());
+            assertNotEquals(FIVE_AM.plusMinutes(24), connections.getFirst().getLegs().get(1).getDepartureTime());
         }
 
         @Test
@@ -569,8 +565,8 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
-            assertEquals(FIVE_AM + 19 * 60, connections.getFirst().getDepartureTime());
-            assertEquals(FIVE_AM + 24 * 60, connections.getFirst().getLegs().get(1).getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(19), connections.getFirst().getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(24), connections.getFirst().getLegs().get(1).getDepartureTime());
         }
 
         @Test
@@ -585,9 +581,8 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
 
             assertEquals(1, connections.size());
-            assertEquals(FIVE_AM + 17 * 60, connections.getFirst().getDepartureTime());
-
-            assertEquals(FIVE_AM + 24 * 60, connections.getFirst().getLegs().get(1).getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(17), connections.getFirst().getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(24), connections.getFirst().getLegs().get(1).getDepartureTime());
         }
 
     }
@@ -621,9 +616,9 @@ class RaptorRouterTest {
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            EarliestArrival.Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
-            EarliestArrival.Helpers.assertConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
-            EarliestArrival.Helpers.checkIfConnectionsAreParetoOptimal(connections);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
+            Helpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
+            Helpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
         @Test
@@ -637,7 +632,7 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
                     queryConfig);
             assertEquals(1, connections.size());
-            EarliestArrival.Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
         }
 
         @Test
@@ -655,7 +650,7 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
                     queryConfig);
             assertEquals(1, connections.size());
-            EarliestArrival.Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
         }
 
         @Test
@@ -671,7 +666,7 @@ class RaptorRouterTest {
             List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
                     queryConfig);
             assertEquals(1, connections.size());
-            EarliestArrival.Helpers.assertConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3);
         }
 
         @Test
@@ -690,8 +685,8 @@ class RaptorRouterTest {
                     queryConfig);
 
             assertEquals(1, connections.size());
-            assertEquals(FIVE_AM + 19 * 60, connections.getFirst().getDepartureTime());
-            assertEquals(FIVE_AM + 39 * 60, connections.getFirst().getLegs().get(1).getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(19), connections.getFirst().getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(39), connections.getFirst().getLegs().get(1).getDepartureTime());
         }
 
         @Test
@@ -709,8 +704,8 @@ class RaptorRouterTest {
                     queryConfig);
 
             assertEquals(1, connections.size());
-            assertEquals(FIVE_AM + 19 * 60, connections.getFirst().getDepartureTime());
-            assertEquals(FIVE_AM + 54 * 60, connections.getFirst().getLegs().get(1).getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(19), connections.getFirst().getDepartureTime());
+            assertEquals(FIVE_AM.plusMinutes(54), connections.getFirst().getLegs().get(1).getDepartureTime());
         }
 
         @Test
@@ -724,13 +719,13 @@ class RaptorRouterTest {
 
             assertEquals(2, connections.size());
             Connection firstConnection = connections.getFirst();
-            EarliestArrival.Helpers.assertConnection(firstConnection, STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
+            Helpers.assertEarliestArrivalConnection(firstConnection, STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2);
 
             // The walk transfer from D to N takes 60 minutes and the route from N to Q leaves every 75 minutes.
             Leg firstLeg = firstConnection.getRouteLegs().getFirst();
             Leg secondLeg = firstConnection.getRouteLegs().getLast();
-            int timeDiff = secondLeg.getDepartureTime() - firstLeg.getArrivalTime();
-            assertTrue(timeDiff >= 75 * 60, "Time between trips should be at least 75 minutes");
+            int timeDiff = (int) Duration.between(firstLeg.getArrivalTime(), secondLeg.getDepartureTime()).toMinutes();
+            assertTrue(timeDiff >= 75, "Time between trips should be at least 75 minutes");
         }
 
     }
@@ -784,12 +779,9 @@ class RaptorRouterTest {
         void createIsoLinesFromTwoNotConnectedSourceStops(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
 
-            Map<String, Integer> departureTimeHours = Map.of(STOP_A, 8, STOP_M, 16);
-
             List<String> reachableStopsFromStopA = List.of(STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G);
-            Map<String, Integer> sourceStops = Map.of(STOP_A,
-                    departureTimeHours.get(STOP_A) * RaptorRouterTestBuilder.SECONDS_IN_HOUR, STOP_M,
-                    departureTimeHours.get(STOP_M) * RaptorRouterTestBuilder.SECONDS_IN_HOUR);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY.plusHours(8), STOP_M,
+                    START_OF_DAY.plusHours(16));
             List<String> reachableStopsFromStopM = List.of(STOP_K, STOP_N, STOP_O, STOP_P, STOP_Q);
 
             Map<String, Connection> isoLines = ConvenienceMethods.getIsoLines(raptor, sourceStops);
@@ -802,16 +794,15 @@ class RaptorRouterTest {
             for (Map.Entry<String, List<String>> entry : sourceTargets.entrySet()) {
                 String sourceStop = entry.getKey();
                 List<String> reachableStops = entry.getValue();
-                int departureTimeHour = departureTimeHours.get(sourceStop);
-                int departureTime = departureTimeHour * RaptorRouterTestBuilder.SECONDS_IN_HOUR;
+                LocalDateTime requestedDepartureTime = sourceStops.get(sourceStop);
                 for (String stop : reachableStops) {
                     assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable from " + sourceStop);
                     Connection connection = isoLines.get(stop);
-                    assertTrue(connection.getDepartureTime() >= departureTime,
+                    assertFalse(connection.getDepartureTime().isBefore(requestedDepartureTime),
                             String.format("Connection should have departure time equal or after %d:00",
-                                    departureTimeHour));
-                    assertTrue(connection.getArrivalTime() < Integer.MAX_VALUE,
-                            "Connection should have arrival time before infinity");
+                                    requestedDepartureTime.getHour()));
+                    assertNotNull(connection.getArrivalTime(), "Connection should have arrival time");
+                    assertNotNull(connection.getDepartureTime(), "Connection should have departure time");
                     assertEquals(connection.getFromStopId(), sourceStop, "From stop should be " + sourceStop);
                     assertEquals(connection.getToStopId(), stop, "To stop should be " + stop);
                 }
@@ -823,12 +814,12 @@ class RaptorRouterTest {
                 assertEquals(expectedIsoLines, isoLines.size());
                 assertFalse(isoLines.containsKey(STOP_A), "Source stop should not be in iso lines");
                 for (Map.Entry<String, Connection> entry : isoLines.entrySet()) {
-                    assertTrue(EIGHT_AM <= entry.getValue().getDepartureTime(),
+                    int arrivalTimeStamp = (int) entry.getValue().getArrivalTime().toEpochSecond(ZoneOffset.UTC);
+                    assertFalse(entry.getValue().getDepartureTime().isBefore(EIGHT_AM),
                             "Departure time should be greater than or equal to departure time");
-                    assertTrue(EIGHT_AM < entry.getValue().getArrivalTime(),
+                    assertFalse(entry.getValue().getArrivalTime().isBefore(EIGHT_AM),
                             "Arrival time should be greater than or equal to departure time");
-                    assertTrue(entry.getValue().getArrivalTime() < INFINITY,
-                            "Arrival time should be less than INFINITY");
+                    assertTrue(arrivalTimeStamp < INFINITY, "Arrival time should be less than INFINITY");
                     assertEquals(STOP_A, entry.getValue().getFromStopId(), "From stop should be source stop");
                     assertEquals(entry.getKey(), entry.getValue().getToStopId(), "To stop should be key of map entry");
                 }
@@ -866,7 +857,7 @@ class RaptorRouterTest {
 
         @Test
         void notThrowErrorForValidAndNonExistingSourceStop() {
-            Map<String, Integer> sourceStops = Map.of(STOP_A, EIGHT_AM, "NonExistentStop", EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, "NonExistentStop", EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertDoesNotThrow(() -> ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops),
@@ -875,7 +866,7 @@ class RaptorRouterTest {
 
         @Test
         void notThrowErrorForValidAndNonExistingTargetStop() {
-            Map<String, Integer> sourceStops = Map.of(STOP_H, EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_A, 0, "NonExistentStop", 0);
 
             assertDoesNotThrow(() -> ConvenienceMethods.routeEarliestArrival(raptor, sourceStops, targetStops),
@@ -884,7 +875,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorForInvalidWalkToTargetTimeFromOneOfManyTargetStops() {
-            Map<String, Integer> sourceStops = Map.of(STOP_H, EIGHT_AM);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_A, 0, STOP_B, -1);
 
             assertThrows(IllegalArgumentException.class,
@@ -894,7 +885,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorNullSourceStops() {
-            Map<String, Integer> sourceStops = null;
+            Map<String, LocalDateTime> sourceStops = null;
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertThrows(IllegalArgumentException.class,
@@ -904,7 +895,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorNullTargetStops() {
-            Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
             Map<String, Integer> targetStops = null;
 
             assertThrows(IllegalArgumentException.class,
@@ -914,7 +905,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorEmptyMapSourceStops() {
-            Map<String, Integer> sourceStops = Map.of();
+            Map<String, LocalDateTime> sourceStops = Map.of();
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertThrows(IllegalArgumentException.class,
@@ -924,7 +915,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorEmptyMapTargetStops() {
-            Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
+            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
             Map<String, Integer> targetStops = Map.of();
 
             assertThrows(IllegalArgumentException.class,

@@ -8,6 +8,7 @@ import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -19,8 +20,8 @@ class RaptorLeg implements Leg {
     private final @Nullable String tripId;
     private final String fromStopId;
     private final String toStopId;
-    private final int departureTime;
-    private final int arrivalTime;
+    private final LocalDateTime departureTime;
+    private final LocalDateTime arrivalTime;
     private final Type type;
 
     @Override
@@ -28,11 +29,11 @@ class RaptorLeg implements Leg {
         // sort legs first by departure time than by arrival time since there some legs that actually have the same
         // departure and arrival time (really short distance local service) and therefore the following leg may
         // have the same departure time but a later arrival time
-        int comparison = Integer.compare(this.departureTime, other.getDepartureTime());
+        int comparison = getDepartureTime().compareTo(other.getDepartureTime());
         if (comparison != 0) {
             return comparison;
         } else {
-            return Integer.compare(this.arrivalTime, other.getArrivalTime());
+            return getArrivalTime().compareTo(other.getArrivalTime());
         }
 
     }
@@ -45,7 +46,7 @@ class RaptorLeg implements Leg {
         return Objects.equals(this.routeId, that.getRouteId()) && Objects.equals(this.tripId,
                 that.getTripId()) && Objects.equals(this.fromStopId, that.getFromStopId()) && Objects.equals(
                 this.toStopId,
-                that.getToStopId()) && this.departureTime == that.getDepartureTime() && this.arrivalTime == that.getArrivalTime() && Objects.equals(
+                that.getToStopId()) && this.getArrivalTime() == that.getArrivalTime() && this.getDepartureTime() == that.getDepartureTime() && Objects.equals(
                 this.type, that.getType());
     }
 
