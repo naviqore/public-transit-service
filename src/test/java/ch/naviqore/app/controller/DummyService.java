@@ -87,7 +87,13 @@ class DummyService implements PublicTransitService {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
             try {
-                connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                if (timeType == TimeType.DEPARTURE) {
+                    connections.put(stop,
+                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                } else {
+                    connections.put(stop,
+                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                }
             } catch (IllegalArgumentException e) {
                 // ignore
             }
@@ -104,7 +110,13 @@ class DummyService implements PublicTransitService {
                 continue;
             }
             try {
-                connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                if (timeType == TimeType.DEPARTURE) {
+                    connections.put(stop,
+                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                } else {
+                    connections.put(stop,
+                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                }
             } catch (IllegalArgumentException e) {
                 // ignore
             }
