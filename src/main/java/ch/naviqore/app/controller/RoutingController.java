@@ -169,7 +169,7 @@ public class RoutingController {
         for (Map.Entry<Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
             Stop stop = entry.getKey();
             ch.naviqore.service.Connection connection = entry.getValue();
-            arrivals.add(map(stop, connection, map(timeType), returnConnections));
+            arrivals.add(new StopConnection(stop, connection, timeType, returnConnections));
         }
 
         return arrivals;
