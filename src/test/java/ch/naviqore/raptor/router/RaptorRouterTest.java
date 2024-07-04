@@ -156,6 +156,21 @@ class RaptorRouterTest {
                 previousConnection = currentConnection;
             }
         }
+
+        private static void assertIsoLines(Map<String, Connection> isoLines, int expectedIsoLines) {
+            assertEquals(expectedIsoLines, isoLines.size());
+            assertFalse(isoLines.containsKey(STOP_A), "Source stop should not be in iso lines");
+            for (Map.Entry<String, Connection> entry : isoLines.entrySet()) {
+                int arrivalTimeStamp = (int) entry.getValue().getArrivalTime().toEpochSecond(ZoneOffset.UTC);
+                assertFalse(entry.getValue().getDepartureTime().isBefore(EIGHT_AM),
+                        "Departure time should be greater than or equal to departure time");
+                assertFalse(entry.getValue().getArrivalTime().isBefore(EIGHT_AM),
+                        "Arrival time should be greater than or equal to departure time");
+                assertTrue(arrivalTimeStamp < INFINITY, "Arrival time should be less than INFINITY");
+                assertEquals(STOP_A, entry.getValue().getFromStopId(), "From stop should be source stop");
+                assertEquals(entry.getKey(), entry.getValue().getToStopId(), "To stop should be key of map entry");
+            }
+        }
     }
 
     @Nested
@@ -808,25 +823,6 @@ class RaptorRouterTest {
                 }
             }
         }
-
-        private static class Helpers {
-            private static void assertIsoLines(Map<String, Connection> isoLines, int expectedIsoLines) {
-                assertEquals(expectedIsoLines, isoLines.size());
-                assertFalse(isoLines.containsKey(STOP_A), "Source stop should not be in iso lines");
-                for (Map.Entry<String, Connection> entry : isoLines.entrySet()) {
-                    int arrivalTimeStamp = (int) entry.getValue().getArrivalTime().toEpochSecond(ZoneOffset.UTC);
-                    assertFalse(entry.getValue().getDepartureTime().isBefore(EIGHT_AM),
-                            "Departure time should be greater than or equal to departure time");
-                    assertFalse(entry.getValue().getArrivalTime().isBefore(EIGHT_AM),
-                            "Arrival time should be greater than or equal to departure time");
-                    assertTrue(arrivalTimeStamp < INFINITY, "Arrival time should be less than INFINITY");
-                    assertEquals(STOP_A, entry.getValue().getFromStopId(), "From stop should be source stop");
-                    assertEquals(entry.getKey(), entry.getValue().getToStopId(), "To stop should be key of map entry");
-                }
-            }
-
-        }
-
     }
 
     @Nested
