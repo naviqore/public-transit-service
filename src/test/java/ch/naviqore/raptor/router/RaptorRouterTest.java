@@ -167,7 +167,7 @@ class RaptorRouterTest {
             assertNotNull(matchingConnection, "Matching connection should be found");
             assertEquals(connection.getFromStopId(), matchingConnection.getFromStopId(), "From stop should match");
             assertEquals(connection.getToStopId(), matchingConnection.getToStopId(), "To stop should match");
-            if( timeType == TimeType.DEPARTURE ){
+            if (timeType == TimeType.DEPARTURE) {
                 assertEquals(connection.getDepartureTime(), matchingConnection.getDepartureTime(),
                         "Departure time should match");
 
@@ -177,14 +177,14 @@ class RaptorRouterTest {
                     return;
                 }
             } else {
-                assertEquals(connection.getArrivalTime(), matchingConnection.getArrivalTime(), "Arrival time should match");
+                assertEquals(connection.getArrivalTime(), matchingConnection.getArrivalTime(),
+                        "Arrival time should match");
                 // there is no guarantee that the departure time is the same, but it should not be earlier (worse) than
                 // the departure time of the matching connection
                 if (connection.getDepartureTime().isBefore(matchingConnection.getArrivalTime())) {
                     return;
                 }
             }
-
 
             assertEquals(connection.getDepartureTime(), matchingConnection.getDepartureTime(),
                     "Departure time should match");
@@ -350,21 +350,6 @@ class RaptorRouterTest {
         }
 
         @Test
-        void findConnectionBetweenOnlyFootpath(RaptorRouterTestBuilder builder) {
-            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
-                    .withAddRoute2_HL()
-                    .withAddRoute3_MQ()
-                    .withAddRoute4_RS()
-                    .withAddTransfer1_ND(1)
-                    .withAddTransfer2_LR()
-                    .build();
-
-            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_N, STOP_D, EIGHT_AM);
-            assertEquals(1, connections.size());
-            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0, 1, 0, raptor);
-        }
-
-        @Test
         void takeFasterRouteOfOverlappingRoutes(RaptorRouterTestBuilder builder) {
             // Create Two Versions of the same route with different travel speeds (both leaving at same time from A)
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
@@ -527,21 +512,6 @@ class RaptorRouterTest {
         }
 
         @Test
-        void findConnectionBetweenOnlyFootpath(RaptorRouterTestBuilder builder) {
-            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
-                    .withAddRoute2_HL()
-                    .withAddRoute3_MQ()
-                    .withAddRoute4_RS()
-                    .withAddTransfer1_ND(1)
-                    .withAddTransfer2_LR()
-                    .build();
-
-            List<Connection> connections = ConvenienceMethods.routeLatestDeparture(raptor, STOP_N, STOP_D, NINE_AM);
-            assertEquals(1, connections.size());
-            Helpers.assertLatestDepartureConnection(connections.getFirst(), STOP_N, STOP_D, NINE_AM, 0, 1, 0, raptor);
-        }
-
-        @Test
         void takeFasterRouteOfOverlappingRoutes(RaptorRouterTestBuilder builder) {
             // Create Two Versions of the same route with different travel speeds (both leaving at same time from A)
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
@@ -588,6 +558,40 @@ class RaptorRouterTest {
             // check that R1(-F for forward) route was used
             assertEquals("R1-F", connection.getRouteLegs().getFirst().getRouteId());
         }
+    }
+
+    @Nested
+    class WalkTransfers {
+
+        @Test
+        void findConnectionBetweenOnlyFootpath(RaptorRouterTestBuilder builder) {
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withAddRoute2_HL()
+                    .withAddRoute3_MQ()
+                    .withAddRoute4_RS()
+                    .withAddTransfer1_ND(1)
+                    .withAddTransfer2_LR()
+                    .build();
+
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_N, STOP_D, EIGHT_AM);
+            assertEquals(1, connections.size());
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0, 1, 0, raptor);
+        }
+
+        @Test
+        void findConnectionBetweenWithFootpath(RaptorRouterTestBuilder builder) {
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().withAddTransfer1_ND().build();
+
+            // Should return connection with two route legs and one walk transfer
+            //  - Route R1-F from A to D
+            //  - Foot Transfer from D to N
+            //  - Route R3-F from N to Q
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM);
+
+            assertEquals(1, connections.size());
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
+        }
+
     }
 
     @Nested
