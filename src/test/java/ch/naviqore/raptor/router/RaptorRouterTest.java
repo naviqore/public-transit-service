@@ -621,6 +621,27 @@ class RaptorRouterTest {
             Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_C, STOP_O, EIGHT_AM, 0, 1, 2, raptor);
         }
 
+        @Test
+        void ensureUnnecessaryWalkTransferIsNotAdded(RaptorRouterTestBuilder builder) {
+            // This test should ensure that the router does not add a walk transfer at the beginning of a trip only to
+            // reduce the earliest arrival time at the next stop when the following route leg could have also been entered
+            // at the previous stop (same overall arrival time only more walking and earlier departure time).
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddTransfer("A", "B", 15).build();
+
+            // Route connection from A <-> C can be connected by a route trip starting at 8:15 at A, arriving at B at
+            // 8:20 and then at C at 8:26.
+            // Since the earliest arrival request is set to depart at 08:01 and the walk to B takes 15 minutes, the
+            // earliest arrival at B is 8:16. However, in this case the traveller still has to wait until 8:21 to depart
+            // from B. The walk transfer should not be added in this case.
+            LocalDateTime requestedDepartureTime = EIGHT_AM.plusMinutes(1);
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_C,
+                    requestedDepartureTime);
+
+            assertEquals(1, connections.size());
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, requestedDepartureTime, 0,
+                    0, 1, raptor);
+        }
+
     }
 
     @Nested

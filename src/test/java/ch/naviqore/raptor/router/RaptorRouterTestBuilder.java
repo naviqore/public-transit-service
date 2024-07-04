@@ -171,6 +171,11 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withAddTransfer(String sourceStop, String targetStop, int duration) {
+        transfers.add(new Transfer(sourceStop, targetStop, duration));
+        return this;
+    }
+
     public RaptorRouterTestBuilder withSameStopTransferTime(int time) {
         this.sameStopTransferTime = time;
         return this;
