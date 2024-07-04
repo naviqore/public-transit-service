@@ -642,6 +642,39 @@ class RaptorRouterTest {
                     0, 1, raptor);
         }
 
+        @Test
+        void ensureFinalLegDoesNotFavorWalkTransferBecauseOfSameStopTransferTime(RaptorRouterTestBuilder builder) {
+            // This test is intended to ensure that due to the subtraction of the same transfer time from the arrival time
+            // of a walk transfer, the walk transfer is not falsely favored over a route leg arriving at the final stop.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withAddTransfer("B", "C", 7)
+                    .withSameStopTransferTime(120)
+                    .build();
+
+            // Route connection from A <-> C can be connected by a route trip starting at 8:00 at A, arriving at B at
+            // 8:05 and then at C at 8:11. If the walk from B to C takes 7 minutes the "comparable" arrival time at C
+            // will be also 8:10. However, since the "real" arrival time will be 8:12, the walk transfer should not be
+            // favored.
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_C, EIGHT_AM);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0, 0, 1, raptor);
+        }
+
+        @Test
+        void ensureFinalWalkTransferIsAddedIfArrivesEarlierThanRouteLeg(RaptorRouterTestBuilder builder) {
+            // This test is intended to ensure that a walk transfer is added at the final stop if it arrives earlier than
+            // the route leg.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withAddTransfer("B", "C", 5)
+                    .withSameStopTransferTime(120)
+                    .build();
+
+            // Route connection from A <-> C can be connected by a route trip starting at 8:00 at A, arriving at B at
+            // 8:05 and then at C at 8:11. If the walk from B to C takes 5 minutes the arrival time at C is 8:10 and
+            // should be favored over the route leg arriving at 8:11.
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_A, STOP_C, EIGHT_AM);
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0, 1, 1, raptor);
+        }
+
     }
 
     @Nested
