@@ -142,6 +142,11 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withAddRoute3_MQ(int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), offset, headway, travelTime, dwellTime));
+        return this;
+    }
+
     public RaptorRouterTestBuilder withAddRoute4_RS() {
         routes.add(new Route("R4", List.of("R", "P", "F", "S")));
         return this;

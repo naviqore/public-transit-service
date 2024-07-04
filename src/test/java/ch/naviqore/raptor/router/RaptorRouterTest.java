@@ -592,6 +592,35 @@ class RaptorRouterTest {
             Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
         }
 
+        @Test
+        void findConnectionWithZeroTravelTimeTripsAndConsequentWalkTransfer(RaptorRouterTestBuilder builder) {
+            // There are connections on local public transport where the travel time between stops is zero (in reality
+            // 30 seconds or so, but rounded to the closest minute). This test ensures that the walk transfer is not
+            // sorted before/after such a leg when rebuilding the connection.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddRoute3_MQ(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddTransfer1_ND()
+                    .build();
+
+            // Connection C <-> O will be 1-stop leg from C to D, a walk transfer to N and a 1-stop leg from N to O.
+            // I.e. departure time at C will be equal to walk transfer departure at D and arrival time at O will be equal
+            // to departure time at N.
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_C, STOP_O, EIGHT_AM);
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            Leg firstRouteLeg = connection.getLegs().getFirst();
+            Leg walkTransferLeg = connection.getLegs().get(1);
+            assertEquals(firstRouteLeg.getType(), Leg.Type.ROUTE);
+            assertEquals(walkTransferLeg.getType(), Leg.Type.WALK_TRANSFER);
+            assertEquals(firstRouteLeg.getDepartureTime(), firstRouteLeg.getArrivalTime(),
+                    "Departure time at C should be equal to arrival time at D");
+            assertEquals(firstRouteLeg.getDepartureTime(), walkTransferLeg.getDepartureTime(),
+                    "Departure time at C should be equal to walk departure time at D");
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_C, STOP_O, EIGHT_AM, 0, 1, 2, raptor);
+        }
+
     }
 
     @Nested
