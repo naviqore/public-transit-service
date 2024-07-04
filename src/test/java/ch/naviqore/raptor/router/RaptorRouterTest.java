@@ -675,6 +675,21 @@ class RaptorRouterTest {
             Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0, 1, 1, raptor);
         }
 
+        @Test
+        void initialWalkTransferShouldLeaveAsLateAsPossible(RaptorRouterTestBuilder builder) {
+            // This test tests that the walk transfer at a beginning of a trip leaves as late as possible, i.e. arriving
+            // at the next stop at the same time as the route leg departs.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().withAddTransfer1_ND(15).build();
+
+            // Connection from N to E can be connected by a walk transfer from N to D and then a route trip from D to E.
+            // The route trip from D to E leaves at 8:18. The walk transfer requires 15 minutes of walking, thus should
+            // leave N at 8:03 to reach D on time (8:18). The requested earliest departure time is 8:00.
+            List<Connection> connections = ConvenienceMethods.routeEarliestArrival(raptor, STOP_N, STOP_E, EIGHT_AM);
+            assertEquals(1, connections.size());
+            assertEquals(EIGHT_AM.plusMinutes(3), connections.getFirst().getDepartureTime());
+            Helpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_E, EIGHT_AM, 0, 1, 1, raptor);
+        }
+
     }
 
     @Nested
