@@ -39,6 +39,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
         this.raptorTripMaskProvider = maskProvider;
+        raptorTripMaskProvider.setTripIds(lookup.routeTripIds());
         validator = new InputValidator(lookup.stops());
     }
 

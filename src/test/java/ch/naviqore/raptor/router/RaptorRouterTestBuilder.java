@@ -2,11 +2,10 @@ package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 
 /**
  * Test builder to set up a raptor for testing purposes.
@@ -57,7 +56,7 @@ public class RaptorRouterTestBuilder {
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
                                          int sameStopTransferTime) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime);
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, new NoMaskProvider());
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -212,6 +211,35 @@ public class RaptorRouterTestBuilder {
      * @param duration   the (walking) duration of the transfer between stops in minutes.
      */
     private record Transfer(String sourceStop, String targetStop, int duration) {
+    }
+
+    /**
+     * No mask provider for testing.
+     */
+    @Setter
+    @NoArgsConstructor
+    static class NoMaskProvider implements RaptorTripMaskProvider {
+
+        Map<String, String[]> tripIds = null;
+
+        @Override
+        public Map<String, TripMask> getTripMask(LocalDate date) {
+            int earliestTripTime = DAY_START_HOUR * SECONDS_IN_HOUR;
+            int latestTripTime = (DAY_END_HOUR + 2) * SECONDS_IN_HOUR;
+
+            Map<String, TripMask> tripMasks = new HashMap<>();
+            for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
+                String routeId = entry.getKey();
+                String[] tripIds = entry.getValue();
+                boolean[] tripMask = new boolean[tripIds.length];
+                for (int i = 0; i < tripIds.length; i++) {
+                    tripMask[i] = true;
+                }
+                tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
+            }
+
+            return tripMasks;
+        }
     }
 
 }

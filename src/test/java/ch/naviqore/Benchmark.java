@@ -9,7 +9,9 @@ import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.impl.convert.GtfsTripMaskProvider;
 import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
@@ -97,7 +99,7 @@ final class Benchmark {
         additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
 
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
-                SAME_STOP_TRANSFER_TIME).convert(SCHEDULE_DATE);
+                SAME_STOP_TRANSFER_TIME, new GtfsTripMaskProvider(schedule)).convert();
         manageResources();
         return raptor;
     }

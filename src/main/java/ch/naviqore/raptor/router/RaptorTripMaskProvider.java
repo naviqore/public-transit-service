@@ -4,5 +4,6 @@ import java.time.LocalDate;
 import java.util.Map;
 
 public interface RaptorTripMaskProvider {
-    Map<String, RaptorTripMask> getTripMask(Map<String, String[]> routeTripIds, LocalDate date);
+    void setTripIds(Map<String, String[]> routeTripIds);
+    Map<String, TripMask> getTripMask(LocalDate date);
 }

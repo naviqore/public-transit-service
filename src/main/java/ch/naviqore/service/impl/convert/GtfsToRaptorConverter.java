@@ -7,7 +7,7 @@ import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,22 +33,27 @@ public class GtfsToRaptorConverter {
     private final GtfsSchedule schedule;
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime) {
-        this(schedule, List.of(), sameStopTransferTime);
+        this(schedule, sameStopTransferTime, new GtfsTripMaskProvider(schedule));
+    }
+
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime,
+                                 GtfsTripMaskProvider tripMaskProvider) {
+        this(schedule, List.of(), sameStopTransferTime, tripMaskProvider);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,
-                                 int sameStopTransferTime) {
+                                 int sameStopTransferTime, GtfsTripMaskProvider tripMaskProvider) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
-        this.builder = RaptorAlgorithm.builder(sameStopTransferTime);
+        this.builder = RaptorAlgorithm.builder(sameStopTransferTime, tripMaskProvider);
     }
 
-    public RaptorAlgorithm convert(LocalDate date) {
-        List<Trip> activeTrips = schedule.getActiveTrips(date);
-        log.info("Converting {} active trips from GTFS schedule to Raptor model", activeTrips.size());
+    public RaptorAlgorithm convert() {
+        Collection<Trip> trips = schedule.getTrips().values();
+        log.info("Converting {} trips from GTFS schedule to Raptor model", trips.size());
 
-        for (Trip trip : activeTrips) {
+        for (Trip trip : trips) {
             GtfsRoutePartitioner.SubRoute subRoute = partitioner.getSubRoute(trip);
 
             // add route if not already
