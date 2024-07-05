@@ -9,7 +9,6 @@ import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.convert.GtfsTripMaskProvider;
 import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
