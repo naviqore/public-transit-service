@@ -142,6 +142,11 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withAddRoute3_MQ(int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), offset, headway, travelTime, dwellTime));
+        return this;
+    }
+
     public RaptorRouterTestBuilder withAddRoute4_RS() {
         routes.add(new Route("R4", List.of("R", "P", "F", "S")));
         return this;
@@ -163,6 +168,11 @@ public class RaptorRouterTestBuilder {
 
     public RaptorRouterTestBuilder withAddTransfer2_LR() {
         transfers.add(new Transfer("L", "R", 30));
+        return this;
+    }
+
+    public RaptorRouterTestBuilder withAddTransfer(String sourceStop, String targetStop, int duration) {
+        transfers.add(new Transfer(sourceStop, targetStop, duration));
         return this;
     }
 
