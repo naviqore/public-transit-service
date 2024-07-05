@@ -130,14 +130,16 @@ public class RaptorRouterBuilder {
     private Lookup buildLookup(List<RouteBuilder.RouteContainer> routeContainers) {
         log.debug("Building lookup with {} stops and {} routes", stops.size(), routeContainers.size());
         Map<String, Integer> routes = new HashMap<>(routeContainers.size());
+        Map<String, String[]> routeTripIds = new HashMap<>();
 
         // assign idx to routes based on sorted order
         for (int i = 0; i < routeContainers.size(); i++) {
             RouteBuilder.RouteContainer routeContainer = routeContainers.get(i);
             routes.put(routeContainer.id(), i);
+            routeTripIds.put(routeContainer.id(), routeContainer.trips().keySet().toArray(new String[0]));
         }
 
-        return new Lookup(Map.copyOf(stops), Map.copyOf(routes));
+        return new Lookup(Map.copyOf(stops), Map.copyOf(routes), Map.copyOf(routeTripIds));
     }
 
     private StopContext buildStopContext(Lookup lookup) {
