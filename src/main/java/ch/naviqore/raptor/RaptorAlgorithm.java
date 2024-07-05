@@ -1,6 +1,7 @@
 package ch.naviqore.raptor;
 
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
+import ch.naviqore.raptor.router.RaptorTripMaskProvider;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -8,8 +9,8 @@ import java.util.Map;
 
 public interface RaptorAlgorithm {
 
-    static RaptorRouterBuilder builder(int sameStopTransferTime) {
-        return new RaptorRouterBuilder(sameStopTransferTime);
+    static RaptorRouterBuilder builder(int sameStopTransferTime, RaptorTripMaskProvider tripMaskProvider) {
+        return new RaptorRouterBuilder(sameStopTransferTime, tripMaskProvider);
     }
 
     /**

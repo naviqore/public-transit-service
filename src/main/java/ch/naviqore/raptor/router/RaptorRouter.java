@@ -29,14 +29,16 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private final RouteTraversal routeTraversal;
 
     @Getter
-    private final RaptorTripMaskProvider raptorTripMaskProvider = null;
+    private final RaptorTripMaskProvider raptorTripMaskProvider;
 
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal,
+                 RaptorTripMaskProvider maskProvider) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
+        this.raptorTripMaskProvider = maskProvider;
         validator = new InputValidator(lookup.stops());
     }
 

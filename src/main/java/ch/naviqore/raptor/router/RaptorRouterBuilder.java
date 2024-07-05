@@ -32,13 +32,15 @@ public class RaptorRouterBuilder {
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
     private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
+    private final RaptorTripMaskProvider tripMaskProvider;
 
     int stopTimeSize = 0;
     int routeStopSize = 0;
     int transferSize = 0;
 
-    public RaptorRouterBuilder(int defaultSameStopTransferTime) {
+    public RaptorRouterBuilder(int defaultSameStopTransferTime, RaptorTripMaskProvider tripMaskProvider) {
         this.defaultSameStopTransferTime = defaultSameStopTransferTime;
+        this.tripMaskProvider = tripMaskProvider;
     }
 
     public RaptorRouterBuilder addStop(String id) {
@@ -120,7 +122,7 @@ public class RaptorRouterBuilder {
         StopContext stopContext = buildStopContext(lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
 
-        return new RaptorRouter(lookup, stopContext, routeTraversal);
+        return new RaptorRouter(lookup, stopContext, routeTraversal, tripMaskProvider);
     }
 
     private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
