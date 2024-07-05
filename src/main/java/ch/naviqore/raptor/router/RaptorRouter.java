@@ -28,6 +28,9 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final RouteTraversal routeTraversal;
 
+    @Getter
+    private final RaptorTripMaskProvider raptorTripMaskProvider = null;
+
     private final InputValidator validator;
 
     RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
