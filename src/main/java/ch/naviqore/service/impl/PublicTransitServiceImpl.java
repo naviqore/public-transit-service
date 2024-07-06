@@ -211,7 +211,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 lastMile = getLastWalk(targetLocation, connection.getToStopId(), arrivalTime);
             }
 
-            Connection serviceConnection = map(connection, firstMile, lastMile, time.toLocalDate(), schedule);
+            Connection serviceConnection = map(connection, firstMile, lastMile, schedule);
 
             // Filter needed because the raptor algorithm does not consider the firstMile and lastMile walk time
             if (Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
@@ -277,7 +277,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 config.getMaximumWalkingDuration(), timeType);
 
         return mapToStopConnectionMap(raptorAlgorithm.routeIsolines(sourceStops, map(timeType), map(config)), source,
-                time, config, timeType);
+                config, timeType);
     }
 
     @Override
@@ -286,12 +286,12 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
 
         return mapToStopConnectionMap(raptorAlgorithm.routeIsolines(sourceStops, map(timeType), map(config)), null,
-                time, config, timeType);
+                config, timeType);
     }
 
     private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,
-                                                         @Nullable GeoCoordinate source, LocalDateTime startTime,
-                                                         ConnectionQueryConfig config, TimeType timeType) {
+                                                         @Nullable GeoCoordinate source, ConnectionQueryConfig config,
+                                                         TimeType timeType) {
         Map<Stop, Connection> result = new HashMap<>();
 
         for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isoLines.entrySet()) {
@@ -306,7 +306,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             }
 
             Stop stop = map(schedule.getStops().get(entry.getKey()));
-            Connection serviceConnection = map(connection, firstMile, lastMile, startTime.toLocalDate(), schedule);
+            Connection serviceConnection = map(connection, firstMile, lastMile, schedule);
 
             // The raptor algorithm does not consider the firstMile walk time, so we need to filter out connections
             // that exceed the maximum travel time here
