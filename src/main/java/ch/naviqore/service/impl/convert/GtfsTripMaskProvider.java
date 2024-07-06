@@ -50,8 +50,8 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
             String routeId = entry.getKey();
             String[] tripIds = entry.getValue();
             boolean[] tripMask = new boolean[tripIds.length];
-            int earliestTripTime = -1;
-            int latestTripTime = -1;
+            int earliestTripTime = TripMask.NO_TRIP;
+            int latestTripTime = TripMask.NO_TRIP;
             for (int i = 0; i < tripIds.length; i++) {
                 tripMask[i] = schedule.getTrips().get(tripIds[i]).getCalendar().isServiceAvailable(date);
             }

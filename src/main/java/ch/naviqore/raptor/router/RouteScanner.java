@@ -4,7 +4,9 @@ import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
@@ -28,15 +30,19 @@ class RouteScanner {
      */
     private final int minTransferDuration;
     private final TimeType timeType;
+    private final LocalDate referenceDate;
+
+    private final Map<String, TripMask> tripMasks;
 
     /**
      * @param stopLabelsAndTimes      the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time.
      * @param timeType                the time type (arrival or departure).
+     * @param referenceDate           the reference date for the query.
      */
     RouteScanner(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,
-                 TimeType timeType) {
+                 TimeType timeType, LocalDate referenceDate) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -48,6 +54,8 @@ class RouteScanner {
         // constant configuration of scanner
         this.minTransferDuration = minimumTransferDuration;
         this.timeType = timeType;
+        this.referenceDate = referenceDate;
+        this.tripMasks = raptorData.getRaptorTripMaskProvider().getTripMask(referenceDate);
     }
 
     /**
@@ -108,6 +116,12 @@ class RouteScanner {
         final int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
         final int numberOfStops = currentRoute.numberOfStops();
 
+        TripMask tripMask = tripMasks.get(currentRoute.id());
+        if (tripMask.earliestTripTime() == TripMask.NO_TRIP || tripMask.latestTripTime() == TripMask.NO_TRIP) {
+            log.debug("No active trips on route {}", currentRoute.id());
+            return;
+        }
+
         ActiveTrip activeTrip = null;
 
         int startOffset = forward ? 0 : numberOfStops - 1;
@@ -118,10 +132,9 @@ class RouteScanner {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
             int bestStopTime = stopLabelsAndTimes.getComparableBestTime(stopIdx);
-
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(stop, bestStopTime, markedStops, stopIdx, stopOffset, numberOfStops)) {
+                if (!canEnterAtStop(stop, bestStopTime, markedStops, stopIdx, stopOffset, tripMask, currentRoute)) {
                     continue;
                 }
             } else {
@@ -132,7 +145,7 @@ class RouteScanner {
                     continue;
                 }
             }
-            activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
+            activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound, tripMask);
         }
     }
 
@@ -142,19 +155,28 @@ class RouteScanner {
      * performance reasons) assuming that this check is only run when not travelling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stop          the stop to check if a trip can be entered.
-     * @param stopTime      the time at the stop.
-     * @param markedStops   the set of marked stops from the previous round.
-     * @param stopIdx       the index of the stop to check if a trip can be entered.
-     * @param stopOffset    the offset of the stop in the route.
-     * @param numberOfStops the number of stops in the route.
+     * @param stop         the stop to check if a trip can be entered.
+     * @param stopTime     the time at the stop.
+     * @param markedStops  the set of marked stops from the previous round.
+     * @param stopIdx      the index of the stop to check if a trip can be entered.
+     * @param stopOffset   the offset of the stop in the route.
+     * @param tripMask     the trip mask for the route.
+     * @param currentRoute the current route.
      */
     private boolean canEnterAtStop(Stop stop, int stopTime, Set<Integer> markedStops, int stopIdx, int stopOffset,
-                                   int numberOfStops) {
+                                   TripMask tripMask, Route currentRoute) {
 
         int unreachableValue = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
         if (stopTime == unreachableValue) {
             log.debug("Stop {} cannot be reached, continue", stop.id());
+            return false;
+        }
+
+        if (timeType == TimeType.DEPARTURE && tripMask.latestTripTime() < stopTime) {
+            log.debug("No trips departing after best stop time on route {} for stop {}", currentRoute.id(), stop.id());
+            return false;
+        } else if (timeType == TimeType.ARRIVAL && stopTime < tripMask.earliestTripTime()) {
+            log.debug("No trips arriving before best stop time on route {} for stop {}", currentRoute.id(), stop.id());
             return false;
         }
 
@@ -164,7 +186,7 @@ class RouteScanner {
             return false;
         }
 
-        if (timeType == TimeType.DEPARTURE && (stopOffset + 1 == numberOfStops)) {
+        if (timeType == TimeType.DEPARTURE && (stopOffset + 1 == currentRoute.numberOfStops())) {
             // last stop in route, does not make sense to check for trip to enter
             log.debug("Stop {} is last stop in route, continue", stop.id());
             return false;
@@ -231,17 +253,19 @@ class RouteScanner {
     }
 
     /**
-     * Find the possible trip on the route. This loops through all trips departing or arriving from a given stop for a
-     * given route and returns details about the first or last trip that can be taken (departing after or arriving
-     * before the time of the previous round at this stop and accounting for transfer constraints).
+     * Find the possible trip on the route for the given trip mask. This loops through all trips departing or arriving
+     * from a given stop for a given route and returns details about the first or last trip that can be taken (departing
+     * after or arriving before the time of the previous round at this stop and accounting for transfer constraints).
      *
      * @param stopIdx    the index of the stop to find the possible trip from.
      * @param stop       the stop to find the possible trip from.
      * @param stopOffset the offset of the stop in the route.
      * @param route      the route to find the possible trip on.
      * @param lastRound  the last round.
+     * @param tripMask   the trip mask for the route.
      */
-    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route, int lastRound) {
+    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route, int lastRound,
+                                                  TripMask tripMask) {
 
         int firstStopTimeIdx = route.firstStopTimeIdx();
         int numberOfStops = route.numberOfStops();
@@ -258,20 +282,28 @@ class RouteScanner {
                     minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
 
+        int increment = (timeType == TimeType.DEPARTURE) ? 1 : -1;
+
         while ((timeType == TimeType.DEPARTURE) ? tripOffset < numberOfTrips : tripOffset >= 0) {
+            // check if trip is active
+            if (!tripMask.tripMask()[tripOffset]) {
+                log.debug("Trip {} is not active on route {}", tripOffset, route.id());
+                tripOffset += increment;
+                continue;
+            }
             StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
             if ((timeType == TimeType.DEPARTURE) ? currentStopTime.departure() >= referenceTime : currentStopTime.arrival() <= referenceTime) {
                 log.debug("Found active trip ({}) on route {}", tripOffset, route.id());
                 entryTime = (timeType == TimeType.DEPARTURE) ? currentStopTime.departure() : currentStopTime.arrival();
                 break;
             }
-            if ((timeType == TimeType.DEPARTURE) ? tripOffset < numberOfTrips - 1 : tripOffset > 0) {
-                tripOffset += (timeType == TimeType.DEPARTURE) ? 1 : -1;
-            } else {
-                // no active trip found
-                log.debug("No active trip found on route {}", route.id());
-                return null;
-            }
+            tripOffset += increment;
+        }
+
+        if ((timeType == TimeType.DEPARTURE) ? tripOffset == numberOfTrips : tripOffset == -1) {
+            // no active trip found
+            log.debug("No active trip found on route {}", route.id());
+            return null;
         }
 
         return new ActiveTrip(tripOffset, entryTime, previousLabel);
