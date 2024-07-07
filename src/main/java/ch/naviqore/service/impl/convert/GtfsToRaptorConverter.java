@@ -33,20 +33,20 @@ public class GtfsToRaptorConverter {
     private final GtfsSchedule schedule;
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime) {
-        this(schedule, sameStopTransferTime, new GtfsTripMaskProvider(schedule));
+        this(schedule, sameStopTransferTime, 1, new GtfsTripMaskProvider(schedule));
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime,
-                                 GtfsTripMaskProvider tripMaskProvider) {
-        this(schedule, List.of(), sameStopTransferTime, tripMaskProvider);
+                                 int maxDaysToScan, GtfsTripMaskProvider tripMaskProvider) {
+        this(schedule, List.of(), sameStopTransferTime, maxDaysToScan, tripMaskProvider);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,
-                                 int sameStopTransferTime, GtfsTripMaskProvider tripMaskProvider) {
+                                 int sameStopTransferTime, int maxDaysToScan, GtfsTripMaskProvider tripMaskProvider) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
-        this.builder = RaptorAlgorithm.builder(sameStopTransferTime, tripMaskProvider);
+        this.builder = RaptorAlgorithm.builder(sameStopTransferTime, maxDaysToScan, tripMaskProvider);
     }
 
     public RaptorAlgorithm convert() {

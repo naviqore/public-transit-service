@@ -33,6 +33,7 @@ class Query {
     private final StopLabelsAndTimes stopLabelsAndTimes;
 
     private final LocalDate referenceDate;
+    private final int maxDaysToScan;
 
     /**
      * @param raptorData               the current raptor data structures.
@@ -43,9 +44,11 @@ class Query {
      * @param timeType                 the time type (arrival or departure) of the query.
      * @param config                   the query configuration.
      * @param referenceDate            the reference date for the query.
+     * @param maxDaysToScan            the maximum number of days to scan for the query.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDate referenceDate) {
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDate referenceDate,
+          int maxDaysToScan) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
@@ -63,6 +66,7 @@ class Query {
         this.config = config;
         this.timeType = timeType;
         this.referenceDate = referenceDate;
+        this.maxDaysToScan = maxDaysToScan;
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
@@ -90,7 +94,7 @@ class Query {
         FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData,
                 config.getMinimumTransferDuration(), config.getMaximumWalkingDuration(), timeType);
         RouteScanner routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData,
-                config.getMinimumTransferDuration(), timeType, referenceDate);
+                config.getMinimumTransferDuration(), timeType, referenceDate, maxDaysToScan);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = initialize();

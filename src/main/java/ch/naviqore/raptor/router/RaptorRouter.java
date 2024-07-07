@@ -31,14 +31,20 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final RaptorTripMaskProvider raptorTripMaskProvider;
 
+    private final int maxDaysToScan;
+
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal,
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, int maxDaysToScan,
                  RaptorTripMaskProvider maskProvider) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
         this.raptorTripMaskProvider = maskProvider;
+        if (maxDaysToScan < 1) {
+            throw new IllegalArgumentException("maxDaysToScan must be greater than 0");
+        }
+        this.maxDaysToScan = maxDaysToScan;
         raptorTripMaskProvider.setTripIds(lookup.routeTripIds());
         validator = new InputValidator(lookup.stops());
     }
@@ -81,7 +87,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
-                refStopTimes, new int[]{}, config, timeType, referenceDate).run();
+                refStopTimes, new int[]{}, config, timeType, referenceDate, maxDaysToScan).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
@@ -117,7 +123,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDate).run();
+                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDate, maxDaysToScan).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops, referenceDate);

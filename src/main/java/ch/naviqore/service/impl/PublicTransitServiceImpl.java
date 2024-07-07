@@ -54,7 +54,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheSize(),
                 EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name()));
         raptorAlgorithm = new GtfsToRaptorConverter(schedule, additionalTransfers,
-                config.getTransferTimeSameStopDefault(), tripMaskProvider).convert();
+                config.getTransferTimeSameStopDefault(), config.getMaxDaysToScan(), tripMaskProvider).convert();
     }
 
     @Override

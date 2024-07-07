@@ -27,6 +27,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 public class RaptorRouterBuilder {
 
     private final int defaultSameStopTransferTime;
+    private final int maxDaysToScan;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
@@ -38,8 +39,9 @@ public class RaptorRouterBuilder {
     int routeStopSize = 0;
     int transferSize = 0;
 
-    public RaptorRouterBuilder(int defaultSameStopTransferTime, RaptorTripMaskProvider tripMaskProvider) {
+    public RaptorRouterBuilder(int defaultSameStopTransferTime, int maxDaysToScan, RaptorTripMaskProvider tripMaskProvider) {
         this.defaultSameStopTransferTime = defaultSameStopTransferTime;
+        this.maxDaysToScan = maxDaysToScan;
         this.tripMaskProvider = tripMaskProvider;
     }
 
@@ -122,7 +124,7 @@ public class RaptorRouterBuilder {
         StopContext stopContext = buildStopContext(lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
 
-        return new RaptorRouter(lookup, stopContext, routeTraversal, tripMaskProvider);
+        return new RaptorRouter(lookup, stopContext, routeTraversal, maxDaysToScan, tripMaskProvider);
     }
 
     private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {

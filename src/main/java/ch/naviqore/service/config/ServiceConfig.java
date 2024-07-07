@@ -22,6 +22,8 @@ public class ServiceConfig {
     public static final double DEFAULT_WALKING_SPEED = 1.4;
     public static final int DEFAULT_WALKING_DURATION_MINIMUM = 120;
 
+    public static final int DEFAULT_MAX_DAYS_TO_SCAN = 3;
+
     public static final int DEFAULT_CACHE_SIZE = 5;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
@@ -34,13 +36,14 @@ public class ServiceConfig {
     private final WalkCalculatorType walkingCalculatorType;
     private final double walkingSpeed;
     private final int walkingDurationMinimum;
+    private final int maxDaysToScan;
     private final int cacheSize;
     private final CacheEvictionStrategy cacheEvictionStrategy;
 
     public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
                          int transferTimeBetweenStopsMinimum, int transferTimeAccessEgress, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
-                         int cacheSize, CacheEvictionStrategy cacheEvictionStrategy) {
+                         int maxDaysToScan, int cacheSize, CacheEvictionStrategy cacheEvictionStrategy) {
 
         this.gtfsStaticUri = validateNonNull(gtfsStaticUri, "gtfsStaticUrl");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
@@ -53,6 +56,7 @@ public class ServiceConfig {
         this.walkingCalculatorType = validateNonNull(walkingCalculatorType, "walkingCalculatorType");
         this.walkingSpeed = validatePositive(walkingSpeed, "walkingSpeed");
         this.walkingDurationMinimum = validateNonNegative(walkingDurationMinimum, "walkingDurationMinimum");
+        this.maxDaysToScan = validatePositive(maxDaysToScan, "maxDaysToScan");
         this.cacheSize = validatePositive(cacheSize, "cacheSize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }
@@ -64,7 +68,8 @@ public class ServiceConfig {
         this(gtfsStaticUri, DEFAULT_GTFS_STATIC_UPDATE_CRON, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
                 DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_ACCESS_EGRESS,
                 DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED,
-                DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
+                DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_CACHE_SIZE,
+                DEFAULT_CACHE_EVICTION_STRATEGY);
     }
 
     private static <T> T validateNonNull(T value, String name) {

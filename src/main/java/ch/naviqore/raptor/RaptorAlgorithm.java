@@ -9,8 +9,8 @@ import java.util.Map;
 
 public interface RaptorAlgorithm {
 
-    static RaptorRouterBuilder builder(int sameStopTransferTime, RaptorTripMaskProvider tripMaskProvider) {
-        return new RaptorRouterBuilder(sameStopTransferTime, tripMaskProvider);
+    static RaptorRouterBuilder builder(int sameStopTransferTime, int maxDaysToScan, RaptorTripMaskProvider tripMaskProvider) {
+        return new RaptorRouterBuilder(sameStopTransferTime, maxDaysToScan, tripMaskProvider);
     }
 
     /**

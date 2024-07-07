@@ -19,8 +19,6 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 class RouteScanner {
 
     private static final int SECONDS_IN_DAY = 86400;
-    // TODO: Expose this as configuration parameter!
-    private static final int MAX_DAYS_TO_SCAN = 3;
 
     private final Stop[] stops;
     private final int[] stopRoutes;
@@ -29,9 +27,7 @@ class RouteScanner {
     private final RouteStop[] routeStops;
     private final StopLabelsAndTimes stopLabelsAndTimes;
 
-    /**
-     * the minimum transfer duration time, since this is intended as rest period it is added to the walk time.
-     */
+    private final int maxDaysToScan;
     private final int minTransferDuration;
     private final TimeType timeType;
 
@@ -43,9 +39,10 @@ class RouteScanner {
      * @param minimumTransferDuration The minimum transfer duration time.
      * @param timeType                the time type (arrival or departure).
      * @param referenceDate           the reference date for the query.
+     * @param maxDaysToScan           the maximum number of days to scan.
      */
     RouteScanner(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,
-                 TimeType timeType, LocalDate referenceDate) {
+                 TimeType timeType, LocalDate referenceDate, int maxDaysToScan) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -58,19 +55,20 @@ class RouteScanner {
         this.minTransferDuration = minimumTransferDuration;
         this.timeType = timeType;
 
-        if (MAX_DAYS_TO_SCAN < 1) {
-            throw new IllegalArgumentException("MAX_DAYS_TO_SCAN must be at least 1");
-        } else if (MAX_DAYS_TO_SCAN == 1) {
+        if (maxDaysToScan < 1) {
+            throw new IllegalArgumentException("maxDaysToScan must be greater than 0.");
+        } else if (maxDaysToScan == 1) {
             tripMasks.add(raptorData.getRaptorTripMaskProvider().getTripMask(referenceDate));
         } else {
             // always include the previous day to account for trips that overlap from the previous/later day
             // depending on time type
-            for (int i = -1; i < (MAX_DAYS_TO_SCAN - 1); i++) {
+            for (int i = -1; i < (maxDaysToScan - 1); i++) {
                 LocalDate date = timeType == TimeType.DEPARTURE ? referenceDate.plusDays(i) : referenceDate.minusDays(
                         i);
                 tripMasks.add(raptorData.getRaptorTripMaskProvider().getTripMask(date));
             }
         }
+        this.maxDaysToScan = maxDaysToScan;
     }
 
     /**
@@ -164,7 +162,7 @@ class RouteScanner {
     }
 
     private boolean isRouteActiveInTimeRange(Route route) {
-        for (int i = 0; i < MAX_DAYS_TO_SCAN; i++) {
+        for (int i = 0; i < maxDaysToScan; i++) {
             TripMask tripMask = tripMasks.get(i).get(route.id());
             if (tripMask.earliestTripTime() != TripMask.NO_TRIP && tripMask.latestTripTime() != TripMask.NO_TRIP) {
                 return true;
@@ -196,7 +194,7 @@ class RouteScanner {
         }
 
         TripMask tripMask = tripMasks.getLast().get(currentRoute.id());
-        int dayOffset = MAX_DAYS_TO_SCAN == 1 ? 0 : MAX_DAYS_TO_SCAN - 2; // subtract previous and reference day
+        int dayOffset = maxDaysToScan == 1 ? 0 : maxDaysToScan - 2; // subtract previous and reference day
         int timeOffset = dayOffset * SECONDS_IN_DAY;
         if (timeType == TimeType.DEPARTURE && tripMask.latestTripTime() + timeOffset < stopTime) {
             log.debug("No trips departing after best stop time on route {} for stop {}", currentRoute.id(), stop.id());
@@ -310,9 +308,9 @@ class RouteScanner {
                     minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
 
-        for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {
+        for (int dayIndex = 0; dayIndex < maxDaysToScan; dayIndex++) {
             TripMask tripMask = tripMasks.get(dayIndex).get(route.id());
-            int dayOffset = MAX_DAYS_TO_SCAN == 1 ? 0 : dayIndex - 1; // subtract previous and reference day
+            int dayOffset = maxDaysToScan == 1 ? 0 : dayIndex - 1; // subtract previous and reference day
             int timeOffset = (timeType == TimeType.DEPARTURE ? 1 : -1) * dayOffset * SECONDS_IN_DAY;
             int earliestTripTime = tripMask.earliestTripTime() + timeOffset;
             int latestTripTime = tripMask.latestTripTime() + timeOffset;

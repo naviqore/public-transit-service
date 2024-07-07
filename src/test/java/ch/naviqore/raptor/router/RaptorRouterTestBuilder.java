@@ -56,7 +56,12 @@ public class RaptorRouterTestBuilder {
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
                                          int sameStopTransferTime) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, new NoMaskProvider());
+        return build(routes, transfers, dayStart, dayEnd, sameStopTransferTime, 1, new NoMaskProvider());
+    }
+
+    private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
+                                         int sameStopTransferTime, int daysToScan, RaptorTripMaskProvider maskProvider) {
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, daysToScan, maskProvider);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {

@@ -68,6 +68,7 @@ final class Benchmark {
     private static final int SAME_STOP_TRANSFER_TIME = 120;
     private static final int ACCESS_EGRESS_TIME = 15;
     private static final int SEARCH_RADIUS = 500;
+    private static final int MAX_DAYS_TO_SCAN = 3;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -98,7 +99,7 @@ final class Benchmark {
         additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
 
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
-                SAME_STOP_TRANSFER_TIME, new GtfsTripMaskProvider(schedule)).convert();
+                SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule)).convert();
         manageResources();
         return raptor;
     }
