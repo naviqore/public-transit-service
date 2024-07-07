@@ -1,0 +1,38 @@
+diff a/src/test/java/ch/naviqore/raptor/router/RaptorRouterTestBuilder.java b/src/test/java/ch/naviqore/raptor/router/RaptorRouterTestBuilder.java	(rejected hunks)
+@@ -272,4 +272,36 @@
+         }
+     }
+ 
++    @Setter
++    @NoArgsConstructor
++    static class EverySecondTripMaskProvider implements RaptorTripMaskProvider {
++
++        Map<String, String[]> tripIds = null;
++
++        @Override
++        public Map<String, TripMask> getTripMask(LocalDate date) {
++
++            int dayOfMonth = date.getDayOfMonth();
++
++            int earliestTripTime = DAY_START_HOUR * SECONDS_IN_HOUR;
++            int latestTripTime = (DAY_END_HOUR + 2) * SECONDS_IN_HOUR;
++
++            Map<String, TripMask> tripMasks = new HashMap<>();
++            for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
++                String routeId = entry.getKey();
++                String[] tripIds = entry.getValue();
++                boolean value = dayOfMonth % 2 == 0;
++                boolean[] tripMask = new boolean[tripIds.length];
++                for (int i = 0; i < tripIds.length; i++) {
++                    tripMask[i] = value;
++                    value = !value;
++                }
++                tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
++            }
++
++            return tripMasks;
++        }
++
++    }
++
+ }

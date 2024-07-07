@@ -54,13 +54,12 @@ public class RaptorRouterTestBuilder {
     private final List<Transfer> transfers = new ArrayList<>();
     private int sameStopTransferTime = 120;
 
-    private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                         int sameStopTransferTime) {
-        return build(routes, transfers, dayStart, dayEnd, sameStopTransferTime, 1, new NoMaskProvider());
-    }
+    private int maxDaysToScan = 1;
+    private RaptorTripMaskProvider tripMaskProvider = new NoMaskProvider();
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                         int sameStopTransferTime, int daysToScan, RaptorTripMaskProvider maskProvider) {
+                                         int sameStopTransferTime, int daysToScan,
+                                         RaptorTripMaskProvider maskProvider) {
         RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, daysToScan, maskProvider);
         Set<String> addedStops = new HashSet<>();
 
@@ -185,8 +184,24 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withMaxDaysToScan(int days) {
+        this.maxDaysToScan = days;
+        return this;
+    }
+
+    public RaptorRouterTestBuilder withTripMaskProvider(RaptorTripMaskProvider provider) {
+        this.tripMaskProvider = provider;
+        return this;
+    }
+
     public RaptorAlgorithm build() {
-        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStopTransferTime);
+        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStopTransferTime, maxDaysToScan,
+                tripMaskProvider);
+    }
+
+    RaptorAlgorithm build(int startOfDay, int endOfDay) {
+        return build(routes, transfers, startOfDay, endOfDay, sameStopTransferTime, maxDaysToScan,
+                tripMaskProvider);
     }
 
     public RaptorAlgorithm buildWithDefaults() {
