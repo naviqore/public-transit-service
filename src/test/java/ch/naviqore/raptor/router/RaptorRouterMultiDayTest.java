@@ -79,43 +79,93 @@ public class RaptorRouterMultiDayTest {
     class PreviousDay {
         @Test
         void findDepartureConnectionFromPreviousDayService(RaptorRouterTestBuilder builder) {
-            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withMaxDaysToScan(3).build(5, 26);
+
+            RaptorAlgorithm multiDayRaptor = builder.withAddRoute1_AG().withMaxDaysToScan(3).build(5, 26);
+            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).build(5, 26);
 
             // connection from A to G should leave at 00:00 am. (this trip is part of the previous day service)
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
-                    REFERENCE_DAY);
+            List<Connection> multiDayConnections = RaptorRouterTestHelpers.routeEarliestArrival(multiDayRaptor, STOP_A,
+                    STOP_G, REFERENCE_DAY);
+            // connection from A to G should leave at 05:00 am. (this trip is part of the reference day service)
+            List<Connection> singleDayConnections = RaptorRouterTestHelpers.routeEarliestArrival(singleDayRaptor,
+                    STOP_A, STOP_G, REFERENCE_DAY);
 
-            assertEquals(1, connections.size());
-            Connection connection = connections.getFirst();
+            assertEquals(1, multiDayConnections.size());
+            Connection connection = multiDayConnections.getFirst();
             RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, REFERENCE_DAY, 0, 0, 1,
-                    raptor);
+                    multiDayRaptor);
             assertEquals(REFERENCE_DAY, connection.getDepartureTime());
+
+            assertEquals(1, singleDayConnections.size());
+            Connection singleDayConnection = singleDayConnections.getFirst();
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(singleDayConnection, STOP_A, STOP_G, REFERENCE_DAY,
+                    0, 0, 1, multiDayRaptor);
+            assertEquals(REFERENCE_DAY.plusHours(5), singleDayConnection.getDepartureTime());
         }
 
         @Test
         void findArrivalConnectionFromPreviousDayService(RaptorRouterTestBuilder builder) {
-            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withMaxDaysToScan(3).build(5, 26);
+            RaptorAlgorithm multiDayRaptor = builder.withAddRoute1_AG().withMaxDaysToScan(3).build(5, 26);
+            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).build(5, 26);
 
             LocalDateTime requestedArrivalTime = REFERENCE_DAY.plusMinutes(5);
 
             // connection from A to G should arrive at 00:05 am. (this trip is part of the previous day service)
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_G,
-                    requestedArrivalTime);
+            List<Connection> multiDayConnections = RaptorRouterTestHelpers.routeLatestDeparture(multiDayRaptor, STOP_A,
+                    STOP_G, requestedArrivalTime);
+            // connection from A to G should not be possible if only the reference day is considered
+            List<Connection> singleDayConnections = RaptorRouterTestHelpers.routeLatestDeparture(singleDayRaptor,
+                    STOP_A, STOP_G, requestedArrivalTime);
 
-            assertEquals(1, connections.size());
-            Connection connection = connections.getFirst();
+            assertEquals(1, multiDayConnections.size());
+            assertEquals(0, singleDayConnections.size());
+            Connection connection = multiDayConnections.getFirst();
             RaptorRouterTestHelpers.assertLatestDepartureConnection(connection, STOP_A, STOP_G, requestedArrivalTime, 0,
-                    0, 1, raptor);
+                    0, 1, multiDayRaptor);
             assertEquals(requestedArrivalTime, connection.getArrivalTime());
             assertEquals(PREVIOUS_DAY.toLocalDate(), connection.getDepartureTime().toLocalDate());
         }
     }
 
     @Nested
+    class NextDay {
+
+        @Test
+        void findConnectionUsingNextDayService(RaptorRouterTestBuilder builder) {
+            int startOfDay = 5;
+            int endOfDay = 20;
+
+            // service runs only until 20:00!
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG().withMaxDaysToScan(3).build(startOfDay, endOfDay);
+
+            // departure time is 22:00 hence the connection from A to G should leave at the start of the next service
+            // day
+            LocalDateTime departureTime = REFERENCE_DAY.plusHours(22);
+
+            // connection from A to G should leave at 00:00 am. (this trip is part of the next day service)
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    departureTime);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
+                    raptor);
+            assertEquals(NEXT_DAY.plusHours(startOfDay), connection.getDepartureTime());
+
+            // confirm that this connection is not possible with 1 service day only
+            RaptorAlgorithm raptorWithLessDays = builder.withMaxDaysToScan(1).build(startOfDay, endOfDay);
+            List<Connection> connectionsWithLessDays = RaptorRouterTestHelpers.routeEarliestArrival(raptorWithLessDays,
+                    STOP_A, STOP_G, departureTime);
+            assertEquals(0, connectionsWithLessDays.size());
+        }
+
+    }
+
+    @Nested
     class MultiDay {
 
         @Test
-        void findOnlyConnectionUsingTwoServiceDays(RaptorRouterTestBuilder builder) {
+        void findConnectionUsingTwoServiceDays(RaptorRouterTestBuilder builder) {
 
             int startOfDay = 6;
             int endOfDay = 22;
@@ -146,6 +196,53 @@ public class RaptorRouterMultiDayTest {
                     raptor);
             assertTrue(connection.getDepartureTime().isBefore(REFERENCE_DAY.plusHours(endOfDay)));
             assertTrue(connection.getArrivalTime().isAfter(NEXT_DAY.plusHours(startOfDay)));
+        }
+
+        @Test
+        void findConnectionUsingFiveServiceDays(RaptorRouterTestBuilder builder) {
+
+            int startOfDay = 6;
+            int endOfDay = 22;
+
+            int numDaysInFuture = 5;
+
+            LocalDateTime departureTime = REFERENCE_DAY.plusHours(16);
+
+            RoutePerDayMasker tripMaskProvider = new RoutePerDayMasker();
+            tripMaskProvider.setDayStartHour(startOfDay);
+            tripMaskProvider.setDayEndHour(endOfDay);
+
+            // deactivate all days except for the day "numDaysInFuture" days in the future
+            for (int i = -1; i < numDaysInFuture; i++) {
+                tripMaskProvider.deactivateRouteOnDate("R1", REFERENCE_DAY.plusDays(i).toLocalDate());
+            }
+
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withMaxDaysToScan(numDaysInFuture + 2) // +2 for reference day and previous day
+                    .withTripMaskProvider(tripMaskProvider)
+                    .build(startOfDay, endOfDay);
+
+            // connection from A to G should leave at start of day of 5th day in the future, since that will be the
+            // first active trip on this connection.
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    departureTime);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
+                    raptor);
+            assertTrue(connection.getDepartureTime()
+                    .isEqual(REFERENCE_DAY.plusDays(numDaysInFuture).plusHours(startOfDay)));
+            assertTrue(
+                    connection.getArrivalTime().isAfter(REFERENCE_DAY.plusDays(numDaysInFuture).plusHours(startOfDay)));
+
+            // confirm that no connection is found if the raptor is built with fewer days to scan
+            RaptorAlgorithm raptorWithLessDays = builder.withMaxDaysToScan(numDaysInFuture + 1) // one day less
+                    .build(startOfDay, endOfDay);
+            List<Connection> connectionsWithLessDays = RaptorRouterTestHelpers.routeEarliestArrival(raptorWithLessDays,
+                    STOP_A, STOP_G, departureTime);
+            assertEquals(0, connectionsWithLessDays.size());
+
         }
 
     }
