@@ -22,7 +22,7 @@ class RouteScanner {
 
     private final Stop[] stops;
     private final int[] stopRoutes;
-    private final StopTime[] stopTimes;
+    private final int[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
     private final StopLabelsAndTimes stopLabelsAndTimes;
@@ -151,8 +151,11 @@ class RouteScanner {
                 }
             } else {
                 // in this case we are on a trip and need to check if time has improved
-                StopTime stopTimeObj = stopTimes[firstStopTimeIdx + activeTrip.tripOffset * numberOfStops + stopOffset];
-                if (!checkIfTripIsPossibleAndUpdateMarks(stopTimeObj, activeTrip, stop, bestStopTime, stopIdx, round,
+                int stopTimeIndex = firstStopTimeIdx + 2 * (activeTrip.tripOffset * numberOfStops + stopOffset) + 2;
+                // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
+                int targetTime = stopTimes[(timeType == TimeType.DEPARTURE) ? stopTimeIndex : stopTimeIndex + 1];
+                targetTime += activeTrip.dayTimeOffset;
+                if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, stop, bestStopTime, stopIdx, round,
                         lastRound, markedStopsNext, currentRouteIdx)) {
                     continue;
                 }
@@ -233,7 +236,7 @@ class RouteScanner {
      * <p>If the time was not improved, an additional check will be needed to figure out if an earlier or later trip
      * from the stop is possible within the current round, thus the method returns true.</p>
      *
-     * @param stopTime        the stop time to check for an earlier or later trip.
+     * @param targetTime      the stop time to check for an earlier or later trip.
      * @param activeTrip      the active trip to check for an earlier or later trip.
      * @param stop            the stop to check for an earlier or later trip.
      * @param bestStopTime    the earliest or latest time at the stop based on the TimeType.
@@ -242,23 +245,15 @@ class RouteScanner {
      * @param currentRouteIdx the index of the current route.
      * @return true if an earlier or later trip is possible, false otherwise.
      */
-    private boolean checkIfTripIsPossibleAndUpdateMarks(StopTime stopTime, ActiveTrip activeTrip, Stop stop,
+    private boolean checkIfTripIsPossibleAndUpdateMarks(int targetTime, ActiveTrip activeTrip, Stop stop,
                                                         int bestStopTime, int stopIdx, int thisRound, int lastRound,
                                                         Set<Integer> markedStopsNext, int currentRouteIdx) {
-
-        int targetTime = (timeType == TimeType.DEPARTURE) ? stopTime.arrival() : stopTime.departure();
-        targetTime += activeTrip.dayTimeOffset;
 
         boolean isImproved = (timeType == TimeType.DEPARTURE) ? targetTime < bestStopTime : targetTime > bestStopTime;
 
         if (isImproved) {
             log.debug("Stop {} was improved", stop.id());
             stopLabelsAndTimes.setBestTime(stopIdx, targetTime);
-
-            if (activeTrip.dayTimeOffset != 0) {
-                //let me know
-                log.debug("Day time offset is not 0");
-            }
 
             StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(activeTrip.entryTime, targetTime,
                     StopLabelsAndTimes.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx,
@@ -327,8 +322,9 @@ class RouteScanner {
                     log.debug("Trip {} is not active on route {}", i, route.id());
                     continue;
                 }
-                StopTime currentStopTime = stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
-                int relevantStopTime = (timeType == TimeType.DEPARTURE) ? currentStopTime.departure() : currentStopTime.arrival();
+                int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
+                // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
+                int relevantStopTime = stopTimes[(timeType == TimeType.DEPARTURE) ? stopTimeIndex + 1 : stopTimeIndex];
                 relevantStopTime += timeOffset;
                 if ((timeType == TimeType.DEPARTURE) ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
                     log.debug("Found active trip ({}) on route {}", i, route.id());

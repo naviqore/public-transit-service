@@ -20,7 +20,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 class LabelPostprocessor {
 
     private final Stop[] stops;
-    private final StopTime[] stopTimes;
+    private final int[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
 
@@ -375,7 +375,8 @@ class LabelPostprocessor {
             return null;
         }
 
-        return stopTimes[firstStopTimeIdx + tripOffset * numberOfStops + stopOffset];
+        int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
+        return new StopTime(stopTimes[stopTimeIndex], stopTimes[stopTimeIndex + 1]);
     }
 
     private @Nullable StopLabelsAndTimes.Label getBestLabelForStop(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,

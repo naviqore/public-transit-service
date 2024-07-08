@@ -200,11 +200,17 @@ public class RaptorRouterBuilder {
         // allocate arrays in needed size
         Route[] routeArr = new Route[routeContainers.size()];
         RouteStop[] routeStopArr = new RouteStop[routeStopSize];
-        StopTime[] stopTimeArr = new StopTime[stopTimeSize];
+        int[] stopTimeArr = new int[2+(stopTimeSize*2)+(routeContainers.size()*2)];
 
         // iterate over routes and populate arrays
         int routeStopCnt = 0;
-        int stopTimeCnt = 0;
+
+        // placeholders for min/max value of day
+        int undefinedValue = Integer.MIN_VALUE;
+        stopTimeArr[0] = undefinedValue;
+        stopTimeArr[1] = undefinedValue;
+
+        int stopTimeCnt = 2;
         for (int routeIdx = 0; routeIdx < routeContainers.size(); routeIdx++) {
             RouteBuilder.RouteContainer routeContainer = routeContainers.get(routeIdx);
 
@@ -213,6 +219,10 @@ public class RaptorRouterBuilder {
             final int numberOfTrips = routeContainer.trips().size();
             routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt, numberOfTrips,
                     routeContainer.trips().keySet().toArray(new String[0]));
+
+            // will be route day min/max values
+            stopTimeArr[stopTimeCnt++] = undefinedValue;
+            stopTimeArr[stopTimeCnt++] = undefinedValue;
 
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
@@ -224,7 +234,8 @@ public class RaptorRouterBuilder {
             // add times to stop time array
             for (StopTime[] stopTimes : routeContainer.trips().values()) {
                 for (StopTime stopTime : stopTimes) {
-                    stopTimeArr[stopTimeCnt++] = stopTime;
+                    stopTimeArr[stopTimeCnt++] = stopTime.arrival();
+                    stopTimeArr[stopTimeCnt++] = stopTime.departure();
                 }
             }
         }
