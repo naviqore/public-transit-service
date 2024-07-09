@@ -1,7 +1,7 @@
 package ch.naviqore.service.impl.convert;
 
-import ch.naviqore.gtfs.schedule.model.Calendar;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.raptor.router.RaptorDayMask;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
 import ch.naviqore.raptor.router.TripMask;
 import ch.naviqore.service.config.ServiceConfig;
@@ -11,7 +11,6 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
@@ -36,14 +35,19 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     @Override
-    public Map<String, TripMask> getTripMask(LocalDate date) {
+    public String getServiceIdForDate(LocalDate date) {
+        return cache.getActiveServices(date);
+    }
+
+    @Override
+    public RaptorDayMask getTripMask(LocalDate date) {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }
         return cache.getMask(date);
     }
 
-    private Map<String, TripMask> buildTripMask(LocalDate date) {
+    private RaptorDayMask buildTripMask(LocalDate date, String serviceId) {
         Map<String, TripMask> tripMasks = new HashMap<>();
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
@@ -84,16 +88,28 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
             tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
         }
 
-        return tripMasks;
+        // get overall earliest and latest trip time
+        int earliestTripTime = tripMasks.values().stream()
+                .mapToInt(TripMask::earliestTripTime)
+                .filter(time -> time != TripMask.NO_TRIP)
+                .min()
+                .orElse(TripMask.NO_TRIP);
 
+        int latestTripTime = tripMasks.values().stream()
+                .mapToInt(TripMask::latestTripTime)
+                .filter(time -> time != TripMask.NO_TRIP)
+                .max()
+                .orElse(TripMask.NO_TRIP);
+
+        return new RaptorDayMask(serviceId, date, earliestTripTime, latestTripTime, tripMasks);
     }
 
     /**
      * Caches for active services (= GTFS calendars) per date and raptor trip mask instances.
      */
     private class MaskCache {
-        private final EvictionCache<Set<Calendar>, Map<String, TripMask>> maskCache;
-        private final EvictionCache<LocalDate, Set<ch.naviqore.gtfs.schedule.model.Calendar>> activeServices;
+        private final EvictionCache<String, RaptorDayMask> maskCache;
+        private final EvictionCache<LocalDate, String> activeServices;
 
         /**
          * @param cacheSize the maximum number of trip mask instances to be cached.
@@ -104,20 +120,24 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
             activeServices = new EvictionCache<>(Math.min(365, cacheSize * 20), strategy);
         }
 
+        public String getActiveServices(LocalDate date) {
+            return activeServices.computeIfAbsent(date, () -> getActiveServicesFromSchedule(date));
+        }
+
         // get cached mask or build a new one
-        public Map<String, TripMask> getMask(LocalDate date) {
-            Set<ch.naviqore.gtfs.schedule.model.Calendar> activeServices = this.activeServices.computeIfAbsent(date,
-                    () -> getActiveServices(date));
-            return maskCache.computeIfAbsent(activeServices, () -> buildTripMask(date));
+        public RaptorDayMask getMask(LocalDate date) {
+            String activeServices = this.getActiveServices(date);
+            return maskCache.computeIfAbsent(activeServices, () -> buildTripMask(date, activeServices));
         }
 
         // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
-        private Set<ch.naviqore.gtfs.schedule.model.Calendar> getActiveServices(LocalDate date) {
+        private String getActiveServicesFromSchedule(LocalDate date) {
             return schedule.getCalendars()
                     .values()
                     .stream()
                     .filter(calendar -> calendar.isServiceAvailable(date))
-                    .collect(Collectors.toSet());
+                    .map(ch.naviqore.gtfs.schedule.model.Calendar::getId)
+                    .collect(Collectors.joining(","));
         }
 
         // clear the cache, needs to be called when the GTFS schedule changes

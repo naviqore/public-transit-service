@@ -253,7 +253,12 @@ public class RaptorRouterTestBuilder {
         Map<String, String[]> tripIds = null;
 
         @Override
-        public Map<String, TripMask> getTripMask(LocalDate date) {
+        public String getServiceIdForDate(LocalDate date) {
+            return "NoMask";
+        }
+
+        @Override
+        public RaptorDayMask getTripMask(LocalDate date) {
             int earliestTripTime = DAY_START_HOUR * SECONDS_IN_HOUR;
             int latestTripTime = (DAY_END_HOUR + 2) * SECONDS_IN_HOUR;
 
@@ -268,7 +273,7 @@ public class RaptorRouterTestBuilder {
                 tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
             }
 
-            return tripMasks;
+            return new RaptorDayMask(getServiceIdForDate(date), date, earliestTripTime, latestTripTime, tripMasks);
         }
     }
 

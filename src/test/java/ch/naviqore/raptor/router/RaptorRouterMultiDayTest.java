@@ -48,7 +48,12 @@ public class RaptorRouterMultiDayTest {
         }
 
         @Override
-        public Map<String, TripMask> getTripMask(LocalDate date) {
+        public String getServiceIdForDate(LocalDate date) {
+            return date.toString();
+        }
+
+        @Override
+        public RaptorDayMask getTripMask(LocalDate date) {
 
             Set<String> blockedRouteIds = blockedRoutes.getOrDefault(date, Set.of());
 
@@ -71,7 +76,7 @@ public class RaptorRouterMultiDayTest {
                 }
             }
 
-            return tripMasks;
+            return new RaptorDayMask(getServiceIdForDate(date), date, earliestTripTime, latestTripTime, tripMasks);
         }
     }
 

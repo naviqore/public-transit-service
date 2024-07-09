@@ -13,4 +13,6 @@ interface RaptorData {
 
     RaptorTripMaskProvider getRaptorTripMaskProvider();
 
+    RaptorCache getRaptorCache();
+
 }
