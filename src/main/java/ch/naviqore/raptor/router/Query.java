@@ -4,7 +4,7 @@ import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -32,7 +32,7 @@ class Query {
     private final int cutoffTime;
     private final StopLabelsAndTimes stopLabelsAndTimes;
 
-    private final LocalDate referenceDate;
+    private final LocalDateTime referenceDate;
     private final int maxDaysToScan;
 
     /**
@@ -47,7 +47,7 @@ class Query {
      * @param maxDaysToScan            the maximum number of days to scan for the query.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDate referenceDate,
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDateTime referenceDate,
           int maxDaysToScan) {
 
         if (sourceStopIndices.length != sourceTimes.length) {

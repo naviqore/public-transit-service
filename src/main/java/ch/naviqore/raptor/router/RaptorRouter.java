@@ -89,14 +89,15 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.validateSourceStopTimes(sourceStops);
 
         log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
-        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops, referenceDate));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
-                refStopTimes, new int[]{}, config, timeType, referenceDate, maxDaysToScan).run();
+                refStopTimes, new int[]{}, config, timeType, referenceDateTime, maxDaysToScan).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
@@ -119,7 +120,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
         InputValidator.validateSourceStopTimes(sourceStops);
-        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<String, Integer> sourceStopsSecondsOfDay = DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops,
                 referenceDate);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
@@ -132,7 +134,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDate, maxDaysToScan).run();
+                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDateTime, maxDaysToScan).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops, referenceDate);

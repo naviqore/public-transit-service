@@ -11,20 +11,18 @@ import java.util.stream.Collectors;
 
 class DateTimeUtils {
 
-    static LocalDate getReferenceDate(Map<?, LocalDateTime> sourceStops, TimeType timeType) {
+    static LocalDateTime getReferenceDate(Map<?, LocalDateTime> sourceStops, TimeType timeType) {
         if (timeType == TimeType.DEPARTURE) {
             // get minimum departure time
             return sourceStops.values()
                     .stream()
                     .min(Comparator.naturalOrder())
-                    .map(LocalDateTime::toLocalDate)
                     .orElseThrow();
         } else {
             // get maximum arrival time
             return sourceStops.values()
                     .stream()
                     .max(Comparator.naturalOrder())
-                    .map(LocalDateTime::toLocalDate)
                     .orElseThrow();
         }
     }
