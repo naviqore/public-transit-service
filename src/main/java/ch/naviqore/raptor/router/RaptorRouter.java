@@ -54,6 +54,11 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     }
 
     @Override
+    public void prepareStopTimesForDate(LocalDate date) {
+        raptorCache.getStopTimesForDate(date);
+    }
+
+    @Override
     public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");

@@ -3,6 +3,7 @@ package ch.naviqore.raptor;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -48,5 +49,9 @@ public interface RaptorAlgorithm {
      */
     Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                           QueryConfig config);
+
+    // TODO: Discuss if this should be added to the interface (for now added for benchmark test)
+    void prepareStopTimesForDate(LocalDate date);
+
 
 }

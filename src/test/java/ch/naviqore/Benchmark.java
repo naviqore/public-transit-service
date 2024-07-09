@@ -101,6 +101,12 @@ final class Benchmark {
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
                 SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule)).convert();
         manageResources();
+
+        raptor.prepareStopTimesForDate(SCHEDULE_DATE);
+        raptor.prepareStopTimesForDate(SCHEDULE_DATE.plusDays(1));
+        raptor.prepareStopTimesForDate(SCHEDULE_DATE.minusDays(1));
+        manageResources();
+
         return raptor;
     }
 
