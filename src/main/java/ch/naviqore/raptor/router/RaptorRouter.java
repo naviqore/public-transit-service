@@ -32,7 +32,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private final RaptorTripMaskProvider raptorTripMaskProvider;
 
     @Getter
-    private final RaptorCache raptorCache;
+    private final StopTimeProvider stopTimeProvider;
 
     private final int maxDaysToScan;
 
@@ -49,13 +49,13 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         }
         this.maxDaysToScan = maxDaysToScan;
         raptorTripMaskProvider.setTripIds(lookup.routeTripIds());
-        this.raptorCache = new RaptorCache(this);
+        this.stopTimeProvider = new StopTimeProvider(this);
         validator = new InputValidator(lookup.stops());
     }
 
     @Override
     public void prepareStopTimesForDate(LocalDate date) {
-        raptorCache.getStopTimesForDate(date);
+        stopTimeProvider.getStopTimesForDate(date);
     }
 
     @Override

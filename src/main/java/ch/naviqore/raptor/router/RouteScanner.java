@@ -62,14 +62,14 @@ class RouteScanner {
             throw new IllegalArgumentException("maxDaysToScan must be greater than 0.");
         } else if (maxDaysToScan == 1) {
             stopTimes = new int[1][];
-            stopTimes[0] = raptorData.getRaptorCache().getStopTimesForDate(referenceDate);
+            stopTimes[0] = raptorData.getStopTimeProvider().getStopTimesForDate(referenceDate);
             actualDaysToScan = 1;
             startDayOffset = 0;
         } else {
             // there is no need to scan the next day for arrival trips but previous day is maybe needed in departure trips
             if (timeType == TimeType.DEPARTURE) {
                 LocalDate previousDay = referenceDate.minusDays(1);
-                int[] previousDayStopTimes = raptorData.getRaptorCache().getStopTimesForDate(previousDay);
+                int[] previousDayStopTimes = raptorData.getStopTimeProvider().getStopTimesForDate(previousDay);
 
                 int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(),
                         referenceDateTime).getSeconds();
@@ -93,7 +93,7 @@ class RouteScanner {
                 int dayOffset = i + startDayOffset;
                 LocalDate date = timeType == TimeType.DEPARTURE ? referenceDate.plusDays(
                         dayOffset) : referenceDate.minusDays(dayOffset);
-                stopTimes[i] = raptorData.getRaptorCache().getStopTimesForDate(date);
+                stopTimes[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date);
             }
         }
     }

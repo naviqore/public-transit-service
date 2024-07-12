@@ -7,12 +7,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Cache for the stop times for a given date.
+ * Provider for stop time int arrays for a given date.
  * <p>
- * The cache is used to store the stop times for a given date. The stop times are calculated based on the trip mask
- * provided by the {@link RaptorTripMaskProvider}. The stop times are then used to scan the route for the given date.
+ * This provider uses the {@link RaptorTripMaskProvider} to create the stop time arrays for a given date. The stop time
+ * arrays are then cached based on the service id of the date, allowing to handle multiple days with same service id
+ * efficiently.
  */
-class RaptorCache {
+class StopTimeProvider {
 
     // TODO: make these configurable
     private static final int STOP_MASK_CACHE_SIZE = 5;
@@ -27,7 +28,7 @@ class RaptorCache {
     private final Map<LocalDate, String> serviceIds = new HashMap<>();
     private final RaptorData data;
 
-    RaptorCache(RaptorData data) {
+    StopTimeProvider(RaptorData data) {
         this.data = data;
         this.stopTimeCache = new EvictionCache<>(STOP_MASK_CACHE_SIZE, STOP_MASK_CACHE_STRATEGY);
     }
