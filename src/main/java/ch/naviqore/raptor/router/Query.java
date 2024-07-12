@@ -127,7 +127,7 @@ class Query {
      * @return the initially marked stops.
      */
     Set<Integer> initialize() {
-        log.info("Initializing global best times per stop and best labels per round");
+        log.debug("Initializing global best times per stop and best labels per round");
 
         // fill target stops
         for (int i = 0; i < targetStops.length; i += 2) {

@@ -211,7 +211,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 if (stopsToIdx.containsKey(stopId)) {
                     validStopIds.put(stopsToIdx.get(stopId), time);
                 } else {
-                    log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
+                    log.debug("Stop ID {} not found in lookup removing from query.", entry.getKey());
                 }
             }
 
