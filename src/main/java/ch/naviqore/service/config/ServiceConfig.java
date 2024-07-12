@@ -49,8 +49,8 @@ public class ServiceConfig {
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferTimeSameStopDefault = validateNonNegative(transferTimeSameStopDefault,
                 "transferTimeSameStopDefault");
-        this.transferTimeBetweenStopsMinimum = validateNonNegative(transferTimeBetweenStopsMinimum,
-                "transferTimeBetweenStopsMinimum");
+        // negative values imply that transfers should not be generated
+        this.transferTimeBetweenStopsMinimum = transferTimeBetweenStopsMinimum;
         this.transferTimeAccessEgress = validateNonNegative(transferTimeAccessEgress, "transferTimeAccessEgress");
         this.walkingSearchRadius = validateNonNegative(walkingSearchRadius, "walkingSearchRadius");
         this.walkingCalculatorType = validateNonNull(walkingCalculatorType, "walkingCalculatorType");
