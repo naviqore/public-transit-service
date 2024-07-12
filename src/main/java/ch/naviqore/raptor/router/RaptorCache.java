@@ -6,12 +6,22 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Cache for the stop times for a given date.
+ * <p>
+ * The cache is used to store the stop times for a given date. The stop times are calculated based on the trip mask
+ * provided by the {@link RaptorTripMaskProvider}. The stop times are then used to scan the route for the given date.
+ */
 class RaptorCache {
 
     // TODO: make these configurable
     private static final int STOP_MASK_CACHE_SIZE = 5;
     private static final EvictionCache.Strategy STOP_MASK_CACHE_STRATEGY = EvictionCache.Strategy.LRU;
 
+    /**
+     * The cache for the stop times. Stop time arrays are mapped to service ids, because multiple dates may have the
+     * same service id.
+     */
     private final EvictionCache<String, int[]> stopTimeCache;
 
     private final Map<LocalDate, String> serviceIds = new HashMap<>();
@@ -22,6 +32,24 @@ class RaptorCache {
         this.stopTimeCache = new EvictionCache<>(STOP_MASK_CACHE_SIZE, STOP_MASK_CACHE_STRATEGY);
     }
 
+    /**
+     * Create the stop times for a given date.
+     * <p>
+     * The stop time array is built based on the trip mask provided by the {@link RaptorTripMaskProvider} and is
+     * structured as follows:
+     * <ul>
+     *     <li>0: earliest overall stop time (in seconds relative to service date)</li>
+     *     <li>1: latest overall stop time (in seconds relative to service date)</li>
+     *     <li>n: for each route the stop times are stored in the following order:
+     *     <ul>
+     *     <li>0: earliest route stop time of day(in seconds relative to service date)</li>
+     *     <li>1: latest route stop time od day (in seconds relative to service date)</li>
+     *     <li>n: each trip of the route stored as a sequence of 2 x number of stops on trip, in following logic:
+     *     stop 1: arrival time, stop 1: departure time, stop 2 arrival time, stop 2 departure time, ...
+     *
+     * @param date the date for which the stop times should be created (or retrieved from cache)
+     * @return the stop times for the given date.
+     */
     int[] getStopTimesForDate(LocalDate date) {
         String serviceId = serviceIds.get(date);
         if (serviceId == null) {
@@ -31,7 +59,7 @@ class RaptorCache {
         return stopTimeCache.computeIfAbsent(serviceId, () -> createStopTimesForDate(date));
     }
 
-    int[] createStopTimesForDate(LocalDate date) {
+    private int[] createStopTimesForDate(LocalDate date) {
         RaptorDayMask mask = data.getRaptorTripMaskProvider().getTripMask(date);
 
         int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
