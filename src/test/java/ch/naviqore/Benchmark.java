@@ -15,6 +15,7 @@ import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
+import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.spatial.index.KDTree;
 import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
@@ -99,12 +100,13 @@ final class Benchmark {
         additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
 
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
-                SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule)).convert();
+                SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule), MAX_DAYS_TO_SCAN,
+                EvictionCache.Strategy.LRU).convert();
         manageResources();
 
-        raptor.prepareStopTimesForDate(SCHEDULE_DATE);
-        raptor.prepareStopTimesForDate(SCHEDULE_DATE.plusDays(1));
-        raptor.prepareStopTimesForDate(SCHEDULE_DATE.minusDays(1));
+        for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {
+            raptor.prepareStopTimesForDate(SCHEDULE_DATE.plusDays(dayIndex - 1));
+        }
         manageResources();
 
         return raptor;

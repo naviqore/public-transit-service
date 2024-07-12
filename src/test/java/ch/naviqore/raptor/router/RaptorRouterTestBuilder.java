@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.utils.cache.EvictionCache;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
@@ -60,7 +61,8 @@ public class RaptorRouterTestBuilder {
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
                                          int sameStopTransferTime, int daysToScan,
                                          RaptorTripMaskProvider maskProvider) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, daysToScan, maskProvider);
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, daysToScan, maskProvider,
+                daysToScan, EvictionCache.Strategy.LRU);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -200,8 +202,7 @@ public class RaptorRouterTestBuilder {
     }
 
     RaptorAlgorithm build(int startOfDay, int endOfDay) {
-        return build(routes, transfers, startOfDay, endOfDay, sameStopTransferTime, maxDaysToScan,
-                tripMaskProvider);
+        return build(routes, transfers, startOfDay, endOfDay, sameStopTransferTime, maxDaysToScan, tripMaskProvider);
     }
 
     public RaptorAlgorithm buildWithDefaults() {

@@ -5,6 +5,7 @@ import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.utils.cache.EvictionCache;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collection;
@@ -32,21 +33,23 @@ public class GtfsToRaptorConverter {
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime) {
-        this(schedule, sameStopTransferTime, 1, new GtfsTripMaskProvider(schedule));
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime, int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
+        this(schedule, sameStopTransferTime, 1, new GtfsTripMaskProvider(schedule), stopTimeCacheSize, stopTimeCacheStrategy);
     }
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime,
-                                 int maxDaysToScan, GtfsTripMaskProvider tripMaskProvider) {
-        this(schedule, List.of(), sameStopTransferTime, maxDaysToScan, tripMaskProvider);
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime, int maxDaysToScan,
+                                 GtfsTripMaskProvider tripMaskProvider, int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
+        this(schedule, List.of(), sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize, stopTimeCacheStrategy);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,
-                                 int sameStopTransferTime, int maxDaysToScan, GtfsTripMaskProvider tripMaskProvider) {
+                                 int sameStopTransferTime, int maxDaysToScan, GtfsTripMaskProvider tripMaskProvider,
+                                 int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
-        this.builder = RaptorAlgorithm.builder(sameStopTransferTime, maxDaysToScan, tripMaskProvider);
+        this.builder = RaptorAlgorithm.builder(sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize,
+                stopTimeCacheStrategy);
     }
 
     public RaptorAlgorithm convert() {

@@ -50,11 +50,13 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         this.stopSearchIndex = stopSearchIndex;
         this.walkCalculator = walkCalculator;
 
+        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
+
         // build raptor algorithm
-        tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheSize(),
-                EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name()));
+        tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheSize(), cacheStrategy);
         raptorAlgorithm = new GtfsToRaptorConverter(schedule, additionalTransfers,
-                config.getTransferTimeSameStopDefault(), config.getMaxDaysToScan(), tripMaskProvider).convert();
+                config.getTransferTimeSameStopDefault(), config.getMaxDaysToScan(), tripMaskProvider,
+                config.getCacheSize(), cacheStrategy).convert();
     }
 
     @Override

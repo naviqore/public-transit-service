@@ -15,10 +15,6 @@ import java.util.Map;
  */
 class StopTimeProvider {
 
-    // TODO: make these configurable
-    private static final int STOP_MASK_CACHE_SIZE = 5;
-    private static final EvictionCache.Strategy STOP_MASK_CACHE_STRATEGY = EvictionCache.Strategy.LRU;
-
     /**
      * The cache for the stop times. Stop time arrays are mapped to service ids, because multiple dates may have the
      * same service id.
@@ -29,10 +25,11 @@ class StopTimeProvider {
     private final RaptorData data;
     private final RaptorTripMaskProvider tripMaskProvider;
 
-    StopTimeProvider(RaptorData data, RaptorTripMaskProvider tripMaskProvider) {
+    StopTimeProvider(RaptorData data, RaptorTripMaskProvider tripMaskProvider, int cacheSize,
+                     EvictionCache.Strategy cacheStrategy) {
         this.data = data;
         this.tripMaskProvider = tripMaskProvider;
-        this.stopTimeCache = new EvictionCache<>(STOP_MASK_CACHE_SIZE, STOP_MASK_CACHE_STRATEGY);
+        this.stopTimeCache = new EvictionCache<>(cacheSize, cacheStrategy);
     }
 
     /**

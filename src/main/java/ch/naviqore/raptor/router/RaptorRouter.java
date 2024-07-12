@@ -4,6 +4,7 @@ import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.TimeType;
+import ch.naviqore.utils.cache.EvictionCache;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private final InputValidator validator;
 
     RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, int maxDaysToScan,
-                 RaptorTripMaskProvider maskProvider) {
+                 RaptorTripMaskProvider maskProvider, int stopTimeCacheSize,
+                 EvictionCache.Strategy stopTimeCacheStrategy) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
@@ -45,7 +47,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         }
         this.maxDaysToScan = maxDaysToScan;
         maskProvider.setTripIds(lookup.routeTripIds());
-        this.stopTimeProvider = new StopTimeProvider(this, maskProvider);
+        this.stopTimeProvider = new StopTimeProvider(this, maskProvider, stopTimeCacheSize, stopTimeCacheStrategy);
         validator = new InputValidator(lookup.stops());
     }
 

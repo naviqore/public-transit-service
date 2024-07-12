@@ -2,6 +2,7 @@ package ch.naviqore.raptor;
 
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
+import ch.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,8 +11,11 @@ import java.util.Map;
 
 public interface RaptorAlgorithm {
 
-    static RaptorRouterBuilder builder(int sameStopTransferTime, int maxDaysToScan, RaptorTripMaskProvider tripMaskProvider) {
-        return new RaptorRouterBuilder(sameStopTransferTime, maxDaysToScan, tripMaskProvider);
+    static RaptorRouterBuilder builder(int sameStopTransferTime, int maxDaysToScan,
+                                       RaptorTripMaskProvider tripMaskProvider, int stopTimeCacheSize,
+                                       EvictionCache.Strategy stopTimeCacheStrategy) {
+        return new RaptorRouterBuilder(sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize,
+                stopTimeCacheStrategy);
     }
 
     /**
@@ -52,6 +56,5 @@ public interface RaptorAlgorithm {
 
     // TODO: Discuss if this should be added to the interface (for now added for benchmark test)
     void prepareStopTimesForDate(LocalDate date);
-
 
 }

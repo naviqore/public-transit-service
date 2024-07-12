@@ -21,7 +21,7 @@ public class ServiceConfigParser {
                                @Value("${walking.speed}") double walkingSpeed,
                                @Value("${walking.duration.minimum}") int walkingDurationMinimum,
                                @Value("${raptor.days.to.scan}") int maxDaysToScan,
-                               @Value("${cache.size}") int cacheSize,
+                               @Value("${cache.number.service.day}") int cacheSize,
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
         ServiceConfig.WalkCalculatorType walkCalculatorTypeEnum = ServiceConfig.WalkCalculatorType.valueOf(
