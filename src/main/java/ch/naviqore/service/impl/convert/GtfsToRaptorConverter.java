@@ -33,13 +33,17 @@ public class GtfsToRaptorConverter {
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime, int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
-        this(schedule, sameStopTransferTime, 1, new GtfsTripMaskProvider(schedule), stopTimeCacheSize, stopTimeCacheStrategy);
+    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime, int stopTimeCacheSize,
+                                 EvictionCache.Strategy stopTimeCacheStrategy) {
+        this(schedule, sameStopTransferTime, 1, new GtfsTripMaskProvider(schedule), stopTimeCacheSize,
+                stopTimeCacheStrategy);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime, int maxDaysToScan,
-                                 GtfsTripMaskProvider tripMaskProvider, int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
-        this(schedule, List.of(), sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize, stopTimeCacheStrategy);
+                                 GtfsTripMaskProvider tripMaskProvider, int stopTimeCacheSize,
+                                 EvictionCache.Strategy stopTimeCacheStrategy) {
+        this(schedule, List.of(), sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize,
+                stopTimeCacheStrategy);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,

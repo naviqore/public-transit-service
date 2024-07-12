@@ -24,14 +24,13 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
                                                  LocalDateTime departureTime) {
-        return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime),
-                createStopMap(targetStopId, 0));
+        return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
                                                  LocalDateTime departureTime, QueryConfig config) {
-        return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime),
-                createStopMap(targetStopId, 0), config);
+        return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0),
+                config);
     }
 
     static Map<String, LocalDateTime> createStopMap(String stopId, LocalDateTime value) {
@@ -54,8 +53,7 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
                                                  LocalDateTime arrivalTime) {
-        return routeLatestDeparture(raptor, createStopMap(sourceStopId, 0),
-                createStopMap(targetStopId, arrivalTime));
+        return routeLatestDeparture(raptor, createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime));
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
@@ -67,7 +65,6 @@ class RaptorRouterTestHelpers {
                                                  Map<String, LocalDateTime> targetStops, QueryConfig config) {
         return raptor.routeLatestDeparture(sourceStops, targetStops, config);
     }
-
 
     static void assertEarliestArrivalConnection(Connection connection, String sourceStop, String targetStop,
                                                 LocalDateTime requestedDepartureTime, int numSameStopTransfers,
@@ -112,11 +109,11 @@ class RaptorRouterTestHelpers {
     static void assertReverseDirectionConnection(Connection connection, TimeType timeType, RaptorAlgorithm raptor) {
         List<Connection> connections;
         if (timeType == TimeType.DEPARTURE) {
-            connections = routeEarliestArrival(raptor, connection.getFromStopId(),
-                    connection.getToStopId(), connection.getDepartureTime());
+            connections = routeEarliestArrival(raptor, connection.getFromStopId(), connection.getToStopId(),
+                    connection.getDepartureTime());
         } else {
-            connections = routeLatestDeparture(raptor, connection.getFromStopId(),
-                    connection.getToStopId(), connection.getArrivalTime());
+            connections = routeLatestDeparture(raptor, connection.getFromStopId(), connection.getToStopId(),
+                    connection.getArrivalTime());
         }
 
         // find the connections with the same amount of rounds (this one should match)

@@ -39,7 +39,7 @@ class RouteScanner {
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time.
      * @param timeType                the time type (arrival or departure).
-     * @param referenceDateTime           the reference date for the query.
+     * @param referenceDateTime       the reference date for the query.
      * @param maxDaysToScan           the maximum number of days to scan.
      */
     RouteScanner(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,

@@ -14,16 +14,10 @@ class DateTimeUtils {
     static LocalDateTime getReferenceDate(Map<?, LocalDateTime> sourceStops, TimeType timeType) {
         if (timeType == TimeType.DEPARTURE) {
             // get minimum departure time
-            return sourceStops.values()
-                    .stream()
-                    .min(Comparator.naturalOrder())
-                    .orElseThrow();
+            return sourceStops.values().stream().min(Comparator.naturalOrder()).orElseThrow();
         } else {
             // get maximum arrival time
-            return sourceStops.values()
-                    .stream()
-                    .max(Comparator.naturalOrder())
-                    .orElseThrow();
+            return sourceStops.values().stream().max(Comparator.naturalOrder()).orElseThrow();
         }
     }
 

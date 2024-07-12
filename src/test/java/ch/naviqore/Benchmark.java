@@ -11,13 +11,7 @@ import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.convert.GtfsTripMaskProvider;
-import ch.naviqore.service.impl.transfer.SameStopTransferGenerator;
-import ch.naviqore.service.impl.transfer.TransferGenerator;
-import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
-import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.utils.cache.EvictionCache;
-import ch.naviqore.utils.spatial.index.KDTree;
-import ch.naviqore.utils.spatial.index.KDTreeBuilder;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -83,9 +77,8 @@ final class Benchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule,
-                SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule), MAX_DAYS_TO_SCAN,
-                EvictionCache.Strategy.LRU).convert();
+        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN,
+                new GtfsTripMaskProvider(schedule), MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU).convert();
         manageResources();
 
         for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {

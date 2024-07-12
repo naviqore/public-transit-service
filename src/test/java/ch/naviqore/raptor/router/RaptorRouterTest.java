@@ -1,6 +1,9 @@
 package ch.naviqore.raptor.router;
 
-import ch.naviqore.raptor.*;
+import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Leg;
+import ch.naviqore.raptor.QueryConfig;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -57,12 +60,15 @@ class RaptorRouterTest {
             //  - Route R3-F from P to Q
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM);
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0,
+                    1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0,
+                    3, raptor);
             RaptorRouterTestHelpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
@@ -70,9 +76,11 @@ class RaptorRouterTest {
         void routeBetweenTwoStopsOnSameRoute(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_B, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_B,
+                    EIGHT_AM);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_B, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_B, EIGHT_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -80,13 +88,16 @@ class RaptorRouterTest {
             builder.withAddRoute5_AH_selfIntersecting();
             RaptorAlgorithm raptor = builder.build();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H,
+                    EIGHT_AM);
             assertEquals(2, connections.size());
 
             // First Connection Should have no transfers but ride the entire loop (slow)
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_H, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_H, EIGHT_AM, 0,
+                    0, 1, raptor);
             // Second Connection Should Change at Stop B and take the earlier trip of the same route there (faster)
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0,
+                    2, raptor);
 
             RaptorRouterTestHelpers.checkIfConnectionsAreParetoOptimal(connections);
         }
@@ -99,9 +110,11 @@ class RaptorRouterTest {
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // fastest and only connection should be B -> H
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops,
+                    targetStops);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, EIGHT_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -113,10 +126,13 @@ class RaptorRouterTest {
 
             // B -> H has no transfers but later arrival time (due to departure time one hour later)
             // A -> H has one transfer but earlier arrival time
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops,
+                    targetStops);
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1, raptor);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0,
+                    0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_H, EIGHT_AM, 1, 0,
+                    2, raptor);
             assertTrue(connections.getFirst().getArrivalTime().isAfter(connections.get(1).getArrivalTime()),
                     "Connection from A should arrive earlier than connection from B");
         }
@@ -129,9 +145,11 @@ class RaptorRouterTest {
             Map<String, Integer> targetStops = Map.of(STOP_F, 0, STOP_S, 0);
 
             // fastest and only connection should be A -> F
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops,
+                    targetStops);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -144,10 +162,13 @@ class RaptorRouterTest {
 
             // since F is closer to A than S, the fastest connection should be A -> F, but because of the hour
             // walk time to target, the connection A -> S should be faster (no additional walk time)
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops,
+                    targetStops);
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1, raptor);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_S, EIGHT_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0,
+                    0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_S, EIGHT_AM, 1, 0,
+                    2, raptor);
 
             // Note since the required walk time to target is not added as a leg, the solutions will not be pareto
             // optimal without additional post-processing.
@@ -158,7 +179,8 @@ class RaptorRouterTest {
             // Omit route R2/R4 and transfers to make stop Q (on R3) unreachable from A (on R1)
             RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM);
             assertTrue(connections.isEmpty(), "No connection should be found");
         }
 
@@ -169,12 +191,14 @@ class RaptorRouterTest {
                     .withAddRoute1_AG("R1X", RaptorRouterTestBuilder.DEFAULT_OFFSET,
                             RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 3, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
                     .build();
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    EIGHT_AM);
 
             // Both Routes leave at 8:00 at Stop A, but R1 arrives at G at 8:35 whereas R1X arrives at G at 8:23
             // R1X should be taken
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0,
+                    0, 1, raptor);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
@@ -190,12 +214,14 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
                     .withAddRoute1_AG("R1X", 15, 30, 3, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
                     .build();
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    EIGHT_AM);
 
             // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 8:15 from Stop A and
             // arrives at G at 8:38. R1 should be used.
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_G, EIGHT_AM, 0,
+                    0, 1, raptor);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
@@ -224,12 +250,15 @@ class RaptorRouterTest {
             //  - Route R3-F from P to Q
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_Q, NINE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_Q,
+                    NINE_AM);
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_Q, NINE_AM, 0, 1, 2, raptor);
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_Q, NINE_AM, 2, 0, 3, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_Q, NINE_AM, 0,
+                    1, 2, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_Q, NINE_AM, 2, 0,
+                    3, raptor);
             RaptorRouterTestHelpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
@@ -237,9 +266,11 @@ class RaptorRouterTest {
         void routeBetweenTwoStopsOnSameRoute(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_B, NINE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_B,
+                    NINE_AM);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_B, NINE_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_B, NINE_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -247,13 +278,16 @@ class RaptorRouterTest {
             builder.withAddRoute5_AH_selfIntersecting();
             RaptorAlgorithm raptor = builder.build();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_H, NINE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_H,
+                    NINE_AM);
             assertEquals(2, connections.size());
 
             // First Connection Should have no transfers but ride the entire loop (slow)
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_H, NINE_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_H, NINE_AM, 0,
+                    0, 1, raptor);
             // Second Connection Should Change at Stop B and take the earlier trip of the same route there (faster)
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0,
+                    2, raptor);
 
             RaptorRouterTestHelpers.checkIfConnectionsAreParetoOptimal(connections);
         }
@@ -266,9 +300,11 @@ class RaptorRouterTest {
             Map<String, LocalDateTime> targetStops = Map.of(STOP_H, NINE_AM);
 
             // fastest and only connection should be B -> H
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
+                    targetStops);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -280,10 +316,13 @@ class RaptorRouterTest {
 
             // B -> H has no transfers but (theoretical) worse departure time (due to extra one-hour walk time)
             // A -> H has one transfer but (theoretical) better departure time (no additional walk time
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
+                    targetStops);
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0, 0, 1, raptor);
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_B, STOP_H, NINE_AM, 0,
+                    0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_H, NINE_AM, 1, 0,
+                    2, raptor);
         }
 
         @Test
@@ -294,9 +333,11 @@ class RaptorRouterTest {
             Map<String, LocalDateTime> targetStops = Map.of(STOP_F, NINE_AM, STOP_S, NINE_AM);
 
             // fastest and only connection should be A -> F
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
+                    targetStops);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, NINE_AM, 0, 0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, NINE_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -309,10 +350,13 @@ class RaptorRouterTest {
 
             // since F is closer to A than S, the fastest connection should be A -> F, but because of the hour
             // earlier arrival time, the connection A -> S should be faster (no additional walk time)
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops, targetStops);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
+                    targetStops);
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0, 0, 1, raptor);
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_S, NINE_AM, 1, 0, 2, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_F, EIGHT_AM, 0,
+                    0, 1, raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.get(1), STOP_A, STOP_S, NINE_AM, 1, 0,
+                    2, raptor);
         }
 
         @Test
@@ -320,7 +364,8 @@ class RaptorRouterTest {
             // Omit route R2/R4 and transfers to make stop Q (on R3) unreachable from A (on R1)
             RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_Q, NINE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_Q,
+                    NINE_AM);
             assertTrue(connections.isEmpty(), "No connection should be found");
         }
 
@@ -335,11 +380,12 @@ class RaptorRouterTest {
             // Both Routes arrive at 8:35 at Stop G, but R1 leaves A at 8:00 whereas R1X leaves at A at 8:12
             // R1X should be taken
             LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
-            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_G, arrivalTime);
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_G,
+                    arrivalTime);
 
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1,
-                    raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime,
+                    0, 0, 1, raptor);
             // check departure at 8:12
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM.plusMinutes(12), connection.getDepartureTime());
@@ -355,14 +401,15 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
                     .withAddRoute1_AG("R1X", 15, 30, 3, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
                     .build();
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    EIGHT_AM);
 
             // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 7:45 from Stop A and
             // arrives at G at 8:08. R1 should be used.
             LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime, 0, 0, 1,
-                    raptor);
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime,
+                    0, 0, 1, raptor);
             // check departure at 8:00
             Connection connection = connections.getFirst();
             assertEquals(EIGHT_AM, connection.getDepartureTime());
@@ -386,9 +433,11 @@ class RaptorRouterTest {
                     .withAddTransfer2_LR()
                     .build();
 
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_N, STOP_D, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_N, STOP_D,
+                    EIGHT_AM);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0, 1, 0, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_D, EIGHT_AM, 0,
+                    1, 0, raptor);
         }
 
         @Test
@@ -399,10 +448,12 @@ class RaptorRouterTest {
             //  - Route R1-F from A to D
             //  - Foot Transfer from D to N
             //  - Route R3-F from N to Q
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM);
 
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0,
+                    1, 2, raptor);
         }
 
         @Test
@@ -420,7 +471,8 @@ class RaptorRouterTest {
             // Connection C <-> O will be 1-stop leg from C to D, a walk transfer to N and a 1-stop leg from N to O.
             // I.e. departure time at C will be equal to walk transfer departure at D and arrival time at O will be equal
             // to departure time at N.
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_C, STOP_O, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_C, STOP_O,
+                    EIGHT_AM);
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
             Leg firstRouteLeg = connection.getLegs().getFirst();
@@ -431,7 +483,8 @@ class RaptorRouterTest {
                     "Departure time at C should be equal to arrival time at D");
             assertEquals(firstRouteLeg.getDepartureTime(), walkTransferLeg.getDepartureTime(),
                     "Departure time at C should be equal to walk departure time at D");
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_C, STOP_O, EIGHT_AM, 0, 1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_C, STOP_O, EIGHT_AM, 0,
+                    1, 2, raptor);
         }
 
         @Test
@@ -451,8 +504,8 @@ class RaptorRouterTest {
                     requestedDepartureTime);
 
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, requestedDepartureTime, 0,
-                    0, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C,
+                    requestedDepartureTime, 0, 0, 1, raptor);
         }
 
         @Test
@@ -468,8 +521,10 @@ class RaptorRouterTest {
             // 8:05 and then at C at 8:11. If the walk from B to C takes 7 minutes the "comparable" arrival time at C
             // will be also 8:10. However, since the "real" arrival time will be 8:12, the walk transfer should not be
             // favored.
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C, EIGHT_AM);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0, 0, 1, raptor);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,
+                    EIGHT_AM);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0,
+                    0, 1, raptor);
         }
 
         @Test
@@ -484,8 +539,10 @@ class RaptorRouterTest {
             // Route connection from A <-> C can be connected by a route trip starting at 8:00 at A, arriving at B at
             // 8:05 and then at C at 8:11. If the walk from B to C takes 5 minutes the arrival time at C is 8:10 and
             // should be favored over the route leg arriving at 8:11.
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C, EIGHT_AM);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0, 1, 1, raptor);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,
+                    EIGHT_AM);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_C, EIGHT_AM, 0,
+                    1, 1, raptor);
         }
 
         @Test
@@ -497,10 +554,12 @@ class RaptorRouterTest {
             // Connection from N to E can be connected by a walk transfer from N to D and then a route trip from D to E.
             // The route trip from D to E leaves at 8:18. The walk transfer requires 15 minutes of walking, thus should
             // leave N at 8:03 to reach D on time (8:18). The requested earliest departure time is 8:00.
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_N, STOP_E, EIGHT_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_N, STOP_E,
+                    EIGHT_AM);
             assertEquals(1, connections.size());
             assertEquals(EIGHT_AM.plusMinutes(3), connections.getFirst().getDepartureTime());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_E, EIGHT_AM, 0, 1, 1, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_N, STOP_E, EIGHT_AM, 0,
+                    1, 1, raptor);
         }
 
     }
@@ -517,7 +576,8 @@ class RaptorRouterTest {
             // There should be a connection leaving stop A at 5:00 am and this test should ensure that the same stop
             // transfer time is not added at the first stop, i.e. departure time at 5:00 am should allow to board the
             // first trip at 5:00 am
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H,
+                    FIVE_AM);
             assertEquals(1, connections.size());
             assertEquals(FIVE_AM, connections.getFirst().getDepartureTime());
         }
@@ -531,7 +591,8 @@ class RaptorRouterTest {
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
             // Connection at 5:24 from B to H should be missed because of the same stop transfer time (120s)
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H,
+                    FIVE_AM);
 
             assertEquals(1, connections.size());
 
@@ -548,7 +609,8 @@ class RaptorRouterTest {
                     .build();
             // There should be a connection leaving stop A at 5:19 am and arriving at stop B at 5:24 am
             // Connection at 5:24 from B to H should not be missed because of no same stop transfer time
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H,
+                    FIVE_AM);
 
             assertEquals(1, connections.size());
             assertEquals(FIVE_AM.plusMinutes(19), connections.getFirst().getDepartureTime());
@@ -564,7 +626,8 @@ class RaptorRouterTest {
                     .build();
             // There should be a connection leaving stop A at 5:17 am and arriving at stop B at 5:22 am
             // Connection at 5:24 from B to H should be cached when the same stop transfer time is 120s
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H, FIVE_AM);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_H,
+                    FIVE_AM);
 
             assertEquals(1, connections.size());
             assertEquals(FIVE_AM.plusMinutes(17), connections.getFirst().getDepartureTime());
@@ -597,13 +660,15 @@ class RaptorRouterTest {
             //  - Route R1-F from A to F
             //  - Route R4-R from F to P
             //  - Route R3-F from P to Q
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
-                    queryConfig);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM, queryConfig);
 
             // check if 2 connections were found
             assertEquals(2, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0,
+                    1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.get(1), STOP_A, STOP_Q, EIGHT_AM, 2, 0,
+                    3, raptor);
             RaptorRouterTestHelpers.checkIfConnectionsAreParetoOptimal(connections);
         }
 
@@ -615,10 +680,11 @@ class RaptorRouterTest {
 
             // Should only find three route leg connections, since direct transfer between D and N is longer than
             // allowed maximum walking distance (60 minutes):
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
-                    queryConfig);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM, queryConfig);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2,
+                    0, 3, raptor);
         }
 
         @Test
@@ -633,10 +699,11 @@ class RaptorRouterTest {
             //  - Foot Transfer from D to N
             //  - Route R3-F from N to Q
             // 2. Connection with two transfers (see above) should not be found
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
-                    queryConfig);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM, queryConfig);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 0,
+                    1, 2, raptor);
         }
 
         @Test
@@ -649,10 +716,11 @@ class RaptorRouterTest {
             //  - Route R1-F from A to F
             //  - Route R4-R from F to P
             //  - Route R3-F from P to Q
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
-                    queryConfig);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM, queryConfig);
             assertEquals(1, connections.size());
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2, 0, 3, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connections.getFirst(), STOP_A, STOP_Q, EIGHT_AM, 2,
+                    0, 3, raptor);
         }
 
         @Test
@@ -700,12 +768,13 @@ class RaptorRouterTest {
             queryConfig.setMinimumTransferDuration(20 * 60); // 20 minutes
 
             RaptorAlgorithm raptor = builder.buildWithDefaults();
-            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q, EIGHT_AM,
-                    queryConfig);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,
+                    EIGHT_AM, queryConfig);
 
             assertEquals(2, connections.size());
             Connection firstConnection = connections.getFirst();
-            RaptorRouterTestHelpers.assertEarliestArrivalConnection(firstConnection, STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2, raptor);
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(firstConnection, STOP_A, STOP_Q, EIGHT_AM, 0, 1, 2,
+                    raptor);
 
             // The walk transfer from D to N takes 60 minutes and the route from N to Q leaves every 75 minutes.
             Leg firstLeg = firstConnection.getRouteLegs().getFirst();

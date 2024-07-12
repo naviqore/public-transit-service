@@ -89,13 +89,15 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         }
 
         // get overall earliest and latest trip time
-        int earliestTripTime = tripMasks.values().stream()
+        int earliestTripTime = tripMasks.values()
+                .stream()
                 .mapToInt(TripMask::earliestTripTime)
                 .filter(time -> time != TripMask.NO_TRIP)
                 .min()
                 .orElse(TripMask.NO_TRIP);
 
-        int latestTripTime = tripMasks.values().stream()
+        int latestTripTime = tripMasks.values()
+                .stream()
                 .mapToInt(TripMask::latestTripTime)
                 .filter(time -> time != TripMask.NO_TRIP)
                 .max()

@@ -88,11 +88,9 @@ class DummyService implements PublicTransitService {
         for (Stop stop : STOPS) {
             try {
                 if (timeType == TimeType.DEPARTURE) {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
                 } else {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
                 }
             } catch (IllegalArgumentException e) {
                 // ignore
@@ -111,11 +109,9 @@ class DummyService implements PublicTransitService {
             }
             try {
                 if (timeType == TimeType.DEPARTURE) {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
                 } else {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
                 }
             } catch (IllegalArgumentException e) {
                 // ignore
