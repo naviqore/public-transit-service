@@ -27,9 +27,11 @@ class StopTimeProvider {
 
     private final Map<LocalDate, String> serviceIds = new HashMap<>();
     private final RaptorData data;
+    private final RaptorTripMaskProvider tripMaskProvider;
 
-    StopTimeProvider(RaptorData data) {
+    StopTimeProvider(RaptorData data, RaptorTripMaskProvider tripMaskProvider) {
         this.data = data;
+        this.tripMaskProvider = tripMaskProvider;
         this.stopTimeCache = new EvictionCache<>(STOP_MASK_CACHE_SIZE, STOP_MASK_CACHE_STRATEGY);
     }
 
@@ -54,14 +56,14 @@ class StopTimeProvider {
     int[] getStopTimesForDate(LocalDate date) {
         String serviceId = serviceIds.get(date);
         if (serviceId == null) {
-            serviceId = data.getRaptorTripMaskProvider().getServiceIdForDate(date);
+            serviceId = tripMaskProvider.getServiceIdForDate(date);
             serviceIds.put(date, serviceId);
         }
         return stopTimeCache.computeIfAbsent(serviceId, () -> createStopTimesForDate(date));
     }
 
     private int[] createStopTimesForDate(LocalDate date) {
-        RaptorDayMask mask = data.getRaptorTripMaskProvider().getTripMask(date);
+        RaptorDayMask mask = tripMaskProvider.getTripMask(date);
 
         int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
         int[] newStopTimesArray = new int[originalStopTimesArray.length];

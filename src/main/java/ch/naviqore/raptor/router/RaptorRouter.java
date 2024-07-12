@@ -29,9 +29,6 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private final RouteTraversal routeTraversal;
 
     @Getter
-    private final RaptorTripMaskProvider raptorTripMaskProvider;
-
-    @Getter
     private final StopTimeProvider stopTimeProvider;
 
     private final int maxDaysToScan;
@@ -43,13 +40,12 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        this.raptorTripMaskProvider = maskProvider;
         if (maxDaysToScan < 1) {
             throw new IllegalArgumentException("maxDaysToScan must be greater than 0");
         }
         this.maxDaysToScan = maxDaysToScan;
-        raptorTripMaskProvider.setTripIds(lookup.routeTripIds());
-        this.stopTimeProvider = new StopTimeProvider(this);
+        maskProvider.setTripIds(lookup.routeTripIds());
+        this.stopTimeProvider = new StopTimeProvider(this, maskProvider);
         validator = new InputValidator(lookup.stops());
     }
 
