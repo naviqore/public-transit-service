@@ -64,11 +64,7 @@ final class Benchmark {
     private static final long MONITORING_INTERVAL_MS = 30000;
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int NOT_AVAILABLE = -1;
-    private static final int WALKING_SPEED = 3000;
-    private static final int MINIMUM_TRANSFER_TIME = 120;
     private static final int SAME_STOP_TRANSFER_TIME = 120;
-    private static final int ACCESS_EGRESS_TIME = 15;
-    private static final int SEARCH_RADIUS = 500;
     private static final int MAX_DAYS_TO_SCAN = 3;
 
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -87,19 +83,7 @@ final class Benchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        // TODO: This should be implemented in the new integration service and should not need to run everytime a raptor
-        //  instance is created. Ideally this will be handled as an attribute with a list of transfer generators. With
-        //  this approach, transfers can be generated according to different rules with the first applicable one taking
-        //  precedence.
-        KDTree<Stop> spatialStopIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
-        BeeLineWalkCalculator walkCalculator = new BeeLineWalkCalculator(WALKING_SPEED);
-        WalkTransferGenerator transferGenerator = new WalkTransferGenerator(walkCalculator, MINIMUM_TRANSFER_TIME,
-                ACCESS_EGRESS_TIME, SEARCH_RADIUS, spatialStopIndex);
-        List<TransferGenerator.Transfer> additionalGeneratedTransfers = transferGenerator.generateTransfers(schedule);
-        SameStopTransferGenerator sameStopTransferGenerator = new SameStopTransferGenerator(SAME_STOP_TRANSFER_TIME);
-        additionalGeneratedTransfers.addAll(sameStopTransferGenerator.generateTransfers(schedule));
-
-        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, additionalGeneratedTransfers,
+        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule,
                 SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN, new GtfsTripMaskProvider(schedule), MAX_DAYS_TO_SCAN,
                 EvictionCache.Strategy.LRU).convert();
         manageResources();
