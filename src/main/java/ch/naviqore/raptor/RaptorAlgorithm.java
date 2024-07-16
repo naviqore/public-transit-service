@@ -1,8 +1,7 @@
 package ch.naviqore.raptor;
 
+import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
-import ch.naviqore.raptor.router.RaptorTripMaskProvider;
-import ch.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,11 +10,8 @@ import java.util.Map;
 
 public interface RaptorAlgorithm {
 
-    static RaptorRouterBuilder builder(int sameStopTransferTime, int maxDaysToScan,
-                                       RaptorTripMaskProvider tripMaskProvider, int stopTimeCacheSize,
-                                       EvictionCache.Strategy stopTimeCacheStrategy) {
-        return new RaptorRouterBuilder(sameStopTransferTime, maxDaysToScan, tripMaskProvider, stopTimeCacheSize,
-                stopTimeCacheStrategy);
+    static RaptorRouterBuilder builder(RaptorConfig config) {
+        return new RaptorRouterBuilder(config);
     }
 
     /**

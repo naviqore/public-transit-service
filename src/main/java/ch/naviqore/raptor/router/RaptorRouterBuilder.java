@@ -1,7 +1,6 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.utils.cache.EvictionCache;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,29 +24,19 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 @Slf4j
 public class RaptorRouterBuilder {
 
-    private final int defaultSameStopTransferTime;
-    private final int maxDaysToScan;
-    private final int stopTimeCacheSize;
-    private final EvictionCache.Strategy stopTimeCacheStrategy;
+    private final RaptorConfig config;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
     private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
-    private final RaptorTripMaskProvider tripMaskProvider;
 
     int stopTimeSize = 0;
     int routeStopSize = 0;
     int transferSize = 0;
 
-    public RaptorRouterBuilder(int defaultSameStopTransferTime, int maxDaysToScan,
-                               RaptorTripMaskProvider tripMaskProvider, int stopTimeCacheSize,
-                               EvictionCache.Strategy stopTimeCacheStrategy) {
-        this.defaultSameStopTransferTime = defaultSameStopTransferTime;
-        this.maxDaysToScan = maxDaysToScan;
-        this.tripMaskProvider = tripMaskProvider;
-        this.stopTimeCacheSize = stopTimeCacheSize;
-        this.stopTimeCacheStrategy = stopTimeCacheStrategy;
+    public RaptorRouterBuilder(RaptorConfig config) {
+        this.config = config;
     }
 
     public RaptorRouterBuilder addStop(String id) {
@@ -129,8 +118,7 @@ public class RaptorRouterBuilder {
         StopContext stopContext = buildStopContext(lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
 
-        return new RaptorRouter(lookup, stopContext, routeTraversal, maxDaysToScan, tripMaskProvider, stopTimeCacheSize,
-                stopTimeCacheStrategy);
+        return new RaptorRouter(lookup, stopContext, routeTraversal, config);
     }
 
     private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
@@ -177,7 +165,7 @@ public class RaptorRouterBuilder {
             List<Transfer> currentTransfers = transfers.get(stopId);
             int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
 
-            int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, defaultSameStopTransferTime);
+            int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, config.getDefaultSameStopTransferTime());
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,

@@ -1,12 +1,12 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.utils.cache.EvictionCache;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Test builder to set up a raptor for testing purposes.
@@ -53,16 +53,14 @@ public class RaptorRouterTestBuilder {
 
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
-    private int sameStopTransferTime = 120;
 
-    private int maxDaysToScan = 1;
-    private RaptorTripMaskProvider tripMaskProvider = new NoMaskProvider();
+    private int daysToScan = 1;
+    private int defaultSameStopTransferTime = 120;
+    private RaptorTripMaskProvider tripMaskProvider = new RaptorConfig.NoMaskProvider();
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                         int sameStopTransferTime, int daysToScan,
-                                         RaptorTripMaskProvider maskProvider) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime, daysToScan, maskProvider,
-                daysToScan, EvictionCache.Strategy.LRU);
+                                         RaptorConfig config) {
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(config);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -182,12 +180,12 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withSameStopTransferTime(int time) {
-        this.sameStopTransferTime = time;
+        this.defaultSameStopTransferTime = time;
         return this;
     }
 
     public RaptorRouterTestBuilder withMaxDaysToScan(int days) {
-        this.maxDaysToScan = days;
+        this.daysToScan = days;
         return this;
     }
 
@@ -197,12 +195,16 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorAlgorithm build() {
-        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStopTransferTime, maxDaysToScan,
-                tripMaskProvider);
+        return build(DAY_START_HOUR, DAY_END_HOUR);
     }
 
     RaptorAlgorithm build(int startOfDay, int endOfDay) {
-        return build(routes, transfers, startOfDay, endOfDay, sameStopTransferTime, maxDaysToScan, tripMaskProvider);
+        RaptorConfig config = new RaptorConfig();
+        config.setDaysToScan(daysToScan);
+        config.setDefaultSameStopTransferTime(defaultSameStopTransferTime);
+        config.setMaskProvider(tripMaskProvider);
+        config.setStopTimeCacheSize(daysToScan);
+        return build(routes, transfers, startOfDay, endOfDay, config);
     }
 
     public RaptorAlgorithm buildWithDefaults() {
@@ -242,40 +244,6 @@ public class RaptorRouterTestBuilder {
      * @param duration   the (walking) duration of the transfer between stops in minutes.
      */
     private record Transfer(String sourceStop, String targetStop, int duration) {
-    }
-
-    /**
-     * No mask provider for testing.
-     */
-    @Setter
-    @NoArgsConstructor
-    static class NoMaskProvider implements RaptorTripMaskProvider {
-
-        Map<String, String[]> tripIds = null;
-
-        @Override
-        public String getServiceIdForDate(LocalDate date) {
-            return "NoMask";
-        }
-
-        @Override
-        public RaptorDayMask getTripMask(LocalDate date) {
-            int earliestTripTime = DAY_START_HOUR * SECONDS_IN_HOUR;
-            int latestTripTime = (DAY_END_HOUR + 2) * SECONDS_IN_HOUR;
-
-            Map<String, TripMask> tripMasks = new HashMap<>();
-            for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
-                String routeId = entry.getKey();
-                String[] tripIds = entry.getValue();
-                boolean[] tripMask = new boolean[tripIds.length];
-                for (int i = 0; i < tripIds.length; i++) {
-                    tripMask[i] = true;
-                }
-                tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
-            }
-
-            return new RaptorDayMask(getServiceIdForDate(date), date, earliestTripTime, latestTripTime, tripMasks);
-        }
     }
 
 }

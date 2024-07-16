@@ -2,6 +2,7 @@ package ch.naviqore.service.impl;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -51,12 +52,12 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         this.walkCalculator = walkCalculator;
 
         EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
+        tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheSize(), cacheStrategy);
 
         // build raptor algorithm
-        tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheSize(), cacheStrategy);
-        raptorAlgorithm = new GtfsToRaptorConverter(schedule, additionalTransfers,
-                config.getTransferTimeSameStopDefault(), config.getMaxDaysToScan(), tripMaskProvider,
-                config.getCacheSize(), cacheStrategy).convert();
+        RaptorConfig raptorConfig = new RaptorConfig(config.getMaxDaysToScan(), config.getTransferTimeSameStopDefault(),
+                config.getCacheSize(), cacheStrategy, tripMaskProvider);
+        raptorAlgorithm = new GtfsToRaptorConverter(schedule, raptorConfig).convert();
     }
 
     @Override

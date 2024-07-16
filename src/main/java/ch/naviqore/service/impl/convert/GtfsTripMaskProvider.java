@@ -54,56 +54,14 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
             String routeId = entry.getKey();
             String[] tripIds = entry.getValue();
             boolean[] tripMask = new boolean[tripIds.length];
-            int earliestTripTime = TripMask.NO_TRIP;
-            int latestTripTime = TripMask.NO_TRIP;
             for (int i = 0; i < tripIds.length; i++) {
                 tripMask[i] = schedule.getTrips().get(tripIds[i]).getCalendar().isServiceAvailable(date);
             }
 
-            // get first instance of true in tripMask
-            for (int i = 0; i < tripMask.length; i++) {
-                if (tripMask[i]) {
-                    earliestTripTime = schedule.getTrips()
-                            .get(tripIds[i])
-                            .getStopTimes()
-                            .getFirst()
-                            .departure()
-                            .getTotalSeconds();
-                    break;
-                }
-            }
-
-            for (int i = tripMask.length - 1; i >= 0; i--) {
-                if (tripMask[i]) {
-                    latestTripTime = schedule.getTrips()
-                            .get(tripIds[i])
-                            .getStopTimes()
-                            .getLast()
-                            .arrival()
-                            .getTotalSeconds();
-                    break;
-                }
-            }
-
-            tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
+            tripMasks.put(routeId, new TripMask(tripMask));
         }
 
-        // get overall earliest and latest trip time
-        int earliestTripTime = tripMasks.values()
-                .stream()
-                .mapToInt(TripMask::earliestTripTime)
-                .filter(time -> time != TripMask.NO_TRIP)
-                .min()
-                .orElse(TripMask.NO_TRIP);
-
-        int latestTripTime = tripMasks.values()
-                .stream()
-                .mapToInt(TripMask::latestTripTime)
-                .filter(time -> time != TripMask.NO_TRIP)
-                .max()
-                .orElse(TripMask.NO_TRIP);
-
-        return new RaptorDayMask(serviceId, date, earliestTripTime, latestTripTime, tripMasks);
+        return new RaptorDayMask(serviceId, date, tripMasks);
     }
 
     /**

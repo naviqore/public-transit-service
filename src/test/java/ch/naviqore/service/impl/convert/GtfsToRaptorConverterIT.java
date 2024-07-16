@@ -4,7 +4,7 @@ import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.utils.cache.EvictionCache;
+import ch.naviqore.raptor.router.RaptorConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,9 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class GtfsToRaptorConverterIT {
 
-    private static final int SAME_STOP_TRANSFER_TIME = 120;
-    private static final int MAX_DAYS_TO_SCAN = 1;
-    private static final EvictionCache.Strategy CACHE_STRATEGY = EvictionCache.Strategy.LRU;
     private GtfsSchedule schedule;
 
     @BeforeEach
@@ -30,8 +27,7 @@ class GtfsToRaptorConverterIT {
 
     @Test
     void shouldConvertGtfsScheduleToRaptor() {
-        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN,
-                CACHE_STRATEGY);
+        GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, new RaptorConfig());
         RaptorAlgorithm raptor = mapper.convert();
         assertThat(raptor).isNotNull();
     }
