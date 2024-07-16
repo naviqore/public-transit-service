@@ -4,7 +4,6 @@ import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.TimeType;
-import ch.naviqore.utils.cache.EvictionCache;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,22 +31,18 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final StopTimeProvider stopTimeProvider;
 
-    private final int maxDaysToScan;
+    private final RaptorConfig config;
 
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, int maxDaysToScan,
-                 RaptorTripMaskProvider maskProvider, int stopTimeCacheSize,
-                 EvictionCache.Strategy stopTimeCacheStrategy) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, RaptorConfig config) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        if (maxDaysToScan < 1) {
-            throw new IllegalArgumentException("maxDaysToScan must be greater than 0");
-        }
-        this.maxDaysToScan = maxDaysToScan;
-        maskProvider.setTripIds(lookup.routeTripIds());
-        this.stopTimeProvider = new StopTimeProvider(this, maskProvider, stopTimeCacheSize, stopTimeCacheStrategy);
+        this.config = config;
+        config.getMaskProvider().setTripIds(lookup.routeTripIds());
+        this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
+                config.getStopTimeCacheStrategy());
         validator = new InputValidator(lookup.stops());
     }
 
@@ -95,7 +90,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
-                refStopTimes, new int[]{}, config, timeType, referenceDateTime, maxDaysToScan).run();
+                refStopTimes, new int[]{}, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
@@ -132,7 +127,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDateTime, maxDaysToScan).run();
+                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops, referenceDate);

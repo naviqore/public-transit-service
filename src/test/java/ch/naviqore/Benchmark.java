@@ -9,6 +9,7 @@ import ch.naviqore.gtfs.schedule.model.Trip;
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.impl.convert.GtfsTripMaskProvider;
 import ch.naviqore.utils.cache.EvictionCache;
@@ -77,8 +78,9 @@ final class Benchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN,
-                new GtfsTripMaskProvider(schedule), MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU).convert();
+        RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN,
+                EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
+        RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, config).convert();
         manageResources();
 
         for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {

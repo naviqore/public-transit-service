@@ -44,11 +44,11 @@ class Query {
      * @param timeType                 the time type (arrival or departure) of the query.
      * @param config                   the query configuration.
      * @param referenceDate            the reference date for the query.
-     * @param maxDaysToScan            the maximum number of days to scan for the query.
+     * @param raptorConfig             the raptor configuration.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
           int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDateTime referenceDate,
-          int maxDaysToScan) {
+          RaptorConfig raptorConfig) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
@@ -66,7 +66,7 @@ class Query {
         this.config = config;
         this.timeType = timeType;
         this.referenceDate = referenceDate;
-        this.maxDaysToScan = maxDaysToScan;
+        this.maxDaysToScan = raptorConfig.getDaysToScan();
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
