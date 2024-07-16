@@ -121,8 +121,8 @@ class Query {
         }
 
         // scan all range offsets in reverse order (earliest arrival / latest departure first)
-        for (int i = rangeOffsets.size() - 1; i >= 0; i--) {
-            int rangeOffset = rangeOffsets.get(i);
+        for (int offsetIdx = rangeOffsets.size() - 1; offsetIdx >= 0; offsetIdx--) {
+            int rangeOffset = rangeOffsets.get(offsetIdx);
             int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
             log.debug("Running rounds with range offset {}", rangeOffset);
 

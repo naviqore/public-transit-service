@@ -410,8 +410,8 @@ class RouteScanner {
 
         // get routes passing the stop
         Stop currentStop = stops[stopIdx];
-        int stopRouteIdx = currentStop.stopRouteIdx();
-        int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
+        int stopRouteStartIdx = currentStop.stopRouteIdx();
+        int stopRouteEndIdx = stopRouteStartIdx + currentStop.numberOfRoutes();
 
         int refSourceTime = stopLabelsAndTimes.getLabel(0, stopIdx).targetTime();
         int endRangeSourceTime = refSourceTime + timeDirection * range;
@@ -420,21 +420,22 @@ class RouteScanner {
         int rangeEnd = Math.max(refSourceTime, endRangeSourceTime);
 
         // check all departures of passing routes
-        for (int i = stopRouteIdx; i < stopRouteEndIdx; i++) {
-            Route route = routes[stopRoutes[i]];
+        for (int stopRouteIdx = stopRouteStartIdx; stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
+            Route route = routes[stopRoutes[stopRouteIdx]];
             ArrayList<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd,
                     timeType);
-            for (int j = 0; i < tripOffsetsForRoute.size(); i++) {
+            for (int tripOffsetIdx = 0; tripOffsetIdx < tripOffsetsForRoute.size(); tripOffsetIdx++) {
                 int tripOffset;
                 if (timeType == TimeType.DEPARTURE) {
-                    tripOffset = tripOffsetsForRoute.get(j) - refSourceTime;
+                    tripOffset = tripOffsetsForRoute.get(tripOffsetIdx) - refSourceTime;
                 } else {
-                    tripOffset = refSourceTime - tripOffsetsForRoute.get(tripOffsetsForRoute.size() - j - 1);
+                    tripOffset = refSourceTime - tripOffsetsForRoute.get(
+                            tripOffsetsForRoute.size() - tripOffsetIdx - 1);
                 }
-                if (tripOffsets.size() == j) {
+                if (tripOffsets.size() == tripOffsetIdx) {
                     tripOffsets.add(tripOffset);
                 } else {
-                    tripOffsets.set(j, Math.min(tripOffsets.get(j), tripOffset));
+                    tripOffsets.set(tripOffsetIdx, Math.min(tripOffsets.get(tripOffsetIdx), tripOffset));
                 }
             }
         }
