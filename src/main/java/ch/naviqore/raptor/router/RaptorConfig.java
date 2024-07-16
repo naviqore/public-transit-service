@@ -70,8 +70,6 @@ public class RaptorConfig {
     @NoArgsConstructor
     static class NoMaskProvider implements RaptorTripMaskProvider {
 
-        private final static int EARLIEST_TRIP_TIME = 0;
-        private final static int LATEST_TRIP_TIME = 48 * 60 * 60; // 48 hours in seconds
         Map<String, String[]> tripIds = null;
 
         @Override
@@ -81,9 +79,6 @@ public class RaptorConfig {
 
         @Override
         public RaptorDayMask getTripMask(LocalDate date) {
-            int earliestTripTime = EARLIEST_TRIP_TIME;
-            int latestTripTime = LATEST_TRIP_TIME;
-
             Map<String, TripMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();
@@ -92,10 +87,10 @@ public class RaptorConfig {
                 for (int i = 0; i < tripIds.length; i++) {
                     tripMask[i] = true;
                 }
-                tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
+                tripMasks.put(routeId, new TripMask(tripMask));
             }
 
-            return new RaptorDayMask(getServiceIdForDate(date), date, earliestTripTime, latestTripTime, tripMasks);
+            return new RaptorDayMask(getServiceIdForDate(date), date, tripMasks);
         }
     }
 

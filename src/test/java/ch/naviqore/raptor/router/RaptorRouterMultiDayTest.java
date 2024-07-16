@@ -31,7 +31,6 @@ public class RaptorRouterMultiDayTest {
 
     @NoArgsConstructor
     static class RoutePerDayMasker implements RaptorTripMaskProvider {
-        private static final int SECONDS_IN_HOUR = 3600;
         final Map<LocalDate, Set<String>> blockedRoutes = new HashMap<>();
         @Setter
         Map<String, String[]> tripIds = null;
@@ -57,26 +56,22 @@ public class RaptorRouterMultiDayTest {
 
             Set<String> blockedRouteIds = blockedRoutes.getOrDefault(date, Set.of());
 
-            int earliestTripTime = dayStartHour * SECONDS_IN_HOUR;
-            int latestTripTime = (dayEndHour + 2) * SECONDS_IN_HOUR;
-
             Map<String, TripMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();
                 String[] tripIds = entry.getValue();
                 if (blockedRouteIds.contains(routeId)) {
-                    tripMasks.put(routeId,
-                            new TripMask(TripMask.NO_TRIP, TripMask.NO_TRIP, new boolean[tripIds.length]));
+                    tripMasks.put(routeId, new TripMask(new boolean[tripIds.length]));
                 } else {
                     boolean[] tripMask = new boolean[tripIds.length];
                     for (int i = 0; i < tripIds.length; i++) {
                         tripMask[i] = true;
                     }
-                    tripMasks.put(routeId, new TripMask(earliestTripTime, latestTripTime, tripMask));
+                    tripMasks.put(routeId, new TripMask(tripMask));
                 }
             }
 
-            return new RaptorDayMask(getServiceIdForDate(date), date, earliestTripTime, latestTripTime, tripMasks);
+            return new RaptorDayMask(getServiceIdForDate(date), date, tripMasks);
         }
     }
 

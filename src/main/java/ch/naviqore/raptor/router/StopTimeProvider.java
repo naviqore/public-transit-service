@@ -65,9 +65,9 @@ class StopTimeProvider {
         int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
         int[] newStopTimesArray = new int[originalStopTimesArray.length];
 
-        // set the global start/end times
-        newStopTimesArray[0] = mask.earliestTripTime();
-        newStopTimesArray[1] = mask.latestTripTime();
+        // set the global start and end times for the day (initially set to NO_TRIP)
+        newStopTimesArray[0] = TripMask.NO_TRIP;
+        newStopTimesArray[1] = TripMask.NO_TRIP;
 
         // set the stop times for each route
         for (Map.Entry<String, TripMask> entry : mask.tripMask().entrySet()) {
@@ -78,10 +78,10 @@ class StopTimeProvider {
             int numStops = route.numberOfStops();
             int stopTimeIndex = route.firstStopTimeIdx();
 
-            newStopTimesArray[stopTimeIndex] = tripMask.earliestTripTime();
-            newStopTimesArray[stopTimeIndex + 1] = tripMask.latestTripTime();
-
             boolean[] booleanMask = tripMask.tripMask();
+
+            int earliestRouteStopTime = TripMask.NO_TRIP;
+            int latestRouteStopTime = TripMask.NO_TRIP;
 
             int tripOffset = 0;
             for (boolean tripActive : booleanMask) {
@@ -92,6 +92,11 @@ class StopTimeProvider {
                     if (tripActive) {
                         newStopTimesArray[arrivalIndex] = originalStopTimesArray[arrivalIndex];
                         newStopTimesArray[departureIndex] = originalStopTimesArray[departureIndex];
+                        if( earliestRouteStopTime == TripMask.NO_TRIP ){
+                            earliestRouteStopTime = originalStopTimesArray[arrivalIndex];
+                        }
+                        latestRouteStopTime = originalStopTimesArray[departureIndex];
+
                     } else {
                         newStopTimesArray[arrivalIndex] = TripMask.NO_TRIP;
                         newStopTimesArray[departureIndex] = TripMask.NO_TRIP;
@@ -99,6 +104,23 @@ class StopTimeProvider {
                 }
                 tripOffset++;
             }
+
+            // set the earliest and latest stop times for the route
+            newStopTimesArray[stopTimeIndex] = earliestRouteStopTime;
+            newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
+
+            // maybe update the global start/end times for day
+            if( earliestRouteStopTime != TripMask.NO_TRIP && latestRouteStopTime != TripMask.NO_TRIP ){
+                // set the global earliest stop time if not set or if the new time is earlier
+                if( newStopTimesArray[0] == TripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0] ){
+                    newStopTimesArray[0] = earliestRouteStopTime;
+                }
+                // set the global latest stop time if not set or if the new time is later
+                if( newStopTimesArray[1] == TripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1] ){
+                    newStopTimesArray[1] = latestRouteStopTime;
+                }
+            }
+
         }
 
         return newStopTimesArray;
