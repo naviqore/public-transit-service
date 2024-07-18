@@ -55,6 +55,7 @@ public class RaptorRouterTestBuilder {
     private final List<Transfer> transfers = new ArrayList<>();
 
     private int daysToScan = 1;
+    private int raptorRange = -1;
     private int defaultSameStopTransferTime = 120;
     private RaptorTripMaskProvider tripMaskProvider = new RaptorConfig.NoMaskProvider();
 
@@ -189,6 +190,11 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withRaptorRange(int raptorRange) {
+        this.raptorRange = raptorRange;
+        return this;
+    }
+
     public RaptorRouterTestBuilder withTripMaskProvider(RaptorTripMaskProvider provider) {
         this.tripMaskProvider = provider;
         return this;
@@ -204,6 +210,7 @@ public class RaptorRouterTestBuilder {
         config.setDefaultSameStopTransferTime(defaultSameStopTransferTime);
         config.setMaskProvider(tripMaskProvider);
         config.setStopTimeCacheSize(daysToScan);
+        config.setRaptorRange(raptorRange);
         return build(routes, transfers, startOfDay, endOfDay, config);
     }
 
