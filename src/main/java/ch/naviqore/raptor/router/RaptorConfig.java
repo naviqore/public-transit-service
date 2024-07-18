@@ -21,12 +21,16 @@ public class RaptorConfig {
     private int daysToScan = 1;
     private int defaultSameStopTransferTime = 120;
 
+    @Setter
+    private int raptorRange = 1800; // 30 minutes
+
     private int stopTimeCacheSize = 5;
     private EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
 
-    public RaptorConfig(int daysToScan, int defaultSameStopTransferTime, int stopTimeCacheSize,
+    public RaptorConfig(int daysToScan, int raptorRange, int defaultSameStopTransferTime, int stopTimeCacheSize,
                         @NotNull EvictionCache.Strategy stopTimeCacheStrategy,
                         @NotNull RaptorTripMaskProvider maskProvider) {
+        setRaptorRange(raptorRange);
         setDaysToScan(daysToScan);
         setDefaultSameStopTransferTime(defaultSameStopTransferTime);
         setStopTimeCacheSize(stopTimeCacheSize);

@@ -16,14 +16,11 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 @Slf4j
 class Query {
 
-    private final static int RANGE = 1800; // 30 minutes in seconds
-
     private final int[] sourceStopIndices;
     private final int[] targetStopIndices;
     private final int[] sourceTimes;
     private final int[] walkingDurationsToTarget;
 
-    private final RaptorData raptorData;
     private final QueryConfig config;
     private final TimeType timeType;
 
@@ -33,8 +30,7 @@ class Query {
     private final FootpathRelaxer footpathRelaxer;
     private final RouteScanner routeScanner;
 
-    private final LocalDateTime referenceDate;
-    private final int maxDaysToScan;
+    private final int raptorRange;
 
     /**
      * @param raptorData               the current raptor data structures.
@@ -59,15 +55,13 @@ class Query {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
-        this.raptorData = raptorData;
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
         this.walkingDurationsToTarget = walkingDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
-        this.referenceDate = referenceDate;
-        this.maxDaysToScan = raptorConfig.getDaysToScan();
+        this.raptorRange = raptorConfig.getRaptorRange();
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
@@ -77,7 +71,7 @@ class Query {
         footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(),
                 config.getMaximumWalkingDuration(), timeType);
         routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(), timeType,
-                referenceDate, maxDaysToScan);
+                referenceDate, raptorConfig.getDaysToScan());
     }
 
     /**
@@ -104,7 +98,7 @@ class Query {
         markedStops = removeSuboptimalLabelsForRound(0, markedStops);
 
         // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
-        if (RANGE <= 0) {
+        if (raptorRange <= 0) {
             doRounds(markedStops);
         } else {
             doRangeRaptor(markedStops);
@@ -178,7 +172,7 @@ class Query {
     private List<Integer> getRangeOffsets(Set<Integer> markedStops, RouteScanner routeScanner) {
         ArrayList<Integer> rangeOffsets = new ArrayList<>();
         for (int stopIdx : markedStops) {
-            ArrayList<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, RANGE);
+            ArrayList<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
             for (int i = 0; i < stopRangeOffsets.size(); i++) {
                 if (rangeOffsets.size() == i) {
                     rangeOffsets.add(stopRangeOffsets.get(i));
