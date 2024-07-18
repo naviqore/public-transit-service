@@ -67,6 +67,11 @@ public class RaptorConfig {
         this.stopTimeCacheStrategy = stopTimeCacheStrategy;
     }
 
+    public RaptorConfig copy() {
+        return new RaptorConfig(daysToScan, raptorRange, defaultSameStopTransferTime, stopTimeCacheSize,
+                stopTimeCacheStrategy, maskProvider);
+    }
+
     /**
      * No mask provider as default mask provider (no masking of trips).
      */
