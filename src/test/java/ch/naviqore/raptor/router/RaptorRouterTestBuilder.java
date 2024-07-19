@@ -137,7 +137,11 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute2_HL() {
-        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L")));
+        return withAddRoute2_HL(DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
+    }
+
+    public RaptorRouterTestBuilder withAddRoute2_HL(int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L"), offset, headway, travelTime, dwellTime));
         return this;
     }
 
