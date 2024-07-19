@@ -18,6 +18,7 @@ public class RangeRaptorTest {
 
     private static final String STOP_A = "A";
     private static final String STOP_I = "I";
+    private static final String STOP_N = "N";
 
     private static final LocalDateTime START_OF_DAY = LocalDateTime.of(2021, 1, 1, 0, 0);
     private static final LocalDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
@@ -124,15 +125,157 @@ public class RangeRaptorTest {
         RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime);
     }
 
+    @Test
+    void findDepartureConnections_thatWouldBeSameAsSimpleRaptor(RaptorRouterTestBuilder builder) {
+
+        LocalDateTime departureTime = EIGHT_AM;
+
+        RaptorAlgorithm rangeRaptor = builder.withAddRoute1_AG()
+                .withAddRoute2_HL()
+                .withSameStopTransferTime(0)
+                .withRaptorRange(1800)
+                .withMaxDaysToScan(1)
+                .build();
+
+        // Find connections from "A" to "I" departing at 8:00 am.
+        // Route 1 leaves "A" at 8:00, 8:15... and arrives at "B" 5 minutes later.
+        // Route 2 leaves "H" at 8:00, 8:15... and arrives at "B" 5 minutes later and continues on to "I" one minute
+        // after arriving, the trip from "B" to "I" requires 5 minutes. Therefore, the shortest possible travel
+        // time is 11 minutes. Since both routes have the same headway the range raptor should return the same
+        // connection as a simple raptor implementation.
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(rangeRaptor, STOP_A, STOP_I,
+                departureTime);
+
+        LocalDateTime expectedArrivalTime = EIGHT_AM.plusMinutes(
+                2 * RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS + RaptorRouterTestBuilder.DEFAULT_DWELL_TIME);
+
+        assertEquals(1, connections.size());
+        Connection rangeRaptorConnection = connections.getFirst();
+        RangeRaptorHelpers.assertConnection(rangeRaptorConnection, EIGHT_AM, expectedArrivalTime);
+
+        // check that simple raptor connection is the same
+        RaptorAlgorithm simpleRaptor = builder.withRaptorRange(-1).build();
+        connections = RaptorRouterTestHelpers.routeEarliestArrival(simpleRaptor, STOP_A, STOP_I, departureTime);
+
+        assertEquals(1, connections.size());
+        Connection simpleRaptorConnection = connections.getFirst();
+        RangeRaptorHelpers.assertConnection(simpleRaptorConnection, EIGHT_AM, expectedArrivalTime);
+    }
+
+    @Test
+    void findArrivalConnections_thatWouldBeSameAsSimpleRaptor(RaptorRouterTestBuilder builder) {
+        LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(11);
+        LocalDateTime expectedDepartureTime = EIGHT_AM;
+
+        RaptorAlgorithm rangeRaptor = builder.withAddRoute1_AG()
+                .withAddRoute2_HL()
+                .withSameStopTransferTime(0)
+                .withRaptorRange(1800)
+                .withMaxDaysToScan(1)
+                .build();
+
+        RaptorAlgorithm simpleRaptor = builder.withRaptorRange(-1).build();
+
+        // Find connections from "A" to "I" arriving at 8:11 am. Should leave at "A" at 8:00 for both range and simple
+        // raptor.
+        List<Connection> rangeRaptorConnections = RaptorRouterTestHelpers.routeLatestDeparture(rangeRaptor, STOP_A,
+                STOP_I, arrivalTime);
+        List<Connection> simpleRaptorConnections = RaptorRouterTestHelpers.routeLatestDeparture(simpleRaptor, STOP_A,
+                STOP_I, arrivalTime);
+
+        assertEquals(1, rangeRaptorConnections.size());
+        assertEquals(1, simpleRaptorConnections.size());
+
+        RangeRaptorHelpers.assertConnection(rangeRaptorConnections.getFirst(), expectedDepartureTime, arrivalTime);
+        RangeRaptorHelpers.assertConnection(simpleRaptorConnections.getFirst(), expectedDepartureTime, arrivalTime);
+    }
+
+    @Test
+    void findDepartureConnections_withSourceTransferFirst() {
+        int headway_route_1 = 15;
+        int headway_route_2 = 30;
+
+        RaptorAlgorithm rangeRaptor = new RaptorRouterTestBuilder().withAddRoute1_AG(
+                        RaptorRouterTestBuilder.DEFAULT_OFFSET, headway_route_1,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withAddRoute2_HL(RaptorRouterTestBuilder.DEFAULT_OFFSET, headway_route_2,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withAddRoute3_MQ() // to create stop N
+                .withAddTransfer(STOP_N, STOP_A, 15)
+                .withSameStopTransferTime(0)
+                .withRaptorRange(1800)
+                .withMaxDaysToScan(1)
+                .build();
+
+        // Find connections from "N" to "I" departing at 8:00 am.
+        // It takes 15 minutes to walk from "N" to "A", thus earliest arrival at "A" is 8:15.
+        // Route 1 leaves "A" at 8:00, 8:15, 8:30, 8:45... and arrives at "B" 5 minutes later.
+        // Route 2 leaves "H" at 8:00, 8:30, 9:00... and arrives at "B" 5 minutes later and continues on to "I" one
+        // minute after arriving, the trip from "B" to "I" requires 5 minutes. Therefore, the shortest possible travel
+        // is 26 minutes, but since Route 2 only arrives at "B" at 8:35, the connection leaving "A" at 8:15  does not
+        // make sense and the connection leaving at 8:30 is the best option (for range raptor) --> the proposed
+        // connection should suggest leaving "N" at 8:15.
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(rangeRaptor, STOP_N, STOP_I,
+                EIGHT_AM);
+
+        LocalDateTime expectedDepartureTime = EIGHT_AM.plusMinutes(15);
+        LocalDateTime expectedArrivalTime = expectedDepartureTime.plusMinutes(26);
+
+        // first connection is the one with the least route legs --> including the transfer
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 3,
+                STOP_N, STOP_I);
+    }
+
+    @Test
+    void findArrivalConnections_withSourceTransferFirst() {
+        int headway_route_1 = 30;
+        int headway_route_2 = 15;
+
+        RaptorAlgorithm rangeRaptor = new RaptorRouterTestBuilder().withAddRoute1_AG(
+                        RaptorRouterTestBuilder.DEFAULT_OFFSET, headway_route_1,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withAddRoute2_HL(RaptorRouterTestBuilder.DEFAULT_OFFSET, headway_route_2,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withAddRoute3_MQ() // to create stop N
+                .withAddTransfer(STOP_N, STOP_I, 15)
+                .withSameStopTransferTime(0)
+                .withRaptorRange(1800)
+                .withMaxDaysToScan(1)
+                .build();
+
+        // Find connections from "A" to "N" arriving at 8:41 am.
+        // It takes 15 minutes to walk from "I" to "N", thus the latest departure at "N" is 8:26.
+        // Route 1 leaves "A" at 8:00, 8:30, 9:00... and arrives at "B" 5 minutes later.
+        // Route 2 leaves "H" at 8:00, 8:15, 8:30... and arrives at "B" 5 minutes later and continues on to "I" one
+        // minute after arriving, the trip from "B" to "I" requires 5 minutes. Therefore, the shortest possible travel
+        // is 26 minutes, but since Route 1 only arrives at "B" at 8:05, the connection leaving "B" at 8:06 to "I" makes
+        // more sense than waiting for the 8:21 Route 2 connection, thus the arrival time at "N" should be 8:26.
+        List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(rangeRaptor, STOP_A, STOP_N,
+                EIGHT_AM.plusMinutes(41));
+
+        LocalDateTime expectedDepartureTime = EIGHT_AM;
+        LocalDateTime expectedArrivalTime = expectedDepartureTime.plusMinutes(26);
+
+        // first connection is the one with the least route legs --> including the transfer
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 3,
+                STOP_A, STOP_N);
+    }
+
     static class RangeRaptorHelpers {
 
         static void assertConnection(Connection connection, LocalDateTime expectedDepartureTime,
                                      LocalDateTime expectedArrivalTime) {
-            assertEquals(2, connection.getLegs().size());
+            assertConnection(connection, expectedDepartureTime, expectedArrivalTime, 2, STOP_A, STOP_I);
+        }
+
+        static void assertConnection(Connection connection, LocalDateTime expectedDepartureTime,
+                                     LocalDateTime expectedArrivalTime, int numLegs, String fromStopId,
+                                     String toStopId) {
+            assertEquals(numLegs, connection.getLegs().size());
             assertEquals(expectedDepartureTime, connection.getDepartureTime());
             assertEquals(expectedArrivalTime, connection.getArrivalTime());
-            assertEquals(RangeRaptorTest.STOP_A, connection.getFromStopId());
-            assertEquals(RangeRaptorTest.STOP_I, connection.getToStopId());
+            assertEquals(fromStopId, connection.getFromStopId());
+            assertEquals(toStopId, connection.getToStopId());
         }
 
     }
