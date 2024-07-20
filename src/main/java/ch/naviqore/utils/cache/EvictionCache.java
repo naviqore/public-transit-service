@@ -7,7 +7,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -22,8 +23,10 @@ public class EvictionCache<K, V> {
     private final int size;
     private final Strategy strategy;
     private final Map<K, V> cache;
-    private final LinkedHashMap<K, Long> accessOrder; // Tracks insertion and access order
-    private final Lock lock = new ReentrantLock();
+    private final LinkedHashMap<K, Long> accessOrder;
+    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    private final Lock readLock = readWriteLock.readLock();
+    private final Lock writeLock = readWriteLock.writeLock();
 
     /**
      * Constructs a new EvictionCache with the specified size and eviction strategy.
@@ -50,12 +53,20 @@ public class EvictionCache<K, V> {
      * @return the current (existing or computed) value associated with the specified key
      */
     public V computeIfAbsent(K key, Supplier<V> supplier) {
-        lock.lock();
+        readLock.lock();
         try {
             if (cache.containsKey(key)) {
-                log.debug("Cache hit, retrieving cached instance for key {}", key);
-                updateAccessOrder(key);
-                return cache.get(key);
+                return retrieveFromCache(key);
+            }
+        } finally {
+            readLock.unlock();
+        }
+
+        writeLock.lock();
+        try {
+            // double-check to avoid re-computation
+            if (cache.containsKey(key)) {
+                return retrieveFromCache(key);
             }
 
             if (cache.size() >= size) {
@@ -69,7 +80,7 @@ public class EvictionCache<K, V> {
 
             return value;
         } finally {
-            lock.unlock();
+            writeLock.unlock();
         }
     }
 
@@ -77,12 +88,12 @@ public class EvictionCache<K, V> {
      * Clears the cache, removing all key-value mappings.
      */
     public void clear() {
-        lock.lock();
+        writeLock.lock();
         try {
             cache.clear();
             accessOrder.clear();
         } finally {
-            lock.unlock();
+            writeLock.unlock();
         }
     }
 
@@ -93,11 +104,11 @@ public class EvictionCache<K, V> {
      * @return {@code true} if this cache contains a mapping for the specified key
      */
     public boolean isCached(K key) {
-        lock.lock();
+        readLock.lock();
         try {
             return cache.containsKey(key);
         } finally {
-            lock.unlock();
+            readLock.unlock();
         }
     }
 
@@ -105,7 +116,18 @@ public class EvictionCache<K, V> {
      * Returns the current number of entries in the cache.
      */
     public int getNumberOfEntries() {
-        return cache.size();
+        readLock.lock();
+        try {
+            return cache.size();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    private V retrieveFromCache(K key) {
+        log.debug("Cache hit, retrieving cached instance for key {}", key);
+        updateAccessOrder(key);
+        return cache.get(key);
     }
 
     private void updateAccessOrder(K key) {
