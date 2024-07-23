@@ -62,9 +62,13 @@ public class EvictionCache<K, V> {
             readLock.unlock();
         }
 
+        // compute value without any lock to avoid global blocking of the cache,
+        // at the cost of potential duplicate computations.
+        V value = supplier.get();
+
         writeLock.lock();
         try {
-            // double-check to avoid re-computation
+            // double-check to avoid replacing value of key, if already existing
             if (cache.containsKey(key)) {
                 return retrieveFromCache(key);
             }
@@ -73,8 +77,7 @@ public class EvictionCache<K, V> {
                 evict();
             }
 
-            log.debug("No cache hit, computing new instance for key {}", key);
-            V value = supplier.get();
+            log.debug("No cache hit, setting new instance for key {}", key);
             cache.put(key, value);
             updateAccessOrder(key);
 
