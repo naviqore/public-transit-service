@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -16,17 +15,18 @@ import java.util.Map;
 @ToString
 public class RaptorConfig {
 
+    @Setter
     private RaptorTripMaskProvider maskProvider = new NoMaskProvider();
 
     private int daysToScan = 1;
     private int defaultSameStopTransferTime = 120;
 
     private int stopTimeCacheSize = 5;
+    @Setter
     private EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
 
     public RaptorConfig(int daysToScan, int defaultSameStopTransferTime, int stopTimeCacheSize,
-                        @NotNull EvictionCache.Strategy stopTimeCacheStrategy,
-                        @NotNull RaptorTripMaskProvider maskProvider) {
+                        EvictionCache.Strategy stopTimeCacheStrategy, RaptorTripMaskProvider maskProvider) {
         setDaysToScan(daysToScan);
         setDefaultSameStopTransferTime(defaultSameStopTransferTime);
         setStopTimeCacheSize(stopTimeCacheSize);
@@ -53,14 +53,6 @@ public class RaptorConfig {
             throw new IllegalArgumentException("Stop time cache size must be greater than 0.");
         }
         this.stopTimeCacheSize = stopTimeCacheSize;
-    }
-
-    public void setMaskProvider(@NotNull RaptorTripMaskProvider maskProvider) {
-        this.maskProvider = maskProvider;
-    }
-
-    public void setStopTimeCacheStrategy(@NotNull EvictionCache.Strategy stopTimeCacheStrategy) {
-        this.stopTimeCacheStrategy = stopTimeCacheStrategy;
     }
 
     /**
