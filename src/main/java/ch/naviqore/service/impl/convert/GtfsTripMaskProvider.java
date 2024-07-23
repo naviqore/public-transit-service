@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
 
     private final GtfsSchedule schedule;
+    private final GtfsTripMaskProvider.MaskCache cache;
     @Setter
     private Map<String, String[]> tripIds = null;
-    private final GtfsTripMaskProvider.MaskCache cache;
 
     public GtfsTripMaskProvider(GtfsSchedule schedule) {
         this(schedule, ServiceConfig.DEFAULT_CACHE_SIZE,
@@ -44,7 +44,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }
-        return cache.getMask(date);
+        return buildTripMask(date, cache.getActiveServices(date));
     }
 
     private RaptorDayMask buildTripMask(LocalDate date, String serviceId) {
@@ -68,7 +68,6 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
      * Caches for active services (= GTFS calendars) per date and raptor trip mask instances.
      */
     private class MaskCache {
-        private final EvictionCache<String, RaptorDayMask> maskCache;
         private final EvictionCache<LocalDate, String> activeServices;
 
         /**
@@ -76,18 +75,11 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
          * @param strategy  the cache eviction strategy.
          */
         MaskCache(int cacheSize, EvictionCache.Strategy strategy) {
-            maskCache = new EvictionCache<>(cacheSize, strategy);
             activeServices = new EvictionCache<>(Math.min(365, cacheSize * 20), strategy);
         }
 
         public String getActiveServices(LocalDate date) {
             return activeServices.computeIfAbsent(date, () -> getActiveServicesFromSchedule(date));
-        }
-
-        // get cached mask or build a new one
-        public RaptorDayMask getMask(LocalDate date) {
-            String activeServices = this.getActiveServices(date);
-            return maskCache.computeIfAbsent(activeServices, () -> buildTripMask(date, activeServices));
         }
 
         // get all active calendars form the gtfs for given date, serves as key for caching raptor instances
@@ -103,7 +95,6 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         // clear the cache, needs to be called when the GTFS schedule changes
         private void clear() {
             activeServices.clear();
-            maskCache.clear();
         }
 
     }

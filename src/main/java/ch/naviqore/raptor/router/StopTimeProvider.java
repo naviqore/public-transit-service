@@ -3,7 +3,6 @@ package ch.naviqore.raptor.router;
 import ch.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -21,7 +20,6 @@ class StopTimeProvider {
      */
     private final EvictionCache<String, int[]> stopTimeCache;
 
-    private final Map<LocalDate, String> serviceIds = new HashMap<>();
     private final RaptorData data;
     private final RaptorTripMaskProvider tripMaskProvider;
 
@@ -51,11 +49,7 @@ class StopTimeProvider {
      * @return the stop times for the given date.
      */
     int[] getStopTimesForDate(LocalDate date) {
-        String serviceId = serviceIds.get(date);
-        if (serviceId == null) {
-            serviceId = tripMaskProvider.getServiceIdForDate(date);
-            serviceIds.put(date, serviceId);
-        }
+        String serviceId = tripMaskProvider.getServiceIdForDate(date);
         return stopTimeCache.computeIfAbsent(serviceId, () -> createStopTimesForDate(date));
     }
 
@@ -92,7 +86,7 @@ class StopTimeProvider {
                     if (tripActive) {
                         newStopTimesArray[arrivalIndex] = originalStopTimesArray[arrivalIndex];
                         newStopTimesArray[departureIndex] = originalStopTimesArray[departureIndex];
-                        if( earliestRouteStopTime == TripMask.NO_TRIP ){
+                        if (earliestRouteStopTime == TripMask.NO_TRIP) {
                             earliestRouteStopTime = originalStopTimesArray[arrivalIndex];
                         }
                         latestRouteStopTime = originalStopTimesArray[departureIndex];
@@ -110,13 +104,13 @@ class StopTimeProvider {
             newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
 
             // maybe update the global start/end times for day
-            if( earliestRouteStopTime != TripMask.NO_TRIP && latestRouteStopTime != TripMask.NO_TRIP ){
+            if (earliestRouteStopTime != TripMask.NO_TRIP && latestRouteStopTime != TripMask.NO_TRIP) {
                 // set the global earliest stop time if not set or if the new time is earlier
-                if( newStopTimesArray[0] == TripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0] ){
+                if (newStopTimesArray[0] == TripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
                     newStopTimesArray[0] = earliestRouteStopTime;
                 }
                 // set the global latest stop time if not set or if the new time is later
-                if( newStopTimesArray[1] == TripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1] ){
+                if (newStopTimesArray[1] == TripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
                     newStopTimesArray[1] = latestRouteStopTime;
                 }
             }
