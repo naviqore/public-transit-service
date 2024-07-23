@@ -36,14 +36,14 @@ public class ServiceConfig {
     private final WalkCalculatorType walkingCalculatorType;
     private final double walkingSpeed;
     private final int walkingDurationMinimum;
-    private final int maxDaysToScan;
-    private final int cacheSize;
+    private final int raptorDaysToScan;
+    private final int cacheServiceDaySize;
     private final CacheEvictionStrategy cacheEvictionStrategy;
 
     public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
                          int transferTimeBetweenStopsMinimum, int transferTimeAccessEgress, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
-                         int maxDaysToScan, int cacheSize, CacheEvictionStrategy cacheEvictionStrategy) {
+                         int raptorDaysToScan, int cacheServiceDaySize, CacheEvictionStrategy cacheEvictionStrategy) {
 
         this.gtfsStaticUri = validateNonNull(gtfsStaticUri, "gtfsStaticUrl");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
@@ -56,8 +56,8 @@ public class ServiceConfig {
         this.walkingCalculatorType = validateNonNull(walkingCalculatorType, "walkingCalculatorType");
         this.walkingSpeed = validatePositive(walkingSpeed, "walkingSpeed");
         this.walkingDurationMinimum = validateNonNegative(walkingDurationMinimum, "walkingDurationMinimum");
-        this.maxDaysToScan = validatePositive(maxDaysToScan, "maxDaysToScan");
-        this.cacheSize = validatePositive(cacheSize, "cacheSize");
+        this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
+        this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }
 

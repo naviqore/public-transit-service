@@ -52,7 +52,7 @@ public class ServiceConfigParserIT {
         assertEquals(DEFAULT_WALKING_SPEED, config.getWalkingSpeed());
         assertEquals(DEFAULT_WALKING_SEARCH_RADIUS, config.getWalkingSearchRadius());
         assertEquals(DEFAULT_WALKING_DURATION_MINIMUM, config.getWalkingDurationMinimum());
-        assertEquals(DEFAULT_MAX_DAYS_TO_SCAN, config.getMaxDaysToScan());
+        assertEquals(DEFAULT_MAX_DAYS_TO_SCAN, config.getRaptorDaysToScan());
         assertEquals(DEFAULT_CACHE_SIZE, config.getCacheSize());
         assertEquals(CacheEvictionStrategy.LRU, config.getCacheEvictionStrategy());
     }
