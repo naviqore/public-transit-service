@@ -70,8 +70,8 @@ public class RaptorConfig {
         }
 
         @Override
-        public RaptorDayMask getTripMask(LocalDate date) {
-            Map<String, TripMask> tripMasks = new HashMap<>();
+        public RaptorTripMaskProvider.DayMask getTripMask(LocalDate date) {
+            Map<String, RouteMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();
                 String[] tripIds = entry.getValue();
@@ -79,10 +79,10 @@ public class RaptorConfig {
                 for (int i = 0; i < tripIds.length; i++) {
                     tripMask[i] = true;
                 }
-                tripMasks.put(routeId, new TripMask(tripMask));
+                tripMasks.put(routeId, new RouteMask(tripMask));
             }
 
-            return new RaptorDayMask(getServiceIdForDate(date), date, tripMasks);
+            return new RaptorTripMaskProvider.DayMask(getServiceIdForDate(date), date, tripMasks);
         }
     }
 

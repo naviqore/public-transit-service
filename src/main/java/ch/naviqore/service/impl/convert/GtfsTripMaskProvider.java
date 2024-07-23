@@ -1,9 +1,7 @@
 package ch.naviqore.service.impl.convert;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.router.RaptorDayMask;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
-import ch.naviqore.raptor.router.TripMask;
 import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.utils.cache.EvictionCache;
 import lombok.Setter;
@@ -40,15 +38,15 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     @Override
-    public RaptorDayMask getTripMask(LocalDate date) {
+    public RaptorTripMaskProvider.DayMask getTripMask(LocalDate date) {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }
         return buildTripMask(date, cache.getActiveServices(date));
     }
 
-    private RaptorDayMask buildTripMask(LocalDate date, String serviceId) {
-        Map<String, TripMask> tripMasks = new HashMap<>();
+    private RaptorTripMaskProvider.DayMask buildTripMask(LocalDate date, String serviceId) {
+        Map<String, RouteMask> tripMasks = new HashMap<>();
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
             String routeId = entry.getKey();
@@ -58,10 +56,10 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
                 tripMask[i] = schedule.getTrips().get(tripIds[i]).getCalendar().isServiceAvailable(date);
             }
 
-            tripMasks.put(routeId, new TripMask(tripMask));
+            tripMasks.put(routeId, new RouteMask(tripMask));
         }
 
-        return new RaptorDayMask(serviceId, date, tripMasks);
+        return new RaptorTripMaskProvider.DayMask(serviceId, date, tripMasks);
     }
 
     /**
