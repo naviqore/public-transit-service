@@ -24,7 +24,7 @@ public class GtfsRoutePartitioner {
     public GtfsRoutePartitioner(GtfsSchedule schedule) {
         log.info("Partitioning GTFS schedule with {} routes into sub-routes", schedule.getRoutes().size());
         schedule.getRoutes().values().forEach(this::processRoute);
-        log.info("Got {} sub-routes in schedule", subRoutes.values().stream().mapToInt(Map::size).sum());
+        log.debug("Got {} sub-routes in schedule", subRoutes.values().stream().mapToInt(Map::size).sum());
     }
 
     private void processRoute(Route route) {

@@ -109,7 +109,7 @@ public class RaptorRouterBuilder {
     }
 
     public RaptorAlgorithm build() {
-        log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
+        log.info("Initializing Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 
         // build route containers and the raptor array-based data structures
