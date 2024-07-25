@@ -18,10 +18,7 @@ public class ServiceConfigParserIT {
 
     static Stream<Arguments> provideTestCombinations() {
         return Stream.of(Arguments.of(-1, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_WALKING_SEARCH_RADIUS,
-                        DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE", "Minimum Transfer Time cannot be smaller than zero."),
-                Arguments.of(DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, -1, DEFAULT_WALKING_SEARCH_RADIUS,
-                        DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE",
-                        "Same Stop Transfer Time cannot be smaller than zero."),
+                        DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE", "Same Stop Transfer Time cannot be smaller than zero."),
                 Arguments.of(DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, -1,
                         DEFAULT_WALKING_SPEED, "BEE_LINE_DISTANCE",
                         "Maximum Walking Distance cannot be smaller than zero."),
@@ -40,7 +37,7 @@ public class ServiceConfigParserIT {
                 DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
                 DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS,
                 DEFAULT_WALKING_CALCULATOR_TYPE.name(), DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM,
-                DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name());
+                DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name());
         return parser.getServiceConfig();
     }
 
@@ -55,7 +52,8 @@ public class ServiceConfigParserIT {
         assertEquals(DEFAULT_WALKING_SPEED, config.getWalkingSpeed());
         assertEquals(DEFAULT_WALKING_SEARCH_RADIUS, config.getWalkingSearchRadius());
         assertEquals(DEFAULT_WALKING_DURATION_MINIMUM, config.getWalkingDurationMinimum());
-        assertEquals(DEFAULT_CACHE_SIZE, config.getCacheSize());
+        assertEquals(DEFAULT_MAX_DAYS_TO_SCAN, config.getRaptorDaysToScan());
+        assertEquals(DEFAULT_CACHE_SIZE, config.getCacheServiceDaySize());
         assertEquals(CacheEvictionStrategy.LRU, config.getCacheEvictionStrategy());
     }
 
@@ -65,8 +63,8 @@ public class ServiceConfigParserIT {
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
                         DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, "INVALID",
-                        DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE,
-                        DEFAULT_CACHE_EVICTION_STRATEGY.name()));
+                        DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN,
+                        DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()));
     }
 
     @ParameterizedTest(name = "{5}")
@@ -78,7 +76,7 @@ public class ServiceConfigParserIT {
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         transferTimeSameStopDefault, transferTimeBetweenStopsMinimum,
                         DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, walkingSearchRadius, walkingCalculatorType.toUpperCase(),
-                        walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_CACHE_SIZE,
+                        walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_CACHE_SIZE,
                         DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
     }
 

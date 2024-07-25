@@ -3,11 +3,12 @@ package ch.naviqore.service.impl.convert;
 import ch.naviqore.gtfs.schedule.model.*;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
+import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,23 +33,23 @@ public class GtfsToRaptorConverter {
     private final List<TransferGenerator.Transfer> additionalTransfers;
     private final GtfsSchedule schedule;
 
-    public GtfsToRaptorConverter(GtfsSchedule schedule, int sameStopTransferTime) {
-        this(schedule, List.of(), sameStopTransferTime);
+    public GtfsToRaptorConverter(GtfsSchedule schedule, RaptorConfig config) {
+        this(schedule, List.of(), config);
     }
 
     public GtfsToRaptorConverter(GtfsSchedule schedule, List<TransferGenerator.Transfer> additionalTransfers,
-                                 int sameStopTransferTime) {
+                                 RaptorConfig config) {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
-        this.builder = RaptorAlgorithm.builder(sameStopTransferTime);
+        this.builder = RaptorAlgorithm.builder(config);
     }
 
-    public RaptorAlgorithm convert(LocalDate date) {
-        List<Trip> activeTrips = schedule.getActiveTrips(date);
-        log.info("Converting {} active trips from GTFS schedule to Raptor model", activeTrips.size());
+    public RaptorAlgorithm convert() {
+        Collection<Trip> trips = schedule.getTrips().values();
+        log.info("Converting {} trips from GTFS schedule to Raptor model", trips.size());
 
-        for (Trip trip : activeTrips) {
+        for (Trip trip : trips) {
             GtfsRoutePartitioner.SubRoute subRoute = partitioner.getSubRoute(trip);
 
             // add route if not already

@@ -28,10 +28,6 @@ class DummyService implements PublicTransitService {
 
     static final List<DummyServiceModels.Stop> STOPS = List.of(STOP_A, STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G,
             STOP_H);
-
-    private record RouteData(DummyServiceModels.Route route, List<DummyServiceModels.Stop> stops) {
-    }
-
     private static final RouteData ROUTE_1 = new RouteData(
             new DummyServiceModels.Route("1", "Route 1", "R1", "BUS", "Agency 1"),
             List.of(STOP_A, STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G));
@@ -41,7 +37,6 @@ class DummyService implements PublicTransitService {
     private static final RouteData ROUTE_3 = new RouteData(
             new DummyServiceModels.Route("3", "Route 3", "R3", "BUS", "Agency 3"),
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
-
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
     @Override
@@ -88,11 +83,9 @@ class DummyService implements PublicTransitService {
         for (Stop stop : STOPS) {
             try {
                 if (timeType == TimeType.DEPARTURE) {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
                 } else {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
                 }
             } catch (IllegalArgumentException e) {
                 // ignore
@@ -111,11 +104,9 @@ class DummyService implements PublicTransitService {
             }
             try {
                 if (timeType == TimeType.DEPARTURE) {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(source, stop, time, timeType));
                 } else {
-                    connections.put(stop,
-                            DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
+                    connections.put(stop, DummyConnectionGenerators.getSimpleConnection(stop, source, time, timeType));
                 }
             } catch (IllegalArgumentException e) {
                 // ignore
@@ -176,6 +167,9 @@ class DummyService implements PublicTransitService {
                 .map(routeData -> routeData.route)
                 .findFirst()
                 .orElseThrow(() -> new RouteNotFoundException(routeId));
+    }
+
+    private record RouteData(DummyServiceModels.Route route, List<DummyServiceModels.Stop> stops) {
     }
 
     static class DummyConnectionGenerators {

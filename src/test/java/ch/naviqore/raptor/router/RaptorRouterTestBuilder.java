@@ -53,11 +53,14 @@ public class RaptorRouterTestBuilder {
 
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
-    private int sameStopTransferTime = 120;
+
+    private int daysToScan = 1;
+    private int defaultSameStopTransferTime = 120;
+    private RaptorTripMaskProvider tripMaskProvider = new RaptorConfig.NoMaskProvider();
 
     private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                         int sameStopTransferTime) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(sameStopTransferTime);
+                                         RaptorConfig config) {
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(config);
         Set<String> addedStops = new HashSet<>();
 
         for (Route route : routes) {
@@ -177,12 +180,31 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withSameStopTransferTime(int time) {
-        this.sameStopTransferTime = time;
+        this.defaultSameStopTransferTime = time;
+        return this;
+    }
+
+    public RaptorRouterTestBuilder withMaxDaysToScan(int days) {
+        this.daysToScan = days;
+        return this;
+    }
+
+    public RaptorRouterTestBuilder withTripMaskProvider(RaptorTripMaskProvider provider) {
+        this.tripMaskProvider = provider;
         return this;
     }
 
     public RaptorAlgorithm build() {
-        return build(routes, transfers, DAY_START_HOUR, DAY_END_HOUR, sameStopTransferTime);
+        return build(DAY_START_HOUR, DAY_END_HOUR);
+    }
+
+    RaptorAlgorithm build(int startOfDay, int endOfDay) {
+        RaptorConfig config = new RaptorConfig();
+        config.setDaysToScan(daysToScan);
+        config.setDefaultSameStopTransferTime(defaultSameStopTransferTime);
+        config.setMaskProvider(tripMaskProvider);
+        config.setStopTimeCacheSize(daysToScan);
+        return build(routes, transfers, startOfDay, endOfDay, config);
     }
 
     public RaptorAlgorithm buildWithDefaults() {

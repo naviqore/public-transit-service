@@ -40,8 +40,12 @@ public class PublicTransitServiceInitializer {
         this.walkCalculator = initializeWalkCalculator(config);
         this.stopSearchIndex = generateStopSearchIndex(schedule);
         this.spatialStopIndex = generateSpatialStopIndex(schedule);
-        this.additionalTransfers = generateTransfers(schedule,
-                createTransferGenerators(config, walkCalculator, spatialStopIndex));
+        if (config.getTransferTimeBetweenStopsMinimum() >= 0) {
+            this.additionalTransfers = generateTransfers(schedule,
+                    createTransferGenerators(config, walkCalculator, spatialStopIndex));
+        } else {
+            this.additionalTransfers = new ArrayList<>();
+        }
     }
 
     private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {

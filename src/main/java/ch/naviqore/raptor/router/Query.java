@@ -4,6 +4,7 @@ import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +32,9 @@ class Query {
     private final int cutoffTime;
     private final StopLabelsAndTimes stopLabelsAndTimes;
 
+    private final LocalDateTime referenceDate;
+    private final int maxDaysToScan;
+
     /**
      * @param raptorData               the current raptor data structures.
      * @param sourceStopIndices        the indices of the source stops.
@@ -39,9 +43,12 @@ class Query {
      * @param walkingDurationsToTarget the walking durations to the target stops.
      * @param timeType                 the time type (arrival or departure) of the query.
      * @param config                   the query configuration.
+     * @param referenceDate            the reference date for the query.
+     * @param raptorConfig             the raptor configuration.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType) {
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDateTime referenceDate,
+          RaptorConfig raptorConfig) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
@@ -58,6 +65,8 @@ class Query {
         this.walkingDurationsToTarget = walkingDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
+        this.referenceDate = referenceDate;
+        this.maxDaysToScan = raptorConfig.getDaysToScan();
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
@@ -85,7 +94,7 @@ class Query {
         FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData,
                 config.getMinimumTransferDuration(), config.getMaximumWalkingDuration(), timeType);
         RouteScanner routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData,
-                config.getMinimumTransferDuration(), timeType);
+                config.getMinimumTransferDuration(), timeType, referenceDate, maxDaysToScan);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = initialize();
@@ -118,7 +127,7 @@ class Query {
      * @return the initially marked stops.
      */
     Set<Integer> initialize() {
-        log.info("Initializing global best times per stop and best labels per round");
+        log.debug("Initializing global best times per stop and best labels per round");
 
         // fill target stops
         for (int i = 0; i < targetStops.length; i += 2) {

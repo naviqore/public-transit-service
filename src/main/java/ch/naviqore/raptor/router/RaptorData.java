@@ -11,4 +11,6 @@ interface RaptorData {
 
     RouteTraversal getRouteTraversal();
 
+    StopTimeProvider getStopTimeProvider();
+
 }

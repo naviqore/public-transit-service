@@ -28,13 +28,27 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final RouteTraversal routeTraversal;
 
+    @Getter
+    private final StopTimeProvider stopTimeProvider;
+
+    private final RaptorConfig config;
+
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, RaptorConfig config) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
+        this.config = config;
+        config.getMaskProvider().setTripIds(lookup.routeTripIds());
+        this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
+                config.getStopTimeCacheStrategy());
         validator = new InputValidator(lookup.stops());
+    }
+
+    @Override
+    public void prepareStopTimesForDate(LocalDate date) {
+        stopTimeProvider.getStopTimesForDate(date);
     }
 
     @Override
@@ -68,14 +82,15 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.validateSourceStopTimes(sourceStops);
 
         log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
-        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops, referenceDate));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
-                refStopTimes, new int[]{}, config, timeType).run();
+                refStopTimes, new int[]{}, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
@@ -98,7 +113,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
         InputValidator.validateSourceStopTimes(sourceStops);
-        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<String, Integer> sourceStopsSecondsOfDay = DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops,
                 referenceDate);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
@@ -111,7 +127,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType).run();
+                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops, referenceDate);
@@ -190,7 +206,7 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 if (stopsToIdx.containsKey(stopId)) {
                     validStopIds.put(stopsToIdx.get(stopId), time);
                 } else {
-                    log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
+                    log.debug("Stop ID {} not found in lookup removing from query.", entry.getKey());
                 }
             }
 

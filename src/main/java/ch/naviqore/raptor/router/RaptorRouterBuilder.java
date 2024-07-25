@@ -8,8 +8,6 @@ import java.util.*;
 
 import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 
-// TODO remove duplicated step of generating same stop transfers
-
 /**
  * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
  * are correctly added and validated before constructing the Raptor model:
@@ -26,7 +24,7 @@ import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
 @Slf4j
 public class RaptorRouterBuilder {
 
-    private final int defaultSameStopTransferTime;
+    private final RaptorConfig config;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
     private final Map<String, List<Transfer>> transfers = new HashMap<>();
@@ -37,8 +35,8 @@ public class RaptorRouterBuilder {
     int routeStopSize = 0;
     int transferSize = 0;
 
-    public RaptorRouterBuilder(int defaultSameStopTransferTime) {
-        this.defaultSameStopTransferTime = defaultSameStopTransferTime;
+    public RaptorRouterBuilder(RaptorConfig config) {
+        this.config = config;
     }
 
     public RaptorRouterBuilder addStop(String id) {
@@ -111,7 +109,7 @@ public class RaptorRouterBuilder {
     }
 
     public RaptorAlgorithm build() {
-        log.info("Initialize Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
+        log.info("Initializing Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 
         // build route containers and the raptor array-based data structures
@@ -120,7 +118,7 @@ public class RaptorRouterBuilder {
         StopContext stopContext = buildStopContext(lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
 
-        return new RaptorRouter(lookup, stopContext, routeTraversal);
+        return new RaptorRouter(lookup, stopContext, routeTraversal, config);
     }
 
     private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
@@ -130,14 +128,16 @@ public class RaptorRouterBuilder {
     private Lookup buildLookup(List<RouteBuilder.RouteContainer> routeContainers) {
         log.debug("Building lookup with {} stops and {} routes", stops.size(), routeContainers.size());
         Map<String, Integer> routes = new HashMap<>(routeContainers.size());
+        Map<String, String[]> routeTripIds = new HashMap<>();
 
         // assign idx to routes based on sorted order
         for (int i = 0; i < routeContainers.size(); i++) {
             RouteBuilder.RouteContainer routeContainer = routeContainers.get(i);
             routes.put(routeContainer.id(), i);
+            routeTripIds.put(routeContainer.id(), routeContainer.trips().keySet().toArray(new String[0]));
         }
 
-        return new Lookup(Map.copyOf(stops), Map.copyOf(routes));
+        return new Lookup(Map.copyOf(stops), Map.copyOf(routes), Map.copyOf(routeTripIds));
     }
 
     private StopContext buildStopContext(Lookup lookup) {
@@ -165,7 +165,7 @@ public class RaptorRouterBuilder {
             List<Transfer> currentTransfers = transfers.get(stopId);
             int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
 
-            int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, defaultSameStopTransferTime);
+            int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, config.getDefaultSameStopTransferTime());
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
@@ -194,11 +194,16 @@ public class RaptorRouterBuilder {
         // allocate arrays in needed size
         Route[] routeArr = new Route[routeContainers.size()];
         RouteStop[] routeStopArr = new RouteStop[routeStopSize];
-        StopTime[] stopTimeArr = new StopTime[stopTimeSize];
+        int[] stopTimeArr = new int[2 + (stopTimeSize * 2) + (routeContainers.size() * 2)];
 
         // iterate over routes and populate arrays
         int routeStopCnt = 0;
-        int stopTimeCnt = 0;
+
+        // placeholders for min/max value of day
+        stopTimeArr[0] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        stopTimeArr[1] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+
+        int stopTimeCnt = 2;
         for (int routeIdx = 0; routeIdx < routeContainers.size(); routeIdx++) {
             RouteBuilder.RouteContainer routeContainer = routeContainers.get(routeIdx);
 
@@ -207,6 +212,10 @@ public class RaptorRouterBuilder {
             final int numberOfTrips = routeContainer.trips().size();
             routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt, numberOfTrips,
                     routeContainer.trips().keySet().toArray(new String[0]));
+
+            // will be route day min/max values
+            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
@@ -218,7 +227,8 @@ public class RaptorRouterBuilder {
             // add times to stop time array
             for (StopTime[] stopTimes : routeContainer.trips().values()) {
                 for (StopTime stopTime : stopTimes) {
-                    stopTimeArr[stopTimeCnt++] = stopTime;
+                    stopTimeArr[stopTimeCnt++] = stopTime.arrival();
+                    stopTimeArr[stopTimeCnt++] = stopTime.departure();
                 }
             }
         }
