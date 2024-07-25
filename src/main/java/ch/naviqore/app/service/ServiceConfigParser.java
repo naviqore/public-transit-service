@@ -20,9 +20,9 @@ public class ServiceConfigParser {
                                @Value("${walking.calculator.type}") String walkingCalculatorType,
                                @Value("${walking.speed}") double walkingSpeed,
                                @Value("${walking.duration.minimum}") int walkingDurationMinimum,
-                               @Value("${raptor.days.to.scan}") int maxDaysToScan,
+                               @Value("${raptor.days.to.scan}") int raptorDaysToScan,
                                @Value("${raptor.range}") int raptorRange,
-                               @Value("${cache.number.service.day}") int cacheSize,
+                               @Value("${cache.service.day.size}") int cacheServiceDaySize,
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
         ServiceConfig.WalkCalculatorType walkCalculatorTypeEnum = ServiceConfig.WalkCalculatorType.valueOf(
@@ -32,7 +32,7 @@ public class ServiceConfigParser {
 
         this.serviceConfig = new ServiceConfig(gtfsStaticUri, gtfsStaticUpdateCron, transferTimeSameStopDefault,
                 transferTimeBetweenStopsMinimum, transferTimeAccessEgress, walkingSearchRadius, walkCalculatorTypeEnum,
-                walkingSpeed, walkingDurationMinimum, maxDaysToScan, raptorRange, cacheSize, cacheEvictionStrategyEnum);
+                walkingSpeed, walkingDurationMinimum, raptorDaysToScan, raptorRange, cacheServiceDaySize, cacheEvictionStrategyEnum);
     }
 
 }

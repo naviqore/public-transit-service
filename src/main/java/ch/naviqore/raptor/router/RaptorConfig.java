@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -16,6 +15,7 @@ import java.util.Map;
 @ToString
 public class RaptorConfig {
 
+    @Setter
     private RaptorTripMaskProvider maskProvider = new NoMaskProvider();
 
     private int daysToScan = 1;
@@ -25,11 +25,11 @@ public class RaptorConfig {
     private int raptorRange = 1800; // 30 minutes
 
     private int stopTimeCacheSize = 5;
+    @Setter
     private EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
 
     public RaptorConfig(int daysToScan, int raptorRange, int defaultSameStopTransferTime, int stopTimeCacheSize,
-                        @NotNull EvictionCache.Strategy stopTimeCacheStrategy,
-                        @NotNull RaptorTripMaskProvider maskProvider) {
+                        EvictionCache.Strategy stopTimeCacheStrategy, RaptorTripMaskProvider maskProvider) {
         setRaptorRange(raptorRange);
         setDaysToScan(daysToScan);
         setDefaultSameStopTransferTime(defaultSameStopTransferTime);
@@ -59,14 +59,6 @@ public class RaptorConfig {
         this.stopTimeCacheSize = stopTimeCacheSize;
     }
 
-    public void setMaskProvider(@NotNull RaptorTripMaskProvider maskProvider) {
-        this.maskProvider = maskProvider;
-    }
-
-    public void setStopTimeCacheStrategy(@NotNull EvictionCache.Strategy stopTimeCacheStrategy) {
-        this.stopTimeCacheStrategy = stopTimeCacheStrategy;
-    }
-
     public RaptorConfig copy() {
         return new RaptorConfig(daysToScan, raptorRange, defaultSameStopTransferTime, stopTimeCacheSize,
                 stopTimeCacheStrategy, maskProvider);
@@ -77,6 +69,7 @@ public class RaptorConfig {
      */
     @Setter
     @NoArgsConstructor
+
     static class NoMaskProvider implements RaptorTripMaskProvider {
 
         Map<String, String[]> tripIds = null;
@@ -87,8 +80,8 @@ public class RaptorConfig {
         }
 
         @Override
-        public RaptorDayMask getTripMask(LocalDate date) {
-            Map<String, TripMask> tripMasks = new HashMap<>();
+        public DayTripMask getDayTripMask(LocalDate date) {
+            Map<String, RouteTripMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();
                 String[] tripIds = entry.getValue();
@@ -96,10 +89,10 @@ public class RaptorConfig {
                 for (int i = 0; i < tripIds.length; i++) {
                     tripMask[i] = true;
                 }
-                tripMasks.put(routeId, new TripMask(tripMask));
+                tripMasks.put(routeId, new RouteTripMask(tripMask));
             }
 
-            return new RaptorDayMask(getServiceIdForDate(date), date, tripMasks);
+            return new DayTripMask(getServiceIdForDate(date), date, tripMasks);
         }
     }
 

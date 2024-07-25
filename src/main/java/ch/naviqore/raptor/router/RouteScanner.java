@@ -196,7 +196,7 @@ class RouteScanner {
         for (int i = 0; i < actualDaysToScan; i++) {
             int stopTimeStartIndex = route.firstStopTimeIdx();
             // This means the earliest and latest trip time are set for the route (route is active on given day)
-            if (stopTimes[i][stopTimeStartIndex] != TripMask.NO_TRIP && stopTimes[i][stopTimeStartIndex + 1] != TripMask.NO_TRIP) {
+            if (stopTimes[i][stopTimeStartIndex] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && stopTimes[i][stopTimeStartIndex + 1] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                 return true;
             }
         }
@@ -272,7 +272,7 @@ class RouteScanner {
         for (int dayIndex = stopTimes.length - 1; dayIndex >= 0; dayIndex--) {
             int dayOffset = dayIndex + startDayOffset;
             int time = stopTimes[dayIndex][stopTimeIdx];
-            if (time != TripMask.NO_TRIP) {
+            if (time != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                 int timeOffset = (timeType == TimeType.DEPARTURE ? 1 : -1) * dayOffset * SECONDS_IN_DAY;
                 return time + timeOffset;
             }
@@ -373,7 +373,7 @@ class RouteScanner {
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
                 int relevantStopTime = stopTimes[dayIndex][(timeType == TimeType.DEPARTURE) ? stopTimeIndex + 1 : stopTimeIndex];
                 // Trip is not active
-                if (relevantStopTime == TripMask.NO_TRIP) {
+                if (relevantStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                     continue;
                 }
                 relevantStopTime += timeOffset;
