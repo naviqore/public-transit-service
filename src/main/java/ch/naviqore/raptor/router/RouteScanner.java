@@ -496,7 +496,7 @@ class RouteScanner {
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
                 int stopTime = stopTimes[dayIndex][(timeType == TimeType.DEPARTURE) ? stopTimeIndex + 1 : stopTimeIndex];
                 // Trip is not active
-                if (stopTime == TripMask.NO_TRIP) {
+                if (stopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                     continue;
                 }
                 stopTime += timeOffset;
