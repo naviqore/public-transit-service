@@ -200,8 +200,8 @@ public class RaptorRouterBuilder {
         int routeStopCnt = 0;
 
         // placeholders for min/max value of day
-        stopTimeArr[0] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
-        stopTimeArr[1] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
+        stopTimeArr[0] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        stopTimeArr[1] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
         int stopTimeCnt = 2;
         for (int routeIdx = 0; routeIdx < routeContainers.size(); routeIdx++) {
@@ -214,8 +214,8 @@ public class RaptorRouterBuilder {
                     routeContainer.trips().keySet().toArray(new String[0]));
 
             // will be route day min/max values
-            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
-            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
+            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+            stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();

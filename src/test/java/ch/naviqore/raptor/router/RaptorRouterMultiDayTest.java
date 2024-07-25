@@ -52,26 +52,26 @@ public class RaptorRouterMultiDayTest {
         }
 
         @Override
-        public RaptorTripMaskProvider.DayMask getTripMask(LocalDate date) {
+        public DayTripMask getDayTripMask(LocalDate date) {
 
             Set<String> blockedRouteIds = blockedRoutes.getOrDefault(date, Set.of());
 
-            Map<String, RouteMask> tripMasks = new HashMap<>();
+            Map<String, RouteTripMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();
                 String[] tripIds = entry.getValue();
                 if (blockedRouteIds.contains(routeId)) {
-                    tripMasks.put(routeId, new RouteMask(new boolean[tripIds.length]));
+                    tripMasks.put(routeId, new RouteTripMask(new boolean[tripIds.length]));
                 } else {
                     boolean[] tripMask = new boolean[tripIds.length];
                     for (int i = 0; i < tripIds.length; i++) {
                         tripMask[i] = true;
                     }
-                    tripMasks.put(routeId, new RouteMask(tripMask));
+                    tripMasks.put(routeId, new RouteTripMask(tripMask));
                 }
             }
 
-            return new RaptorTripMaskProvider.DayMask(getServiceIdForDate(date), date, tripMasks);
+            return new DayTripMask(getServiceIdForDate(date), date, tripMasks);
         }
     }
 

@@ -39,28 +39,29 @@ public interface RaptorTripMaskProvider {
      * @param date the date for which the trip mask should be returned.
      * @return the raptor day mask of the day.
      */
-    DayMask getTripMask(LocalDate date);
+    DayTripMask getDayTripMask(LocalDate date);
 
     /**
-     * This represents a service day mask for a given day.
+     * This represents a service day trip mask for a given day.
      * <p>
      * The service day mask holds the date it's valid for, a serviceId which can be identical for multiple days if the
-     * service is the same. And a map of route ids to {@link RouteMask}.
+     * service is the same. And a map of route ids to {@link RouteTripMask}.
      *
      * @param serviceId the service id for the day
      * @param date      the date of the day
-     * @param tripMask  a map of route ids to trip masks for the day
+     * @param tripMask  a map of route ids to route trip masks for the day
      */
-    record DayMask(String serviceId, LocalDate date, Map<String, RouteMask> tripMask) {
+    record DayTripMask(String serviceId, LocalDate date, Map<String, RouteTripMask> tripMask) {
     }
 
     /**
      * Represents a route trip mask for a given day and route.
      *
-     * @param tripMask the route trip mask for the day, where each index represents trip (sorted by departure times) and
-     *                 the boolean value at that index indicates if the trip is taking place on the given day.
+     * @param routeTripMask the route trip mask for the day, where each index represents trip (sorted by departure
+     *                      times) and the boolean value at that index indicates if the trip is taking place on the
+     *                      given day.
      */
-    record RouteMask(boolean[] tripMask) {
+    record RouteTripMask(boolean[] routeTripMask) {
         public static final int NO_TRIP = Integer.MIN_VALUE;
     }
 

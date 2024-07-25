@@ -54,28 +54,28 @@ class StopTimeProvider {
     }
 
     private int[] createStopTimesForDate(LocalDate date) {
-        RaptorTripMaskProvider.DayMask mask = tripMaskProvider.getTripMask(date);
+        RaptorTripMaskProvider.DayTripMask mask = tripMaskProvider.getDayTripMask(date);
 
         int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
         int[] newStopTimesArray = new int[originalStopTimesArray.length];
 
         // set the global start and end times for the day (initially set to NO_TRIP)
-        newStopTimesArray[0] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
-        newStopTimesArray[1] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
+        newStopTimesArray[0] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        newStopTimesArray[1] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
         // set the stop times for each route
-        for (Map.Entry<String, RaptorTripMaskProvider.RouteMask> entry : mask.tripMask().entrySet()) {
+        for (Map.Entry<String, RaptorTripMaskProvider.RouteTripMask> entry : mask.tripMask().entrySet()) {
             String routeId = entry.getKey();
-            RaptorTripMaskProvider.RouteMask tripMask = entry.getValue();
+            RaptorTripMaskProvider.RouteTripMask tripMask = entry.getValue();
             int routeIdx = data.getLookup().routes().get(routeId);
             Route route = data.getRouteTraversal().routes()[routeIdx];
             int numStops = route.numberOfStops();
             int stopTimeIndex = route.firstStopTimeIdx();
 
-            boolean[] booleanMask = tripMask.tripMask();
+            boolean[] booleanMask = tripMask.routeTripMask();
 
-            int earliestRouteStopTime = RaptorTripMaskProvider.RouteMask.NO_TRIP;
-            int latestRouteStopTime = RaptorTripMaskProvider.RouteMask.NO_TRIP;
+            int earliestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+            int latestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
             int tripOffset = 0;
             for (boolean tripActive : booleanMask) {
@@ -86,14 +86,14 @@ class StopTimeProvider {
                     if (tripActive) {
                         newStopTimesArray[arrivalIndex] = originalStopTimesArray[arrivalIndex];
                         newStopTimesArray[departureIndex] = originalStopTimesArray[departureIndex];
-                        if (earliestRouteStopTime == RaptorTripMaskProvider.RouteMask.NO_TRIP) {
+                        if (earliestRouteStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                             earliestRouteStopTime = originalStopTimesArray[arrivalIndex];
                         }
                         latestRouteStopTime = originalStopTimesArray[departureIndex];
 
                     } else {
-                        newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
-                        newStopTimesArray[departureIndex] = RaptorTripMaskProvider.RouteMask.NO_TRIP;
+                        newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+                        newStopTimesArray[departureIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
                     }
                 }
                 tripOffset++;
@@ -104,13 +104,13 @@ class StopTimeProvider {
             newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
 
             // maybe update the global start/end times for day
-            if (earliestRouteStopTime != RaptorTripMaskProvider.RouteMask.NO_TRIP && latestRouteStopTime != RaptorTripMaskProvider.RouteMask.NO_TRIP) {
+            if (earliestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && latestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                 // set the global earliest stop time if not set or if the new time is earlier
-                if (newStopTimesArray[0] == RaptorTripMaskProvider.RouteMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
+                if (newStopTimesArray[0] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
                     newStopTimesArray[0] = earliestRouteStopTime;
                 }
                 // set the global latest stop time if not set or if the new time is later
-                if (newStopTimesArray[1] == RaptorTripMaskProvider.RouteMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
+                if (newStopTimesArray[1] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
                     newStopTimesArray[1] = latestRouteStopTime;
                 }
             }

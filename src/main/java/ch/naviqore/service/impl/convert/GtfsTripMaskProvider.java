@@ -38,15 +38,15 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     @Override
-    public RaptorTripMaskProvider.DayMask getTripMask(LocalDate date) {
+    public DayTripMask getDayTripMask(LocalDate date) {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }
         return buildTripMask(date, cache.getActiveServices(date));
     }
 
-    private RaptorTripMaskProvider.DayMask buildTripMask(LocalDate date, String serviceId) {
-        Map<String, RouteMask> tripMasks = new HashMap<>();
+    private DayTripMask buildTripMask(LocalDate date, String serviceId) {
+        Map<String, RouteTripMask> tripMasks = new HashMap<>();
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
             String routeId = entry.getKey();
@@ -56,10 +56,10 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
                 tripMask[i] = schedule.getTrips().get(tripIds[i]).getCalendar().isServiceAvailable(date);
             }
 
-            tripMasks.put(routeId, new RouteMask(tripMask));
+            tripMasks.put(routeId, new RouteTripMask(tripMask));
         }
 
-        return new RaptorTripMaskProvider.DayMask(serviceId, date, tripMasks);
+        return new DayTripMask(serviceId, date, tripMasks);
     }
 
     /**
