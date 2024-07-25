@@ -55,7 +55,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheServiceDaySize(), cacheStrategy);
 
         // build raptor algorithm
-        RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(),
+        RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
                 config.getTransferTimeSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
                 tripMaskProvider);
         raptorAlgorithm = new GtfsToRaptorConverter(schedule, additionalTransfers, raptorConfig).convert();

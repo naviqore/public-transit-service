@@ -61,6 +61,7 @@ final class Benchmark {
     private static final int NOT_AVAILABLE = -1;
     private static final int SAME_STOP_TRANSFER_TIME = 120;
     private static final int MAX_DAYS_TO_SCAN = 3;
+    private static final int RAPTOR_RANGE = -1; // No range raptor
 
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
@@ -78,8 +79,8 @@ final class Benchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, SAME_STOP_TRANSFER_TIME, MAX_DAYS_TO_SCAN,
-                EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
+        RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, RAPTOR_RANGE, SAME_STOP_TRANSFER_TIME,
+                MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(schedule, config).convert();
         manageResources();
 

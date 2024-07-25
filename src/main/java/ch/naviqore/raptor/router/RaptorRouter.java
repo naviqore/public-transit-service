@@ -39,7 +39,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        this.config = config;
+        // to prevent changing the raptor configuration after initialization the configuration is copied
+        this.config = config.copy();
         config.getMaskProvider().setTripIds(lookup.routeTripIds());
         this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
                 config.getStopTimeCacheStrategy());

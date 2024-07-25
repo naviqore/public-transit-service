@@ -5,10 +5,7 @@ import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
 
@@ -24,16 +21,16 @@ class Query {
     private final int[] sourceTimes;
     private final int[] walkingDurationsToTarget;
 
-    private final RaptorData raptorData;
     private final QueryConfig config;
     private final TimeType timeType;
 
     private final int[] targetStops;
     private final int cutoffTime;
     private final StopLabelsAndTimes stopLabelsAndTimes;
+    private final FootpathRelaxer footpathRelaxer;
+    private final RouteScanner routeScanner;
 
-    private final LocalDateTime referenceDate;
-    private final int maxDaysToScan;
+    private final int raptorRange;
 
     /**
      * @param raptorData               the current raptor data structures.
@@ -58,19 +55,23 @@ class Query {
             throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
         }
 
-        this.raptorData = raptorData;
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
         this.walkingDurationsToTarget = walkingDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
-        this.referenceDate = referenceDate;
-        this.maxDaysToScan = raptorConfig.getDaysToScan();
+        this.raptorRange = raptorConfig.getRaptorRange();
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
         stopLabelsAndTimes = new StopLabelsAndTimes(raptorData.getStopContext().stops().length, timeType);
+
+        // set up footpath relaxer and route scanner and inject stop labels and times
+        footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(),
+                config.getMaximumWalkingDuration(), timeType);
+        routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(), timeType,
+                referenceDate, raptorConfig.getDaysToScan());
     }
 
     /**
@@ -90,16 +91,65 @@ class Query {
      * </ul>
      */
     List<StopLabelsAndTimes.Label[]> run() {
-        // set up footpath relaxer and route scanner and inject stop labels and times
-        FootpathRelaxer footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData,
-                config.getMinimumTransferDuration(), config.getMaximumWalkingDuration(), timeType);
-        RouteScanner routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData,
-                config.getMinimumTransferDuration(), timeType, referenceDate, maxDaysToScan);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = initialize();
         markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
         markedStops = removeSuboptimalLabelsForRound(0, markedStops);
+
+        // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
+        if (raptorRange <= 0) {
+            doRounds(markedStops);
+        } else {
+            doRangeRaptor(markedStops);
+        }
+        return stopLabelsAndTimes.getBestLabelsPerRound();
+    }
+
+    void doRangeRaptor(Set<Integer> markedStops) {
+        // prepare range offsets
+        List<Integer> rangeOffsets = getRangeOffsets(markedStops, routeScanner);
+        HashMap<Integer, Integer> stopIdxSourceTimes = new HashMap<>();
+        for (int stopIdx : markedStops) {
+            stopIdxSourceTimes.put(stopIdx, stopLabelsAndTimes.getLabel(0, stopIdx).targetTime());
+        }
+
+        // scan all range offsets in reverse order (earliest arrival / latest departure first)
+        for (int offsetIdx = rangeOffsets.size() - 1; offsetIdx >= 0; offsetIdx--) {
+            int rangeOffset = rangeOffsets.get(offsetIdx);
+            int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
+            log.debug("Running rounds with range offset {}", rangeOffset);
+
+            // set source times to the source times of the previous round
+            for (int stopIdx : markedStops) {
+                StopLabelsAndTimes.Label label = stopLabelsAndTimes.getLabel(0, stopIdx);
+                int targetTime = stopIdxSourceTimes.get(stopIdx) + timeFactor * rangeOffset;
+                stopLabelsAndTimes.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
+            }
+            doRounds(markedStops);
+        }
+    }
+
+    StopLabelsAndTimes.Label copyLabelWithNewTargetTime(StopLabelsAndTimes.Label label, int targetTime) {
+        int sourceTime = label.sourceTime();
+
+        // if the label is not a source label, we need to adjust the source time by the same offset
+        if (label.type() != StopLabelsAndTimes.LabelType.INITIAL) {
+            int offset = targetTime - label.targetTime();
+            sourceTime += offset;
+        }
+
+        return new StopLabelsAndTimes.Label(sourceTime, targetTime, label.type(), label.routeOrTransferIdx(),
+                label.tripOffset(), label.stopIdx(), label.previous());
+
+    }
+
+    /**
+     * Method to perform the rounds of the routing algorithm (see {@link #run()}).
+     *
+     * @param markedStops the initially marked stops.
+     */
+    private void doRounds(Set<Integer> markedStops) {
 
         // continue with further rounds as long as there are new marked stops
         int round = 1;
@@ -117,8 +167,22 @@ class Query {
             markedStops = removeSuboptimalLabelsForRound(round, markedStopsNext);
             round++;
         }
+    }
 
-        return stopLabelsAndTimes.getBestLabelsPerRound();
+    private List<Integer> getRangeOffsets(Set<Integer> markedStops, RouteScanner routeScanner) {
+        ArrayList<Integer> rangeOffsets = new ArrayList<>();
+        for (int stopIdx : markedStops) {
+            ArrayList<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
+            for (int i = 0; i < stopRangeOffsets.size(); i++) {
+                if (rangeOffsets.size() == i) {
+                    rangeOffsets.add(stopRangeOffsets.get(i));
+                } else {
+                    rangeOffsets.set(i, Math.min(rangeOffsets.get(i), stopRangeOffsets.get(i)));
+                }
+            }
+        }
+
+        return rangeOffsets;
     }
 
     /**
