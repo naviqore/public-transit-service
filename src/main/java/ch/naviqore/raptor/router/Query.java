@@ -189,9 +189,12 @@ class Query {
         for (int stopIdx : markedStops) {
             List<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
             for (int i = 0; i < stopRangeOffsets.size(); i++) {
+                // if the rangeOffsets list is not long enough, add the offset
                 if (rangeOffsets.size() == i) {
                     rangeOffsets.add(stopRangeOffsets.get(i));
                 } else {
+                    // if the rangeOffsets list is long enough, update the offset to the minimum of the current and the
+                    // new offset, this ensures that the range offset is applicable for all marked stops
                     rangeOffsets.set(i, Math.min(rangeOffsets.get(i), stopRangeOffsets.get(i)));
                 }
             }
