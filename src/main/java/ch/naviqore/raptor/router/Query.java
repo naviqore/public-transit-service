@@ -169,6 +169,21 @@ class Query {
         }
     }
 
+    /**
+     * Get the range offsets for the marked stops.
+     * <p>
+     * The range offsets define the offsets of the requested departure / arrival time when the range raptor
+     * implementation shall start spawning from the source stop. E.g. if the source stop has departures at 10:00, 10:10,
+     * 10:20, and the range is 30 minutes, the range offsets would be 0, 10, 20.
+     * <p>
+     * To be efficient, the range offsets are looked at on per route basis. So if Route A has departures at 10:00,
+     * 10:10, 10:20, and Route B has departures at 10:05, 10:15, 10:25, the range offsets are be 0, 10, 20 and not 0, 5,
+     * 10, 15, 20, 25 (note real values are in seconds and not minutes --> *60).
+     *
+     * @param markedStops  the marked stops to get the range offsets for.
+     * @param routeScanner the route scanner to get the trip offsets for the stops.
+     * @return the range offsets (in seconds) applicable for all marked stops.
+     */
     private List<Integer> getRangeOffsets(Set<Integer> markedStops, RouteScanner routeScanner) {
         ArrayList<Integer> rangeOffsets = new ArrayList<>();
         for (int stopIdx : markedStops) {
