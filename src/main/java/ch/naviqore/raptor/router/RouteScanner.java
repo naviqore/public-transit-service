@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
@@ -403,7 +404,7 @@ class RouteScanner {
      * @param range   the range to get the trip offsets for.
      * @return the trip offsets for the stop in the given range.
      */
-    ArrayList<Integer> getTripOffsetsForStop(int stopIdx, int range) {
+    List<Integer> getTripOffsetsForStop(int stopIdx, int range) {
         ArrayList<Integer> tripOffsets = new ArrayList<>();
 
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
@@ -422,7 +423,7 @@ class RouteScanner {
         // check all departures of passing routes
         for (int stopRouteIdx = stopRouteStartIdx; stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
             Route route = routes[stopRoutes[stopRouteIdx]];
-            ArrayList<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd,
+            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd,
                     timeType);
             for (int tripOffsetIdx = 0; tripOffsetIdx < tripOffsetsForRoute.size(); tripOffsetIdx++) {
                 int tripOffset;
@@ -470,7 +471,7 @@ class RouteScanner {
      * @param timeType type of the time (arrival or departure)
      * @return list of stop times in the given range
      */
-    private ArrayList<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue,
+    private List<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue,
                                                    TimeType timeType) {
         ArrayList<Integer> stopTimesInRange = new ArrayList<>();
         int stopOffset = getStopOffsetForStopOnRoute(route, stopIdx);

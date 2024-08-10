@@ -172,7 +172,7 @@ class Query {
     private List<Integer> getRangeOffsets(Set<Integer> markedStops, RouteScanner routeScanner) {
         ArrayList<Integer> rangeOffsets = new ArrayList<>();
         for (int stopIdx : markedStops) {
-            ArrayList<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
+            List<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
             for (int i = 0; i < stopRangeOffsets.size(); i++) {
                 if (rangeOffsets.size() == i) {
                     rangeOffsets.add(stopRangeOffsets.get(i));
