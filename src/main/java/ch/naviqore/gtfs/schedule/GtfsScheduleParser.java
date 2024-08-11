@@ -1,10 +1,7 @@
 package ch.naviqore.gtfs.schedule;
 
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
-import ch.naviqore.gtfs.schedule.type.ExceptionType;
-import ch.naviqore.gtfs.schedule.type.RouteType;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.gtfs.schedule.type.TransferType;
+import ch.naviqore.gtfs.schedule.type.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVRecord;
 
@@ -81,13 +78,10 @@ class GtfsScheduleParser {
     }
 
     private void parseStop(CSVRecord record) {
-        if (record.isMapped("parent_station")) {
-            builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
-                    Double.parseDouble(record.get("stop_lon")), record.get("parent_station").trim());
-        } else {
-            builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
-                    Double.parseDouble(record.get("stop_lon")));
-        }
+        builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
+                Double.parseDouble(record.get("stop_lon")),
+                ParsingHelpers.getStringFieldOrDefault(record, "parent_station", null),
+                StopAccessibilityType.parse(ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
     }
 
     private void parseRoute(CSVRecord record) {
@@ -98,7 +92,9 @@ class GtfsScheduleParser {
     private void parseTrips(CSVRecord record) {
         try {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
-                    record.get("trip_headsign"));
+                    record.get("trip_headsign"), TripAccessibilityType.parse(
+                            ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
+                    TripBikeInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());
         }
@@ -121,4 +117,25 @@ class GtfsScheduleParser {
                 TransferType.parse(record.get("transfer_type")),
                 minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time")));
     }
+
+    private static class ParsingHelpers {
+
+        private static String getStringField(CSVRecord record, String fieldName) {
+            return record.get(fieldName).trim();
+        }
+
+        private static int getIntField(CSVRecord record, String fieldName) {
+            return Integer.parseInt(record.get(fieldName));
+        }
+
+        private static String getStringFieldOrDefault(CSVRecord record, String fieldName, String defaultValue) {
+            return record.isMapped(fieldName) ? getStringField(record, fieldName) : defaultValue;
+        }
+
+        private static int getIntFieldOrDefault(CSVRecord record, String fieldName, int defaultValue) {
+            return record.isMapped(fieldName) ? getIntField(record, fieldName) : defaultValue;
+        }
+
+    }
+
 }

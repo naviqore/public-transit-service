@@ -1,5 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.type.StopAccessibilityType;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.Location;
 import lombok.AccessLevel;
@@ -17,6 +18,8 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
     private final String id;
     private final String name;
     private final GeoCoordinate coordinate;
+    @Getter(AccessLevel.NONE)
+    private final StopAccessibilityType wheelchairBoarding;
     @Nullable
     @Setter(AccessLevel.PACKAGE)
     @Getter(AccessLevel.NONE)
@@ -36,6 +39,15 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
 
     public Optional<Stop> getParent() {
         return Optional.ofNullable(parent);
+    }
+
+    public StopAccessibilityType getWheelchairBoarding() {
+        /* According to the GTFS specification, a child stop with unknown wheelchair boarding information should inherit
+         * the parent stop's wheelchair boarding information. https://gtfs.org/schedule/reference/#stopstxt */
+        if (wheelchairBoarding == StopAccessibilityType.UNKNOWN && parent != null) {
+            return parent.getWheelchairBoarding();
+        }
+        return wheelchairBoarding;
     }
 
     @Override
