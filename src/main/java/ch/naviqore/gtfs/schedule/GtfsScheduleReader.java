@@ -74,7 +74,7 @@ public class GtfsScheduleReader {
                             "Required GTFS CSV file" + fileType.getFileName() + " not found in ZIP");
                 } else if (fileType.getPresence() == GtfsScheduleFile.Presence.CONDITIONALLY_REQUIRED) {
                     GtfsScheduleFile alternativeRequiredFile = getAlternativeRequiredFile(fileType);
-                    if (zf.getEntry(alternativeRequiredFile.getFileName()) != null) {
+                    if (zf.getEntry(alternativeRequiredFile.getFileName()) == null) {
                         throw new FileNotFoundException(
                                 "Conditional requirement not met: either: " + fileType.getFileName() + " or " + alternativeRequiredFile.getFileName() + " must be present in the ZIP");
                     }
