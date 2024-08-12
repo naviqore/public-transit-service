@@ -35,7 +35,7 @@ Public transit schedule information and connection routing service based on GTFS
 To deploy `public-transit-service` using Docker, run the following command:
 
 ```bash
-docker run -p 8080:8080 -e GTFS_URI=<URL or PATH> ghcr.io/naviqore/public-transit-service:latest
+docker run -p 8080:8080 -e GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public-transit-service:latest
 ```
 
 For more configuration options, refer to the [application.properties](src/main/resources/application.properties) file.
