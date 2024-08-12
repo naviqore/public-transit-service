@@ -32,7 +32,8 @@ public class ServiceConfigParser {
 
         this.serviceConfig = new ServiceConfig(gtfsStaticUri, gtfsStaticUpdateCron, transferTimeSameStopDefault,
                 transferTimeBetweenStopsMinimum, transferTimeAccessEgress, walkingSearchRadius, walkCalculatorTypeEnum,
-                walkingSpeed, walkingDurationMinimum, raptorDaysToScan, raptorRange, cacheServiceDaySize, cacheEvictionStrategyEnum);
+                walkingSpeed, walkingDurationMinimum, raptorDaysToScan, raptorRange, cacheServiceDaySize,
+                cacheEvictionStrategyEnum);
     }
 
 }

@@ -423,8 +423,7 @@ class RouteScanner {
         // check all departures of passing routes
         for (int stopRouteIdx = stopRouteStartIdx; stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
             Route route = routes[stopRoutes[stopRouteIdx]];
-            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd,
-                    timeType);
+            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd, timeType);
             for (int tripOffsetIdx = 0; tripOffsetIdx < tripOffsetsForRoute.size(); tripOffsetIdx++) {
                 int tripOffset;
                 if (timeType == TimeType.DEPARTURE) {
@@ -471,8 +470,7 @@ class RouteScanner {
      * @param timeType type of the time (arrival or departure)
      * @return list of stop times in the given range
      */
-    private List<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue,
-                                                   TimeType timeType) {
+    private List<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue, TimeType timeType) {
         ArrayList<Integer> stopTimesInRange = new ArrayList<>();
         int stopOffset = getStopOffsetForStopOnRoute(route, stopIdx);
         int firstStopTimeIdx = route.firstStopTimeIdx();
