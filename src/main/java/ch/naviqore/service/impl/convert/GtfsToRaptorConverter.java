@@ -89,16 +89,8 @@ public class GtfsToRaptorConverter {
             for (Transfer transfer : stop.getTransfers()) {
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
                         .isPresent()) {
-                    try {
-                        builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
-                                transfer.getMinTransferTime().get());
-                    } catch (IllegalArgumentException e) {
-                        // TODO: Problem is that with active trips we already filtered some stops which have no active
-                        //  trip anymore, so they are not added. Maybe we should build the Raptor always for the
-                        //  complete schedule, and add use masking array for the stop times of when we want to create
-                        //  routes at a specific date. This would also be more efficient.
-                        log.debug("Omit adding transfer: {}", e.getMessage());
-                    }
+                    builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
+                            transfer.getMinTransferTime().get());
                 }
             }
         }
@@ -118,12 +110,9 @@ public class GtfsToRaptorConverter {
                         transfer.from().getId(), transfer.to().getId(), transfer.duration());
                 continue;
             }
-            try {
-                builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
-            } catch (IllegalArgumentException e) {
-                // TODO: Same problem as above
-                log.debug("Omit adding transfer: {}", e.getMessage());
-            }
+
+            builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+
         }
 
     }
