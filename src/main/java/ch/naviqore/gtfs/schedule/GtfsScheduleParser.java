@@ -80,7 +80,7 @@ class GtfsScheduleParser {
     private void parseStop(CSVRecord record) {
         builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
                 Double.parseDouble(record.get("stop_lon")),
-                ParsingHelpers.getStringFieldOrDefault(record, "parent_station", null),
+                ParsingHelpers.getStringFieldOrDefault(record, "parent_station", ""),
                 StopAccessibilityType.parse(ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
     }
 
