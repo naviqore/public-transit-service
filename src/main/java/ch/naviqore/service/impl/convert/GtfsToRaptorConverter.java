@@ -1,6 +1,9 @@
 package ch.naviqore.service.impl.convert;
 
-import ch.naviqore.gtfs.schedule.model.*;
+import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.Stop;
+import ch.naviqore.gtfs.schedule.model.StopTime;
+import ch.naviqore.gtfs.schedule.model.Transfer;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
@@ -8,7 +11,6 @@ import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.impl.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,7 +28,6 @@ import java.util.Set;
 @Slf4j
 public class GtfsToRaptorConverter {
 
-    private final Set<GtfsRoutePartitioner.SubRoute> addedSubRoutes = new HashSet<>();
     private final Set<String> addedStops = new HashSet<>();
     private final RaptorRouterBuilder builder;
     private final GtfsRoutePartitioner partitioner;
@@ -46,35 +47,11 @@ public class GtfsToRaptorConverter {
     }
 
     public RaptorAlgorithm convert() {
-        Collection<Trip> trips = schedule.getTrips().values();
-        log.info("Converting {} trips from GTFS schedule to Raptor model", trips.size());
+        log.info("Converting {} trips from GTFS schedule to Raptor data model", schedule.getTrips().size());
 
-        for (Trip trip : trips) {
-            GtfsRoutePartitioner.SubRoute subRoute = partitioner.getSubRoute(trip);
-
-            // add route if not already
-            if (!addedSubRoutes.contains(subRoute)) {
-                List<String> stopIds = subRoute.getStopsSequence().stream().map(Stop::getId).toList();
-
-                // add stops of that are not already added
-                for (String stopId : stopIds) {
-                    if (!addedStops.contains(stopId)) {
-                        builder.addStop(stopId);
-                        addedStops.add(stopId);
-                    }
-                }
-
-                builder.addRoute(subRoute.getId(), stopIds);
-                addedSubRoutes.add(subRoute);
-            }
-
-            // add current trip
-            builder.addTrip(trip.getId(), subRoute.getId());
-            List<StopTime> stopTimes = trip.getStopTimes();
-            for (int i = 0; i < stopTimes.size(); i++) {
-                StopTime stopTime = stopTimes.get(i);
-                builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
-                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
+        for (var route : schedule.getRoutes().values()) {
+            for (GtfsRoutePartitioner.SubRoute subRoute : partitioner.getSubRoutes(route)) {
+                addRoute(subRoute);
             }
         }
 
@@ -83,9 +60,46 @@ public class GtfsToRaptorConverter {
         return builder.build();
     }
 
+    // add raptor route for each sub route of the gtfs routes
+    private void addRoute(GtfsRoutePartitioner.SubRoute subRoute) {
+
+        // add stops of sub route that are not already added
+        List<String> stopIds = subRoute.getStopsSequence().stream().map(Stop::getId).toList();
+        for (String stopId : stopIds) {
+            if (!addedStops.contains(stopId)) {
+                builder.addStop(stopId);
+                addedStops.add(stopId);
+            }
+        }
+
+        // add sub route as raptor route
+        builder.addRoute(subRoute.getId(), stopIds);
+
+        // add trips of sub route
+        for (var trip : subRoute.getTrips()) {
+            builder.addTrip(trip.getId(), subRoute.getId());
+            List<StopTime> stopTimes = trip.getStopTimes();
+            for (int i = 0; i < stopTimes.size(); i++) {
+                StopTime stopTime = stopTimes.get(i);
+                builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
+                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
+            }
+        }
+    }
+
+    // add raptor transfer for each gtfs or additional transfer
     private void addTransfers() {
+
+        // add all additional transfers
+        for (TransferGenerator.Transfer transfer : additionalTransfers) {
+            builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+        }
+
+        // transfers from gtfs have precedence; already added additional transfers with the same source and target stop
+        // will be overwritten, avoids costly lookups.
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
+
             for (Transfer transfer : stop.getTransfers()) {
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
                         .isPresent()) {
@@ -93,26 +107,6 @@ public class GtfsToRaptorConverter {
                             transfer.getMinTransferTime().get());
                 }
             }
-        }
-
-        // add additional transfers
-        for (TransferGenerator.Transfer transfer : additionalTransfers) {
-
-            // TODO: Just overwrite with precedence order, avoid costly lookups
-            if (schedule.getStops()
-                    .get(transfer.from().getId())
-                    .getTransfers()
-                    .stream()
-                    .anyMatch(t -> t.getFromStop().equals(transfer.from()) && t.getToStop()
-                            .equals(transfer.to()) && t.getTransferType() == TransferType.MINIMUM_TIME)) {
-                log.debug(
-                        "Omit adding additional transfer from {} to {} with duration {} as it has already been defined",
-                        transfer.from().getId(), transfer.to().getId(), transfer.duration());
-                continue;
-            }
-
-            builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
-
         }
 
     }
