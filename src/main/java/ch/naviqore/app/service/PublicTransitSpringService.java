@@ -32,20 +32,26 @@ import java.util.Optional;
 public class PublicTransitSpringService implements PublicTransitService {
 
     private final ServiceConfig config;
-    private final PublicTransitService delegate;
+    private PublicTransitService delegate;
 
     @Autowired
     public PublicTransitSpringService(ServiceConfigParser parser) {
         log.info("Initializing public transit spring service");
         this.config = parser.getServiceConfig();
-        this.delegate = new PublicTransitServiceFactory(config,
-                InputValidator.getRepository(config.getGtfsStaticUri())).create();
+        this.delegate = createDelegate();
     }
 
     @Scheduled(cron = "${gtfs.static.update.cron}")
     public void updateStaticScheduleTask() {
-        log.info("Updating static GTFS from: {}", config.getGtfsStaticUri());
-        updateStaticSchedule();
+        log.info("Updating public transit service with static GTFS");
+        // no need to synchronize; the service operates on the old delegate until its reference is set to the new one
+        delegate = createDelegate();
+        log.info("Successfully updated public transit service with static GTFS");
+    }
+
+    private PublicTransitService createDelegate() {
+        return new PublicTransitServiceFactory(config,
+                InputValidator.getRepository(config.getGtfsStaticUri())).create();
     }
 
     @Override
@@ -117,11 +123,6 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Override
     public Route getRouteById(String routeId) throws RouteNotFoundException {
         return delegate.getRouteById(routeId);
-    }
-
-    @Override
-    public void updateStaticSchedule() {
-        delegate.updateStaticSchedule();
     }
 
     private static class InputValidator {

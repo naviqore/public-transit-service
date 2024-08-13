@@ -36,7 +36,6 @@ public class GtfsRaptorService implements PublicTransitService {
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
     private final RaptorAlgorithm raptorAlgorithm;
-    private final GtfsTripMaskProvider tripMaskProvider;
 
     GtfsRaptorService(ServiceConfig config, GtfsSchedule schedule,
                       KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
@@ -49,7 +48,8 @@ public class GtfsRaptorService implements PublicTransitService {
         this.walkCalculator = walkCalculator;
 
         EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
-        tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheServiceDaySize(), cacheStrategy);
+        GtfsTripMaskProvider tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheServiceDaySize(),
+                cacheStrategy);
 
         // build raptor algorithm
         RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
@@ -388,13 +388,4 @@ public class GtfsRaptorService implements PublicTransitService {
         return TypeMapper.map(route);
     }
 
-    @Override
-    public void updateStaticSchedule() {
-        // TODO: Update method to pull new transit schedule from URL.
-        //  Also handle case: Path and URL provided, URL only, discussion needed, which cases make sense.
-        log.warn("Updating static schedule not implemented yet ({})", config.getGtfsStaticUri());
-
-        // clear the trip mask cache, since new the cached instances are now outdated
-        tripMaskProvider.clearCache();
-    }
 }
