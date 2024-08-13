@@ -1,9 +1,8 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.gtfs.schedule.type.ExceptionType;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -11,11 +10,15 @@ import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
+@EqualsAndHashCode(of = "id")
+@ToString(of = {"id", "serviceDays", "startDate", "endDate"})
 public final class Calendar implements Initializable {
 
     private final String id;
     private final EnumSet<DayOfWeek> serviceDays;
+    @Nullable
     private final LocalDate startDate;
+    @Nullable
     private final LocalDate endDate;
     private Map<LocalDate, CalendarDate> calendarDates = new HashMap<>();
     private List<Trip> trips = new ArrayList<>();
@@ -28,12 +31,17 @@ public final class Calendar implements Initializable {
      * @return true if the service is operational on the given date, false otherwise
      */
     public boolean isServiceAvailable(LocalDate date) {
-        if (date.isBefore(startDate) || date.isAfter(endDate)) {
-            return false;
-        }
         CalendarDate exception = calendarDates.get(date);
         if (exception != null) {
             return exception.type() == ExceptionType.ADDED;
+        }
+        // if no start and end date are defined, the calendar was added by calendar_dates.txt and is only active on
+        // exception dates
+        if (startDate == null || endDate == null) {
+            return false;
+        }
+        if (date.isBefore(startDate) || date.isAfter(endDate)) {
+            return false;
         }
         return serviceDays.contains(date.getDayOfWeek());
     }
@@ -51,24 +59,6 @@ public final class Calendar implements Initializable {
 
     void addTrip(Trip trip) {
         trips.add(trip);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (Calendar) obj;
-        return Objects.equals(this.id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return "Calendar[" + "id=" + id + ", " + "serviceDays=" + serviceDays + ", " + "startDate=" + startDate + ", " + "endDate=" + endDate + ']';
     }
 
 }

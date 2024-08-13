@@ -44,6 +44,13 @@ public class GtfsScheduleReader {
                 readCsvFile(csvFile, parser, fileType);
             } else if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
                 throw new FileNotFoundException("Required GTFS CSV file" + csvFile.getAbsolutePath() + " not found");
+            } else if (fileType.getPresence() == GtfsScheduleFile.Presence.CONDITIONALLY_REQUIRED) {
+                GtfsScheduleFile alternativeRequiredFile = getAlternativeRequiredFile(fileType);
+                File alternativeCsvFile = new File(directory, alternativeRequiredFile.getFileName());
+                if (!alternativeCsvFile.exists()) {
+                    throw new FileNotFoundException(
+                            "Conditional requirement not met: either: " + csvFile.getAbsolutePath() + " or " + alternativeCsvFile.getAbsolutePath() + " must be present in the directory");
+                }
             }
         }
     }
@@ -65,9 +72,23 @@ public class GtfsScheduleReader {
                 } else if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
                     throw new FileNotFoundException(
                             "Required GTFS CSV file" + fileType.getFileName() + " not found in ZIP");
+                } else if (fileType.getPresence() == GtfsScheduleFile.Presence.CONDITIONALLY_REQUIRED) {
+                    GtfsScheduleFile alternativeRequiredFile = getAlternativeRequiredFile(fileType);
+                    if (zf.getEntry(alternativeRequiredFile.getFileName()) == null) {
+                        throw new FileNotFoundException(
+                                "Conditional requirement not met: either: " + fileType.getFileName() + " or " + alternativeRequiredFile.getFileName() + " must be present in the ZIP");
+                    }
                 }
             }
         }
+    }
+
+    private static GtfsScheduleFile getAlternativeRequiredFile(GtfsScheduleFile fileType) {
+        return switch (fileType) {
+            case CALENDAR -> GtfsScheduleFile.CALENDAR_DATES;
+            case CALENDAR_DATES -> GtfsScheduleFile.CALENDAR;
+            default -> throw new IllegalArgumentException("No alternative required file for " + fileType);
+        };
     }
 
     private static void readCsvFile(File file, GtfsScheduleParser parser,

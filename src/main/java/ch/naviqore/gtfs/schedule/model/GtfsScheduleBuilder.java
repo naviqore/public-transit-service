@@ -102,8 +102,17 @@ public class GtfsScheduleBuilder {
         checkNotBuilt();
         Calendar calendar = calendars.get(calendarId);
         if (calendar == null) {
-            throw new IllegalArgumentException("Calendar " + calendarId + " does not exist");
+            EnumSet<DayOfWeek> dayOfWeek = EnumSet.noneOf(DayOfWeek.class);
+            calendar = new Calendar(calendarId, dayOfWeek, null, null);
+            calendars.put(calendarId, calendar);
         }
+
+        // check that no exception for defined date is present, each service id / date combination must be unique
+        if (calendar.getCalendarDates().containsKey(date)) {
+            throw new IllegalArgumentException(
+                    "Date " + date + " is already defined as an exception for calendar " + calendarId);
+        }
+
         log.debug("Adding calendar {}-{}", calendarId, date);
         CalendarDate calendarDate = new CalendarDate(calendar, localDateCache.getOrAdd(date), type);
         calendar.addCalendarDate(calendarDate);
