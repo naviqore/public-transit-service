@@ -94,7 +94,7 @@ class GtfsScheduleParser {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
                     record.get("trip_headsign"), AccessibilityInformation.parse(
                             ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
-                    TripBikeInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "bikes_allowed", 0)));
+                    BikeInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());
         }

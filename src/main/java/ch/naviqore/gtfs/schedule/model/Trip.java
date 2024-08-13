@@ -1,7 +1,7 @@
 package ch.naviqore.gtfs.schedule.model;
 
 import ch.naviqore.gtfs.schedule.type.AccessibilityInformation;
-import ch.naviqore.gtfs.schedule.type.TripBikeInformation;
+import ch.naviqore.gtfs.schedule.type.BikeInformation;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -19,7 +19,7 @@ public final class Trip implements Comparable<Trip>, Initializable {
     private final Calendar calendar;
     private final String headSign;
     private final AccessibilityInformation wheelchairAccessible;
-    private final TripBikeInformation bikesAllowed;
+    private final BikeInformation bikesAllowed;
     private List<StopTime> stopTimes = new ArrayList<>();
 
     void addStopTime(StopTime stopTime) {

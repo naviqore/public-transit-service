@@ -5,13 +5,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Defines the types of bike options for trips as specified in the GTFS feed standards.
+ * Informs about bike options for trips as specified in the GTFS feed standards.
  * <p>
  * For more information on trip bike option types, see <a href="https://gtfs.org/schedule/reference/#tripstxt">GTFS Trips</a>.
  */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-public enum TripBikeInformation {
+public enum BikeInformation {
 
     UNKNOWN(0, "No bike information for the trip."),
     ALLOWED(1, "Vehicle being used on this particular trip can accommodate at least one bicycle."),
@@ -20,20 +20,20 @@ public enum TripBikeInformation {
     private final int code;
     private final String description;
 
-    public static TripBikeInformation parse(String code) {
+    public static BikeInformation parse(String code) {
         if (code == null || code.isEmpty()) {
             return UNKNOWN;
         }
         return parse(Integer.parseInt(code));
     }
 
-    public static TripBikeInformation parse(int code) {
-        for (TripBikeInformation type : TripBikeInformation.values()) {
+    public static BikeInformation parse(int code) {
+        for (BikeInformation type : BikeInformation.values()) {
             if (type.code == code) {
                 return type;
             }
         }
-        throw new IllegalArgumentException("No trip bike option with code " + code + " found");
+        throw new IllegalArgumentException("No bike information with code " + code + " found");
     }
 
 }

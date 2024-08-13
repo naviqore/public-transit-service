@@ -109,10 +109,10 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign) {
-        return addTrip(id, routeId, serviceId, headSign, AccessibilityInformation.UNKNOWN, TripBikeInformation.UNKNOWN);
+        return addTrip(id, routeId, serviceId, headSign, AccessibilityInformation.UNKNOWN, BikeInformation.UNKNOWN);
     }
 
-    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign, AccessibilityInformation wheelchairAccessible, TripBikeInformation bikesAllowed) {
+    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign, AccessibilityInformation wheelchairAccessible, BikeInformation bikesAllowed) {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");
