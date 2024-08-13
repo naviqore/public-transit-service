@@ -48,12 +48,12 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
-        addStop(id, name, lat, lon, "", StopAccessibilityType.UNKNOWN);
+        addStop(id, name, lat, lon, "", AccessibilityInformation.UNKNOWN);
         return this;
     }
 
     public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId,
-                                       StopAccessibilityType wheelchairBoarding) {
+                                       AccessibilityInformation wheelchairBoarding) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
@@ -109,10 +109,10 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign) {
-        return addTrip(id, routeId, serviceId, headSign, TripAccessibilityType.UNKNOWN, TripBikeInformation.UNKNOWN);
+        return addTrip(id, routeId, serviceId, headSign, AccessibilityInformation.UNKNOWN, TripBikeInformation.UNKNOWN);
     }
 
-    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign, TripAccessibilityType wheelchairAccessible, TripBikeInformation bikesAllowed) {
+    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign, AccessibilityInformation wheelchairAccessible, TripBikeInformation bikesAllowed) {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");

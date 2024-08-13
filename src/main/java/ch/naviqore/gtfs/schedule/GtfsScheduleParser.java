@@ -81,7 +81,7 @@ class GtfsScheduleParser {
         builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
                 Double.parseDouble(record.get("stop_lon")),
                 ParsingHelpers.getStringFieldOrDefault(record, "parent_station", ""),
-                StopAccessibilityType.parse(ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
+                AccessibilityInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
     }
 
     private void parseRoute(CSVRecord record) {
@@ -92,7 +92,7 @@ class GtfsScheduleParser {
     private void parseTrips(CSVRecord record) {
         try {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
-                    record.get("trip_headsign"), TripAccessibilityType.parse(
+                    record.get("trip_headsign"), AccessibilityInformation.parse(
                             ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
                     TripBikeInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
