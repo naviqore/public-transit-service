@@ -4,7 +4,6 @@ public class RouteTypeMapper {
 
     public static DefaultRouteType map(RouteType routeType) {
         return switch (routeType) {
-            case null -> null;
             case DefaultRouteType defaultRouteType -> defaultRouteType;
             case HierarchicalVehicleType hierarchicalVehicleType -> map(hierarchicalVehicleType);
             default -> throw new IllegalArgumentException("No mapping available for " + routeType);
@@ -12,9 +11,6 @@ public class RouteTypeMapper {
     }
 
     private static DefaultRouteType map(HierarchicalVehicleType routeType) {
-        if (routeType == null) {
-            return null;
-        }
         return switch (routeType) {
             case RAILWAY_SERVICE, HIGH_SPEED_RAIL_SERVICE, LONG_DISTANCE_TRAINS, INTER_REGIONAL_RAIL_SERVICE,
                  CAR_TRANSPORT_RAIL_SERVICE, SLEEPER_RAIL_SERVICE, REGIONAL_RAIL_SERVICE, TOURIST_RAILWAY_SERVICE,
