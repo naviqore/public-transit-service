@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.QueryConfig;
@@ -27,34 +27,34 @@ final class TypeMapper {
             return null;
         }
 
-        return new StopImpl(stop.getId(), stop.getName(), stop.getCoordinate());
+        return new GtfsRaptorStop(stop.getId(), stop.getName(), stop.getCoordinate());
     }
 
     public static Route map(ch.naviqore.gtfs.schedule.model.Route route) {
-        return new RouteImpl(route.getId(), route.getLongName(), route.getShortName(), route.getType().getDescription(),
-                route.getAgency().name());
+        return new GtfsRaptorRoute(route.getId(), route.getLongName(), route.getShortName(),
+                route.getType().getDescription(), route.getAgency().name());
     }
 
     public static Trip map(ch.naviqore.gtfs.schedule.model.Trip trip, LocalDate date) {
         // create stop times
-        List<StopTimeImpl> stopTimes = trip.getStopTimes()
+        List<GtfsRaptorStopTime> stopTimes = trip.getStopTimes()
                 .stream()
-                .map(stopTime -> new StopTimeImpl(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
+                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
                         stopTime.departure().toLocalDateTime(date)))
                 .toList();
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
-        TripImpl tripImpl = new TripImpl(trip.getId(), trip.getHeadSign(), map(trip.getRoute()),
+        GtfsRaptorTrip gtfsRaptorTrip = new GtfsRaptorTrip(trip.getId(), trip.getHeadSign(), map(trip.getRoute()),
                 stopTimes.stream().map(stopTime -> (StopTime) stopTime).toList());
 
         // set trip on stop times impls
-        stopTimes.forEach(stopTime -> stopTime.setTrip(tripImpl));
+        stopTimes.forEach(stopTime -> stopTime.setTrip(gtfsRaptorTrip));
 
-        return tripImpl;
+        return gtfsRaptorTrip;
     }
 
     public static StopTime map(ch.naviqore.gtfs.schedule.model.StopTime stopTime, LocalDate date) {
-        return new StopTimeImpl(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
+        return new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
                 stopTime.departure().toLocalDateTime(date), map(stopTime.trip(), date));
     }
 
@@ -70,8 +70,8 @@ final class TypeMapper {
     public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
                                   LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
                                   @Nullable Stop stop) {
-        return new WalkImpl(distance, duration, walkType, departureTime, arrivalTime, sourceLocation, targetLocation,
-                stop);
+        return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
+                targetLocation, stop);
     }
 
     public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Walk firstMile,
@@ -90,7 +90,7 @@ final class TypeMapper {
             legs.addLast(lastMile);
         }
 
-        return new ConnectionImpl(legs);
+        return new GtfsRaptorConnection(legs);
     }
 
     public static Leg map(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule) {
@@ -101,7 +101,7 @@ final class TypeMapper {
 
         return switch (leg.getType()) {
             case WALK_TRANSFER ->
-                    new TransferImpl(distance, duration, leg.getDepartureTime(), leg.getArrivalTime(), sourceStop,
+                    new GtfsRaptorTransfer(distance, duration, leg.getDepartureTime(), leg.getArrivalTime(), sourceStop,
                             targetStop);
             case ROUTE -> createPublicTransitLeg(leg, schedule, distance);
         };
@@ -153,11 +153,7 @@ final class TypeMapper {
         assert departure != null : "Departure stop time cannot be null";
         assert arrival != null : "Arrival stop time cannot be null";
 
-        return new PublicTransitLegImpl(distance, duration, trip, departure, arrival);
-    }
-
-    private static int getSecondsOfDay(LocalDateTime time, LocalDate refDay) {
-        return (int) Duration.between(refDay.atStartOfDay(), time).toSeconds();
+        return new GtfsRaptorPublicTransitLeg(distance, duration, trip, departure, arrival);
     }
 
     private static LocalDate getServiceDay(ch.naviqore.raptor.Leg leg, ch.naviqore.gtfs.schedule.model.Trip trip) {

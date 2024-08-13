@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.service.Route;
 import ch.naviqore.service.StopTime;
@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-public class TripImpl implements Trip {
+public class GtfsRaptorTrip implements Trip {
 
     private final String id;
     private final String headSign;

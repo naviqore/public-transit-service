@@ -1,12 +1,12 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.config.ServiceConfig;
-import ch.naviqore.service.impl.transfer.TransferGenerator;
-import ch.naviqore.service.impl.transfer.WalkTransferGenerator;
+import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
+import ch.naviqore.service.gtfs.raptor.transfer.WalkTransferGenerator;
 import ch.naviqore.service.walk.BeeLineWalkCalculator;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.search.SearchIndex;
@@ -23,23 +23,24 @@ import java.util.*;
 @RequiredArgsConstructor
 @Getter(AccessLevel.PACKAGE)
 @Slf4j
-public class PublicTransitServiceInitializer {
+public class GtfsRaptorServiceInitializer {
 
     private final ServiceConfig config;
-
     private final WalkCalculator walkCalculator;
     private final GtfsSchedule schedule;
     private final SearchIndex<Stop> stopSearchIndex;
     private final KDTree<Stop> spatialStopIndex;
     private final List<TransferGenerator.Transfer> additionalTransfers;
 
-    public PublicTransitServiceInitializer(ServiceConfig config, GtfsSchedule schedule) {
+    public GtfsRaptorServiceInitializer(ServiceConfig config, GtfsSchedule schedule) {
         this.config = config;
         this.schedule = schedule;
         log.debug("Initializing with config: {}", config);
         this.walkCalculator = initializeWalkCalculator(config);
         this.stopSearchIndex = generateStopSearchIndex(schedule);
         this.spatialStopIndex = generateSpatialStopIndex(schedule);
+
+        // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
         if (config.getTransferTimeBetweenStopsMinimum() >= 0) {
             this.additionalTransfers = generateTransfers(schedule,
                     createTransferGenerators(config, walkCalculator, spatialStopIndex));
@@ -76,8 +77,7 @@ public class PublicTransitServiceInitializer {
                                                                     KDTree<Stop> spatialStopIndex) {
         ArrayList<TransferGenerator> generators = new ArrayList<>();
 
-        // TODO: Allow deactivation of walk transfer generator through service config.
-        // always create walking transfers between stops
+        // add between stops walking transfer generator to generator list
         generators.add(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
                 config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));
 
@@ -114,7 +114,7 @@ public class PublicTransitServiceInitializer {
     }
 
     public PublicTransitService get() {
-        return new PublicTransitServiceImpl(config, schedule, spatialStopIndex, stopSearchIndex, walkCalculator,
+        return new GtfsRaptorService(config, schedule, spatialStopIndex, stopSearchIndex, walkCalculator,
                 additionalTransfers);
     }
 
