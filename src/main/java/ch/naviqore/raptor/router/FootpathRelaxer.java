@@ -22,7 +22,7 @@ class FootpathRelaxer {
     private final QueryState queryState;
 
     /**
-     * @param queryState              the best time per stop and label per stop and round.
+     * @param queryState              the query state with the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time, since this is intended as rest period (e.g.
      *                                coffee break) it is added to the walk time.

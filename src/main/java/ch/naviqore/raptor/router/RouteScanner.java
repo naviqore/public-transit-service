@@ -37,7 +37,7 @@ class RouteScanner {
     private final int startDayOffset;
 
     /**
-     * @param queryState              the best time per stop and label per stop and round.
+     * @param queryState              the query state with the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time.
      * @param timeType                the time type (arrival or departure).
