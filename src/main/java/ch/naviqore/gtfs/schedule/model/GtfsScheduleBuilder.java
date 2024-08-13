@@ -35,6 +35,10 @@ public class GtfsScheduleBuilder {
     private final Map<String, Trip> trips = new HashMap<>();
     private final Map<String, List<Stop>> parents = new HashMap<>();
 
+    private boolean hasAccessibilityInformationForStops = false;
+    private boolean hasAccessibilityInformationForTrips = false;
+    private boolean hasBikeInformationForTrips = false;
+
     private boolean built = false;
 
     public GtfsScheduleBuilder addAgency(String id, String name, String url, String timezone) {
@@ -57,6 +61,9 @@ public class GtfsScheduleBuilder {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
+        }
+        if (wheelchairBoarding != AccessibilityInformation.UNKNOWN) {
+            hasAccessibilityInformationForStops = true;
         }
         log.debug("Adding stop {}", id);
         Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon), wheelchairBoarding);
@@ -112,10 +119,17 @@ public class GtfsScheduleBuilder {
         return addTrip(id, routeId, serviceId, headSign, AccessibilityInformation.UNKNOWN, BikeInformation.UNKNOWN);
     }
 
-    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign, AccessibilityInformation wheelchairAccessible, BikeInformation bikesAllowed) {
+    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign,
+                                       AccessibilityInformation wheelchairAccessible, BikeInformation bikesAllowed) {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");
+        }
+        if (wheelchairAccessible != AccessibilityInformation.UNKNOWN) {
+            hasAccessibilityInformationForTrips = true;
+        }
+        if (bikesAllowed != BikeInformation.UNKNOWN) {
+            hasBikeInformationForTrips = true;
         }
         Route route = routes.get(routeId);
         if (route == null) {
@@ -193,7 +207,8 @@ public class GtfsScheduleBuilder {
         routes.values().parallelStream().forEach(Initializable::initialize);
         calendars.values().parallelStream().forEach(Initializable::initialize);
 
-        GtfsSchedule schedule = new GtfsSchedule(agencies, calendars, stops, routes, trips);
+        GtfsSchedule schedule = new GtfsSchedule(agencies, calendars, stops, routes, trips,
+                hasAccessibilityInformationForStops, hasAccessibilityInformationForTrips, hasBikeInformationForTrips);
         clear();
         built = true;
 
