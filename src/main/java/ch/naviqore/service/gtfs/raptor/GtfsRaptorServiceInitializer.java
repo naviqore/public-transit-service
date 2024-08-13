@@ -26,7 +26,6 @@ import java.util.*;
 public class GtfsRaptorServiceInitializer {
 
     private final ServiceConfig config;
-
     private final WalkCalculator walkCalculator;
     private final GtfsSchedule schedule;
     private final SearchIndex<Stop> stopSearchIndex;
@@ -40,6 +39,8 @@ public class GtfsRaptorServiceInitializer {
         this.walkCalculator = initializeWalkCalculator(config);
         this.stopSearchIndex = generateStopSearchIndex(schedule);
         this.spatialStopIndex = generateSpatialStopIndex(schedule);
+
+        // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
         if (config.getTransferTimeBetweenStopsMinimum() >= 0) {
             this.additionalTransfers = generateTransfers(schedule,
                     createTransferGenerators(config, walkCalculator, spatialStopIndex));
@@ -76,8 +77,7 @@ public class GtfsRaptorServiceInitializer {
                                                                     KDTree<Stop> spatialStopIndex) {
         ArrayList<TransferGenerator> generators = new ArrayList<>();
 
-        // TODO: Allow deactivation of walk transfer generator through service config.
-        // always create walking transfers between stops
+        // add between stops walking transfer generator to generator list
         generators.add(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
                 config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));
 
