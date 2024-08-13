@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
+import static ch.naviqore.raptor.router.QueryState.NO_INDEX;
 
 @Slf4j
 class FootpathRelaxer {
@@ -19,10 +19,10 @@ class FootpathRelaxer {
     private final int maxWalkingDuration;
     private final TimeType timeType;
 
-    private final StopLabelsAndTimes stopLabelsAndTimes;
+    private final QueryState queryState;
 
     /**
-     * @param stopLabelsAndTimes      the best time per stop and label per stop and round.
+     * @param queryState              the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time, since this is intended as rest period (e.g.
      *                                coffee break) it is added to the walk time.
@@ -30,7 +30,7 @@ class FootpathRelaxer {
      *                                exceeds this value, the target stop is not reached.
      * @param timeType                the time type (arrival or departure).
      */
-    FootpathRelaxer(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,
+    FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration,
                     int maximumWalkingDuration, TimeType timeType) {
         // constant data structures
         this.transfers = raptorData.getStopContext().transfers();
@@ -40,7 +40,7 @@ class FootpathRelaxer {
         this.maxWalkingDuration = maximumWalkingDuration;
         this.timeType = timeType;
         // note: will also change outside of relaxer, due to route scanning
-        this.stopLabelsAndTimes = stopLabelsAndTimes;
+        this.queryState = queryState;
     }
 
     /**
@@ -94,10 +94,10 @@ class FootpathRelaxer {
             return;
         }
         Stop sourceStop = stops[stopIdx];
-        StopLabelsAndTimes.Label previousLabel = stopLabelsAndTimes.getLabel(round, stopIdx);
+        QueryState.Label previousLabel = queryState.getLabel(round, stopIdx);
 
         // do not relax footpath from stop that was only reached by footpath in the same round
-        if (previousLabel == null || previousLabel.type() == StopLabelsAndTimes.LabelType.TRANSFER) {
+        if (previousLabel == null || previousLabel.type() == QueryState.LabelType.TRANSFER) {
             return;
         }
 
@@ -121,19 +121,18 @@ class FootpathRelaxer {
             int comparableTargetTime = targetTime - targetStop.sameStopTransferTime() * timeDirection;
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= stopLabelsAndTimes.getComparableBestTime(
+            if (comparableTargetTime * timeDirection >= queryState.getComparableBestTime(
                     transfer.targetStopIdx()) * timeDirection) {
                 continue;
             }
 
             log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
             // update best times with comparable target time
-            stopLabelsAndTimes.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
+            queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
-            StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(sourceTime, targetTime,
-                    StopLabelsAndTimes.LabelType.TRANSFER, i, NO_INDEX, transfer.targetStopIdx(),
-                    stopLabelsAndTimes.getLabel(round, stopIdx));
-            stopLabelsAndTimes.setLabel(round, transfer.targetStopIdx(), label);
+            QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
+                    NO_INDEX, transfer.targetStopIdx(), queryState.getLabel(round, stopIdx));
+            queryState.setLabel(round, transfer.targetStopIdx(), label);
             // mark stop as improved
             markedStops.add(transfer.targetStopIdx());
         }

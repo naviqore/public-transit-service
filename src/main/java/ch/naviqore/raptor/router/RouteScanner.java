@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
+import static ch.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
  * Scans routes, which are passing marked stops, for each round.
@@ -27,7 +27,7 @@ class RouteScanner {
     private final Route[] routes;
     private final int[] rawStopTimes;
     private final RouteStop[] routeStops;
-    private final StopLabelsAndTimes stopLabelsAndTimes;
+    private final QueryState queryState;
 
     private final int minTransferDuration;
     private final TimeType timeType;
@@ -37,15 +37,15 @@ class RouteScanner {
     private final int startDayOffset;
 
     /**
-     * @param stopLabelsAndTimes      the best time per stop and label per stop and round.
+     * @param queryState              the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time.
      * @param timeType                the time type (arrival or departure).
      * @param referenceDateTime       the reference date for the query.
      * @param maxDaysToScan           the maximum number of days to scan.
      */
-    RouteScanner(StopLabelsAndTimes stopLabelsAndTimes, RaptorData raptorData, int minimumTransferDuration,
-                 TimeType timeType, LocalDateTime referenceDateTime, int maxDaysToScan) {
+    RouteScanner(QueryState queryState, RaptorData raptorData, int minimumTransferDuration, TimeType timeType,
+                 LocalDateTime referenceDateTime, int maxDaysToScan) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -53,7 +53,7 @@ class RouteScanner {
         this.rawStopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
         // note: will also change outside of scanner, due to footpath relaxation
-        this.stopLabelsAndTimes = stopLabelsAndTimes;
+        this.queryState = queryState;
         // constant configuration of scanner
         this.minTransferDuration = minimumTransferDuration;
         this.timeType = timeType;
@@ -172,7 +172,7 @@ class RouteScanner {
         for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += step) {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
-            int bestStopTime = stopLabelsAndTimes.getComparableBestTime(stopIdx);
+            int bestStopTime = queryState.getComparableBestTime(stopIdx);
             // find first marked stop in route
             if (activeTrip == null) {
                 if (!canEnterAtStop(stop, bestStopTime, markedStops, stopIdx, stopOffset, currentRoute)) {
@@ -306,18 +306,17 @@ class RouteScanner {
 
         if (isImproved) {
             log.debug("Stop {} was improved", stop.id());
-            stopLabelsAndTimes.setBestTime(stopIdx, targetTime);
+            queryState.setBestTime(stopIdx, targetTime);
 
-            StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(activeTrip.entryTime, targetTime,
-                    StopLabelsAndTimes.LabelType.ROUTE, currentRouteIdx, activeTrip.tripOffset, stopIdx,
-                    activeTrip.previousLabel);
-            stopLabelsAndTimes.setLabel(thisRound, stopIdx, label);
+            QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
+                    currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
+            queryState.setLabel(thisRound, stopIdx, label);
             markedStopsNext.add(stopIdx);
 
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
-            StopLabelsAndTimes.Label previous = stopLabelsAndTimes.getLabel(lastRound, stopIdx);
+            QueryState.Label previous = queryState.getLabel(lastRound, stopIdx);
 
             boolean isImprovedInSameRound = previous == null || ((timeType == TimeType.DEPARTURE) ? previous.targetTime() >= targetTime : previous.targetTime() <= targetTime);
             if (isImprovedInSameRound) {
@@ -347,11 +346,11 @@ class RouteScanner {
         int numberOfStops = route.numberOfStops();
         int numberOfTrips = route.numberOfTrips();
 
-        StopLabelsAndTimes.Label previousLabel = stopLabelsAndTimes.getLabel(lastRound, stopIdx);
+        QueryState.Label previousLabel = queryState.getLabel(lastRound, stopIdx);
 
         // this is the reference time, where we can depart after or arrive earlier
         int referenceTime = previousLabel.targetTime();
-        if (previousLabel.type() == StopLabelsAndTimes.LabelType.ROUTE) {
+        if (previousLabel.type() == QueryState.LabelType.ROUTE) {
             referenceTime += (timeType == TimeType.DEPARTURE) ? Math.max(stop.sameStopTransferTime(),
                     minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
         }
@@ -414,7 +413,7 @@ class RouteScanner {
         int stopRouteStartIdx = currentStop.stopRouteIdx();
         int stopRouteEndIdx = stopRouteStartIdx + currentStop.numberOfRoutes();
 
-        int refSourceTime = stopLabelsAndTimes.getLabel(0, stopIdx).targetTime();
+        int refSourceTime = queryState.getLabel(0, stopIdx).targetTime();
         int endRangeSourceTime = refSourceTime + timeDirection * range;
 
         int rangeStart = Math.min(refSourceTime, endRangeSourceTime);
@@ -508,8 +507,7 @@ class RouteScanner {
         return stopTimesInRange;
     }
 
-    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset,
-                              StopLabelsAndTimes.Label previousLabel) {
+    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, QueryState.Label previousLabel) {
     }
 
 }
