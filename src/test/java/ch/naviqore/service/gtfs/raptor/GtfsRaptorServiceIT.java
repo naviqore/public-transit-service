@@ -146,33 +146,128 @@ class GtfsRaptorServiceIT {
 
         @Nested
         class Connections {
-            @Test
-            void shouldGetConnections() {
-                List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
-                        new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
-                        TimeType.DEPARTURE, config);
-                assertFalse(connections.isEmpty(), "Expected to find connections.");
+
+            @Nested
+            class FromLocation {
+
+                @Test
+                void shouldGetConnections() {
+                    List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
+                            new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertFalse(connections.isEmpty(), "Expected to find connections.");
+                }
+
+                @Test
+                void shouldHandleNoNearestTargetStop() {
+                    List<Connection> connections = service.getConnections(new GeoCoordinate(0.0, 0.0),
+                            new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no connections to be found when no nearest stop exists.");
+                }
+
+                @Test
+                void shouldHandleInactiveDate() {
+                    List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
+                            new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2023, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no connections to be found when source stop has no active trip on the date.");
+                }
             }
 
-            @Test
-            void shouldHandleNoConnectionsFound() {
-                // TODO: Handle cases, should we throw an error or just return an empty list?:
-                //  - No nearest stop exists
-                //  - A nearest stop exists but has no active trip on date
-                //  - no connections are found
+            @Nested
+            class FromStop {
+
+                private Stop source;
+
+                @BeforeEach
+                void setUp() throws StopNotFoundException {
+                    source = service.getStopById("FUR_CREEK_RES");
+                }
+
+                @Test
+                void shouldGetConnections() {
+                    List<Connection> connections = service.getConnections(source,
+                            new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertFalse(connections.isEmpty(), "Expected to find connections.");
+                }
+
+                @Test
+                void shouldHandleNoNearestTargetStop() {
+                    List<Connection> connections = service.getConnections(source, new GeoCoordinate(-89, 0),
+                            LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no connections to be found when no nearest stop exists.");
+                }
+
+                @Test
+                void shouldHandleInactiveDate() {
+                    List<Connection> connections = service.getConnections(source,
+                            new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2023, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no connections to be found when source stop has no active trip on the date.");
+                }
             }
         }
 
         @Nested
         class Isoline {
 
-            @Test
-            void getIsolines_fromLocation() {
-                Map<Stop, Connection> connections = service.getIsoLines(new GeoCoordinate(36.425288, -117.133162),
-                        LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
-                assertFalse(connections.isEmpty(), "Expected to find connections.");
+            @Nested
+            class FromLocation {
+
+                @Test
+                void shouldGetIsolines() {
+                    Map<Stop, Connection> connections = service.getIsoLines(new GeoCoordinate(36.425288, -117.133162),
+                            LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                    assertFalse(connections.isEmpty(), "Expected to find connections.");
+                }
+
+                @Test
+                void shouldHandleNoIsolinesFound() {
+                    Map<Stop, Connection> connections = service.getIsoLines(new GeoCoordinate(0.0, 0.0),
+                            LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(), "Expected no isolines to be found when no nearest stop exists.");
+                }
+
+                @Test
+                void shouldHandleInactiveDate() {
+                    Map<Stop, Connection> connections = service.getIsoLines(new GeoCoordinate(36.425288, -117.133162),
+                            LocalDateTime.of(2023, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no isolines to be found when no active trips exist on the date.");
+                }
             }
 
+            @Nested
+            class FromStop {
+
+                private Stop source;
+
+                @BeforeEach
+                void setUp() throws StopNotFoundException {
+                    source = service.getStopById("FUR_CREEK_RES");
+                }
+
+                @Test
+                void shouldGetIsolines() {
+                    Map<Stop, Connection> connections = service.getIsoLines(source, LocalDateTime.of(2008, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertFalse(connections.isEmpty(), "Expected to find connections.");
+                }
+
+                @Test
+                void shouldHandleInactiveDate() {
+                    Map<Stop, Connection> connections = service.getIsoLines(source, LocalDateTime.of(2023, 5, 15, 8, 0),
+                            TimeType.DEPARTURE, config);
+                    assertTrue(connections.isEmpty(),
+                            "Expected no isolines to be found when no active trips exist on the date.");
+                }
+            }
         }
 
     }
