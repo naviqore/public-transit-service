@@ -280,6 +280,11 @@ public class GtfsRaptorService implements PublicTransitService {
         Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
                 config.getMaximumWalkingDuration(), timeType);
 
+        // no source stop is within walkable distance, and therefore no isolines are available
+        if (sourceStops.isEmpty()) {
+            return Map.of();
+        }
+
         return mapToStopConnectionMap(
                 raptorAlgorithm.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
                 config, timeType);
