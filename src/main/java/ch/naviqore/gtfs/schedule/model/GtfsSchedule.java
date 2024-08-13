@@ -24,9 +24,9 @@ public class GtfsSchedule {
     private final Map<String, Stop> stops;
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
-    private final boolean hasAccessibilityInformationForStops;
-    private final boolean hasAccessibilityInformationForTrips;
-    private final boolean hasBikeInformationForTrips;
+    private final boolean stopAccessibilityInformationProvider;
+    private final boolean tripAccessibilityInformationProvider;
+    private final boolean tripBikeInformationProvider;
 
     /**
      * Constructs an immutable GTFS schedule.
@@ -35,16 +35,16 @@ public class GtfsSchedule {
      * enhance memory efficiency and thread-safety in a concurrent environment.
      */
     GtfsSchedule(Map<String, Agency> agencies, Map<String, Calendar> calendars, Map<String, Stop> stops,
-                 Map<String, Route> routes, Map<String, Trip> trips, boolean hasAccessibilityInformationForStops,
-                 boolean hasAccessibilityInformationForTrips, boolean hasBikeInformationForTrips) {
+                 Map<String, Route> routes, Map<String, Trip> trips, boolean stopAccessibilityInformationProvider,
+                 boolean tripAccessibilityInformationProvider, boolean tripBikeInformationProvider) {
         this.agencies = Map.copyOf(agencies);
         this.calendars = Map.copyOf(calendars);
         this.stops = Map.copyOf(stops);
         this.routes = Map.copyOf(routes);
         this.trips = Map.copyOf(trips);
-        this.hasAccessibilityInformationForStops = hasAccessibilityInformationForStops;
-        this.hasAccessibilityInformationForTrips = hasAccessibilityInformationForTrips;
-        this.hasBikeInformationForTrips = hasBikeInformationForTrips;
+        this.stopAccessibilityInformationProvider = stopAccessibilityInformationProvider;
+        this.tripAccessibilityInformationProvider = tripAccessibilityInformationProvider;
+        this.tripBikeInformationProvider = tripBikeInformationProvider;
     }
 
     /**
