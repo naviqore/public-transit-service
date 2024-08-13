@@ -90,8 +90,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
-                refStopTimes, new int[]{}, config, timeType, referenceDateTime, this.config).run();
+        List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{}, refStopTimes,
+                new int[]{}, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
@@ -127,8 +127,8 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
-                sourceTimes, walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
+        List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
+                walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
                 validatedTargetStops, referenceDate);

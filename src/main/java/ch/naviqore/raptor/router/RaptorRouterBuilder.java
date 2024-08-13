@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-import static ch.naviqore.raptor.router.StopLabelsAndTimes.NO_INDEX;
+import static ch.naviqore.raptor.router.QueryState.NO_INDEX;
 
 /**
  * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers

@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
+import static ch.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
  * Postprocessing of the raptor algorithm results. Reconstructs connections from the labels per round.
@@ -46,13 +46,12 @@ class LabelPostprocessor {
      * @param bestLabelsPerRound the best labels per round.
      * @return a map containing the best connection to reach all stops.
      */
-    Map<String, Connection> reconstructIsolines(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
-                                                LocalDate referenceDate) {
+    Map<String, Connection> reconstructIsolines(List<QueryState.Label[]> bestLabelsPerRound, LocalDate referenceDate) {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
-            StopLabelsAndTimes.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
-            if (bestLabelForStop != null && bestLabelForStop.type() != StopLabelsAndTimes.LabelType.INITIAL) {
+            QueryState.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
+            if (bestLabelForStop != null && bestLabelForStop.type() != QueryState.LabelType.INITIAL) {
                 Connection connection = reconstructConnectionFromLabel(bestLabelForStop, referenceDate);
                 isolines.put(stop.id(), connection);
             }
@@ -67,14 +66,14 @@ class LabelPostprocessor {
      * @param bestLabelsPerRound the best labels per round.
      * @return a list of pareto-optimal connections.
      */
-    List<Connection> reconstructParetoOptimalSolutions(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
+    List<Connection> reconstructParetoOptimalSolutions(List<QueryState.Label[]> bestLabelsPerRound,
                                                        Map<Integer, Integer> targetStops, LocalDate referenceDate) {
         final List<Connection> connections = new ArrayList<>();
 
         // iterate over all rounds
-        for (StopLabelsAndTimes.Label[] labels : bestLabelsPerRound) {
+        for (QueryState.Label[] labels : bestLabelsPerRound) {
 
-            StopLabelsAndTimes.Label label = null;
+            QueryState.Label label = null;
             int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
 
             for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
@@ -83,7 +82,7 @@ class LabelPostprocessor {
                 if (labels[targetStopIdx] == null) {
                     continue;
                 }
-                StopLabelsAndTimes.Label currentLabel = labels[targetStopIdx];
+                QueryState.Label currentLabel = labels[targetStopIdx];
 
                 if (timeType == TimeType.DEPARTURE) {
                     int actualArrivalTime = currentLabel.targetTime() + targetStopWalkingTime;
@@ -114,12 +113,11 @@ class LabelPostprocessor {
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLabel(StopLabelsAndTimes.Label label,
-                                                                LocalDate referenceDate) {
+    private @Nullable Connection reconstructConnectionFromLabel(QueryState.Label label, LocalDate referenceDate) {
         RaptorConnection connection = new RaptorConnection();
 
-        ArrayList<StopLabelsAndTimes.Label> labels = new ArrayList<>();
-        while (label.type() != StopLabelsAndTimes.LabelType.INITIAL) {
+        ArrayList<QueryState.Label> labels = new ArrayList<>();
+        while (label.type() != QueryState.LabelType.INITIAL) {
             assert label.previous() != null;
             labels.add(label);
             label = label.previous();
@@ -130,7 +128,7 @@ class LabelPostprocessor {
         maybeCombineFirstTwoLabels(labels);
         maybeCombineLastTwoLabels(labels);
 
-        for (StopLabelsAndTimes.Label currentLabel : labels) {
+        for (QueryState.Label currentLabel : labels) {
             String routeId;
             String tripId = null;
             assert currentLabel.previous() != null;
@@ -151,13 +149,13 @@ class LabelPostprocessor {
                 arrivalTimestamp = currentLabel.sourceTime();
             }
 
-            if (currentLabel.type() == StopLabelsAndTimes.LabelType.ROUTE) {
+            if (currentLabel.type() == QueryState.LabelType.ROUTE) {
                 Route route = routes[currentLabel.routeOrTransferIdx()];
                 routeId = route.id();
                 tripId = route.tripIds()[currentLabel.tripOffset()];
                 type = Leg.Type.ROUTE;
 
-            } else if (currentLabel.type() == StopLabelsAndTimes.LabelType.TRANSFER) {
+            } else if (currentLabel.type() == QueryState.LabelType.TRANSFER) {
                 routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
                 type = Leg.Type.WALK_TRANSFER;
             } else {
@@ -195,7 +193,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineFirstTwoLabels(ArrayList<StopLabelsAndTimes.Label> labels) {
+    private void maybeCombineFirstTwoLabels(ArrayList<QueryState.Label> labels) {
         maybeCombineLabels(labels, true);
     }
 
@@ -219,7 +217,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineLastTwoLabels(ArrayList<StopLabelsAndTimes.Label> labels) {
+    private void maybeCombineLastTwoLabels(ArrayList<QueryState.Label> labels) {
         maybeCombineLabels(labels, false);
     }
 
@@ -231,7 +229,7 @@ class LabelPostprocessor {
      * @param fromTarget if true, the first two labels are checked, if false, the last two labels (first two legs of
      *                   connection) are checked. Note the first two labels are the two labels closest to the target!
      */
-    private void maybeCombineLabels(ArrayList<StopLabelsAndTimes.Label> labels, boolean fromTarget) {
+    private void maybeCombineLabels(ArrayList<QueryState.Label> labels, boolean fromTarget) {
         if (labels.size() < 2) {
             return;
         }
@@ -240,11 +238,11 @@ class LabelPostprocessor {
         int transferLabelIndex = fromTarget ? 0 : labels.size() - 1;
         int routeLabelIndex = fromTarget ? 1 : labels.size() - 2;
 
-        StopLabelsAndTimes.Label transferLabel = labels.get(transferLabelIndex);
-        StopLabelsAndTimes.Label routeLabel = labels.get(routeLabelIndex);
+        QueryState.Label transferLabel = labels.get(transferLabelIndex);
+        QueryState.Label routeLabel = labels.get(routeLabelIndex);
 
         // check if the labels are of the correct type else they cannot be combined
-        if (transferLabel.type() != StopLabelsAndTimes.LabelType.TRANSFER || routeLabel.type() != StopLabelsAndTimes.LabelType.ROUTE) {
+        if (transferLabel.type() != QueryState.LabelType.TRANSFER || routeLabel.type() != QueryState.LabelType.ROUTE) {
             return;
         }
 
@@ -284,15 +282,15 @@ class LabelPostprocessor {
 
         // combine and replace labels
         if (fromTarget) {
-            StopLabelsAndTimes.Label combinedLabel = new StopLabelsAndTimes.Label(routeLabel.sourceTime(), routeTime,
-                    StopLabelsAndTimes.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
+            QueryState.Label combinedLabel = new QueryState.Label(routeLabel.sourceTime(), routeTime,
+                    QueryState.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
                     transferLabel.stopIdx(), routeLabel.previous());
             labels.removeFirst();
             labels.removeFirst();
             labels.addFirst(combinedLabel);
         } else {
-            StopLabelsAndTimes.Label combinedLabel = new StopLabelsAndTimes.Label(routeTime, routeLabel.targetTime(),
-                    StopLabelsAndTimes.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
+            QueryState.Label combinedLabel = new QueryState.Label(routeTime, routeLabel.targetTime(),
+                    QueryState.LabelType.ROUTE, routeLabel.routeOrTransferIdx(), routeLabel.tripOffset(),
                     routeLabel.stopIdx(), transferLabel.previous());
             labels.removeLast();
             labels.removeLast();
@@ -311,18 +309,17 @@ class LabelPostprocessor {
      * @param routeLabel         the following route label
      * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
      */
-    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<StopLabelsAndTimes.Label> labels,
-                                                            StopLabelsAndTimes.Label transferLabel,
-                                                            StopLabelsAndTimes.Label routeLabel,
+    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<QueryState.Label> labels,
+                                                            QueryState.Label transferLabel, QueryState.Label routeLabel,
                                                             int transferLabelIndex) {
         // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can
         // be shifted to the route label (shortening the travel time)
         int idleTime = routeLabel.sourceTime() - transferLabel.targetTime();
         if (idleTime != 0) {
-            labels.set(transferLabelIndex, new StopLabelsAndTimes.Label(transferLabel.sourceTime() + idleTime,
-                    transferLabel.targetTime() + idleTime, StopLabelsAndTimes.LabelType.TRANSFER,
-                    transferLabel.routeOrTransferIdx(), transferLabel.tripOffset(), transferLabel.stopIdx(),
-                    transferLabel.previous()));
+            labels.set(transferLabelIndex,
+                    new QueryState.Label(transferLabel.sourceTime() + idleTime, transferLabel.targetTime() + idleTime,
+                            QueryState.LabelType.TRANSFER, transferLabel.routeOrTransferIdx(),
+                            transferLabel.tripOffset(), transferLabel.stopIdx(), transferLabel.previous()));
         }
 
     }
@@ -379,11 +376,10 @@ class LabelPostprocessor {
         return new StopTime(stopTimes[stopTimeIndex], stopTimes[stopTimeIndex + 1]);
     }
 
-    private @Nullable StopLabelsAndTimes.Label getBestLabelForStop(List<StopLabelsAndTimes.Label[]> bestLabelsPerRound,
-                                                                   int stopIdx) {
+    private @Nullable QueryState.Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
         // Loop through the list in reverse order since the first occurrence will be the best target time
         for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
-            StopLabelsAndTimes.Label label = bestLabelsPerRound.get(i)[stopIdx];
+            QueryState.Label label = bestLabelsPerRound.get(i)[stopIdx];
             if (label != null) {
                 return label;
             }

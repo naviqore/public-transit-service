@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static ch.naviqore.raptor.router.StopLabelsAndTimes.INFINITY;
+import static ch.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
  * The query represents a request to the raptor router and coordinates the routing logic. Each request needs a new query
@@ -26,7 +26,7 @@ class Query {
 
     private final int[] targetStops;
     private final int cutoffTime;
-    private final StopLabelsAndTimes stopLabelsAndTimes;
+    private final QueryState queryState;
     private final FootpathRelaxer footpathRelaxer;
     private final RouteScanner routeScanner;
 
@@ -65,12 +65,12 @@ class Query {
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
-        stopLabelsAndTimes = new StopLabelsAndTimes(raptorData.getStopContext().stops().length, timeType);
+        queryState = new QueryState(raptorData.getStopContext().stops().length, timeType);
 
         // set up footpath relaxer and route scanner and inject stop labels and times
-        footpathRelaxer = new FootpathRelaxer(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(),
+        footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
                 config.getMaximumWalkingDuration(), timeType);
-        routeScanner = new RouteScanner(stopLabelsAndTimes, raptorData, config.getMinimumTransferDuration(), timeType,
+        routeScanner = new RouteScanner(queryState, raptorData, config.getMinimumTransferDuration(), timeType,
                 referenceDate, raptorConfig.getDaysToScan());
     }
 
@@ -90,7 +90,7 @@ class Query {
      *     <li>Prepare for the next round by removing suboptimal labels.</li>
      * </ul>
      */
-    List<StopLabelsAndTimes.Label[]> run() {
+    List<QueryState.Label[]> run() {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         Set<Integer> markedStops = initialize();
@@ -103,7 +103,7 @@ class Query {
         } else {
             doRangeRaptor(markedStops);
         }
-        return stopLabelsAndTimes.getBestLabelsPerRound();
+        return queryState.getBestLabelsPerRound();
     }
 
     void doRangeRaptor(Set<Integer> markedStops) {
@@ -111,7 +111,7 @@ class Query {
         List<Integer> rangeOffsets = getRangeOffsets(markedStops, routeScanner);
         HashMap<Integer, Integer> stopIdxSourceTimes = new HashMap<>();
         for (int stopIdx : markedStops) {
-            stopIdxSourceTimes.put(stopIdx, stopLabelsAndTimes.getLabel(0, stopIdx).targetTime());
+            stopIdxSourceTimes.put(stopIdx, queryState.getLabel(0, stopIdx).targetTime());
         }
 
         // scan all range offsets in reverse order (earliest arrival / latest departure first)
@@ -122,24 +122,24 @@ class Query {
 
             // set source times to the source times of the previous round
             for (int stopIdx : markedStops) {
-                StopLabelsAndTimes.Label label = stopLabelsAndTimes.getLabel(0, stopIdx);
+                QueryState.Label label = queryState.getLabel(0, stopIdx);
                 int targetTime = stopIdxSourceTimes.get(stopIdx) + timeFactor * rangeOffset;
-                stopLabelsAndTimes.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
+                queryState.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
             }
             doRounds(markedStops);
         }
     }
 
-    StopLabelsAndTimes.Label copyLabelWithNewTargetTime(StopLabelsAndTimes.Label label, int targetTime) {
+    QueryState.Label copyLabelWithNewTargetTime(QueryState.Label label, int targetTime) {
         int sourceTime = label.sourceTime();
 
         // if the label is not a source label, we need to adjust the source time by the same offset
-        if (label.type() != StopLabelsAndTimes.LabelType.INITIAL) {
+        if (label.type() != QueryState.LabelType.INITIAL) {
             int offset = targetTime - label.targetTime();
             sourceTime += offset;
         }
 
-        return new StopLabelsAndTimes.Label(sourceTime, targetTime, label.type(), label.routeOrTransferIdx(),
+        return new QueryState.Label(sourceTime, targetTime, label.type(), label.routeOrTransferIdx(),
                 label.tripOffset(), label.stopIdx(), label.previous());
 
     }
@@ -155,7 +155,7 @@ class Query {
         int round = 1;
         while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
             // add label layer for new round
-            stopLabelsAndTimes.addNewRound();
+            queryState.addNewRound();
 
             // scan all routs and mark stops that have improved
             Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
@@ -224,11 +224,10 @@ class Query {
             int currentStopIdx = sourceStopIndices[i];
             int targetTime = sourceTimes[i];
 
-            StopLabelsAndTimes.Label label = new StopLabelsAndTimes.Label(0, targetTime,
-                    StopLabelsAndTimes.LabelType.INITIAL, StopLabelsAndTimes.NO_INDEX, StopLabelsAndTimes.NO_INDEX,
-                    currentStopIdx, null);
-            stopLabelsAndTimes.setLabel(0, currentStopIdx, label);
-            stopLabelsAndTimes.setBestTime(currentStopIdx, targetTime);
+            QueryState.Label label = new QueryState.Label(0, targetTime, QueryState.LabelType.INITIAL,
+                    QueryState.NO_INDEX, QueryState.NO_INDEX, currentStopIdx, null);
+            queryState.setLabel(0, currentStopIdx, label);
+            queryState.setBestTime(currentStopIdx, targetTime);
 
             markedStops.add(currentStopIdx);
         }
@@ -252,12 +251,12 @@ class Query {
 
         Set<Integer> markedStopsClean = new HashSet<>();
         for (int stopIdx : markedStops) {
-            StopLabelsAndTimes.Label label = stopLabelsAndTimes.getLabel(round, stopIdx);
+            QueryState.Label label = queryState.getLabel(round, stopIdx);
             if (label != null) {
                 if (timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) {
-                    stopLabelsAndTimes.setLabel(round, stopIdx, null);
+                    queryState.setLabel(round, stopIdx, null);
                 } else if (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime) {
-                    stopLabelsAndTimes.setLabel(round, stopIdx, null);
+                    queryState.setLabel(round, stopIdx, null);
                 } else {
                     markedStopsClean.add(stopIdx);
                 }
@@ -277,7 +276,7 @@ class Query {
         for (int i = 0; i < targetStops.length; i += 2) {
             int targetStopIdx = targetStops[i];
             int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = stopLabelsAndTimes.getActualBestTime(targetStopIdx);
+            int bestTimeForStop = queryState.getActualBestTime(targetStopIdx);
 
             if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
                 bestTimeForStop += walkDurationToTarget;
