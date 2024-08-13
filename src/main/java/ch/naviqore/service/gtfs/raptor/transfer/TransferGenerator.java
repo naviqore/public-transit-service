@@ -1,8 +1,8 @@
-package ch.naviqore.service.impl.transfer;
+package ch.naviqore.service.gtfs.raptor.transfer;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
-import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 
 import java.util.List;
 

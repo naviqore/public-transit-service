@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.StopTime;
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString(exclude = "trip")
-public class StopTimeImpl implements StopTime {
+public class GtfsRaptorStopTime implements StopTime {
 
     private final Stop stop;
     private final LocalDateTime arrivalTime;

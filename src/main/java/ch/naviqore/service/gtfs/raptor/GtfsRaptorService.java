@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.RaptorAlgorithm;
@@ -10,9 +10,9 @@ import ch.naviqore.service.exception.RouteNotFoundException;
 import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
-import ch.naviqore.service.impl.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.impl.convert.GtfsTripMaskProvider;
-import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
+import ch.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
+import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import ch.naviqore.service.walk.WalkCalculator;
 import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
@@ -27,11 +27,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static ch.naviqore.service.impl.TypeMapper.createWalk;
-import static ch.naviqore.service.impl.TypeMapper.map;
-
 @Slf4j
-public class PublicTransitServiceImpl implements PublicTransitService {
+public class GtfsRaptorService implements PublicTransitService {
 
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
@@ -41,10 +38,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
     private final RaptorAlgorithm raptorAlgorithm;
     private final GtfsTripMaskProvider tripMaskProvider;
 
-    PublicTransitServiceImpl(ServiceConfig config, GtfsSchedule schedule,
-                             KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
-                             SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex,
-                             WalkCalculator walkCalculator, List<TransferGenerator.Transfer> additionalTransfers) {
+    GtfsRaptorService(ServiceConfig config, GtfsSchedule schedule,
+                      KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
+                      SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex, WalkCalculator walkCalculator,
+                      List<TransferGenerator.Transfer> additionalTransfers) {
         this.config = config;
         this.schedule = schedule;
         this.spatialStopIndex = spatialStopIndex;
@@ -63,7 +60,10 @@ public class PublicTransitServiceImpl implements PublicTransitService {
 
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
-        return stopSearchIndex.search(like.toLowerCase(), map(searchType)).stream().map(TypeMapper::map).toList();
+        return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
+                .stream()
+                .map(TypeMapper::map)
+                .toList();
     }
 
     @Override
@@ -76,7 +76,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             stop = stop.getParent().get();
         }
 
-        return Optional.ofNullable(map(stop));
+        return Optional.ofNullable(TypeMapper.map(stop));
     }
 
     @Override
@@ -105,7 +105,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         List<String> stopIds = getAllStopIdsForStop(stop);
         return stopIds.stream()
                 .flatMap(stopId -> schedule.getNextDepartures(stopId, from, limit).stream())
-                .map(stopTime -> map(stopTime, from.toLocalDate()))
+                .map(stopTime -> TypeMapper.map(stopTime, from.toLocalDate()))
                 .sorted(Comparator.comparing(StopTime::getDepartureTime))
                 .filter(stopTime -> until == null || stopTime.getDepartureTime().isBefore(until))
                 .limit(limit)
@@ -170,7 +170,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, Integer> targetStops;
 
         if (sourceStop != null) {
-            sourceStops = getAllChildStopsFromStop(map(sourceStop), time);
+            sourceStops = getAllChildStopsFromStop(TypeMapper.map(sourceStop), time);
         } else if (sourceLocation != null) {
             sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, time, config.getMaximumWalkingDuration(),
                     timeType);
@@ -179,7 +179,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         }
 
         if (targetStop != null) {
-            targetStops = getAllChildStopsFromStop(map(targetStop));
+            targetStops = getAllChildStopsFromStop(TypeMapper.map(targetStop));
         } else if (targetLocation != null) {
             targetStops = getStopsWithWalkTimeFromLocation(targetLocation, config.getMaximumWalkingDuration());
         } else {
@@ -194,9 +194,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         // query connection from raptor
         List<ch.naviqore.raptor.Connection> connections;
         if (isDeparture) {
-            connections = raptorAlgorithm.routeEarliestArrival(sourceStops, targetStops, map(config));
+            connections = raptorAlgorithm.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(config));
         } else {
-            connections = raptorAlgorithm.routeLatestDeparture(targetStops, sourceStops, map(config));
+            connections = raptorAlgorithm.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
         }
 
         // assemble connection results
@@ -215,7 +215,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 lastMile = getLastWalk(targetLocation, connection.getToStopId(), arrivalTime);
             }
 
-            Connection serviceConnection = map(connection, firstMile, lastMile, schedule);
+            Connection serviceConnection = TypeMapper.map(connection, firstMile, lastMile, schedule);
 
             // Filter needed because the raptor algorithm does not consider the firstMile and lastMile walk time
             if (Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
@@ -280,7 +280,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
                 config.getMaximumWalkingDuration(), timeType);
 
-        return mapToStopConnectionMap(raptorAlgorithm.routeIsolines(sourceStops, map(timeType), map(config)), source,
+        return mapToStopConnectionMap(
+                raptorAlgorithm.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
                 config, timeType);
     }
 
@@ -289,7 +290,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                                              ConnectionQueryConfig config) {
         Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
 
-        return mapToStopConnectionMap(raptorAlgorithm.routeIsolines(sourceStops, map(timeType), map(config)), null,
+        return mapToStopConnectionMap(
+                raptorAlgorithm.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
                 config, timeType);
     }
 
@@ -309,8 +311,8 @@ public class PublicTransitServiceImpl implements PublicTransitService {
                 lastMile = getLastWalk(source, connection.getFromStopId(), connection.getDepartureTime());
             }
 
-            Stop stop = map(schedule.getStops().get(entry.getKey()));
-            Connection serviceConnection = map(connection, firstMile, lastMile, schedule);
+            Stop stop = TypeMapper.map(schedule.getStops().get(entry.getKey()));
+            Connection serviceConnection = TypeMapper.map(connection, firstMile, lastMile, schedule);
 
             // The raptor algorithm does not consider the firstMile walk time, so we need to filter out connections
             // that exceed the maximum travel time here
@@ -329,9 +331,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         int firstWalkDuration = firstWalk.duration() + config.getTransferTimeAccessEgress();
 
         if (firstWalkDuration > config.getWalkingDurationMinimum()) {
-            return createWalk(firstWalk.distance(), firstWalkDuration, WalkType.FIRST_MILE,
+            return TypeMapper.createWalk(firstWalk.distance(), firstWalkDuration, WalkType.FIRST_MILE,
                     departureTime.minusSeconds(firstWalkDuration), departureTime, source, firstStop.getCoordinate(),
-                    map(firstStop));
+                    TypeMapper.map(firstStop));
         }
         return null;
     }
@@ -342,8 +344,9 @@ public class PublicTransitServiceImpl implements PublicTransitService {
         int lastWalkDuration = lastWalk.duration() + config.getTransferTimeAccessEgress();
 
         if (lastWalkDuration > config.getWalkingDurationMinimum()) {
-            return createWalk(lastWalk.distance(), lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
-                    arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target, map(lastStop));
+            return TypeMapper.createWalk(lastWalk.distance(), lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
+                    arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target,
+                    TypeMapper.map(lastStop));
         }
         return null;
     }
@@ -356,7 +359,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             throw new StopNotFoundException(stopId);
         }
 
-        return map(stop);
+        return TypeMapper.map(stop);
     }
 
     @Override
@@ -371,7 +374,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             throw new TripNotActiveException(tripId, date);
         }
 
-        return map(trip, date);
+        return TypeMapper.map(trip, date);
     }
 
     @Override
@@ -382,7 +385,7 @@ public class PublicTransitServiceImpl implements PublicTransitService {
             throw new RouteNotFoundException(routeId);
         }
 
-        return map(route);
+        return TypeMapper.map(route);
     }
 
     @Override

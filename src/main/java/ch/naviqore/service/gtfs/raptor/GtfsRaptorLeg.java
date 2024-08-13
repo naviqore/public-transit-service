@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.service.Leg;
 import ch.naviqore.service.LegType;
@@ -11,7 +11,7 @@ import lombok.ToString;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-public abstract class LegImpl implements Leg {
+public abstract class GtfsRaptorLeg implements Leg {
 
     private final LegType legType;
     private final int distance;

@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.service.*;
 import lombok.AccessLevel;
@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
-public class ConnectionImpl implements Connection {
+public class GtfsRaptorConnection implements Connection {
 
     private final List<Leg> legs;
 

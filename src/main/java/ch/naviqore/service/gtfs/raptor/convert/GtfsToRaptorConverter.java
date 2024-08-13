@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl.convert;
+package ch.naviqore.service.gtfs.raptor.convert;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.Stop;
@@ -8,7 +8,7 @@ import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
-import ch.naviqore.service.impl.transfer.TransferGenerator;
+import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashSet;

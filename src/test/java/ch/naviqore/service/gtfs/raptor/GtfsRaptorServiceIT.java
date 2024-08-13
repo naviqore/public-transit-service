@@ -1,4 +1,4 @@
-package ch.naviqore.service.impl;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
@@ -26,9 +26,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PublicTransitServiceImplIT {
+class GtfsRaptorServiceIT {
 
-    private PublicTransitServiceImpl service;
+    private GtfsRaptorService service;
 
     @BeforeEach
     void setUp(@TempDir Path tempDir) throws IOException, InterruptedException {
@@ -36,11 +36,11 @@ class PublicTransitServiceImplIT {
 
         // implement repo for gtfs schedule file reader
         GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());
-        PublicTransitServiceInitializer initializer = new PublicTransitServiceInitializer(
+        GtfsRaptorServiceInitializer initializer = new GtfsRaptorServiceInitializer(
                 new ServiceConfig(zipFile.getAbsolutePath()), repo.get());
 
         // create service from initialized data
-        service = new PublicTransitServiceImpl(initializer.getConfig(), initializer.getSchedule(),
+        service = new GtfsRaptorService(initializer.getConfig(), initializer.getSchedule(),
                 initializer.getSpatialStopIndex(), initializer.getStopSearchIndex(), initializer.getWalkCalculator(),
                 initializer.getAdditionalTransfers());
     }
