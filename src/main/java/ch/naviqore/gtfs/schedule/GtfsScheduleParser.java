@@ -80,8 +80,8 @@ class GtfsScheduleParser {
     private void parseStop(CSVRecord record) {
         builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
                 Double.parseDouble(record.get("stop_lon")),
-                ParsingHelpers.getStringFieldOrDefault(record, "parent_station", ""),
-                AccessibilityInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
+                Utils.getStringFieldOrDefault(record, "parent_station", ""),
+                AccessibilityInformation.parse(Utils.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
     }
 
     private void parseRoute(CSVRecord record) {
@@ -93,8 +93,8 @@ class GtfsScheduleParser {
         try {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
                     record.get("trip_headsign"), AccessibilityInformation.parse(
-                            ParsingHelpers.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
-                    BikeInformation.parse(ParsingHelpers.getIntFieldOrDefault(record, "bikes_allowed", 0)));
+                            Utils.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
+                    BikeInformation.parse(Utils.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());
         }
@@ -118,22 +118,14 @@ class GtfsScheduleParser {
                 minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time")));
     }
 
-    private static class ParsingHelpers {
-
-        private static String getStringField(CSVRecord record, String fieldName) {
-            return record.get(fieldName).trim();
-        }
-
-        private static int getIntField(CSVRecord record, String fieldName) {
-            return Integer.parseInt(record.get(fieldName));
-        }
+    private static class Utils {
 
         private static String getStringFieldOrDefault(CSVRecord record, String fieldName, String defaultValue) {
-            return record.isMapped(fieldName) ? getStringField(record, fieldName) : defaultValue;
+            return record.isMapped(fieldName) ? record.get(fieldName).trim() : defaultValue;
         }
 
         private static int getIntFieldOrDefault(CSVRecord record, String fieldName, int defaultValue) {
-            return record.isMapped(fieldName) ? getIntField(record, fieldName) : defaultValue;
+            return record.isMapped(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
         }
 
     }
