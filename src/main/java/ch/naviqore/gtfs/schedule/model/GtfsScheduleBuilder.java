@@ -1,9 +1,6 @@
 package ch.naviqore.gtfs.schedule.model;
 
-import ch.naviqore.gtfs.schedule.type.ExceptionType;
-import ch.naviqore.gtfs.schedule.type.RouteType;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
-import ch.naviqore.gtfs.schedule.type.TransferType;
+import ch.naviqore.gtfs.schedule.type.*;
 import ch.naviqore.utils.cache.ValueObjectCache;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
@@ -51,17 +48,18 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon) {
-        addStop(id, name, lat, lon, "");
+        addStop(id, name, lat, lon, "", AccessibilityInformation.UNKNOWN);
         return this;
     }
 
-    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId) {
+    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId,
+                                       AccessibilityInformation wheelchairBoarding) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon));
+        Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon), wheelchairBoarding);
 
         // only add stop id if it is not a blank string
         if (!parentStopId.isEmpty()) {
@@ -120,6 +118,11 @@ public class GtfsScheduleBuilder {
     }
 
     public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign) {
+        return addTrip(id, routeId, serviceId, headSign, AccessibilityInformation.UNKNOWN, BikeInformation.UNKNOWN);
+    }
+
+    public GtfsScheduleBuilder addTrip(String id, String routeId, String serviceId, String headSign,
+                                       AccessibilityInformation wheelchairAccessible, BikeInformation bikesAllowed) {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");
@@ -133,7 +136,7 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Calendar " + serviceId + " does not exist");
         }
         log.debug("Adding trip {}", id);
-        Trip trip = new Trip(id, route, calendar, stringCache.getOrAdd(headSign));
+        Trip trip = new Trip(id, route, calendar, stringCache.getOrAdd(headSign), wheelchairAccessible, bikesAllowed);
         route.addTrip(trip);
         trips.put(id, trip);
         calendar.addTrip(trip);

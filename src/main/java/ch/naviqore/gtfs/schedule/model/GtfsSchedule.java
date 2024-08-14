@@ -1,6 +1,9 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.type.AccessibilityInformation;
+import ch.naviqore.gtfs.schedule.type.BikeInformation;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +28,15 @@ public class GtfsSchedule {
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
 
+    @Accessors(fluent = true)
+    private final boolean hasStopAccessibilityInformation;
+
+    @Accessors(fluent = true)
+    private final boolean hasTripAccessibilityInformation;
+
+    @Accessors(fluent = true)
+    private final boolean hasTripBikeInformation;
+
     /**
      * Constructs an immutable GTFS schedule.
      * <p>
@@ -38,6 +50,19 @@ public class GtfsSchedule {
         this.stops = Map.copyOf(stops);
         this.routes = Map.copyOf(routes);
         this.trips = Map.copyOf(trips);
+
+        // retrieve accessibility and bike information
+        hasStopAccessibilityInformation = this.stops.values()
+                .stream()
+                .anyMatch(stop -> stop.getWheelchairBoarding() != AccessibilityInformation.UNKNOWN);
+
+        hasTripAccessibilityInformation = this.trips.values()
+                .stream()
+                .anyMatch(trip -> trip.getWheelchairAccessible() != AccessibilityInformation.UNKNOWN);
+
+        hasTripBikeInformation = this.trips.values()
+                .stream()
+                .anyMatch(trip -> trip.getBikesAllowed() != BikeInformation.UNKNOWN);
     }
 
     /**
