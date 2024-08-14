@@ -2,13 +2,10 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.*;
 import ch.naviqore.service.ScheduleInformationService;
-import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,17 +24,11 @@ public class ScheduleController {
         this.service = service;
     }
 
-    private static void validateLimit(int limit) {
-        if (limit <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limit must be greater than 0");
-        }
-    }
-
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
                                            @RequestParam(required = false, defaultValue = "10") int limit,
                                            @RequestParam(required = false, defaultValue = "STARTS_WITH") SearchType searchType) {
-        validateLimit(limit);
+        ScheduleRequestValidator.validateLimit(limit);
         return service.getStops(query, map(searchType)).stream().map(DtoMapper::map).limit(limit).toList();
     }
 
@@ -45,17 +36,10 @@ public class ScheduleController {
     public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
                                                 @RequestParam(required = false, defaultValue = "1000") int maxDistance,
                                                 @RequestParam(required = false, defaultValue = "10") int limit) {
-        validateLimit(limit);
-        if (maxDistance < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max distance can not be negative");
-        }
+        ScheduleRequestValidator.validateLimit(limit);
+        ScheduleRequestValidator.validateMaxDistance(maxDistance);
 
-        GeoCoordinate location;
-        try {
-            location = new GeoCoordinate(latitude, longitude);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        }
+        GeoCoordinate location = ScheduleRequestValidator.validateGeoCoordinate(latitude, longitude);
 
         return service.getNearestStops(location, maxDistance, limit)
                 .stream()
@@ -65,7 +49,7 @@ public class ScheduleController {
 
     @GetMapping("/stops/{stopId}")
     public Stop getStop(@PathVariable String stopId) {
-        return map(validateStop(stopId));
+        return map(ScheduleRequestValidator.validateAndGet(stopId, service));
     }
 
     @GetMapping("/stops/{stopId}/departures")
@@ -73,29 +57,12 @@ public class ScheduleController {
                                          @RequestParam(required = false) LocalDateTime departureDateTime,
                                          @RequestParam(required = false, defaultValue = "10") int limit,
                                          @RequestParam(required = false) LocalDateTime untilDateTime) {
-        validateLimit(limit);
-        if (departureDateTime == null) {
-            departureDateTime = LocalDateTime.now();
-        }
-        if (untilDateTime != null) {
-            if (untilDateTime.isBefore(departureDateTime)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Until date time must be after departure date time");
-            }
-        }
+        ScheduleRequestValidator.validateLimit(limit);
+        departureDateTime = ScheduleRequestValidator.validateAndSetDefaultDateTime(departureDateTime);
+        ScheduleRequestValidator.validateUntilDateTime(departureDateTime, untilDateTime);
 
-        return service.getNextDepartures(validateStop(stopId), departureDateTime, untilDateTime, limit)
-                .stream()
-                .map(DtoMapper::map)
-                .toList();
+        return service.getNextDepartures(ScheduleRequestValidator.validateAndGet(stopId, service), departureDateTime,
+                untilDateTime, limit).stream().map(DtoMapper::map).toList();
     }
 
-    private ch.naviqore.service.Stop validateStop(String stopId) {
-        try {
-            return service.getStopById(stopId);
-        } catch (StopNotFoundException e) {
-            String errorMessage = String.format("The requested stop with ID '%s' was not found.", stopId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage, e);
-        }
-    }
 }
