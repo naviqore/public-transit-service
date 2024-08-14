@@ -106,8 +106,8 @@ public class RoutingController {
 
         dateTime = setToNowIfNull(dateTime);
 
-        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
-        Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
+        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId, StopType.SOURCE) : null;
+        Stop targetStop = targetStopId != null ? getStop(targetStopId, StopType.TARGET) : null;
 
         validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
@@ -149,7 +149,7 @@ public class RoutingController {
             sourceCoordinate = validateCoordinate(sourceLatitude, sourceLongitude);
         }
 
-        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
+        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId, StopType.SOURCE) : null;
 
         validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
         ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
@@ -175,12 +175,19 @@ public class RoutingController {
         return arrivals;
     }
 
-    private ch.naviqore.service.Stop getStop(String stopId) {
+    private ch.naviqore.service.Stop getStop(String stopId, StopType stopType) {
         try {
             return service.getStopById(stopId);
         } catch (StopNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
+            String errorMessage = String.format("The requested %s stop with ID '%s' was not found.",
+                    stopType.name().toLowerCase(), stopId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage, e);
         }
+    }
+
+    private enum StopType {
+        SOURCE,
+        TARGET
     }
 
 }
