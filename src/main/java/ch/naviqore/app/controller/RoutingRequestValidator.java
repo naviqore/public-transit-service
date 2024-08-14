@@ -6,8 +6,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
-
 @NoArgsConstructor(access = AccessLevel.NONE)
 final class RoutingRequestValidator {
 
@@ -39,15 +37,13 @@ final class RoutingRequestValidator {
         }
     }
 
-    public static LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
-        return (dateTime == null) ? LocalDateTime.now() : dateTime;
-    }
-
-    public static void validateStopParameters(String stopId, double latitude, double longitude, String stopType) {
+    public static void validateStopParameters(String stopId, double latitude, double longitude,
+                                              GlobalStopType stopType) {
         if (stopId == null) {
             if (latitude == -91.0 || longitude == -181.0) {
+                String stopTypeName = stopType.name().toLowerCase();
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Either " + stopType + "StopId or " + stopType + "Latitude and " + stopType + "Longitude must be provided.");
+                        "Either " + stopTypeName + "StopId or " + stopTypeName + "Latitude and " + stopTypeName + "Longitude must be provided.");
             }
         }
     }
