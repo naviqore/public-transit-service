@@ -35,10 +35,6 @@ public class GtfsScheduleBuilder {
     private final Map<String, Trip> trips = new HashMap<>();
     private final Map<String, List<Stop>> parents = new HashMap<>();
 
-    private boolean hasAccessibilityInformationForStops = false;
-    private boolean hasAccessibilityInformationForTrips = false;
-    private boolean hasBikeInformationForTrips = false;
-
     private boolean built = false;
 
     public GtfsScheduleBuilder addAgency(String id, String name, String url, String timezone) {
@@ -61,9 +57,6 @@ public class GtfsScheduleBuilder {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
-        }
-        if (wheelchairBoarding != AccessibilityInformation.UNKNOWN) {
-            hasAccessibilityInformationForStops = true;
         }
         log.debug("Adding stop {}", id);
         Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon), wheelchairBoarding);
@@ -124,12 +117,6 @@ public class GtfsScheduleBuilder {
         checkNotBuilt();
         if (trips.containsKey(id)) {
             throw new IllegalArgumentException("Trip " + id + " already exists");
-        }
-        if (wheelchairAccessible != AccessibilityInformation.UNKNOWN) {
-            hasAccessibilityInformationForTrips = true;
-        }
-        if (bikesAllowed != BikeInformation.UNKNOWN) {
-            hasBikeInformationForTrips = true;
         }
         Route route = routes.get(routeId);
         if (route == null) {
@@ -207,8 +194,7 @@ public class GtfsScheduleBuilder {
         routes.values().parallelStream().forEach(Initializable::initialize);
         calendars.values().parallelStream().forEach(Initializable::initialize);
 
-        GtfsSchedule schedule = new GtfsSchedule(agencies, calendars, stops, routes, trips,
-                hasAccessibilityInformationForStops, hasAccessibilityInformationForTrips, hasBikeInformationForTrips);
+        GtfsSchedule schedule = new GtfsSchedule(agencies, calendars, stops, routes, trips);
         clear();
         built = true;
 

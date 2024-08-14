@@ -79,8 +79,7 @@ class GtfsScheduleParser {
 
     private void parseStop(CSVRecord record) {
         builder.addStop(record.get("stop_id"), record.get("stop_name"), Double.parseDouble(record.get("stop_lat")),
-                Double.parseDouble(record.get("stop_lon")),
-                Utils.getStringFieldOrDefault(record, "parent_station", ""),
+                Double.parseDouble(record.get("stop_lon")), Utils.getStringFieldOrDefault(record, "parent_station", ""),
                 AccessibilityInformation.parse(Utils.getIntFieldOrDefault(record, "wheelchair_boarding", 0)));
     }
 
@@ -92,8 +91,8 @@ class GtfsScheduleParser {
     private void parseTrips(CSVRecord record) {
         try {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
-                    record.get("trip_headsign"), AccessibilityInformation.parse(
-                            Utils.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
+                    record.get("trip_headsign"),
+                    AccessibilityInformation.parse(Utils.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
                     BikeInformation.parse(Utils.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid trip {}: {}", record.get("trip_id"), e.getMessage());

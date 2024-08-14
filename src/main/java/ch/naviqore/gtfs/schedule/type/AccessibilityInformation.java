@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * Informs about accessibility for stops and trips as specified in the GTFS feed standards.
  * <p>
- * For more information on stop accessibility types, see <a href="https://gtfs.org/schedule/reference/#stopstxt">GTFS Stops</a>
- * and <a href="https://gtfs.org/schedule/reference/#tripstxt">GTFS Trips</a>.
+ * For more information on stop accessibility types, see <a href="https://gtfs.org/schedule/reference/#stopstxt">GTFS
+ * Stops</a> and <a href="https://gtfs.org/schedule/reference/#tripstxt">GTFS Trips</a>.
  */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter

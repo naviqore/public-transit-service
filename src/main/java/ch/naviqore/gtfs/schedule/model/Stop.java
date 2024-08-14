@@ -47,6 +47,7 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
         if (wheelchairBoarding == AccessibilityInformation.UNKNOWN && parent != null) {
             return parent.getWheelchairBoarding();
         }
+
         return wheelchairBoarding;
     }
 

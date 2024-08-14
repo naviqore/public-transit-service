@@ -1,6 +1,9 @@
 package ch.naviqore.gtfs.schedule.model;
 
+import ch.naviqore.gtfs.schedule.type.AccessibilityInformation;
+import ch.naviqore.gtfs.schedule.type.BikeInformation;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,9 +27,15 @@ public class GtfsSchedule {
     private final Map<String, Stop> stops;
     private final Map<String, Route> routes;
     private final Map<String, Trip> trips;
-    private final boolean stopAccessibilityInformationProvider;
-    private final boolean tripAccessibilityInformationProvider;
-    private final boolean tripBikeInformationProvider;
+
+    @Accessors(fluent = true)
+    private final boolean hasStopAccessibilityInformation;
+
+    @Accessors(fluent = true)
+    private final boolean hasTripAccessibilityInformation;
+
+    @Accessors(fluent = true)
+    private final boolean hasTripBikeInformation;
 
     /**
      * Constructs an immutable GTFS schedule.
@@ -35,16 +44,25 @@ public class GtfsSchedule {
      * enhance memory efficiency and thread-safety in a concurrent environment.
      */
     GtfsSchedule(Map<String, Agency> agencies, Map<String, Calendar> calendars, Map<String, Stop> stops,
-                 Map<String, Route> routes, Map<String, Trip> trips, boolean stopAccessibilityInformationProvider,
-                 boolean tripAccessibilityInformationProvider, boolean tripBikeInformationProvider) {
+                 Map<String, Route> routes, Map<String, Trip> trips) {
         this.agencies = Map.copyOf(agencies);
         this.calendars = Map.copyOf(calendars);
         this.stops = Map.copyOf(stops);
         this.routes = Map.copyOf(routes);
         this.trips = Map.copyOf(trips);
-        this.stopAccessibilityInformationProvider = stopAccessibilityInformationProvider;
-        this.tripAccessibilityInformationProvider = tripAccessibilityInformationProvider;
-        this.tripBikeInformationProvider = tripBikeInformationProvider;
+
+        // retrieve accessibility and bike information
+        hasStopAccessibilityInformation = this.stops.values()
+                .stream()
+                .anyMatch(stop -> stop.getWheelchairBoarding() != AccessibilityInformation.UNKNOWN);
+
+        hasTripAccessibilityInformation = this.trips.values()
+                .stream()
+                .anyMatch(trip -> trip.getWheelchairAccessible() != AccessibilityInformation.UNKNOWN);
+
+        hasTripBikeInformation = this.trips.values()
+                .stream()
+                .anyMatch(trip -> trip.getBikesAllowed() != BikeInformation.UNKNOWN);
     }
 
     /**

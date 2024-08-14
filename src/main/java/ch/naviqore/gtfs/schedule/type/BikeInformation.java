@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * Informs about bike options for trips as specified in the GTFS feed standards.
  * <p>
- * For more information on trip bike option types, see <a href="https://gtfs.org/schedule/reference/#tripstxt">GTFS Trips</a>.
+ * For more information on trip bike option types, see <a href="https://gtfs.org/schedule/reference/#tripstxt">GTFS
+ * Trips</a>.
  */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
