@@ -65,11 +65,7 @@ public class ScheduleController {
 
     @GetMapping("/stops/{stopId}")
     public Stop getStop(@PathVariable String stopId) {
-        try {
-            return map(service.getStopById(stopId));
-        } catch (StopNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
-        }
+        return map(validateStop(stopId));
     }
 
     @GetMapping("/stops/{stopId}/departures")
@@ -88,14 +84,18 @@ public class ScheduleController {
             }
         }
 
-        try {
-            return service.getNextDepartures(service.getStopById(stopId), departureDateTime, untilDateTime, limit)
-                    .stream()
-                    .map(DtoMapper::map)
-                    .toList();
-        } catch (StopNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
-        }
+        return service.getNextDepartures(validateStop(stopId), departureDateTime, untilDateTime, limit)
+                .stream()
+                .map(DtoMapper::map)
+                .toList();
+    }
 
+    private ch.naviqore.service.Stop validateStop(String stopId) {
+        try {
+            return service.getStopById(stopId);
+        } catch (StopNotFoundException e) {
+            String errorMessage = String.format("The requested stop with ID '%s' was not found.", stopId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage, e);
+        }
     }
 }
