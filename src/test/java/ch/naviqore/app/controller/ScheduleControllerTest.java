@@ -100,7 +100,7 @@ public class ScheduleControllerTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> scheduleController.getNearestStops(0, 0, -1000, 10));
 
-        assertEquals("Max distance can not be negative", exception.getReason());
+        assertEquals("Max distance cannot be negative", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
 
