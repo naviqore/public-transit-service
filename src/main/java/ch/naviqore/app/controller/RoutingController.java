@@ -57,10 +57,10 @@ public class RoutingController {
 
         dateTime = RoutingRequestValidator.setToNowIfNull(dateTime);
 
-        Stop sourceStop = sourceStopId != null ? RoutingRequestValidator.validateAndGetStop(sourceStopId, service,
-                RoutingRequestValidator.StopType.SOURCE) : null;
-        Stop targetStop = targetStopId != null ? RoutingRequestValidator.validateAndGetStop(targetStopId, service,
-                RoutingRequestValidator.StopType.TARGET) : null;
+        Stop sourceStop = sourceStopId != null ? GlobalStopValidator.validateAndGetStop(sourceStopId, service,
+                GlobalStopValidator.StopType.SOURCE) : null;
+        Stop targetStop = targetStopId != null ? GlobalStopValidator.validateAndGetStop(targetStopId, service,
+                GlobalStopValidator.StopType.TARGET) : null;
 
         RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
@@ -99,8 +99,8 @@ public class RoutingController {
         GeoCoordinate sourceCoordinate = sourceStopId == null ? RoutingRequestValidator.validateCoordinate(
                 sourceLatitude, sourceLongitude) : null;
 
-        Stop sourceStop = sourceStopId != null ? RoutingRequestValidator.validateAndGetStop(sourceStopId, service,
-                RoutingRequestValidator.StopType.SOURCE) : null;
+        Stop sourceStop = sourceStopId != null ? GlobalStopValidator.validateAndGetStop(sourceStopId, service,
+                GlobalStopValidator.StopType.SOURCE) : null;
 
         RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);

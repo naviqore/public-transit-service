@@ -1,8 +1,5 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.service.PublicTransitService;
-import ch.naviqore.service.Stop;
-import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -46,16 +43,6 @@ final class RoutingRequestValidator {
         return (dateTime == null) ? LocalDateTime.now() : dateTime;
     }
 
-    public static Stop validateAndGetStop(String stopId, PublicTransitService service, StopType stopType) {
-        try {
-            return service.getStopById(stopId);
-        } catch (StopNotFoundException e) {
-            String errorMessage = String.format("The requested %s stop with ID '%s' was not found.",
-                    stopType.name().toLowerCase(), stopId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage, e);
-        }
-    }
-
     public static void validateStopParameters(String stopId, double latitude, double longitude, String stopType) {
         if (stopId == null) {
             if (latitude == -91.0 || longitude == -181.0) {
@@ -65,8 +52,4 @@ final class RoutingRequestValidator {
         }
     }
 
-    public enum StopType {
-        SOURCE,
-        TARGET
-    }
 }
