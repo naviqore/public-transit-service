@@ -6,7 +6,9 @@ import ch.naviqore.service.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class DtoMapper {
@@ -58,6 +60,19 @@ public class DtoMapper {
     public static Connection map(ch.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
         return new Connection(legs);
+    }
+
+    public static List<Connection> map(List<ch.naviqore.service.Connection> connections) {
+        return connections.stream().map(DtoMapper::map).toList();
+    }
+
+    public static List<StopConnection> map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
+                                           ch.naviqore.app.dto.TimeType timeType, boolean returnConnections) {
+        List<StopConnection> arrivals = new ArrayList<>();
+        for (Map.Entry<ch.naviqore.service.Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
+            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), timeType, returnConnections));
+        }
+        return arrivals;
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {
