@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Naviqore Public Transit API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #ffffff;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        header img {
+            height: 80px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content a {
+            display: block;
+            margin: 10px 0;
+            font-size: 1.2em;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .content a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <img src="naviqore-logo-192x192.png" alt="Naviqore Logo">
+    <h1 th:text="${appName}">Naviqore Public Transit API</h1>
+    <p th:text="'Version: ' + ${appVersion}">Version: 1.0.0</p>
+    <p th:text="${appDescription}">API for Public Transit Routing System</p>
+</header>
+<div class="content">
+    <a href="/swagger-ui.html">Swagger UI</a>
+    <a href="/v3/api-docs">API Documentation (JSON)</a>
+    <a href="/actuator/health">Health Check</a>
+    <a href="/actuator/info">Info</a>
+</div>
+</body>
+</html>
