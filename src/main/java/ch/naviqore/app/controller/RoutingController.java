@@ -8,6 +8,11 @@ import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.utils.spatial.GeoCoordinate;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +27,7 @@ import static ch.naviqore.app.dto.DtoMapper.map;
 
 @RestController
 @RequestMapping("/routing")
+@Tag(name = "routing", description = "APIs related to routing and connections")
 public class RoutingController {
 
     private final PublicTransitService service;
@@ -31,6 +37,10 @@ public class RoutingController {
         this.service = service;
     }
 
+    @Operation(summary = "Request connections between two stops", description = "Requests connections between two stops at a given departure datetime.")
+    @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
@@ -45,22 +55,16 @@ public class RoutingController {
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
 
-        // try to get coordinates
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalStopType.SOURCE);
         GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
                 GlobalStopType.TARGET);
-
-        // try to get stops by id
         Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
         Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalStopType.TARGET);
-
-        // configure connection request
         dateTime = Utils.setToNowIfNull(dateTime);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
-        // determine connection case: STOP_STOP, STOP_COORDINATE, COORDINATE_STOP or COORDINATE_COORDINATE
         if (sourceStop != null && targetStop != null) {
             return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
         } else if (sourceStop != null) {
@@ -70,11 +74,15 @@ public class RoutingController {
         } else {
             return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
         }
-
     }
 
+    @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified position at a given departure datetime.")
+    @ApiResponse(responseCode = "200", description = "A list of stop and fastest connection pairs for each reachable stop.")
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/isolines")
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
+                                            // TODO: Replace with and check against null - @RequestParam(required = false) Double sourceLatitude,
                                             @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
                                             @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
                                             @RequestParam(required = false) LocalDateTime dateTime,
@@ -85,24 +93,19 @@ public class RoutingController {
                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
-        // try to get coordinates or source stop
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalStopType.SOURCE);
         Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
-
-        // configure isoline request
         dateTime = Utils.setToNowIfNull(dateTime);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
-        // determine isoline case: STOP or COORDINATE
         if (sourceStop != null) {
             return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType, returnConnections);
         } else {
             return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
                     returnConnections);
         }
-
     }
 
     private static class Utils {
@@ -130,5 +133,7 @@ public class RoutingController {
         }
 
     }
-
 }
+
+
+
