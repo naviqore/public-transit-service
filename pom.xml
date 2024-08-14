@@ -108,6 +108,11 @@
                         <goals>
                             <goal>build-info</goal>
                         </goals>
+                        <configuration>
+                            <additionalProperties>
+                                <description>${project.description}</description>
+                            </additionalProperties>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

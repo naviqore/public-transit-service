@@ -2,8 +2,8 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Naviqore Public Transit API</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Naviqore - Public Transit Service API</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,23 +15,30 @@
 
         header {
             background-color: #f8f9fa;
-            padding: 20px;
+            padding: 40px 20px;
             text-align: center;
             border-bottom: 1px solid #ddd;
         }
 
         header img {
-            height: 80px;
+            height: 100px;
             margin-bottom: 20px;
         }
 
         header h1 {
             margin: 0;
-            font-size: 2.5em;
+            font-size: 3em;
+            color: #333;
+        }
+
+        header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #777;
         }
 
         header p {
-            margin: 5px 0 0 0;
+            margin: 10px 0 0 0;
             font-size: 1.2em;
             color: #666;
         }
@@ -43,8 +50,8 @@
 
         .content a {
             display: block;
-            margin: 10px 0;
-            font-size: 1.2em;
+            margin: 15px 0;
+            font-size: 1.3em;
             text-decoration: none;
             color: #007bff;
         }
@@ -56,10 +63,12 @@
 </head>
 <body>
 <header>
-    <img src="naviqore-logo-192x192.png" alt="Naviqore Logo">
-    <h1 th:text="${appName}">Naviqore Public Transit API</h1>
-    <p th:text="'Version: ' + ${appVersion}">Version: 1.0.0</p>
-    <p th:text="${appDescription}">API for Public Transit Routing System</p>
+    <h2>Naviqore</h2>
+    <img alt="Naviqore Logo" src="naviqore-logo-192x192.png">
+    <h1 th:text="${appName}">Public Transit Service</h1>
+    <h2 th:text="'' + ${appVersion}">1.0.0</h2>
+    <p th:text="${appDescription}">Public transit schedule information and connection routing service based on GTFS data
+        and the RAPTOR algorithm</p>
 </header>
 <div class="content">
     <a href="/swagger-ui.html">Swagger UI</a>
