@@ -49,7 +49,7 @@ public class ScheduleController {
 
     @GetMapping("/stops/{stopId}")
     public Stop getStop(@PathVariable String stopId) {
-        return map(ScheduleRequestValidator.validateAndGet(stopId, service));
+        return map(GlobalStopValidator.validateAndGetStop(stopId, service, GlobalStopValidator.StopType.NOT_DEFINED));
     }
 
     @GetMapping("/stops/{stopId}/departures")
@@ -61,8 +61,9 @@ public class ScheduleController {
         departureDateTime = ScheduleRequestValidator.validateAndSetDefaultDateTime(departureDateTime);
         ScheduleRequestValidator.validateUntilDateTime(departureDateTime, untilDateTime);
 
-        return service.getNextDepartures(ScheduleRequestValidator.validateAndGet(stopId, service), departureDateTime,
-                untilDateTime, limit).stream().map(DtoMapper::map).toList();
+        return service.getNextDepartures(
+                GlobalStopValidator.validateAndGetStop(stopId, service, GlobalStopValidator.StopType.NOT_DEFINED),
+                departureDateTime, untilDateTime, limit).stream().map(DtoMapper::map).toList();
     }
 
 }

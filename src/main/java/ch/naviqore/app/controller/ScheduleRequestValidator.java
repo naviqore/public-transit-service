@@ -1,7 +1,5 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.service.ScheduleInformationService;
-import ch.naviqore.service.exception.StopNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -33,15 +31,6 @@ final class ScheduleRequestValidator {
         }
     }
 
-    public static ch.naviqore.service.Stop validateAndGet(String stopId, ScheduleInformationService service) {
-        try {
-            return service.getStopById(stopId);
-        } catch (StopNotFoundException e) {
-            String errorMessage = String.format("The requested stop with ID '%s' was not found.", stopId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage, e);
-        }
-    }
-
     public static LocalDateTime validateAndSetDefaultDateTime(LocalDateTime dateTime) {
         return (dateTime == null) ? LocalDateTime.now() : dateTime;
     }
@@ -52,4 +41,5 @@ final class ScheduleRequestValidator {
                     "Until date time must be after departure date time");
         }
     }
+
 }
