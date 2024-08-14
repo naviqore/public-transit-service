@@ -58,7 +58,7 @@ public class RoutingControllerTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> routingController.getConnections(invalidStopId, -91.0, -181.0, targetStopId, -91.0, -181.0,
                         LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
-        assertEquals("Stop not found", exception.getReason());
+        assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
     }
 
@@ -372,7 +372,7 @@ public class RoutingControllerTest {
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> routingController.getIsolines(invalidStopId, -91.0, -181.0, LocalDateTime.now(),
                         TimeType.DEPARTURE, 30, 2, 120, 5, false));
-        assertEquals("Stop not found", exception.getReason());
+        assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
     }
 
