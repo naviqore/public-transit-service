@@ -133,7 +133,7 @@ final class TypeMapper {
         StopTime arrival = null;
         for (int i = 0; i < gtfsTrip.getStopTimes().size(); i++) {
             var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
-            // if the from stop id and the departure time matches, set the departure stop time
+            // if the fromStop id and the departure time matches, set the departure stop time
             if (gtfsStopTime.stop().getId().equals(leg.getFromStopId()) && gtfsStopTime.departure()
                     .toLocalTime()
                     .equals(leg.getDepartureTime().toLocalTime())) {
@@ -141,7 +141,7 @@ final class TypeMapper {
                 continue;
             }
 
-            // if the to stop id and the arrival time matches, set the arrival stop time
+            // if the toStop id and the arrival time matches, set the arrival stop time
             if (gtfsStopTime.stop().getId().equals(leg.getToStopId()) && gtfsStopTime.arrival()
                     .toLocalTime()
                     .equals(leg.getArrivalTime().toLocalTime())) {
@@ -149,7 +149,7 @@ final class TypeMapper {
                 break;
             }
         }
-
+        
         assert departure != null : "Departure stop time cannot be null";
         assert arrival != null : "Arrival stop time cannot be null";
 
