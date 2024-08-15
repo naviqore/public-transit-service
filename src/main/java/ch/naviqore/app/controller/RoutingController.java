@@ -37,17 +37,17 @@ public class RoutingController {
         this.service = service;
     }
 
-    @Operation(summary = "Request connections between two stops", description = "Requests connections between two stops at a given departure datetime.")
+    @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
     @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
-                                           @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
-                                           @RequestParam(required = false, defaultValue = "-181.0") double sourceLongitude,
+                                           @RequestParam(required = false) Double sourceLatitude,
+                                           @RequestParam(required = false) Double sourceLongitude,
                                            @RequestParam(required = false) String targetStopId,
-                                           @RequestParam(required = false, defaultValue = "-91.0") double targetLatitude,
-                                           @RequestParam(required = false, defaultValue = "-181.0") double targetLongitude,
+                                           @RequestParam(required = false) Double targetLatitude,
+                                           @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) LocalDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
@@ -65,6 +65,7 @@ public class RoutingController {
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
+        // TODO: Same source and target stop throws exception, introduce specific exceptions for this and out of date range
         if (sourceStop != null && targetStop != null) {
             return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
         } else if (sourceStop != null) {
@@ -76,15 +77,14 @@ public class RoutingController {
         }
     }
 
-    @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified position at a given departure datetime.")
+    @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified stop or location at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of stop and fastest connection pairs for each reachable stop.")
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
     @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/isolines")
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
-                                            // TODO: Replace with and check against null - @RequestParam(required = false) Double sourceLatitude,
-                                            @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
-                                            @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
+                                            @RequestParam(required = false) Double sourceLatitude,
+                                            @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) LocalDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
                                             @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
@@ -110,13 +110,15 @@ public class RoutingController {
 
     private static class Utils {
 
-        private static @Nullable GeoCoordinate getCoordinateIfAvailable(String stopId, double latitude,
-                                                                        double longitude, GlobalStopType stopType) {
+        private static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId,
+                                                                        @Nullable Double latitude,
+                                                                        @Nullable Double longitude,
+                                                                        GlobalStopType stopType) {
             RoutingRequestValidator.validateStopParameters(stopId, latitude, longitude, stopType);
             return stopId == null ? RoutingRequestValidator.validateCoordinate(latitude, longitude) : null;
         }
 
-        private static @Nullable Stop getStopIfAvailable(String stopId, ScheduleInformationService service,
+        private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, ScheduleInformationService service,
                                                          GlobalStopType stopType) {
             return stopId != null ? GlobalStopValidator.validateAndGetStop(stopId, service, stopType) : null;
         }
