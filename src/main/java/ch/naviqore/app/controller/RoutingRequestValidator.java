@@ -55,4 +55,11 @@ final class RoutingRequestValidator {
         }
     }
 
+    public static void validateStops(String sourceStopId, String targetStopId) {
+        if (sourceStopId.equals(targetStopId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The source stop ID and target stop ID cannot be the same. Please provide different stop IDs for the source and target.");
+        }
+    }
+
 }

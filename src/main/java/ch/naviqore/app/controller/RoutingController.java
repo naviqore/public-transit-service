@@ -7,24 +7,29 @@ import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static ch.naviqore.app.dto.DtoMapper.map;
 
+@Slf4j
 @RestController
 @RequestMapping("/routing")
 @Tag(name = "routing", description = "APIs related to routing and connections")
@@ -35,6 +40,11 @@ public class RoutingController {
     @Autowired
     public RoutingController(PublicTransitService service) {
         this.service = service;
+    }
+
+    private static void handleConnectionRoutingException(ConnectionRoutingException e) {
+        log.error("Connection routing exception", e);
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
@@ -55,25 +65,36 @@ public class RoutingController {
                                            @RequestParam(required = false) Integer maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
 
+        // get coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalStopType.SOURCE);
         GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
                 GlobalStopType.TARGET);
+
+        // get stops if available
         Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
         Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalStopType.TARGET);
+
+        // configure routing request
         dateTime = Utils.setToNowIfNull(dateTime);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
-        // TODO: Same source and target stop throws exception, introduce specific exceptions for this and out of date range
-        if (sourceStop != null && targetStop != null) {
-            return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
-        } else if (sourceStop != null) {
-            return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
-        } else if (targetStop != null) {
-            return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
-        } else {
-            return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
+        // determine routing case and get connections
+        try {
+            if (sourceStop != null && targetStop != null) {
+                RoutingRequestValidator.validateStops(sourceStopId, targetStopId);
+                return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
+            } else if (sourceStop != null) {
+                return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
+            } else if (targetStop != null) {
+                return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
+            } else {
+                return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
+            }
+        } catch (ConnectionRoutingException e) {
+            handleConnectionRoutingException(e);
+            return null;
         }
     }
 
@@ -93,18 +114,28 @@ public class RoutingController {
                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
+        // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalStopType.SOURCE);
         Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
+
+        // configure routing request
         dateTime = Utils.setToNowIfNull(dateTime);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
-        if (sourceStop != null) {
-            return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType, returnConnections);
-        } else {
-            return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
-                    returnConnections);
+        // determine routing case and get isolines
+        try {
+            if (sourceStop != null) {
+                return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType,
+                        returnConnections);
+            } else {
+                return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
+                        returnConnections);
+            }
+        } catch (ConnectionRoutingException e) {
+            handleConnectionRoutingException(e);
+            return null;
         }
     }
 
@@ -147,6 +178,7 @@ public class RoutingController {
         }
 
     }
+
 }
 
 
