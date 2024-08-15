@@ -5,10 +5,7 @@ import ch.naviqore.app.infrastructure.GtfsScheduleUrl;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
-import ch.naviqore.service.exception.RouteNotFoundException;
-import ch.naviqore.service.exception.StopNotFoundException;
-import ch.naviqore.service.exception.TripNotActiveException;
-import ch.naviqore.service.exception.TripNotFoundException;
+import ch.naviqore.service.exception.*;
 import ch.naviqore.service.repo.GtfsScheduleRepository;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.extern.slf4j.Slf4j;
@@ -76,37 +73,38 @@ public class PublicTransitSpringService implements PublicTransitService {
 
     @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
-                                           TimeType timeType, ConnectionQueryConfig config) {
+                                           TimeType timeType,
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
     public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
-                                           ConnectionQueryConfig config) {
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
     public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
-                                           ConnectionQueryConfig config) {
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
     public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
-                                           ConnectionQueryConfig config) {
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
     public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
-                                             ConnectionQueryConfig config) {
+                                             ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getIsoLines(source, time, timeType, config);
     }
 
     @Override
     public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
-                                             ConnectionQueryConfig config) {
+                                             ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getIsoLines(source, time, timeType, config);
     }
 
