@@ -5,6 +5,6 @@ package ch.naviqore.service;
  */
 public interface PublicTransitService extends ScheduleInformationService, ConnectionRoutingService {
 
-    // future methods to update the service using GTFS real-time data should be included here
+    Validity getValidity();
 
 }
