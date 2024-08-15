@@ -41,7 +41,27 @@ class DummyService implements PublicTransitService {
 
     @Override
     public Validity getValidity() {
-        return null;
+        return new Validity() {
+
+            private static final int DELTA = 3;
+
+            private final LocalDate now = LocalDate.now();
+
+            @Override
+            public LocalDate getStartDate() {
+                return now.minusDays(DELTA);
+            }
+
+            @Override
+            public LocalDate getEndDate() {
+                return now.plusDays(DELTA);
+            }
+
+            @Override
+            public boolean isWithin(LocalDate date) {
+                return !date.isBefore(getStartDate()) && !date.isAfter(getEndDate());
+            }
+        };
     }
 
     @Override
