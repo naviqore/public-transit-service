@@ -25,8 +25,8 @@ public class RoutingControllerTest {
         LocalDateTime departureDateTime = LocalDateTime.now();
 
         // Act
-        List<Connection> connections = routingController.getConnections(sourceStopId, -1.0, -1.0, targetStopId, -1.0,
-                -1.0, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
+        List<Connection> connections = routingController.getConnections(sourceStopId, null, null, targetStopId, null,
+                null, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
 
         // Assert
         assertNotNull(connections);
@@ -42,7 +42,7 @@ public class RoutingControllerTest {
 
         // Act
         List<Connection> connections = routingController.getConnections(null, sourceLatitude, sourceLongitude,
-                targetStopId, -1.0, -1.0, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
+                targetStopId, null, null, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
 
         // Assert
         assertNotNull(connections);
@@ -56,7 +56,7 @@ public class RoutingControllerTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(invalidStopId, -91.0, -181.0, targetStopId, -91.0, -181.0,
+                () -> routingController.getConnections(invalidStopId, null, null, targetStopId, null, null,
                         LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
         assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
@@ -66,7 +66,7 @@ public class RoutingControllerTest {
     void testGetConnections_MissingSourceAndCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, -91.0, -181.0, "targetStopId", -91.0, -181.0,
+                () -> routingController.getConnections(null, null, null, "targetStopId", -91.0, -181.0,
                         LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
         assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
                 exception.getReason());
@@ -77,7 +77,7 @@ public class RoutingControllerTest {
     void testGetConnections_MissingTargetAndCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections("sourceStopId", -91.0, -181.0, null, -91.0, -181.0,
+                () -> routingController.getConnections("sourceStopId", null, null, null, null, null,
                         LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
         assertEquals("Either targetStopId or targetLatitude and targetLongitude must be provided.",
                 exception.getReason());
@@ -88,7 +88,7 @@ public class RoutingControllerTest {
     void testGetConnection_InvalidCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, 91, 181, null, 32, 32, LocalDateTime.now(),
+                () -> routingController.getConnections(null, 91., 181., null, 32., 32., LocalDateTime.now(),
                         TimeType.DEPARTURE, 30, 2, 120, 5));
         assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
                 exception.getReason());
@@ -99,8 +99,8 @@ public class RoutingControllerTest {
     void testGetConnections_InvalidMaxTransferNumber() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, 0, 0, null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE,
-                        30, -2, 120, 5));
+                () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
+                        TimeType.DEPARTURE, 30, -2, 120, 5));
         assertEquals("Max transfer number must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -109,8 +109,8 @@ public class RoutingControllerTest {
     void testGetConnections_InvalidMaxWalkingDuration() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, 0, 0, null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE,
-                        -30, 2, 120, 5));
+                () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
+                        TimeType.DEPARTURE, -30, 2, 120, 5));
         assertEquals("Max walking duration must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -119,8 +119,8 @@ public class RoutingControllerTest {
     void testGetConnections_InvalidMaxTravelTime() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, 0, 0, null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE,
-                        30, 2, -120, 5));
+                () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
+                        TimeType.DEPARTURE, 30, 2, -120, 5));
         assertEquals("Max travel time must be greater than 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -129,8 +129,8 @@ public class RoutingControllerTest {
     void testGetConnections_InvalidMinTransferTime() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getConnections(null, 0, 0, null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE,
-                        30, 2, 120, -5));
+                () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
+                        TimeType.DEPARTURE, 30, 2, 120, -5));
         assertEquals("Min transfer time must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -142,7 +142,7 @@ public class RoutingControllerTest {
         LocalDateTime time = LocalDateTime.now();
 
         // Act
-        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, time,
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, time,
                 TimeType.DEPARTURE, 30, 2, 120, 5, false);
 
         assertNotNull(stopConnections);
@@ -165,7 +165,7 @@ public class RoutingControllerTest {
         // This tests if the time is set to now if null
         LocalDateTime expectedStartTime = LocalDateTime.now();
 
-        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, null,
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
                 TimeType.DEPARTURE, 30, 2, 120, 5, true);
 
         assertNotNull(stopConnections);
@@ -274,7 +274,7 @@ public class RoutingControllerTest {
         // Arrange
         String sourceStopId = "G";
 
-        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, -1.0, -1.0, null,
+        List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
                 TimeType.ARRIVAL, 30, 2, 120, 5, true);
 
         // This tests if the time is set to now if null
@@ -370,8 +370,8 @@ public class RoutingControllerTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(invalidStopId, -91.0, -181.0, LocalDateTime.now(),
-                        TimeType.DEPARTURE, 30, 2, 120, 5, false));
+                () -> routingController.getIsolines(invalidStopId, null, null, LocalDateTime.now(), TimeType.DEPARTURE,
+                        30, 2, 120, 5, false));
         assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
     }
@@ -380,7 +380,7 @@ public class RoutingControllerTest {
     void testGetIsoLines_MissingSourceAndCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, -91.0, -181.0, LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
+                () -> routingController.getIsolines(null, null, null, LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
                         120, 5, false));
         assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
                 exception.getReason());
@@ -391,8 +391,8 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidCoordinates() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, 91, 181, LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120,
-                        5, false));
+                () -> routingController.getIsolines(null, 91., 181., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
+                        120, 5, false));
         assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
                 exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -402,8 +402,8 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidMaxTransferNumber() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE, 30, -2, 120, 5,
-                        false));
+                () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, -2, 120,
+                        5, false));
         assertEquals("Max transfer number must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -412,8 +412,8 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidMaxWalkingDuration() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE, -30, 2, 120, 5,
-                        false));
+                () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, -30, 2, 120,
+                        5, false));
         assertEquals("Max walking duration must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -422,8 +422,8 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidMaxTravelTime() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, -120, 5,
-                        false));
+                () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, -120,
+                        5, false));
         assertEquals("Max travel time must be greater than 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
@@ -432,8 +432,8 @@ public class RoutingControllerTest {
     void testGetIsoLines_InvalidMinTransferTime() {
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> routingController.getIsolines(null, 0, 0, LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, -5,
-                        false));
+                () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120,
+                        -5, false));
         assertEquals("Min transfer time must be greater than or equal to 0.", exception.getReason());
         assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
     }
