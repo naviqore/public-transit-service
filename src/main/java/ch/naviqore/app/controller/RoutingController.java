@@ -67,16 +67,16 @@ public class RoutingController {
 
         // get coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                GlobalStopType.SOURCE);
+                GlobalValidator.StopType.SOURCE);
         GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
-                GlobalStopType.TARGET);
+                GlobalValidator.StopType.TARGET);
 
         // get stops if available
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
-        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalStopType.TARGET);
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
+        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalValidator.StopType.TARGET);
 
         // configure routing request
-        dateTime = Utils.setToNowIfNull(dateTime);
+        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
@@ -116,11 +116,11 @@ public class RoutingController {
 
         // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                GlobalStopType.SOURCE);
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalStopType.SOURCE);
+                GlobalValidator.StopType.SOURCE);
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
 
         // configure routing request
-        dateTime = Utils.setToNowIfNull(dateTime);
+        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime);
 
@@ -144,14 +144,14 @@ public class RoutingController {
         private static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId,
                                                                         @Nullable Double latitude,
                                                                         @Nullable Double longitude,
-                                                                        GlobalStopType stopType) {
+                                                                        GlobalValidator.StopType stopType) {
             RoutingRequestValidator.validateStopParameters(stopId, latitude, longitude, stopType);
             return stopId == null ? RoutingRequestValidator.validateCoordinate(latitude, longitude) : null;
         }
 
         private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, ScheduleInformationService service,
-                                                         GlobalStopType stopType) {
-            return stopId != null ? GlobalStopValidator.validateAndGetStop(stopId, service, stopType) : null;
+                                                         GlobalValidator.StopType stopType) {
+            return stopId != null ? GlobalValidator.validateAndGetStop(stopId, service, stopType) : null;
         }
 
         private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
@@ -171,10 +171,6 @@ public class RoutingController {
 
         private static int setToMaxIfNull(Integer value) {
             return (value == null) ? Integer.MAX_VALUE : value;
-        }
-
-        private static LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
-            return (dateTime == null) ? LocalDateTime.now() : dateTime;
         }
 
     }

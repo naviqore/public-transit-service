@@ -39,7 +39,7 @@ final class RoutingRequestValidator {
     }
 
     public static void validateStopParameters(@Nullable String stopId, @Nullable Double latitude,
-                                              @Nullable Double longitude, GlobalStopType stopType) {
+                                              @Nullable Double longitude, GlobalValidator.StopType stopType) {
         if (stopId == null) {
             if (latitude == null || longitude == null) {
                 String stopTypeName = stopType.name().toLowerCase();
