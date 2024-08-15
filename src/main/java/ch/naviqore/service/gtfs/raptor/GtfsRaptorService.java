@@ -15,6 +15,7 @@ import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,6 +30,8 @@ public class GtfsRaptorService implements PublicTransitService {
 
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
+    @Getter
+    private final Validity validity;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
@@ -40,6 +43,7 @@ public class GtfsRaptorService implements PublicTransitService {
                       List<TransferGenerator.Transfer> additionalTransfers) {
         this.config = config;
         this.schedule = schedule;
+        this.validity = new GtfsRaptorValidity(schedule);
         this.spatialStopIndex = spatialStopIndex;
         this.stopSearchIndex = stopSearchIndex;
         this.walkCalculator = walkCalculator;

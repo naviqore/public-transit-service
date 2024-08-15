@@ -52,6 +52,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public Validity getValidity() {
+        return delegate.getValidity();
+    }
+
+    @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return delegate.getStops(like, searchType);
     }

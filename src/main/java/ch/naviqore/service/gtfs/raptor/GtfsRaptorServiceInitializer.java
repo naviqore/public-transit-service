@@ -26,8 +26,8 @@ import java.util.*;
 public class GtfsRaptorServiceInitializer {
 
     private final ServiceConfig config;
-    private final WalkCalculator walkCalculator;
     private final GtfsSchedule schedule;
+    private final WalkCalculator walkCalculator;
     private final SearchIndex<Stop> stopSearchIndex;
     private final KDTree<Stop> spatialStopIndex;
     private final List<TransferGenerator.Transfer> additionalTransfers;

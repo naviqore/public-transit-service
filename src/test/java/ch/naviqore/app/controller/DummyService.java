@@ -40,6 +40,11 @@ class DummyService implements PublicTransitService {
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
     @Override
+    public Validity getValidity() {
+        return null;
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType, ConnectionQueryConfig config) {
         return List.of(DummyConnectionGenerators.getSimpleConnection(source, target, time, timeType));
