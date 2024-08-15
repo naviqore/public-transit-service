@@ -67,6 +67,22 @@ public class RoutingControllerTest {
         }
 
         @Test
+        void testRoutingBetweenSameStops() {
+            // Arrange
+            String sourceStopId = "A";
+            String targetStopId = "A";
+            LocalDateTime departureDateTime = LocalDateTime.now();
+            // Act & Assert
+            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                    () -> routingController.getConnections(sourceStopId, null, null, targetStopId, null, null,
+                            departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5));
+            assertEquals(
+                    "The source stop ID and target stop ID cannot be the same. Please provide different stop IDs for the source and target.",
+                    exception.getReason());
+            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+        }
+
+        @Test
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
