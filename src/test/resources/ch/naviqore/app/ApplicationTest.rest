@@ -22,6 +22,10 @@ Accept: application/json
 GET http://localhost:8080/schedule/stops/NOT_EXISTING/departures?departureDateTime=2010-01-01T01:10:01&limit=3
 Accept: application/json
 
+### 3.2 Departure at stop; depratureDateTime outside schedule valdity - 400 BAD REQUEST
+GET http://localhost:8080/schedule/stops/STAGECOACH/departures?departureDateTime=2000-01-01T01:10:01&limit=3
+Accept: application/json
+
 ## Routing API
 
 ### 4.0 Connection between two stops - 200 OK
@@ -30,7 +34,8 @@ GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStop
 Accept: application/json
 
 ### 4.1 Connection between two stops; invalid Min transfer time - 400 BAD REQUEST
-GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&minTransferTime=-1
+GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
+    dateTime=2010-01-01T01:10:01&minTransferTime=-1
 Accept: application/json
 
 ### 4.2 Connection between two stops; invalid source stop id - 404 NOT FOUND
