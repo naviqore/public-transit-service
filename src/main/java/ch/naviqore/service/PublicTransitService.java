@@ -5,6 +5,4 @@ package ch.naviqore.service;
  */
 public interface PublicTransitService extends ScheduleInformationService, ConnectionRoutingService {
 
-    Validity getValidity();
-
 }
