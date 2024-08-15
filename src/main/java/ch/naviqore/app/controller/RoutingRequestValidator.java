@@ -3,6 +3,7 @@ package ch.naviqore.app.controller;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,13 +38,19 @@ final class RoutingRequestValidator {
         }
     }
 
-    public static void validateStopParameters(String stopId, double latitude, double longitude,
-                                              GlobalStopType stopType) {
+    public static void validateStopParameters(@Nullable String stopId, @Nullable Double latitude,
+                                              @Nullable Double longitude, GlobalStopType stopType) {
         if (stopId == null) {
-            if (latitude == -91.0 || longitude == -181.0) {
+            if (latitude == null || longitude == null) {
                 String stopTypeName = stopType.name().toLowerCase();
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Either " + stopTypeName + "StopId or " + stopTypeName + "Latitude and " + stopTypeName + "Longitude must be provided.");
+            }
+        } else {
+            if (latitude != null || longitude != null) {
+                String stopTypeName = stopType.name().toLowerCase();
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Only " + stopTypeName + "StopId or " + stopTypeName + "Latitude and " + stopTypeName + "Longitude must be provided, but not both.");
             }
         }
     }
