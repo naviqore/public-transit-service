@@ -50,9 +50,9 @@ public class RoutingController {
                                            @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) LocalDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
+                                           @RequestParam(required = false) Integer maxWalkingDuration,
+                                           @RequestParam(required = false) Integer maxTransferNumber,
+                                           @RequestParam(required = false) Integer maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
 
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
@@ -87,9 +87,9 @@ public class RoutingController {
                                             @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) LocalDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
+                                            @RequestParam(required = false) Integer maxWalkingDuration,
+                                            @RequestParam(required = false) Integer maxTransferNumber,
+                                            @RequestParam(required = false) Integer maxTravelTime,
                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
@@ -123,15 +123,27 @@ public class RoutingController {
             return stopId != null ? GlobalStopValidator.validateAndGetStop(stopId, service, stopType) : null;
         }
 
-        private static LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
-            return (dateTime == null) ? LocalDateTime.now() : dateTime;
-        }
+        private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
+                                                          @Nullable Integer maxTransferNumber,
+                                                          @Nullable Integer maxTravelTime, int minTransferTime) {
 
-        private static ConnectionQueryConfig createConfig(int maxWalkingDuration, int maxTransferNumber,
-                                                          int maxTravelTime, int minTransferTime) {
+            // replace null values with integer max value
+            maxWalkingDuration = setToMaxIfNull(maxWalkingDuration);
+            maxTransferNumber = setToMaxIfNull(maxTransferNumber);
+            maxTravelTime = setToMaxIfNull(maxTravelTime);
+
+            // validate and create config
             RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                     minTransferTime);
             return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime);
+        }
+
+        private static int setToMaxIfNull(Integer value) {
+            return (value == null) ? Integer.MAX_VALUE : value;
+        }
+
+        private static LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
+            return (dateTime == null) ? LocalDateTime.now() : dateTime;
         }
 
     }
