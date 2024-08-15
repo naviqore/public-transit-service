@@ -43,6 +43,59 @@ class GtfsRaptorServiceIT {
     }
 
     @Nested
+    class Validity {
+
+        @Test
+        void shouldReturnCorrectStartDate() {
+            LocalDate expectedStartDate = LocalDate.of(2007, 1, 1);
+            assertEquals(expectedStartDate, service.getValidity().getStartDate(),
+                    "The start date of the validity should match the earliest start date in the schedule.");
+        }
+
+        @Test
+        void shouldReturnCorrectEndDate() {
+            LocalDate expectedEndDate = LocalDate.of(2010, 12, 31);
+            assertEquals(expectedEndDate, service.getValidity().getEndDate(),
+                    "The end date of the validity should match the latest end date in the schedule.");
+        }
+
+        @Test
+        void shouldBeWithinValidityPeriod() {
+            LocalDate dateWithinValidity = LocalDate.of(2008, 6, 1);
+            assertTrue(service.getValidity().isWithin(dateWithinValidity),
+                    "The date should be within the validity period.");
+        }
+
+        @Test
+        void shouldIncludeStartDateInValidityPeriod() {
+            LocalDate startDate = service.getValidity().getStartDate();
+            assertTrue(service.getValidity().isWithin(startDate),
+                    "The start date should be considered within the validity period.");
+        }
+
+        @Test
+        void shouldIncludeEndDateInValidityPeriod() {
+            LocalDate endDate = service.getValidity().getEndDate();
+            assertTrue(service.getValidity().isWithin(endDate),
+                    "The end date should be considered within the validity period.");
+        }
+
+        @Test
+        void shouldNotBeWithinValidityPeriodBeforeStart() {
+            LocalDate dateBeforeValidity = LocalDate.of(2006, 12, 13);
+            assertFalse(service.getValidity().isWithin(dateBeforeValidity),
+                    "The date before the start date should not be within the validity period.");
+        }
+
+        @Test
+        void shouldNotBeWithinValidityPeriodAfterEnd() {
+            LocalDate dateAfterValidity = LocalDate.of(2011, 1, 1);
+            assertFalse(service.getValidity().isWithin(dateAfterValidity),
+                    "The date after the end date should not be within the validity period.");
+        }
+    }
+
+    @Nested
     class ScheduleInformation {
 
         @Nested
