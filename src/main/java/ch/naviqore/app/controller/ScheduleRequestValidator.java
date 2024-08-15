@@ -31,10 +31,6 @@ final class ScheduleRequestValidator {
         }
     }
 
-    public static LocalDateTime validateAndSetDefaultDateTime(LocalDateTime dateTime) {
-        return (dateTime == null) ? LocalDateTime.now() : dateTime;
-    }
-
     public static void validateUntilDateTime(LocalDateTime departureDateTime, LocalDateTime untilDateTime) {
         if (untilDateTime != null && untilDateTime.isBefore(departureDateTime)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,

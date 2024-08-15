@@ -62,7 +62,7 @@ public class ScheduleController {
     @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/stops/{stopId}")
     public Stop getStop(@PathVariable String stopId) {
-        return map(GlobalStopValidator.validateAndGetStop(stopId, service, GlobalStopType.NOT_DEFINED));
+        return map(GlobalValidator.validateAndGetStop(stopId, service, GlobalValidator.StopType.NOT_DEFINED));
     }
 
     @Operation(summary = "Get next departures from a stop", description = "Retrieves the next departures from a specified stop at a given datetime.")
@@ -74,11 +74,11 @@ public class ScheduleController {
                                          @RequestParam(required = false) LocalDateTime departureDateTime,
                                          @RequestParam(required = false, defaultValue = "10") int limit,
                                          @RequestParam(required = false) LocalDateTime untilDateTime) {
-        ScheduleRequestValidator.validateLimit(limit);
-        departureDateTime = ScheduleRequestValidator.validateAndSetDefaultDateTime(departureDateTime);
+        departureDateTime = GlobalValidator.validateAndSetDefaultDateTime(departureDateTime, service);
         ScheduleRequestValidator.validateUntilDateTime(departureDateTime, untilDateTime);
+        ScheduleRequestValidator.validateLimit(limit);
         return service.getNextDepartures(
-                GlobalStopValidator.validateAndGetStop(stopId, service, GlobalStopType.NOT_DEFINED), departureDateTime,
-                untilDateTime, limit).stream().map(DtoMapper::map).toList();
+                GlobalValidator.validateAndGetStop(stopId, service, GlobalValidator.StopType.NOT_DEFINED),
+                departureDateTime, untilDateTime, limit).stream().map(DtoMapper::map).toList();
     }
 }
