@@ -22,11 +22,11 @@ public interface Coordinate {
 
     /**
      * Calculates the distance to another {@code Coordinate} object.
-     * <p><i>Note: Implementations may raise an {@code IllegalArgumentException} if the other {@code Coordinate} object
-     * is not of the same type.</i></p>
+     * <p>
+     * Note: Implementations may raise an {@code IllegalArgumentException} if the other {@code Coordinate} object is not
+     * of the same type.
      */
     double distanceTo(Coordinate other);
-    // TODO: Should we somehow enforce that distances between geo and cartesian coordinates cannot be calculated?
 
     /**
      * Calculates the distance to another point specified by its components.
