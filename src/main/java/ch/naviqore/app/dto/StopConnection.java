@@ -1,5 +1,6 @@
 package ch.naviqore.app.dto;
 
+import ch.naviqore.service.TimeType;
 import lombok.*;
 
 import java.time.LocalDateTime;

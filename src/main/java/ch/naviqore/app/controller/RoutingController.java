@@ -2,7 +2,7 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.StopConnection;
-import ch.naviqore.app.dto.TimeType;
+import ch.naviqore.service.TimeType;
 import ch.naviqore.service.PublicTransitService;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;

@@ -1,6 +1,7 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.*;
+import ch.naviqore.service.TimeType;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

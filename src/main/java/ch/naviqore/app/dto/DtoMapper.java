@@ -1,7 +1,6 @@
 package ch.naviqore.app.dto;
 
 import ch.naviqore.service.SearchType;
-import ch.naviqore.service.TimeType;
 import ch.naviqore.service.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -50,13 +49,6 @@ public class DtoMapper {
         };
     }
 
-    public static TimeType map(ch.naviqore.app.dto.TimeType timeType) {
-        return switch (timeType) {
-            case DEPARTURE -> TimeType.DEPARTURE;
-            case ARRIVAL -> TimeType.ARRIVAL;
-        };
-    }
-
     public static Connection map(ch.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
         return new Connection(legs);
@@ -67,7 +59,7 @@ public class DtoMapper {
     }
 
     public static List<StopConnection> map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
-                                           ch.naviqore.app.dto.TimeType timeType, boolean returnConnections) {
+                                           TimeType timeType, boolean returnConnections) {
         List<StopConnection> arrivals = new ArrayList<>();
         for (Map.Entry<ch.naviqore.service.Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
             arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), timeType, returnConnections));
