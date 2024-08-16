@@ -57,6 +57,21 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public boolean hasAccessibilityInformation() {
+        return delegate.hasAccessibilityInformation();
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return delegate.hasBikeInformation();
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        return delegate.hasTravelModeInformation();
+    }
+
+    @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return delegate.getStops(like, searchType);
     }

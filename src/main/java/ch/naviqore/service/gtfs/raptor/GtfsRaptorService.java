@@ -60,6 +60,22 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public boolean hasAccessibilityInformation() {
+        return schedule.hasStopAccessibilityInformation();
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return schedule.hasTripBikeInformation();
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        // GTFS requires routes to have a mode, so this is always true
+        return true;
+    }
+
+    @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
                 .stream()

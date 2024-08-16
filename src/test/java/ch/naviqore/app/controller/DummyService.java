@@ -65,6 +65,21 @@ class DummyService implements PublicTransitService {
     }
 
     @Override
+    public boolean hasAccessibilityInformation() {
+        return false;
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return false;
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        return false;
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType, ConnectionQueryConfig config) {
         return List.of(DummyConnectionGenerators.getSimpleConnection(source, target, time, timeType));
