@@ -149,7 +149,7 @@ final class TypeMapper {
                 break;
             }
         }
-        
+
         assert departure != null : "Departure stop time cannot be null";
         assert arrival != null : "Arrival stop time cannot be null";
 
