@@ -12,6 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -96,6 +99,7 @@ public class WalkTransferGeneratorTest {
         GtfsScheduleBuilder builder = GtfsSchedule.builder();
         TEST_STOPS.values()
                 .forEach(stopData -> builder.addStop(stopData.id(), stopData.name(), stopData.lat(), stopData.lon()));
+        builder.addCalendar("ALWAYS", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
         schedule = builder.build();
         spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
         generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,

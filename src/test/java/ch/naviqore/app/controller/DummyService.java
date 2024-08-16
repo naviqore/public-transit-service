@@ -40,6 +40,31 @@ class DummyService implements PublicTransitService {
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
     @Override
+    public Validity getValidity() {
+        return new Validity() {
+
+            private static final int DELTA = 3;
+
+            private final LocalDate now = LocalDate.now();
+
+            @Override
+            public LocalDate getStartDate() {
+                return now.minusDays(DELTA);
+            }
+
+            @Override
+            public LocalDate getEndDate() {
+                return now.plusDays(DELTA);
+            }
+
+            @Override
+            public boolean isWithin(LocalDate date) {
+                return !date.isBefore(getStartDate()) && !date.isAfter(getEndDate());
+            }
+        };
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType, ConnectionQueryConfig config) {
         return List.of(DummyConnectionGenerators.getSimpleConnection(source, target, time, timeType));

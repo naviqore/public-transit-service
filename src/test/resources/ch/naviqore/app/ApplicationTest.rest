@@ -1,21 +1,59 @@
-### Nearest stops
+# API Request Examples
+
+## Schedule API
+
+### 1.0 Nearest stops - 200 OK
 GET http://localhost:8080/schedule/stops/nearest?latitude=36&longitude=-116&maxDistance=500000
 Accept: application/json
 
-### Autocomplete stop name
+### 2.0 Autocomplete stop name - 200 OK
 GET http://localhost:8080/schedule/stops/autocomplete?query=Sta&searchType=STARTS_WITH&limit=100
 Accept: application/json
 
-### Departure at stop
+### 2.1 Autocomplete stop name; invalid search type - 400 BAD REQUEST
+GET http://localhost:8080/schedule/stops/autocomplete?query=Sta&searchType=NOT_A_TYPE&limit=100
+Accept: application/json
+
+### 3.0 Departure at stop - 200 OK
 GET http://localhost:8080/schedule/stops/STAGECOACH/departures?departureDateTime=2010-01-01T01:10:01&limit=3
 Accept: application/json
 
-### Connection between two stops
+### 3.1 Departure at stop; invalid stop id - 404 NOT FOUND
+GET http://localhost:8080/schedule/stops/NOT_EXISTING/departures?departureDateTime=2010-01-01T01:10:01&limit=3
+Accept: application/json
+
+### 3.2 Departure at stop; depratureDateTime outside schedule valdity - 400 BAD REQUEST
+GET http://localhost:8080/schedule/stops/STAGECOACH/departures?departureDateTime=2000-01-01T01:10:01&limit=3
+Accept: application/json
+
+## Routing API
+
+### 4.0 Connection between two stops - 200 OK
 GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
     dateTime=2010-01-01T01:10:01
 Accept: application/json
 
-### Isoline from stop
+### 4.1 Connection between two stops; invalid Min transfer time - 400 BAD REQUEST
+GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
+    dateTime=2010-01-01T01:10:01&minTransferTime=-1
+Accept: application/json
+
+### 4.2 Connection between two stops; invalid source stop id - 404 NOT FOUND
+GET http://localhost:8080/routing/connections?sourceStopId=NOT_EXISTING&targetStopId=NANAA&
+    dateTime=2010-01-01T01:10:01
+Accept: application/json
+
+### 4.3 Connection between two stops; invalid target stop id - 404 NOT FOUND
+GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NOT_EXISTING&
+    dateTime=2010-01-01T01:10:01
+Accept: application/json
+
+### 5.0 Isoline from stop - OK 200
 GET http://localhost:8080/routing/isolines?sourceStopId=STAGECOACH&maxTransferNumber=3&maxTravelTime=7200&
+    dateTime=2010-01-01T01:10:01
+Accept: application/json
+
+### 5.1 Isoline from stop; invalid source stop id - 404 NOT FOUND
+GET http://localhost:8080/routing/isolines?sourceStopId=NOT_EXISTING&maxTransferNumber=3&maxTravelTime=7200&
     dateTime=2010-01-01T01:10:01
 Accept: application/json

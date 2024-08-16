@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Naviqore - Public Transit Service API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #ffffff;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #f8f9fa;
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        header img {
+            height: 100px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 3em;
+            color: #333;
+        }
+
+        header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #777;
+        }
+
+        header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content a {
+            display: block;
+            margin: 15px 0;
+            font-size: 1.3em;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .content a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h2>Naviqore</h2>
+    <img alt="Naviqore Logo" src="naviqore-logo-192x192.png">
+    <h1 th:text="${appName}">Public Transit Service</h1>
+    <h2 th:text="'' + ${appVersion}">1.0.0</h2>
+    <p th:text="${appDescription}">Public transit schedule information and connection routing service based on GTFS data
+        and the RAPTOR algorithm</p>
+</header>
+<div class="content">
+    <a href="/swagger-ui.html">Swagger UI</a>
+    <a href="/v3/api-docs">API Documentation (JSON)</a>
+    <a href="/actuator/health">Health Check</a>
+    <a href="/actuator/metrics">Metrics</a>
+    <a href="/actuator/info">Info</a>
+</div>
+</body>
+</html>

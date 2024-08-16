@@ -1,15 +1,21 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.DtoMapper;
 import ch.naviqore.app.dto.StopConnection;
 import ch.naviqore.app.dto.TimeType;
 import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.config.ConnectionQueryConfig;
-import ch.naviqore.service.exception.StopNotFoundException;
+import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
-import org.jetbrains.annotations.NotNull;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,14 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static ch.naviqore.app.dto.DtoMapper.map;
 
+@Slf4j
 @RestController
 @RequestMapping("/routing")
+@Tag(name = "routing", description = "APIs related to routing and connections")
 public class RoutingController {
 
     private final PublicTransitService service;
@@ -36,151 +42,140 @@ public class RoutingController {
         this.service = service;
     }
 
-    private static GeoCoordinate validateCoordinate(double latitude, double longitude) {
-        try {
-            return new GeoCoordinate(latitude, longitude);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.");
-        }
+    private static void handleConnectionRoutingException(ConnectionRoutingException e) {
+        log.error("Connection routing exception", e);
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
-    private static void validateQueryParams(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
-                                            int minTransferTime) {
-        if (maxWalkingDuration < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Max walking duration must be greater than or equal to 0.");
-        }
-        if (maxTransferNumber < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Max transfer number must be greater than or equal to 0.");
-        }
-        if (maxTravelTime <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Max travel time must be greater than 0.");
-        }
-        if (minTransferTime < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Min transfer time must be greater than or equal to 0.");
-        }
-    }
-
-    private static @NotNull LocalDateTime setToNowIfNull(LocalDateTime dateTime) {
-        if (dateTime == null) {
-            dateTime = LocalDateTime.now();
-        }
-        return dateTime;
-    }
-
+    @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
+    @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
-                                           @RequestParam(required = false, defaultValue = "-91.0") double sourceLatitude,
-                                           @RequestParam(required = false, defaultValue = "-181.0") double sourceLongitude,
+                                           @RequestParam(required = false) Double sourceLatitude,
+                                           @RequestParam(required = false) Double sourceLongitude,
                                            @RequestParam(required = false) String targetStopId,
-                                           @RequestParam(required = false, defaultValue = "-91.0") double targetLatitude,
-                                           @RequestParam(required = false, defaultValue = "-181.0") double targetLongitude,
+                                           @RequestParam(required = false) Double targetLatitude,
+                                           @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) LocalDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
-                                           @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
+                                           @RequestParam(required = false) Integer maxWalkingDuration,
+                                           @RequestParam(required = false) Integer maxTransferNumber,
+                                           @RequestParam(required = false) Integer maxTravelTime,
                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
 
-        GeoCoordinate sourceCoordinate = null;
-        GeoCoordinate targetCoordinate = null;
+        // get coordinates if available
+        GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
+                GlobalValidator.StopType.SOURCE);
+        GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
+                GlobalValidator.StopType.TARGET);
 
-        if (sourceStopId == null) {
-            if (sourceLatitude == -91.0 || sourceLongitude == -181.0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
+        // get stops if available
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
+        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalValidator.StopType.TARGET);
+
+        // configure routing request
+        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
+        ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
+                minTransferTime);
+
+        // determine routing case and get connections
+        try {
+            if (sourceStop != null && targetStop != null) {
+                RoutingRequestValidator.validateStops(sourceStopId, targetStopId);
+                return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
+            } else if (sourceStop != null) {
+                return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
+            } else if (targetStop != null) {
+                return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
+            } else {
+                return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
-            sourceCoordinate = validateCoordinate(sourceLatitude, sourceLongitude);
+        } catch (ConnectionRoutingException e) {
+            handleConnectionRoutingException(e);
+            return null;
         }
-
-        if (targetStopId == null) {
-            if (targetLatitude == -91.0 || targetLongitude == -181.0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Either targetStopId or targetLatitude and targetLongitude must be provided.");
-            }
-            targetCoordinate = validateCoordinate(targetLatitude, targetLongitude);
-        }
-
-        dateTime = setToNowIfNull(dateTime);
-
-        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
-        Stop targetStop = targetStopId != null ? getStop(targetStopId) : null;
-
-        validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
-        ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
-                maxTravelTime);
-
-        List<ch.naviqore.service.Connection> connections;
-
-        if (sourceStop != null && targetStop != null) {
-            connections = service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config);
-        } else if (sourceStop != null) {
-            connections = service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config);
-        } else if (targetStop != null) {
-            connections = service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config);
-        } else {
-            connections = service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config);
-        }
-
-        return connections.stream().map(DtoMapper::map).toList();
     }
 
+    @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified stop or location at a given departure / arrival datetime.")
+    @ApiResponse(responseCode = "200", description = "A list of stop and fastest connection pairs for each reachable stop.")
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/isolines")
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
-                                            @RequestParam(required = false, defaultValue = "-91") double sourceLatitude,
-                                            @RequestParam(required = false, defaultValue = "-181") double sourceLongitude,
+                                            @RequestParam(required = false) Double sourceLatitude,
+                                            @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) LocalDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxWalkingDuration,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTransferNumber,
-                                            @RequestParam(required = false, defaultValue = "2147483647") int maxTravelTime,
+                                            @RequestParam(required = false) Integer maxWalkingDuration,
+                                            @RequestParam(required = false) Integer maxTransferNumber,
+                                            @RequestParam(required = false) Integer maxTravelTime,
                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
-        GeoCoordinate sourceCoordinate = null;
-        if (sourceStopId == null) {
-            if (sourceLatitude == -91.0 || sourceLongitude == -181.0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Either sourceStopId or sourceLatitude and sourceLongitude must be provided.");
+        // get stops or coordinates if available
+        GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
+                GlobalValidator.StopType.SOURCE);
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
+
+        // configure routing request
+        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
+        ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
+                minTransferTime);
+
+        // determine routing case and get isolines
+        try {
+            if (sourceStop != null) {
+                return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType,
+                        returnConnections);
+            } else {
+                return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
+                        returnConnections);
             }
-            sourceCoordinate = validateCoordinate(sourceLatitude, sourceLongitude);
+        } catch (ConnectionRoutingException e) {
+            handleConnectionRoutingException(e);
+            return null;
         }
-
-        Stop sourceStop = sourceStopId != null ? getStop(sourceStopId) : null;
-
-        validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime, minTransferTime);
-        ConnectionQueryConfig config = new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber,
-                maxTravelTime);
-
-        dateTime = setToNowIfNull(dateTime);
-
-        Map<Stop, ch.naviqore.service.Connection> connections;
-        if (sourceStop != null) {
-            connections = service.getIsoLines(sourceStop, dateTime, map(timeType), config);
-        } else {
-            connections = service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config);
-        }
-
-        List<StopConnection> arrivals = new ArrayList<>();
-
-        for (Map.Entry<Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
-            Stop stop = entry.getKey();
-            ch.naviqore.service.Connection connection = entry.getValue();
-            arrivals.add(new StopConnection(stop, connection, timeType, returnConnections));
-        }
-
-        return arrivals;
     }
 
-    private ch.naviqore.service.Stop getStop(String stopId) {
-        try {
-            return service.getStopById(stopId);
-        } catch (StopNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stop not found", e);
+    private static class Utils {
+
+        private static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId,
+                                                                        @Nullable Double latitude,
+                                                                        @Nullable Double longitude,
+                                                                        GlobalValidator.StopType stopType) {
+            RoutingRequestValidator.validateStopParameters(stopId, latitude, longitude, stopType);
+            return stopId == null ? RoutingRequestValidator.validateCoordinate(latitude, longitude) : null;
         }
+
+        private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, ScheduleInformationService service,
+                                                         GlobalValidator.StopType stopType) {
+            return stopId != null ? GlobalValidator.validateAndGetStop(stopId, service, stopType) : null;
+        }
+
+        private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
+                                                          @Nullable Integer maxTransferNumber,
+                                                          @Nullable Integer maxTravelTime, int minTransferTime) {
+
+            // replace null values with integer max value
+            maxWalkingDuration = setToMaxIfNull(maxWalkingDuration);
+            maxTransferNumber = setToMaxIfNull(maxTransferNumber);
+            maxTravelTime = setToMaxIfNull(maxTravelTime);
+
+            // validate and create config
+            RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
+                    minTransferTime);
+            return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime);
+        }
+
+        private static int setToMaxIfNull(Integer value) {
+            return (value == null) ? Integer.MAX_VALUE : value;
+        }
+
     }
 
 }
+
+
+

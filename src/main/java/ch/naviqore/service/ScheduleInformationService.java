@@ -15,6 +15,13 @@ import java.util.Optional;
 public interface ScheduleInformationService {
 
     /**
+     * Retrieves the validity period of the schedule.
+     *
+     * @return the validity period during which the schedule is considered valid
+     */
+    Validity getValidity();
+
+    /**
      * Searches for stops by name.
      *
      * @param like       the search term to match against stop names

@@ -108,6 +108,21 @@ public class GtfsScheduleReader {
         try (CSVParser csvParser = new CSVParser(reader, format)) {
             log.debug("CSV Headers: {}", csvParser.getHeaderMap().keySet());
             csvParser.forEach(record -> recordParser.parse(record, fileType));
+
+            // record number is incremented while parsing; check has to be done after parsing
+            validateCsvFileIsNotEmpty(fileType, csvParser.getRecordNumber());
+        }
+    }
+
+    private static void validateCsvFileIsNotEmpty(GtfsScheduleFile fileType, long recordNumber) throws IOException {
+        if (recordNumber == 0) {
+            String message = String.format("CSV file %s (%s) is empty", fileType.getFileName(),
+                    fileType.getPresence().name());
+            if (fileType.getPresence() == GtfsScheduleFile.Presence.REQUIRED) {
+                throw new IOException(message);
+            } else {
+                log.warn(message);
+            }
         }
     }
 
