@@ -8,14 +8,20 @@ import ch.naviqore.service.exception.TripNotActiveException;
 import ch.naviqore.service.exception.TripNotFoundException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Setter
 @NoArgsConstructor
 class DummyService implements PublicTransitService {
+
+    private boolean hasAccessibilityInformation;
+    private boolean hasBikeInformation;
+    private boolean hasTravelModeInformation;
 
     static final DummyServiceModels.Stop STOP_A = new DummyServiceModels.Stop("A", "Stop A", new GeoCoordinate(0, 0));
     static final DummyServiceModels.Stop STOP_B = new DummyServiceModels.Stop("B", "Stop B", new GeoCoordinate(1, 1));
@@ -66,17 +72,17 @@ class DummyService implements PublicTransitService {
 
     @Override
     public boolean hasAccessibilityInformation() {
-        return false;
+        return hasAccessibilityInformation;
     }
 
     @Override
     public boolean hasBikeInformation() {
-        return false;
+        return hasBikeInformation;
     }
 
     @Override
     public boolean hasTravelModeInformation() {
-        return false;
+        return hasTravelModeInformation;
     }
 
     @Override
