@@ -197,6 +197,10 @@ public class GtfsScheduleBuilder {
         log.info("Building schedule with {} stops, {} routes and {} trips", stops.size(), routes.size(), trips.size());
         setParentChildrenStopRelations();
 
+        if (calendars.isEmpty()) {
+            throw new IllegalArgumentException("At least one calendar has to be set.");
+        }
+
         // initialize: make immutable and resize arrays to capacity
         trips.values().parallelStream().forEach(Initializable::initialize);
         stops.values().parallelStream().forEach(Initializable::initialize);
