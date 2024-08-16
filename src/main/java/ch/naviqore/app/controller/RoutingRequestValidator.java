@@ -1,11 +1,15 @@
 package ch.naviqore.app.controller;
 
+import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.TravelMode;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.EnumSet;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
 final class RoutingRequestValidator {
@@ -20,7 +24,8 @@ final class RoutingRequestValidator {
     }
 
     public static void validateQueryParams(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
-                                           int minTransferTime) {
+                                           int minTransferTime, boolean wheelchairAccessible, boolean bikeAllowed,
+                                           EnumSet<TravelMode> travelModes, PublicTransitService service) {
         if (maxWalkingDuration < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Max walking duration must be greater than or equal to 0.");
@@ -35,6 +40,22 @@ final class RoutingRequestValidator {
         if (minTransferTime < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Min transfer time must be greater than or equal to 0.");
+        }
+
+        // If the service does not support accessibility information, bike information, or travel mode information,
+        // only default values are allowed (i.e., false for wheelchairAccessible, false for bikeAllowed,
+        // and all travel modes).
+        if (wheelchairAccessible && !service.hasAccessibilityInformation()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Accessibility information is not available for this service.");
+        }
+        if (bikeAllowed && !service.hasBikeInformation()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bike information is not available for this service.");
+        }
+        if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.hasTravelModeInformation()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Service does not support travel mode information.");
         }
     }
 
