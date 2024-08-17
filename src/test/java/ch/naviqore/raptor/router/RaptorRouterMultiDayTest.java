@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -52,7 +53,7 @@ public class RaptorRouterMultiDayTest {
         }
 
         @Override
-        public DayTripMask getDayTripMask(LocalDate date) {
+        public DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig) {
 
             Set<String> blockedRouteIds = blockedRoutes.getOrDefault(date, Set.of());
 

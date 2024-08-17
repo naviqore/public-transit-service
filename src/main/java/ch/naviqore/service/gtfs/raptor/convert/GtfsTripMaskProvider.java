@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.convert;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
 import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.utils.cache.EvictionCache;
@@ -38,7 +39,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     @Override
-    public DayTripMask getDayTripMask(LocalDate date) {
+    public DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig) {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }

@@ -1,5 +1,6 @@
 package ch.naviqore.raptor.router;
 
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.utils.cache.EvictionCache;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -80,7 +81,7 @@ public class RaptorConfig {
         }
 
         @Override
-        public DayTripMask getDayTripMask(LocalDate date) {
+        public DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig) {
             Map<String, RouteTripMask> tripMasks = new HashMap<>();
             for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
                 String routeId = entry.getKey();

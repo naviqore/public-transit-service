@@ -1,5 +1,6 @@
 package ch.naviqore.raptor.router;
 
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
@@ -48,13 +49,20 @@ class StopTimeProvider {
      * @param date the date for which the stop times should be created (or retrieved from cache)
      * @return the stop times for the given date.
      */
-    int[] getStopTimesForDate(LocalDate date) {
-        String serviceId = tripMaskProvider.getServiceIdForDate(date);
-        return stopTimeCache.computeIfAbsent(serviceId, () -> createStopTimesForDate(date));
+    int[] getStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
+        String stopTimesKey = getCacheKeyForStopTimes(date, queryConfig);
+        return stopTimeCache.computeIfAbsent(stopTimesKey, () -> createStopTimesForDate(date, queryConfig));
     }
 
-    private int[] createStopTimesForDate(LocalDate date) {
-        RaptorTripMaskProvider.DayTripMask mask = tripMaskProvider.getDayTripMask(date);
+    private String getCacheKeyForStopTimes(LocalDate date, QueryConfig queryConfig) {
+        String serviceId = tripMaskProvider.getServiceIdForDate(date);
+        String queryConfigKey = String.format("%b-%b-%s", queryConfig.isWheelchairAccessible(),
+                queryConfig.isBikeAccessible(), queryConfig.getAllowedTravelModes());
+        return serviceId + "-" + queryConfigKey;
+    }
+
+    private int[] createStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
+        RaptorTripMaskProvider.DayTripMask mask = tripMaskProvider.getDayTripMask(date, queryConfig);
 
         int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
         int[] newStopTimesArray = new int[originalStopTimesArray.length];
