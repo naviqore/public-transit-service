@@ -1,13 +1,21 @@
 package ch.naviqore.service.gtfs.raptor.convert;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.Route;
+import ch.naviqore.gtfs.schedule.model.Trip;
+import ch.naviqore.gtfs.schedule.type.AccessibilityInformation;
+import ch.naviqore.gtfs.schedule.type.BikeInformation;
+import ch.naviqore.gtfs.schedule.type.DefaultRouteType;
+import ch.naviqore.gtfs.schedule.type.RouteTypeMapper;
 import ch.naviqore.raptor.QueryConfig;
+import ch.naviqore.raptor.TravelMode;
 import ch.naviqore.raptor.router.RaptorTripMaskProvider;
 import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.utils.cache.EvictionCache;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +37,38 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         this.cache = new GtfsTripMaskProvider.MaskCache(cacheSize, strategy);
     }
 
+    private static EnumSet<DefaultRouteType> mapToRouteTypes(EnumSet<TravelMode> travelModes) {
+        if (travelModes == null || travelModes.isEmpty()) {
+            return EnumSet.allOf(DefaultRouteType.class);
+        }
+        EnumSet<DefaultRouteType> routeTypes = EnumSet.noneOf(DefaultRouteType.class);
+        for (TravelMode travelMode : travelModes) {
+            routeTypes.addAll(map(travelMode));
+        }
+        return routeTypes;
+    }
+
+    private static EnumSet<DefaultRouteType> map(TravelMode travelMode) {
+        if (travelMode.equals(TravelMode.BUS)) {
+            return EnumSet.of(DefaultRouteType.BUS, DefaultRouteType.TROLLEYBUS);
+        } else if (travelMode.equals(TravelMode.TRAM)) {
+            return EnumSet.of(DefaultRouteType.TRAM, DefaultRouteType.CABLE_TRAM);
+        } else if (travelMode.equals(TravelMode.RAIL)) {
+            return EnumSet.of(DefaultRouteType.RAIL, DefaultRouteType.MONORAIL);
+        } else if (travelMode.equals(TravelMode.SHIP)) {
+            return EnumSet.of(DefaultRouteType.FERRY);
+        } else if (travelMode.equals(TravelMode.SUBWAY)) {
+            return EnumSet.of(DefaultRouteType.SUBWAY);
+        } else if (travelMode.equals(TravelMode.AERIAL_LIFT)) {
+            return EnumSet.of(DefaultRouteType.AERIAL_LIFT);
+        } else if (travelMode.equals(TravelMode.FUNICULAR)) {
+            return EnumSet.of(DefaultRouteType.FUNICULAR);
+        } else {
+            // should never happen
+            throw new IllegalArgumentException("Travel mode not supported");
+        }
+    }
+
     public void clearCache() {
         cache.clear();
     }
@@ -43,18 +83,55 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         if (tripIds == null) {
             throw new IllegalStateException("Trip ids not set");
         }
-        return buildTripMask(date, cache.getActiveServices(date));
+        return buildTripMask(date, cache.getActiveServices(date), queryConfig);
     }
 
-    private DayTripMask buildTripMask(LocalDate date, String serviceId) {
+    private DayTripMask buildTripMask(LocalDate date, String serviceId, QueryConfig queryConfig) {
         Map<String, RouteTripMask> tripMasks = new HashMap<>();
+
+        boolean hasNonDefaultTravelModeFilter = queryConfig.getAllowedTravelModes()
+                .size() != TravelMode.values().length;
+        EnumSet<DefaultRouteType> allowedRouteTypes = mapToRouteTypes(queryConfig.getAllowedTravelModes());
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
             String routeId = entry.getKey();
             String[] tripIds = entry.getValue();
+
             boolean[] tripMask = new boolean[tripIds.length];
+
+            // only check route type if there is a non-default travel mode filter
+            if (hasNonDefaultTravelModeFilter) {
+                Route route = schedule.getRoutes().get(routeId);
+                DefaultRouteType routeType = RouteTypeMapper.map(route.getType());
+                if (!allowedRouteTypes.contains(routeType)) {
+                    // no need for further checks if route type is not allowed
+                    tripMasks.put(routeId, new RouteTripMask(tripMask));
+                    continue;
+                }
+            }
+
             for (int i = 0; i < tripIds.length; i++) {
-                tripMask[i] = schedule.getTrips().get(tripIds[i]).getCalendar().isServiceAvailable(date);
+                Trip trip = schedule.getTrips().get(tripIds[i]);
+                if (!trip.getCalendar().isServiceAvailable(date)) {
+                    tripMask[i] = false;
+                    continue;
+                }
+
+                if (queryConfig.isWheelchairAccessible()) {
+                    if (trip.getWheelchairAccessible() != AccessibilityInformation.ACCESSIBLE) {
+                        tripMask[i] = false;
+                        continue;
+                    }
+                }
+
+                if (queryConfig.isBikeAccessible()) {
+                    if (trip.getBikesAllowed() != BikeInformation.ALLOWED) {
+                        tripMask[i] = false;
+                        continue;
+                    }
+                }
+
+                tripMask[i] = true;
             }
 
             tripMasks.put(routeId, new RouteTripMask(tripMask));

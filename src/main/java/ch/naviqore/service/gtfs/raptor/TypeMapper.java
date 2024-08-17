@@ -1,7 +1,6 @@
 package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.type.DefaultRouteType;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -131,38 +130,6 @@ final class TypeMapper {
             raptorTravelModes.add(ch.naviqore.raptor.TravelMode.valueOf(travelMode.name()));
         }
         return raptorTravelModes;
-    }
-
-    public static EnumSet<DefaultRouteType> mapToRouteTypes(EnumSet<ch.naviqore.raptor.TravelMode> travelModes) {
-        if (travelModes == null || travelModes.isEmpty()) {
-            return EnumSet.allOf(DefaultRouteType.class);
-        }
-        EnumSet<DefaultRouteType> routeTypes = EnumSet.noneOf(DefaultRouteType.class);
-        for (ch.naviqore.raptor.TravelMode travelMode : travelModes) {
-            routeTypes.addAll(map(travelMode));
-        }
-        return routeTypes;
-    }
-
-    public static EnumSet<DefaultRouteType> map(ch.naviqore.raptor.TravelMode travelMode) {
-        if (travelMode.equals(ch.naviqore.raptor.TravelMode.BUS)) {
-            return EnumSet.of(DefaultRouteType.BUS, DefaultRouteType.TROLLEYBUS);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.TRAM)) {
-            return EnumSet.of(DefaultRouteType.TRAM, DefaultRouteType.CABLE_TRAM);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.RAIL)) {
-            return EnumSet.of(DefaultRouteType.RAIL, DefaultRouteType.MONORAIL);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.SHIP)) {
-            return EnumSet.of(DefaultRouteType.FERRY);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.SUBWAY)) {
-            return EnumSet.of(DefaultRouteType.SUBWAY);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.AERIAL_LIFT)) {
-            return EnumSet.of(DefaultRouteType.AERIAL_LIFT);
-        } else if (travelMode.equals(ch.naviqore.raptor.TravelMode.FUNICULAR)) {
-            return EnumSet.of(DefaultRouteType.FUNICULAR);
-        } else {
-            // should never happen
-            throw new IllegalArgumentException("Travel mode not supported");
-        }
     }
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule, int distance) {
