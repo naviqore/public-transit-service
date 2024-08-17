@@ -101,7 +101,8 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
 
             // only check route type if there is a non-default travel mode filter
             if (hasNonDefaultTravelModeFilter) {
-                Route route = schedule.getRoutes().get(routeId);
+                Trip firstTripOfRoute = schedule.getTrips().get(tripIds[0]);
+                Route route = firstTripOfRoute.getRoute();
                 DefaultRouteType routeType = RouteTypeMapper.map(route.getType());
                 if (!allowedRouteTypes.contains(routeType)) {
                     // no need for further checks if route type is not allowed
