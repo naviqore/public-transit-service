@@ -123,6 +123,9 @@ final class TypeMapper {
     }
 
     public static EnumSet<ch.naviqore.raptor.TravelMode> map(EnumSet<TravelMode> travelModes) {
+        if (travelModes == null || travelModes.isEmpty()) {
+            return EnumSet.allOf(ch.naviqore.raptor.TravelMode.class);
+        }
         EnumSet<ch.naviqore.raptor.TravelMode> raptorTravelModes = EnumSet.noneOf(ch.naviqore.raptor.TravelMode.class);
         for (TravelMode travelMode : travelModes) {
             raptorTravelModes.add(ch.naviqore.raptor.TravelMode.valueOf(travelMode.name()));
@@ -131,6 +134,9 @@ final class TypeMapper {
     }
 
     public static EnumSet<DefaultRouteType> mapToRouteTypes(EnumSet<ch.naviqore.raptor.TravelMode> travelModes) {
+        if (travelModes == null || travelModes.isEmpty()) {
+            return EnumSet.allOf(DefaultRouteType.class);
+        }
         EnumSet<DefaultRouteType> routeTypes = EnumSet.noneOf(DefaultRouteType.class);
         for (ch.naviqore.raptor.TravelMode travelMode : travelModes) {
             routeTypes.addAll(map(travelMode));
