@@ -61,7 +61,7 @@ public class GtfsRaptorService implements PublicTransitService {
 
     @Override
     public boolean hasAccessibilityInformation() {
-        return schedule.hasStopAccessibilityInformation();
+        return schedule.hasTripAccessibilityInformation();
     }
 
     @Override
