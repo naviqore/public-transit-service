@@ -111,7 +111,8 @@ final class TypeMapper {
 
     public static QueryConfig map(ConnectionQueryConfig config) {
         return new QueryConfig(config.getMaximumWalkingDuration(), config.getMinimumTransferDuration(),
-                config.getMaximumTransferNumber(), config.getMaximumTravelTime());
+                config.getMaximumTransferNumber(), config.getMaximumTravelTime(), config.isWheelchairAccessible(),
+                config.isBikeAllowed(), map(config.getTravelModes()));
     }
 
     public static ch.naviqore.raptor.TimeType map(TimeType timeType) {
