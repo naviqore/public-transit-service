@@ -48,7 +48,7 @@ public class RoutingController {
 
     @Operation(summary = "Get information about the routing service", description = "Get information about the routing service, such as supported features.")
     @ApiResponse(responseCode = "200", description = "A list of features supported or not supported by the routing service.")
-    @GetMapping("/")
+    @GetMapping("")
     public RouterInfo getRouterInfo() {
         return new RouterInfo(service.hasAccessibilityInformation(), service.hasBikeInformation(),
                 service.hasTravelModeInformation());

@@ -8,7 +8,9 @@ import lombok.ToString;
 @ToString
 @Getter
 public class RouterInfo {
+
     final boolean supportsAccessibility;
     final boolean supportsBikes;
     final boolean supportsTravelModes;
+
 }

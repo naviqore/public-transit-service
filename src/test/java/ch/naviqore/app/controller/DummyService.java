@@ -19,10 +19,6 @@ import java.util.*;
 @NoArgsConstructor
 class DummyService implements PublicTransitService {
 
-    private boolean hasAccessibilityInformation;
-    private boolean hasBikeInformation;
-    private boolean hasTravelModeInformation;
-
     static final DummyServiceModels.Stop STOP_A = new DummyServiceModels.Stop("A", "Stop A", new GeoCoordinate(0, 0));
     static final DummyServiceModels.Stop STOP_B = new DummyServiceModels.Stop("B", "Stop B", new GeoCoordinate(1, 1));
     static final DummyServiceModels.Stop STOP_C = new DummyServiceModels.Stop("C", "Stop C", new GeoCoordinate(2, 2));
@@ -31,7 +27,6 @@ class DummyService implements PublicTransitService {
     static final DummyServiceModels.Stop STOP_F = new DummyServiceModels.Stop("F", "Stop F", new GeoCoordinate(5, 5));
     static final DummyServiceModels.Stop STOP_G = new DummyServiceModels.Stop("G", "Stop G", new GeoCoordinate(6, 6));
     static final DummyServiceModels.Stop STOP_H = new DummyServiceModels.Stop("H", "Stop H", new GeoCoordinate(7, 7));
-
     static final List<DummyServiceModels.Stop> STOPS = List.of(STOP_A, STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G,
             STOP_H);
     private static final RouteData ROUTE_1 = new RouteData(
@@ -44,6 +39,10 @@ class DummyService implements PublicTransitService {
             new DummyServiceModels.Route("3", "Route 3", "R3", "BUS", "Agency 3"),
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
+
+    private boolean hasAccessibilityInformation;
+    private boolean hasBikeInformation;
+    private boolean hasTravelModeInformation;
 
     @Override
     public Validity getValidity() {
