@@ -7,8 +7,9 @@ import lombok.ToString;
 @RequiredArgsConstructor
 @ToString
 @Getter
-public class RouterInfo {
+public class ScheduleInfo {
     final boolean supportsAccessibility;
     final boolean supportsBikes;
     final boolean supportsTravelModes;
+    final ScheduleValidity scheduleValidity;
 }

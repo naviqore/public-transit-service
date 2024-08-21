@@ -1,7 +1,6 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.RouterInfo;
 import ch.naviqore.app.dto.StopConnection;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -44,14 +43,6 @@ public class RoutingController {
     private static void handleConnectionRoutingException(ConnectionRoutingException e) {
         log.error("Connection routing exception", e);
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-    }
-
-    @Operation(summary = "Get information about the routing service", description = "Get information about the routing service, such as supported features.")
-    @ApiResponse(responseCode = "200", description = "A list of features supported or not supported by the routing service.")
-    @GetMapping("/")
-    public RouterInfo getRouterInfo() {
-        return new RouterInfo(service.hasAccessibilityInformation(), service.hasBikeInformation(),
-                service.hasTravelModeInformation());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")

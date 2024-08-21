@@ -597,7 +597,7 @@ public class RoutingControllerTest {
             dummyService.setHasBikeInformation(supportsBikes);
             dummyService.setHasTravelModeInformation(supportsTravelModes);
 
-            RouterInfo routerInfo = routingController.getRouterInfo();
+            ScheduleInfo routerInfo = routingController.getRoutingInfo();
             assertEquals(supportsAccessibility, routerInfo.isSupportsAccessibility());
             assertEquals(supportsBikes, routerInfo.isSupportsBikes());
             assertEquals(supportsTravelModes, routerInfo.isSupportsTravelModes());

@@ -67,6 +67,10 @@ public class DtoMapper {
         return arrivals;
     }
 
+    public static ScheduleValidity map(ch.naviqore.service.Validity validity) {
+        return new ScheduleValidity(validity.getStartDate(), validity.getEndDate());
+    }
+
     private static class LegVisitorImpl implements LegVisitor<Leg> {
         @Override
         public Leg visit(PublicTransitLeg publicTransitLeg) {
