@@ -2,7 +2,11 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.StopConnection;
-import ch.naviqore.service.*;
+import ch.naviqore.app.dto.TimeType;
+import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.ScheduleInformationService;
+import ch.naviqore.service.Stop;
+import ch.naviqore.service.TravelMode;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -84,13 +88,13 @@ public class RoutingController {
         try {
             if (sourceStop != null && targetStop != null) {
                 RoutingRequestValidator.validateStops(sourceStopId, targetStopId);
-                return map(service.getConnections(sourceStop, targetStop, dateTime, timeType, config));
+                return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
             } else if (sourceStop != null) {
-                return map(service.getConnections(sourceStop, targetCoordinate, dateTime, timeType, config));
+                return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
             } else if (targetStop != null) {
-                return map(service.getConnections(sourceCoordinate, targetStop, dateTime, timeType, config));
+                return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
             } else {
-                return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, timeType, config));
+                return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
         } catch (ConnectionRoutingException e) {
             handleConnectionRoutingException(e);
@@ -130,9 +134,10 @@ public class RoutingController {
         // determine routing case and get isolines
         try {
             if (sourceStop != null) {
-                return map(service.getIsoLines(sourceStop, dateTime, timeType, config), timeType, returnConnections);
+                return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType,
+                        returnConnections);
             } else {
-                return map(service.getIsoLines(sourceCoordinate, dateTime, timeType, config), timeType,
+                return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
                         returnConnections);
             }
         } catch (ConnectionRoutingException e) {

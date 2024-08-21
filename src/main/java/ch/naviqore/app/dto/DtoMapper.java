@@ -49,6 +49,13 @@ public class DtoMapper {
         };
     }
 
+    public static ch.naviqore.service.TimeType map(TimeType timeType) {
+        return switch (timeType) {
+            case ARRIVAL -> ch.naviqore.service.TimeType.ARRIVAL;
+            case DEPARTURE -> ch.naviqore.service.TimeType.DEPARTURE;
+        };
+    }
+
     public static Connection map(ch.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
         return new Connection(legs);
@@ -62,7 +69,7 @@ public class DtoMapper {
                                            TimeType timeType, boolean returnConnections) {
         List<StopConnection> arrivals = new ArrayList<>();
         for (Map.Entry<ch.naviqore.service.Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
-            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), timeType, returnConnections));
+            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), map(timeType), returnConnections));
         }
         return arrivals;
     }
