@@ -38,7 +38,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     private static EnumSet<DefaultRouteType> mapToRouteTypes(EnumSet<TravelMode> travelModes) {
-        if (travelModes == null || travelModes.isEmpty()) {
+        if (travelModes.isEmpty()) {
             return EnumSet.allOf(DefaultRouteType.class);
         }
         EnumSet<DefaultRouteType> routeTypes = EnumSet.noneOf(DefaultRouteType.class);
@@ -89,8 +89,9 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     private DayTripMask buildTripMask(LocalDate date, String serviceId, QueryConfig queryConfig) {
         Map<String, RouteTripMask> tripMasks = new HashMap<>();
 
-        boolean hasNonDefaultTravelModeFilter = queryConfig.getAllowedTravelModes()
-                .size() != TravelMode.values().length;
+        // the travel mode filter is only active if not all travel modes are allowed (no filtering is required when all
+        // travel modes are allowed)
+        boolean hasTravelModeFilter = queryConfig.getAllowedTravelModes().size() != TravelMode.values().length;
         EnumSet<DefaultRouteType> allowedRouteTypes = mapToRouteTypes(queryConfig.getAllowedTravelModes());
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
@@ -99,8 +100,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
 
             boolean[] tripMask = new boolean[tripIds.length];
 
-            // only check route type if there is a non-default travel mode filter
-            if (hasNonDefaultTravelModeFilter) {
+            if (hasTravelModeFilter) {
                 Trip firstTripOfRoute = schedule.getTrips().get(tripIds[0]);
                 Route route = firstTripOfRoute.getRoute();
                 DefaultRouteType routeType = RouteTypeMapper.map(route.getType());
