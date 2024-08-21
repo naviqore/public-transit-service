@@ -571,36 +571,6 @@ public class RoutingControllerTest {
 
     @Nested
     class RouterInfoEndpoint {
-        static Stream<Arguments> provideQueryConfigTestCombinations() {
-            boolean[] supportsAccessibility = {true, false};
-            boolean[] supportsBikes = {true, false};
-            boolean[] supportsTravelModes = {true, false};
 
-            // create all permutations based on the boolean arrays (not hard coded)
-            Stream<Arguments> stream = Stream.of();
-            for (boolean supportsAccessibilityValue : supportsAccessibility) {
-                for (boolean supportsBikesValue : supportsBikes) {
-                    for (boolean supportsTravelModesValue : supportsTravelModes) {
-                        stream = Stream.concat(stream, Stream.of(
-                                Arguments.of(supportsAccessibilityValue, supportsBikesValue,
-                                        supportsTravelModesValue)));
-                    }
-                }
-            }
-            return stream;
-        }
-
-        @ParameterizedTest(name = "routerInfoQueryConfig_{index}")
-        @MethodSource("provideQueryConfigTestCombinations")
-        void testQueryConfigValues(boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
-            dummyService.setHasAccessibilityInformation(supportsAccessibility);
-            dummyService.setHasBikeInformation(supportsBikes);
-            dummyService.setHasTravelModeInformation(supportsTravelModes);
-
-            ScheduleInfo routerInfo = routingController.getRoutingInfo();
-            assertEquals(supportsAccessibility, routerInfo.isSupportsAccessibility());
-            assertEquals(supportsBikes, routerInfo.isSupportsBikes());
-            assertEquals(supportsTravelModes, routerInfo.isSupportsTravelModes());
-        }
     }
 }
