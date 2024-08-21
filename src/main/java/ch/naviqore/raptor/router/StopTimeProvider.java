@@ -55,10 +55,9 @@ class StopTimeProvider {
     }
 
     private String getCacheKeyForStopTimes(LocalDate date, QueryConfig queryConfig) {
-        String serviceId = tripMaskProvider.getServiceIdForDate(date);
-        String queryConfigKey = String.format("%b-%b-%s", queryConfig.isWheelchairAccessible(),
-                queryConfig.isBikeAccessible(), queryConfig.getAllowedTravelModes());
-        return serviceId + "-" + queryConfigKey;
+        return String.format("%s-%b-%b-%s", tripMaskProvider.getServiceIdForDate(date),
+                queryConfig.isWheelchairAccessible(), queryConfig.isBikeAccessible(),
+                queryConfig.getAllowedTravelModes());
     }
 
     private int[] createStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
