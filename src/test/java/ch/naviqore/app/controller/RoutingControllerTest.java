@@ -12,8 +12,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -569,7 +571,50 @@ public class RoutingControllerTest {
     }
 
     @Nested
-    class RouterInfoEndpoint {
+    class RoutingInfo {
+        static Stream<Arguments> provideRoutingInfoTestCombinations() {
+            List<boolean[]> combinations = generateBooleanCombinations(7);
+            return combinations.stream()
+                    .map(arr -> Arguments.of(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6]));
+        }
 
+        private static List<boolean[]> generateBooleanCombinations(int length) {
+            return Stream.iterate(new boolean[length], arr -> {
+                boolean[] next = Arrays.copyOf(arr, length);
+                for (int i = length - 1; i >= 0; i--) {
+                    if (next[i]) {
+                        next[i] = false;
+                    } else {
+                        next[i] = true;
+                        break;
+                    }
+                }
+                return next;
+            }).limit((long) Math.pow(2, length)).collect(Collectors.toList());
+        }
+
+        @ParameterizedTest(name = "maxNumTransfers_{0}_maxTravelTime_{1}_maxWalkingTime_{2}_minTransferTime_{3}_accessibility_{4}_bikes_{5}_travelModes_{6}")
+        @MethodSource("provideRoutingInfoTestCombinations")
+        void testQueryConfigValues(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
+                                   boolean supportsMaxWalkingDuration, boolean supportsMinTransferDuration,
+                                   boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
+            dummyService.setHasAccessibilityInformation(supportsAccessibility);
+            dummyService.setHasBikeInformation(supportsBikes);
+            dummyService.setHasTravelModeInformation(supportsTravelModes);
+            dummyService.setSupportsMaxTransferNumber(supportsMaxNumTransfers);
+            dummyService.setSupportsMaxTravelTime(supportsMaxTravelTime);
+            dummyService.setSupportsMaxWalkingDuration(supportsMaxWalkingDuration);
+            dummyService.setSupportsMinTransferDuration(supportsMinTransferDuration);
+
+            ch.naviqore.app.dto.RoutingInfo routingInfo = routingController.getRoutingInfo();
+
+            assertEquals(supportsAccessibility, routingInfo.supportsAccessibility());
+            assertEquals(supportsBikes, routingInfo.supportsBikes());
+            assertEquals(supportsTravelModes, routingInfo.supportsTravelModes());
+            assertEquals(supportsMaxNumTransfers, routingInfo.supportsMaxNumTransfers());
+            assertEquals(supportsMaxTravelTime, routingInfo.supportsMaxTravelTime());
+            assertEquals(supportsMaxWalkingDuration, routingInfo.supportsMaxWalkingDuration());
+            assertEquals(supportsMinTransferDuration, routingInfo.supportsMinTransferDuration());
+        }
     }
 }
