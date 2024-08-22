@@ -68,4 +68,16 @@ public class QueryConfig {
         this.maximumTravelTime = maximumTravelTime;
     }
 
+    /**
+     * Check if the query configuration needs filtering based on the allowed travel modes.
+     *
+     * <p>It is not necessary to filter if all travel modes are allowed. Also, if allowed travel modes are empty, it
+     * is assumed that all travel modes are allowed.
+     *
+     * @return true if the query configuration needs filtering based on the allowed travel modes, false otherwise.
+     */
+    public boolean needsTravelModeFiltering() {
+        return allowedTravelModes.size() < TravelMode.values().length && !allowedTravelModes.isEmpty();
+    }
+
 }

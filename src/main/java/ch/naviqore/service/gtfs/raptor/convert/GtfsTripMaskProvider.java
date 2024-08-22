@@ -89,9 +89,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     private DayTripMask buildTripMask(LocalDate date, String serviceId, QueryConfig queryConfig) {
         Map<String, RouteTripMask> tripMasks = new HashMap<>();
 
-        // the travel mode filter is only active if not all travel modes are allowed (no filtering is required when all
-        // travel modes are allowed)
-        boolean hasTravelModeFilter = queryConfig.getAllowedTravelModes().size() != TravelMode.values().length;
+        boolean hasTravelModeFilter = queryConfig.needsTravelModeFiltering();
         EnumSet<DefaultRouteType> allowedRouteTypes = mapToRouteTypes(queryConfig.getAllowedTravelModes());
 
         for (Map.Entry<String, String[]> entry : tripIds.entrySet()) {
