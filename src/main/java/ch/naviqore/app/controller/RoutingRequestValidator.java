@@ -70,7 +70,7 @@ final class RoutingRequestValidator {
                     "Bike friendly routing is not supported by the router of this service.");
         }
         if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.getSupportedRoutingFeatures()
-                .supportsAccessibility()) {
+                .supportsTravelModes()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Filtering travel modes is not supported by the router of this service.");
         }
