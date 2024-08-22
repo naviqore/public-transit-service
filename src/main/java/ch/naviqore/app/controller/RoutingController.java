@@ -53,8 +53,8 @@ public class RoutingController {
     public RoutingInfo getRoutingInfo() {
         SupportedRoutingFeatures features = service.getSupportedRoutingFeatures();
         return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
-                features.supportsMaxWalkingTime(), features.supportsMinTransferTime(), features.supportsWheelchair(),
-                features.supportsBike(), features.supportsTravelMode());
+                features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(), features.supportsAccessibility(),
+                features.supportsBikes(), features.supportsTravelModes());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
