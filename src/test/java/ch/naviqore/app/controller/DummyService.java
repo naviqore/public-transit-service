@@ -40,6 +40,11 @@ class DummyService implements PublicTransitService {
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
+    private boolean supportsMaxWalkingDuration;
+    private boolean supportsMinTransferDuration;
+    private boolean supportsMaxTransferNumber;
+    private boolean supportsMaxTravelTime;
+
     private boolean hasAccessibilityInformation;
     private boolean hasBikeInformation;
     private boolean hasTravelModeInformation;
@@ -67,6 +72,13 @@ class DummyService implements PublicTransitService {
                 return !date.isBefore(getStartDate()) && !date.isAfter(getEndDate());
             }
         };
+    }
+
+    @Override
+    public SupportedRoutingFeatures getSupportedRoutingFeatures() {
+        return new SupportedRoutingFeatures(supportsMaxTransferNumber, supportsMaxTravelTime,
+                supportsMaxWalkingDuration, supportsMinTransferDuration, hasAccessibilityInformation,
+                hasBikeInformation, hasTravelModeInformation);
     }
 
     @Override

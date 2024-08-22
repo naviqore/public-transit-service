@@ -92,6 +92,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public SupportedRoutingFeatures getSupportedRoutingFeatures() {
+        return delegate.getSupportedRoutingFeatures();
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {

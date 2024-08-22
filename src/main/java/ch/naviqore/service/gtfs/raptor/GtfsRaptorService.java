@@ -154,6 +154,12 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public SupportedRoutingFeatures getSupportedRoutingFeatures() {
+        return new SupportedRoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+                schedule.hasTripBikeInformation(), true );
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
@@ -310,8 +316,8 @@ public class GtfsRaptorService implements PublicTransitService {
 
         try {
             return mapToStopConnectionMap(
-                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)),
-                    source, config, timeType);
+                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
+                    config, timeType);
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
