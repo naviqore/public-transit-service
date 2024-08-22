@@ -17,7 +17,7 @@ import java.util.*;
  * Raptor algorithm implementation
  */
 @Slf4j
-class RaptorRouter implements RaptorAlgorithm, RaptorData {
+public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
     @Getter
     private final Lookup lookup;
@@ -45,6 +45,10 @@ class RaptorRouter implements RaptorAlgorithm, RaptorData {
         this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
                 config.getStopTimeCacheStrategy());
         validator = new InputValidator(lookup.stops());
+    }
+
+    public static RaptorRouterBuilder builder(RaptorConfig config) {
+        return new RaptorRouterBuilder(config);
     }
 
     @Override

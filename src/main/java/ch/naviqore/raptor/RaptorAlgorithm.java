@@ -10,10 +10,6 @@ import java.util.Map;
 
 public interface RaptorAlgorithm {
 
-    static RaptorRouterBuilder builder(RaptorConfig config) {
-        return new RaptorRouterBuilder(config);
-    }
-
     /**
      * Routing the earliest arrival from departure stops to arrival. Given a set departure time.
      *
