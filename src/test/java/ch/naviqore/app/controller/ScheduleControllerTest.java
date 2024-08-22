@@ -78,9 +78,9 @@ public class ScheduleControllerTest {
             ScheduleController scheduleController = new ScheduleController(dummyService);
 
             ch.naviqore.app.dto.ScheduleInfo routerInfo = scheduleController.getScheduleInfo();
-            assertEquals(supportsAccessibility, routerInfo.hasAccessibility());
-            assertEquals(supportsBikes, routerInfo.hasBikes());
-            assertEquals(supportsTravelModes, routerInfo.hasTravelModes());
+            assertEquals(supportsAccessibility, routerInfo.isHasAccessibility());
+            assertEquals(supportsBikes, routerInfo.isHasBikes());
+            assertEquals(supportsTravelModes, routerInfo.isHasTravelModes());
             assertEquals(expStartDate, routerInfo.getScheduleValidity().getStartDate());
             assertEquals(expEndDate, routerInfo.getScheduleValidity().getEndDate());
         }

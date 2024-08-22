@@ -608,13 +608,13 @@ public class RoutingControllerTest {
 
             ch.naviqore.app.dto.RoutingInfo routingInfo = routingController.getRoutingInfo();
 
-            assertEquals(supportsAccessibility, routingInfo.supportsAccessibility());
-            assertEquals(supportsBikes, routingInfo.supportsBikes());
-            assertEquals(supportsTravelModes, routingInfo.supportsTravelModes());
-            assertEquals(supportsMaxNumTransfers, routingInfo.supportsMaxNumTransfers());
-            assertEquals(supportsMaxTravelTime, routingInfo.supportsMaxTravelTime());
-            assertEquals(supportsMaxWalkingDuration, routingInfo.supportsMaxWalkingDuration());
-            assertEquals(supportsMinTransferDuration, routingInfo.supportsMinTransferDuration());
+            assertEquals(supportsAccessibility, routingInfo.isSupportsAccessibility());
+            assertEquals(supportsBikes, routingInfo.isSupportsBikes());
+            assertEquals(supportsTravelModes, routingInfo.isSupportsTravelModes());
+            assertEquals(supportsMaxNumTransfers, routingInfo.isSupportsMaxNumTransfers());
+            assertEquals(supportsMaxTravelTime, routingInfo.isSupportsMaxTravelTime());
+            assertEquals(supportsMaxWalkingDuration, routingInfo.isSupportsMaxWalkingDuration());
+            assertEquals(supportsMinTransferDuration, routingInfo.isSupportsMinTransferDuration());
         }
     }
 }
