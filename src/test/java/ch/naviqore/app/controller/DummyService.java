@@ -30,13 +30,13 @@ class DummyService implements PublicTransitService {
     static final List<DummyServiceModels.Stop> STOPS = List.of(STOP_A, STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G,
             STOP_H);
     private static final RouteData ROUTE_1 = new RouteData(
-            new DummyServiceModels.Route("1", "Route 1", "R1", "BUS", "Agency 1"),
+            new DummyServiceModels.Route("1", "Route 1", "R1", TravelMode.BUS, "BUS", "Agency 1"),
             List.of(STOP_A, STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G));
     private static final RouteData ROUTE_2 = new RouteData(
-            new DummyServiceModels.Route("2", "Route 2", "R2", "BUS", "Agency 2"),
+            new DummyServiceModels.Route("2", "Route 2", "R2", TravelMode.BUS, "BUS", "Agency 2"),
             List.of(STOP_A, STOP_B, STOP_C, STOP_D));
     private static final RouteData ROUTE_3 = new RouteData(
-            new DummyServiceModels.Route("3", "Route 3", "R3", "BUS", "Agency 3"),
+            new DummyServiceModels.Route("3", "Route 3", "R3", TravelMode.BUS, "BUS", "Agency 3"),
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
@@ -403,7 +403,7 @@ class DummyService implements PublicTransitService {
             int refIndex = timeType == TimeType.DEPARTURE ? startStopIndex : endStopIndex;
 
             DummyServiceModels.Trip trip = new DummyServiceModels.Trip(route.route().getId() + "_" + startStop.getId(),
-                    "Head Sign", route.route());
+                    "Head Sign", route.route(), false, false);
             List<ch.naviqore.service.StopTime> stopTimes = new ArrayList<>();
             for (int i = 0; i < route.stops().size(); i++) {
                 DummyServiceModels.Stop stop = route.stops().get(i);

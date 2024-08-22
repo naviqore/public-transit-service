@@ -19,5 +19,7 @@ public class GtfsRaptorTrip implements Trip {
     private final String headSign;
     private final Route route;
     private final List<StopTime> stopTimes;
+    private final boolean bikesAllowed;
+    private final boolean wheelchairAccessible;
 
 }

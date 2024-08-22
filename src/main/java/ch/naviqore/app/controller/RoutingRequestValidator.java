@@ -1,7 +1,7 @@
 package ch.naviqore.app.controller;
 
+import ch.naviqore.app.dto.TravelMode;
 import ch.naviqore.service.PublicTransitService;
-import ch.naviqore.service.TravelMode;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

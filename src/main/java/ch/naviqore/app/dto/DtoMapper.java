@@ -34,11 +34,13 @@ public class DtoMapper {
                         stopTime.getDepartureTime()))
                 .toList();
 
-        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes);
+        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes, trip.isBikesAllowed(),
+                trip.isWheelchairAccessible());
     }
 
     public static Route map(ch.naviqore.service.Route route) {
-        return new Route(route.getId(), route.getName(), route.getShortName(), route.getRouteType());
+        return new Route(route.getId(), route.getName(), route.getShortName(), map(route.getRouteType()),
+                route.getRouteTypeDescription());
     }
 
     public static TravelMode map(ch.naviqore.service.TravelMode travelMode) {
