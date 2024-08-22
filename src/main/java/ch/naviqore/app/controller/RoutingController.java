@@ -102,6 +102,7 @@ public class RoutingController {
             } else if (targetStop != null) {
                 return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
             } else {
+                RoutingRequestValidator.validateCoordinates(sourceCoordinate, targetCoordinate);
                 return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
         } catch (ConnectionRoutingException e) {

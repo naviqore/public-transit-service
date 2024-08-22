@@ -100,4 +100,11 @@ final class RoutingRequestValidator {
         }
     }
 
+    public static void validateCoordinates(GeoCoordinate sourceCoordinate, GeoCoordinate targetCoordinate) {
+        if (sourceCoordinate.equals(targetCoordinate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The source and target coordinates cannot be the same. Please provide different coordinates for the source and target.");
+        }
+    }
+
 }
