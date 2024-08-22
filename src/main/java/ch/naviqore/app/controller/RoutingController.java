@@ -4,6 +4,7 @@ import ch.naviqore.app.dto.Connection;
 import ch.naviqore.app.dto.RoutingInfo;
 import ch.naviqore.app.dto.StopConnection;
 import ch.naviqore.app.dto.TimeType;
+import ch.naviqore.app.dto.TravelMode;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
@@ -91,7 +92,6 @@ public class RoutingController {
         dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
-
         // determine routing case and get connections
         try {
             if (sourceStop != null && targetStop != null) {
@@ -190,7 +190,7 @@ public class RoutingController {
             RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                     minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
             return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime,
-                    wheelchairAccessible, bikeAllowed, travelModes);
+                    wheelchairAccessible, bikeAllowed, map(travelModes));
         }
 
         private static int setToMaxIfNull(Integer value) {

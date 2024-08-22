@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -40,13 +41,25 @@ public class DtoMapper {
         return new Route(route.getId(), route.getName(), route.getShortName(), route.getRouteType());
     }
 
+    public static TravelMode map(ch.naviqore.service.TravelMode travelMode) {
+        return TravelMode.valueOf(travelMode.name());
+    }
+
+    public static ch.naviqore.service.TravelMode map(TravelMode travelMode) {
+        return ch.naviqore.service.TravelMode.valueOf(travelMode.name());
+    }
+
+    public static EnumSet<ch.naviqore.service.TravelMode> map(EnumSet<TravelMode> travelModes) {
+        EnumSet<ch.naviqore.service.TravelMode> serviceTravelModes = EnumSet.noneOf(
+                ch.naviqore.service.TravelMode.class);
+        for (TravelMode travelMode : travelModes) {
+            serviceTravelModes.add(map(travelMode));
+        }
+        return serviceTravelModes;
+    }
+
     public static SearchType map(ch.naviqore.app.dto.SearchType searchType) {
-        return switch (searchType) {
-            case STARTS_WITH -> SearchType.STARTS_WITH;
-            case ENDS_WITH -> SearchType.ENDS_WITH;
-            case CONTAINS -> SearchType.CONTAINS;
-            case EXACT -> SearchType.EXACT;
-        };
+        return SearchType.valueOf(searchType.name());
     }
 
     public static ch.naviqore.service.TimeType map(TimeType timeType) {
