@@ -268,12 +268,12 @@ public class RoutingControllerTest {
             dummyService.setHasTravelModeInformation(hasTravelModeInformation);
 
             if (errorMessage == null) {
-                routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE,
+                routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(), TimeType.DEPARTURE,
                         maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes);
             } else {
                 ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                        () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
+                        () -> routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(),
                                 TimeType.DEPARTURE, maxWalkingDuration, maxTransferDuration, maxTravelTime,
                                 minTransferTime, wheelChairAccessible, bikeAllowed, travelModes));
                 assertEquals(errorMessage, exception.getReason());
