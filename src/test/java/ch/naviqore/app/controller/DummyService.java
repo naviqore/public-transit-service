@@ -40,14 +40,14 @@ class DummyService implements PublicTransitService {
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
-    private boolean supportsMaxWalkingDuration;
-    private boolean supportsMinTransferDuration;
-    private boolean supportsMaxTransferNumber;
-    private boolean supportsMaxTravelTime;
+    private boolean supportsMaxWalkingDuration = true;
+    private boolean supportsMinTransferDuration = true;
+    private boolean supportsMaxTransferNumber = true;
+    private boolean supportsMaxTravelTime = true;
 
-    private boolean hasAccessibilityInformation;
-    private boolean hasBikeInformation;
-    private boolean hasTravelModeInformation;
+    private boolean hasAccessibilityInformation = false;
+    private boolean hasBikeInformation = false;
+    private boolean hasTravelModeInformation = false;
 
     @Override
     public Validity getValidity() {
