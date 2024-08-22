@@ -191,6 +191,21 @@ public class RoutingControllerTest {
         }
 
         @Test
+        void testRoutingBetweenSameCoordinates() {
+            // Arrange
+            double latitude = 46.2044;
+            double longitude = 6.1432;
+            LocalDateTime departureDateTime = LocalDateTime.now();
+            // Act & Assert
+            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                    () -> getConnections(null, latitude, longitude, null, latitude, longitude, departureDateTime));
+            assertEquals(
+                    "The source and target coordinates cannot be the same. Please provide different coordinates for the source and target.",
+                    exception.getReason());
+            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+        }
+
+        @Test
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
