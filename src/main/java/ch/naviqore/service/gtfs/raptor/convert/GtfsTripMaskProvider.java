@@ -87,6 +87,7 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     private DayTripMask buildTripMask(LocalDate date, String serviceId, QueryConfig queryConfig) {
+        validateQueryConfig(queryConfig);
         Map<String, RouteTripMask> tripMasks = new HashMap<>();
 
         boolean hasTravelModeFilter = queryConfig.needsTravelModeFiltering();
@@ -137,6 +138,15 @@ public class GtfsTripMaskProvider implements RaptorTripMaskProvider {
         }
 
         return new DayTripMask(serviceId, date, tripMasks);
+    }
+
+    private void validateQueryConfig(QueryConfig queryConfig) {
+        if (queryConfig.isWheelchairAccessible() && !schedule.hasTripAccessibilityInformation()) {
+            throw new IllegalArgumentException("GTFS schedule does not contain wheelchair accessibility information");
+        }
+        if (queryConfig.isBikeAccessible() && !schedule.hasTripBikeInformation()) {
+            throw new IllegalArgumentException("GTFS schedule does not contain bike accessibility information");
+        }
     }
 
     /**
