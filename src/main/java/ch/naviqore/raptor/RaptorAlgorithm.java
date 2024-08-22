@@ -46,7 +46,4 @@ public interface RaptorAlgorithm {
     Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                           QueryConfig config);
 
-    // TODO: Discuss if this should be added to the interface (for now added for benchmark test)
-    void prepareStopTimesForDate(LocalDate date);
-
 }
