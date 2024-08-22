@@ -42,20 +42,37 @@ final class RoutingRequestValidator {
                     "Min transfer time must be greater than or equal to 0.");
         }
 
-        // If the service does not support accessibility information, bike information, or travel mode information,
-        // only default values are allowed (i.e., false for wheelchairAccessible, false for bikeAllowed,
-        // and all travel modes).
-        if (wheelchairAccessible && !service.hasAccessibilityInformation()) {
+        // check support of routing features
+        if (maxWalkingDuration != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures()
+                .supportsMaxWalkingDuration()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Accessibility information is not available for this service.");
+                    "Max Walking Duration is not supported by the router of this service.");
         }
-        if (bikeAllowed && !service.hasBikeInformation()) {
+        if (maxTransferNumber != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures()
+                .supportsMaxNumTransfers()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Bike information is not available for this service.");
+                    "Max Transfer Number is not supported by the router of this service.");
         }
-        if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.hasTravelModeInformation()) {
+        if (maxTravelTime != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures().supportsMaxTravelTime()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Service does not support travel mode information.");
+                    "Max Travel Time is not supported by the router of this service.");
+        }
+        if (minTransferTime != 0 && !service.getSupportedRoutingFeatures().supportsMinTransferDuration()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Min Transfer Duration is not supported by the router of this service.");
+        }
+        if (wheelchairAccessible && !service.getSupportedRoutingFeatures().supportsAccessibility()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Wheelchair Accessible routing is not supported by the router of this service.");
+        }
+        if (bikeAllowed && !service.getSupportedRoutingFeatures().supportsBikes()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bike friendly routing is not supported by the router of this service.");
+        }
+        if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.getSupportedRoutingFeatures()
+                .supportsAccessibility()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Filtering travel modes is not supported by the router of this service.");
         }
     }
 
