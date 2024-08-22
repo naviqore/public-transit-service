@@ -1,12 +1,10 @@
 package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.Connection;
+import ch.naviqore.app.dto.RoutingInfo;
 import ch.naviqore.app.dto.StopConnection;
 import ch.naviqore.app.dto.TimeType;
-import ch.naviqore.service.PublicTransitService;
-import ch.naviqore.service.ScheduleInformationService;
-import ch.naviqore.service.Stop;
-import ch.naviqore.service.TravelMode;
+import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -47,6 +45,16 @@ public class RoutingController {
     private static void handleConnectionRoutingException(ConnectionRoutingException e) {
         log.error("Connection routing exception", e);
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
+    @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
+    @GetMapping("/")
+    public RoutingInfo getRoutingInfo() {
+        SupportedRoutingFeatures features = service.getSupportedRoutingFeatures();
+        return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
+                features.supportsMaxWalkingTime(), features.supportsMinTransferTime(), features.supportsWheelchair(),
+                features.supportsBike(), features.supportsTravelMode());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
