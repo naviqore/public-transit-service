@@ -49,7 +49,7 @@ public class RoutingController {
 
     @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
     @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
-    @GetMapping("/")
+    @GetMapping("")
     public RoutingInfo getRoutingInfo() {
         SupportedRoutingFeatures features = service.getSupportedRoutingFeatures();
         return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),

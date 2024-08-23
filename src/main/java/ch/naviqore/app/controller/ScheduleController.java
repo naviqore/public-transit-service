@@ -32,7 +32,7 @@ public class ScheduleController {
 
     @Operation(summary = "Get information about the schedule", description = "Get all relevant information about the schedule, such as supported features and validity.")
     @ApiResponse(responseCode = "200", description = "A list of details supported or not supported by the schedule and it's validity.")
-    @GetMapping("/")
+    @GetMapping("")
     public ScheduleInfo getScheduleInfo() {
         return new ScheduleInfo(service.hasAccessibilityInformation(), service.hasBikeInformation(),
                 service.hasTravelModeInformation(), map(service.getValidity()));
