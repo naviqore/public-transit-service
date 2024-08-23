@@ -1,9 +1,5 @@
 package ch.naviqore.raptor;
 
-import ch.naviqore.raptor.router.RaptorConfig;
-import ch.naviqore.raptor.router.RaptorRouterBuilder;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

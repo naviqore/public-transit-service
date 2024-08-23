@@ -5,7 +5,6 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Transfer;
 import ch.naviqore.gtfs.schedule.type.TransferType;
-import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouter;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;

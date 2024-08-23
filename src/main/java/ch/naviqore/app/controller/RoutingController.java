@@ -1,11 +1,10 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.RoutingInfo;
-import ch.naviqore.app.dto.StopConnection;
-import ch.naviqore.app.dto.TimeType;
-import ch.naviqore.app.dto.TravelMode;
-import ch.naviqore.service.*;
+import ch.naviqore.app.dto.*;
+import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.ScheduleInformationService;
+import ch.naviqore.service.Stop;
+import ch.naviqore.service.SupportedRoutingFeatures;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -54,8 +53,8 @@ public class RoutingController {
     public RoutingInfo getRoutingInfo() {
         SupportedRoutingFeatures features = service.getSupportedRoutingFeatures();
         return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
-                features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(), features.supportsAccessibility(),
-                features.supportsBikes(), features.supportsTravelModes());
+                features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(),
+                features.supportsAccessibility(), features.supportsBikes(), features.supportsTravelModes());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")

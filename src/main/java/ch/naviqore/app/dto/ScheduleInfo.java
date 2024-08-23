@@ -8,8 +8,10 @@ import lombok.ToString;
 @ToString
 @Getter
 public class ScheduleInfo {
+
     final boolean hasAccessibility;
     final boolean hasBikes;
     final boolean hasTravelModes;
     final ScheduleValidity scheduleValidity;
+
 }

@@ -1,4 +1,5 @@
 package ch.naviqore.app.dto;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -7,6 +8,7 @@ import lombok.ToString;
 @ToString
 @Getter
 public class RoutingInfo {
+
     final boolean supportsMaxNumTransfers;
     final boolean supportsMaxTravelTime;
     final boolean supportsMaxWalkingDuration;
@@ -14,4 +16,5 @@ public class RoutingInfo {
     final boolean supportsAccessibility;
     final boolean supportsBikes;
     final boolean supportsTravelModes;
+    
 }
