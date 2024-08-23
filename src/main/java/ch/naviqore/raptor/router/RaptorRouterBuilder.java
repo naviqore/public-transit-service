@@ -1,6 +1,5 @@
 package ch.naviqore.raptor.router;
 
-import ch.naviqore.raptor.RaptorAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
@@ -108,7 +107,7 @@ public class RaptorRouterBuilder {
         return this;
     }
 
-    public RaptorAlgorithm build() {
+    public RaptorRouter build() {
         log.info("Initializing Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 

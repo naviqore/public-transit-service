@@ -1,12 +1,12 @@
 package ch.naviqore.app.dto;
 
 import ch.naviqore.service.SearchType;
-import ch.naviqore.service.TimeType;
 import ch.naviqore.service.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -34,26 +34,40 @@ public class DtoMapper {
                         stopTime.getDepartureTime()))
                 .toList();
 
-        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes);
+        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes, trip.isBikesAllowed(),
+                trip.isWheelchairAccessible());
     }
 
     public static Route map(ch.naviqore.service.Route route) {
-        return new Route(route.getId(), route.getName(), route.getShortName(), route.getRouteType());
+        return new Route(route.getId(), route.getName(), route.getShortName(), map(route.getRouteType()),
+                route.getRouteTypeDescription());
+    }
+
+    public static TravelMode map(ch.naviqore.service.TravelMode travelMode) {
+        return TravelMode.valueOf(travelMode.name());
+    }
+
+    public static ch.naviqore.service.TravelMode map(TravelMode travelMode) {
+        return ch.naviqore.service.TravelMode.valueOf(travelMode.name());
+    }
+
+    public static EnumSet<ch.naviqore.service.TravelMode> map(EnumSet<TravelMode> travelModes) {
+        EnumSet<ch.naviqore.service.TravelMode> serviceTravelModes = EnumSet.noneOf(
+                ch.naviqore.service.TravelMode.class);
+        for (TravelMode travelMode : travelModes) {
+            serviceTravelModes.add(map(travelMode));
+        }
+        return serviceTravelModes;
     }
 
     public static SearchType map(ch.naviqore.app.dto.SearchType searchType) {
-        return switch (searchType) {
-            case STARTS_WITH -> SearchType.STARTS_WITH;
-            case ENDS_WITH -> SearchType.ENDS_WITH;
-            case CONTAINS -> SearchType.CONTAINS;
-            case EXACT -> SearchType.EXACT;
-        };
+        return SearchType.valueOf(searchType.name());
     }
 
-    public static TimeType map(ch.naviqore.app.dto.TimeType timeType) {
+    public static ch.naviqore.service.TimeType map(TimeType timeType) {
         return switch (timeType) {
-            case DEPARTURE -> TimeType.DEPARTURE;
-            case ARRIVAL -> TimeType.ARRIVAL;
+            case ARRIVAL -> ch.naviqore.service.TimeType.ARRIVAL;
+            case DEPARTURE -> ch.naviqore.service.TimeType.DEPARTURE;
         };
     }
 
@@ -67,12 +81,16 @@ public class DtoMapper {
     }
 
     public static List<StopConnection> map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
-                                           ch.naviqore.app.dto.TimeType timeType, boolean returnConnections) {
+                                           TimeType timeType, boolean returnConnections) {
         List<StopConnection> arrivals = new ArrayList<>();
         for (Map.Entry<ch.naviqore.service.Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
-            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), timeType, returnConnections));
+            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), map(timeType), returnConnections));
         }
         return arrivals;
+    }
+
+    public static ScheduleValidity map(ch.naviqore.service.Validity validity) {
+        return new ScheduleValidity(validity.getStartDate(), validity.getEndDate());
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {

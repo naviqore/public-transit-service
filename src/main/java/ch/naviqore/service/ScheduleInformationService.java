@@ -22,6 +22,27 @@ public interface ScheduleInformationService {
     Validity getValidity();
 
     /**
+     * Checks if the schedule has accessibility information.
+     *
+     * @return true if the schedule has accessibility information, false otherwise
+     */
+    boolean hasAccessibilityInformation();
+
+    /**
+     * Checks if the schedule has bike information.
+     *
+     * @return true if the schedule has bike information, false otherwise
+     */
+    boolean hasBikeInformation();
+
+    /**
+     * Checks if the schedule has travel mode information.
+     *
+     * @return true if the schedule has travel mode information, false otherwise
+     */
+    boolean hasTravelModeInformation();
+
+    /**
      * Searches for stops by name.
      *
      * @param like       the search term to match against stop names

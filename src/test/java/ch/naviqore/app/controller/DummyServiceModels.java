@@ -2,6 +2,7 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.service.LegType;
 import ch.naviqore.service.LegVisitor;
+import ch.naviqore.service.TravelMode;
 import ch.naviqore.service.WalkType;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import lombok.Getter;
@@ -105,7 +106,8 @@ class DummyServiceModels {
         private final String id;
         private final String name;
         private final String shortName;
-        private final String routeType;
+        private final TravelMode routeType;
+        private final String routeTypeDescription;
         private final String Agency;
 
     }
@@ -116,6 +118,8 @@ class DummyServiceModels {
         private final String id;
         private final String headSign;
         private final Route route;
+        private final boolean bikesAllowed;
+        private final boolean wheelchairAccessible;
         @Setter
         private List<ch.naviqore.service.StopTime> stopTimes;
 

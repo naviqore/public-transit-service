@@ -30,6 +30,14 @@ public class ScheduleController {
         this.service = service;
     }
 
+    @Operation(summary = "Get information about the schedule", description = "Get all relevant information about the schedule, such as supported features and validity.")
+    @ApiResponse(responseCode = "200", description = "A list of details supported or not supported by the schedule and it's validity.")
+    @GetMapping("")
+    public ScheduleInfo getScheduleInfo() {
+        return new ScheduleInfo(service.hasAccessibilityInformation(), service.hasBikeInformation(),
+                service.hasTravelModeInformation(), map(service.getValidity()));
+    }
+
     @Operation(summary = "Autocomplete stop names", description = "Provides stop names and their corresponding stop IDs based on a partial input query.")
     @ApiResponse(responseCode = "200", description = "A list of stop names and IDs that match the query", content = @Content(schema = @Schema(implementation = Stop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))

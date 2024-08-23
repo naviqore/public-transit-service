@@ -191,7 +191,7 @@ class GtfsRaptorServiceIT {
 
         @BeforeEach
         void setUp() {
-            config = new ConnectionQueryConfig(10 * 60, 2 * 60, 4, 24 * 60 * 60);
+            config = new ConnectionQueryConfig(10 * 60, 2 * 60, 4, 24 * 60 * 60, false, false, null);
         }
 
         @Nested

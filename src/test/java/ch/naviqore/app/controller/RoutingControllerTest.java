@@ -4,11 +4,18 @@ import ch.naviqore.app.dto.*;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,8 +25,110 @@ public class RoutingControllerTest {
 
     private final RoutingController routingController = new RoutingController(dummyService);
 
+    static Stream<Arguments> provideQueryConfigTestCombinations() {
+        int validMaxWalkingDuration = 30;
+        int validMaxTransferDuration = 2;
+        int validMaxTravelTime = 120;
+        int validMinTransferTime = 5;
+        boolean validWheelChairAccessible = false;
+        boolean validBikeAllowed = false;
+        EnumSet<TravelMode> validTravelModes = EnumSet.allOf(TravelMode.class);
+
+        boolean hasAccessibilityInformation = true;
+        boolean hasBikeInformation = true;
+        boolean hasTravelModeInformation = true;
+
+        return Stream.of(
+                Arguments.of("validValues", validMaxWalkingDuration, validMaxTransferDuration, validMaxTravelTime,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("maxWalkingDurationEqualsNull", null, validMaxTransferDuration, validMaxTravelTime,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("invalidMaxWalkingDuration", -1, validMaxTransferDuration, validMaxTravelTime,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        "Max walking duration must be greater than or equal to 0."),
+                Arguments.of("maxTransferDurationEqualsNull", validMaxWalkingDuration, null, validMaxTravelTime,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("invalidMaxTransferDuration", validMaxWalkingDuration, -1, validMaxTravelTime,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        "Max transfer number must be greater than or equal to 0."),
+                Arguments.of("maxTravelTimeEqualsNull", validMaxWalkingDuration, validMaxTransferDuration, null,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("invalidMaxTravelTime", validMaxWalkingDuration, validMaxTransferDuration, -1,
+                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        "Max travel time must be greater than 0."),
+                Arguments.of("invalidMinTransferTime", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, -1, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        "Min transfer time must be greater than or equal to 0."),
+                Arguments.of("wheelchairAccessibleWhenServiceProvidesNoSupport", validMaxWalkingDuration,
+                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, true, validBikeAllowed,
+                        validTravelModes, false, hasBikeInformation, hasTravelModeInformation,
+                        "Wheelchair Accessible routing is not supported by the router of this service."),
+                Arguments.of("bikeAllowedWhenServiceProvidesNoSupport", validMaxWalkingDuration,
+                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, validWheelChairAccessible,
+                        true, validTravelModes, hasAccessibilityInformation, false, hasTravelModeInformation,
+                        "Bike friendly routing is not supported by the router of this service."),
+                Arguments.of("travelModesWhenServiceProvidesNoSupport", validMaxWalkingDuration,
+                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, validWheelChairAccessible,
+                        validBikeAllowed, EnumSet.of(TravelMode.BUS), hasAccessibilityInformation, hasBikeInformation,
+                        false, "Filtering travel modes is not supported by the router of this service."),
+                Arguments.of("wheelchairAccessibleWhenServiceProvidesSupport", validMaxWalkingDuration,
+                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, true, validBikeAllowed,
+                        validTravelModes, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        null),
+                Arguments.of("bikeAllowedWhenServiceProvidesSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, hasTravelModeInformation,
+                        validTravelModes, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
+                        null),
+                Arguments.of("travelModesWhenServiceProvidesSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                        EnumSet.of(TravelMode.BUS), hasAccessibilityInformation, hasBikeInformation,
+                        hasTravelModeInformation, null),
+                Arguments.of("defaultWheelchairAccessibleWhenNoSupport", validMaxWalkingDuration,
+                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, false, validBikeAllowed,
+                        validTravelModes, false, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("defaultBikeAllowedWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, false, validTravelModes,
+                        hasAccessibilityInformation, false, hasTravelModeInformation, null),
+                Arguments.of("defaultTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                        EnumSet.allOf(TravelMode.class), hasAccessibilityInformation, hasBikeInformation, false, null),
+                Arguments.of("emptyTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                        EnumSet.noneOf(TravelMode.class), hasAccessibilityInformation, hasBikeInformation,
+                        hasTravelModeInformation, null),
+                Arguments.of("nullTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
+                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed, null,
+                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null));
+    }
+
+    List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
+                                    String targetStopId, Double targetLatitude, Double targetLongitude,
+                                    LocalDateTime departureDateTime) {
+        return routingController.getConnections(sourceStopId, sourceLatitude, sourceLongitude, targetStopId,
+                targetLatitude, targetLongitude, departureDateTime, TimeType.DEPARTURE, null, null, null, 0, false,
+                false, null);
+    }
+
+    List<StopConnection> getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
+                                     LocalDateTime departureDateTime, TimeType timeType, boolean returnConnections) {
+        return routingController.getIsolines(sourceStopId, sourceLatitude, sourceLongitude, departureDateTime, timeType,
+                null, null, null, 0, false, false, null, returnConnections);
+    }
+
     @Nested
     class Connections {
+
+        static Stream<Arguments> provideQueryConfigTestCombinations() {
+            return RoutingControllerTest.provideQueryConfigTestCombinations();
+        }
 
         @Test
         void testWithValidSourceAndTargetStopIds() {
@@ -29,8 +138,8 @@ public class RoutingControllerTest {
             LocalDateTime departureDateTime = LocalDateTime.now();
 
             // Act
-            List<Connection> connections = routingController.getConnections(sourceStopId, null, null, targetStopId,
-                    null, null, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
+            List<Connection> connections = getConnections(sourceStopId, null, null, targetStopId, null, null,
+                    departureDateTime);
 
             // Assert
             assertNotNull(connections);
@@ -45,8 +154,8 @@ public class RoutingControllerTest {
             LocalDateTime departureDateTime = LocalDateTime.now();
 
             // Act
-            List<Connection> connections = routingController.getConnections(null, sourceLatitude, sourceLongitude,
-                    targetStopId, null, null, departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5);
+            List<Connection> connections = getConnections(null, sourceLatitude, sourceLongitude, targetStopId, null,
+                    null, departureDateTime);
 
             // Assert
             assertNotNull(connections);
@@ -60,8 +169,7 @@ public class RoutingControllerTest {
 
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(invalidStopId, null, null, targetStopId, null, null,
-                            LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections(invalidStopId, null, null, targetStopId, null, null, LocalDateTime.now()));
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
             assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
         }
@@ -74,10 +182,24 @@ public class RoutingControllerTest {
             LocalDateTime departureDateTime = LocalDateTime.now();
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(sourceStopId, null, null, targetStopId, null, null,
-                            departureDateTime, TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections(sourceStopId, null, null, targetStopId, null, null, departureDateTime));
             assertEquals(
                     "The source stop ID and target stop ID cannot be the same. Please provide different stop IDs for the source and target.",
+                    exception.getReason());
+            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+        }
+
+        @Test
+        void testRoutingBetweenSameCoordinates() {
+            // Arrange
+            double latitude = 46.2044;
+            double longitude = 6.1432;
+            LocalDateTime departureDateTime = LocalDateTime.now();
+            // Act & Assert
+            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                    () -> getConnections(null, latitude, longitude, null, latitude, longitude, departureDateTime));
+            assertEquals(
+                    "The source and target coordinates cannot be the same. Please provide different coordinates for the source and target.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
         }
@@ -86,8 +208,7 @@ public class RoutingControllerTest {
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, null, null, "targetStopId", null, null,
-                            LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections(null, null, null, "targetStopId", null, null, LocalDateTime.now()));
             assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -97,8 +218,7 @@ public class RoutingControllerTest {
         void testMissingTargetStopAndTargetCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections("sourceStopId", null, null, null, null, null,
-                            LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections("sourceStopId", null, null, null, null, null, LocalDateTime.now()));
             assertEquals("Either targetStopId or targetLatitude and targetLongitude must be provided.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -108,8 +228,7 @@ public class RoutingControllerTest {
         void testGivenSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections("sourceStopId", 0., 0., "targetStopId", null, null,
-                            LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections("sourceStopId", 0., 0., "targetStopId", null, null, LocalDateTime.now()));
             assertEquals("Only sourceStopId or sourceLatitude and sourceLongitude must be provided, but not both.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -119,8 +238,7 @@ public class RoutingControllerTest {
         void testGivenTargetStopAndTargetCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections("sourceStopId", null, null, "targetStopId", 0., 0.,
-                            LocalDateTime.now(), TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections("sourceStopId", null, null, "targetStopId", 0., 0., LocalDateTime.now()));
             assertEquals("Only targetStopId or targetLatitude and targetLongitude must be provided, but not both.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -130,56 +248,45 @@ public class RoutingControllerTest {
         void testInvalidCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, 91., 181., null, 32., 32., LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, 2, 120, 5));
+                    () -> getConnections(null, 91., 181., null, 32., 32., LocalDateTime.now()));
             assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
         }
 
-        @Test
-        void testInvalidMaxTransferNumber() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, -2, 120, 5));
-            assertEquals("Max transfer number must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+        @ParameterizedTest(name = "connectionQueryConfig_{0}")
+        @MethodSource("provideQueryConfigTestCombinations")
+        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+                                   Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
+                                   boolean bikeAllowed, EnumSet<TravelMode> travelModes,
+                                   boolean hasAccessibilityInformation, boolean hasBikeInformation,
+                                   boolean hasTravelModeInformation, String errorMessage) {
 
-        @Test
-        void testInvalidMaxWalkingDuration() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
-                            TimeType.DEPARTURE, -30, 2, 120, 5));
-            assertEquals("Max walking duration must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+            dummyService.setHasAccessibilityInformation(hasAccessibilityInformation);
+            dummyService.setHasBikeInformation(hasBikeInformation);
+            dummyService.setHasTravelModeInformation(hasTravelModeInformation);
 
-        @Test
-        void testInvalidMaxTravelTime() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, 2, -120, 5));
-            assertEquals("Max travel time must be greater than 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void testInvalidMinTransferTime() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getConnections(null, 0., 0., null, 0., 0., LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, 2, 120, -5));
-            assertEquals("Min transfer time must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            if (errorMessage == null) {
+                routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(), TimeType.DEPARTURE,
+                        maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
+                        bikeAllowed, travelModes);
+            } else {
+                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                        () -> routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(),
+                                TimeType.DEPARTURE, maxWalkingDuration, maxTransferDuration, maxTravelTime,
+                                minTransferTime, wheelChairAccessible, bikeAllowed, travelModes));
+                assertEquals(errorMessage, exception.getReason());
+                assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            }
         }
     }
 
     @Nested
     class Isolines {
+
+        static Stream<Arguments> provideQueryConfigTestCombinations() {
+            return RoutingControllerTest.provideQueryConfigTestCombinations();
+        }
 
         @Test
         void testFromStopReturnConnectionsFalse() {
@@ -189,7 +296,7 @@ public class RoutingControllerTest {
 
             // Act
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, time,
-                    TimeType.DEPARTURE, 30, 2, 120, 5, false);
+                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, false);
 
             assertNotNull(stopConnections);
 
@@ -212,7 +319,7 @@ public class RoutingControllerTest {
             LocalDateTime expectedStartTime = LocalDateTime.now();
 
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
-                    TimeType.DEPARTURE, 30, 2, 120, 5, true);
+                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, true);
 
             assertNotNull(stopConnections);
 
@@ -255,8 +362,8 @@ public class RoutingControllerTest {
             LocalDateTime time = LocalDateTime.now();
 
             // Act
-            List<StopConnection> stopConnections = routingController.getIsolines(null, sourceLatitude, sourceLongitude,
-                    time, TimeType.DEPARTURE, 30, 2, 120, 5, false);
+            List<StopConnection> stopConnections = getIsolines(null, sourceLatitude, sourceLongitude, time,
+                    TimeType.DEPARTURE, false);
 
             assertNotNull(stopConnections);
 
@@ -278,8 +385,8 @@ public class RoutingControllerTest {
             // This tests if the time is set to now if null
             LocalDateTime expectedStartTime = LocalDateTime.now();
 
-            List<StopConnection> stopConnections = routingController.getIsolines(null, sourceCoordinate.latitude(),
-                    sourceCoordinate.longitude(), null, TimeType.DEPARTURE, 30, 2, 120, 5, true);
+            List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
+                    sourceCoordinate.longitude(), null, TimeType.DEPARTURE, true);
 
             assertNotNull(stopConnections);
 
@@ -320,8 +427,7 @@ public class RoutingControllerTest {
             // Arrange
             String sourceStopId = "G";
 
-            List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
-                    TimeType.ARRIVAL, 30, 2, 120, 5, true);
+            List<StopConnection> stopConnections = getIsolines(sourceStopId, null, null, null, TimeType.ARRIVAL, true);
 
             // This tests if the time is set to now if null
             LocalDateTime expectedArrivalTime = LocalDateTime.now();
@@ -366,8 +472,8 @@ public class RoutingControllerTest {
             // Arrange
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
 
-            List<StopConnection> stopConnections = routingController.getIsolines(null, sourceCoordinate.latitude(),
-                    sourceCoordinate.longitude(), null, TimeType.ARRIVAL, 30, 2, 120, 5, true);
+            List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
+                    sourceCoordinate.longitude(), null, TimeType.ARRIVAL, true);
 
             // This tests if the time is set to now if null
             LocalDateTime expectedArrivalTime = LocalDateTime.now();
@@ -416,8 +522,7 @@ public class RoutingControllerTest {
 
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(invalidStopId, null, null, LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, 2, 120, 5, false));
+                    () -> getIsolines(invalidStopId, null, null, LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getReason());
             assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
         }
@@ -426,8 +531,7 @@ public class RoutingControllerTest {
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, null, null, LocalDateTime.now(), TimeType.DEPARTURE, 30,
-                            2, 120, 5, false));
+                    () -> getIsolines(null, null, null, LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -437,8 +541,7 @@ public class RoutingControllerTest {
         void testGivenSourceStopAndSourceCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines("sourceStopId", 0., 0.1, LocalDateTime.now(),
-                            TimeType.DEPARTURE, 30, 2, 120, 5, false));
+                    () -> getIsolines("sourceStopId", 0., 0.1, LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Only sourceStopId or sourceLatitude and sourceLongitude must be provided, but not both.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -448,52 +551,84 @@ public class RoutingControllerTest {
         void testInvalidCoordinates() {
             // Act & Assert
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, 91., 181., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
-                            120, 5, false));
+                    () -> getIsolines(null, 91., 181., LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
                     exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
         }
 
-        @Test
-        void testInvalidMaxTransferNumber() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, -2,
-                            120, 5, false));
-            assertEquals("Max transfer number must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+        @ParameterizedTest(name = "isolineQueryConfig_{0}")
+        @MethodSource("provideQueryConfigTestCombinations")
+        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+                                   Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
+                                   boolean bikeAllowed, EnumSet<TravelMode> travelModes,
+                                   boolean hasAccessibilityInformation, boolean hasBikeInformation,
+                                   boolean hasTravelModeInformation, String errorMessage) {
+
+            dummyService.setHasAccessibilityInformation(hasAccessibilityInformation);
+            dummyService.setHasBikeInformation(hasBikeInformation);
+            dummyService.setHasTravelModeInformation(hasTravelModeInformation);
+
+            if (errorMessage == null) {
+                routingController.getIsolines("A", null, null, LocalDateTime.now(), TimeType.DEPARTURE,
+                        maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
+                        bikeAllowed, travelModes, false);
+            } else {
+                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                        () -> routingController.getIsolines("A", null, null, LocalDateTime.now(), TimeType.DEPARTURE,
+                                maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime,
+                                wheelChairAccessible, bikeAllowed, travelModes, false));
+                assertEquals(errorMessage, exception.getReason());
+                assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            }
+        }
+    }
+
+    @Nested
+    class RoutingInfo {
+        static Stream<Arguments> provideRoutingInfoTestCombinations() {
+            List<boolean[]> combinations = generateBooleanCombinations(7);
+            return combinations.stream()
+                    .map(arr -> Arguments.of(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6]));
         }
 
-        @Test
-        void testInvalidMaxWalkingDuration() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, -30, 2,
-                            120, 5, false));
-            assertEquals("Max walking duration must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+        private static List<boolean[]> generateBooleanCombinations(int length) {
+            return Stream.iterate(new boolean[length], arr -> {
+                boolean[] next = Arrays.copyOf(arr, length);
+                for (int i = length - 1; i >= 0; i--) {
+                    if (next[i]) {
+                        next[i] = false;
+                    } else {
+                        next[i] = true;
+                        break;
+                    }
+                }
+                return next;
+            }).limit((long) Math.pow(2, length)).collect(Collectors.toList());
         }
 
-        @Test
-        void testInvalidMaxTravelTime() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
-                            -120, 5, false));
-            assertEquals("Max travel time must be greater than 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+        @ParameterizedTest(name = "maxNumTransfers_{0}_maxTravelTime_{1}_maxWalkingTime_{2}_minTransferTime_{3}_accessibility_{4}_bikes_{5}_travelModes_{6}")
+        @MethodSource("provideRoutingInfoTestCombinations")
+        void testQueryConfigValues(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
+                                   boolean supportsMaxWalkingDuration, boolean supportsMinTransferDuration,
+                                   boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
+            dummyService.setHasAccessibilityInformation(supportsAccessibility);
+            dummyService.setHasBikeInformation(supportsBikes);
+            dummyService.setHasTravelModeInformation(supportsTravelModes);
+            dummyService.setSupportsMaxTransferNumber(supportsMaxNumTransfers);
+            dummyService.setSupportsMaxTravelTime(supportsMaxTravelTime);
+            dummyService.setSupportsMaxWalkingDuration(supportsMaxWalkingDuration);
+            dummyService.setSupportsMinTransferDuration(supportsMinTransferDuration);
 
-        @Test
-        void testInvalidMinTransferTime() {
-            // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> routingController.getIsolines(null, 0., 0., LocalDateTime.now(), TimeType.DEPARTURE, 30, 2,
-                            120, -5, false));
-            assertEquals("Min transfer time must be greater than or equal to 0.", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+            ch.naviqore.app.dto.RoutingInfo routingInfo = routingController.getRoutingInfo();
 
+            assertEquals(supportsAccessibility, routingInfo.isSupportsAccessibility());
+            assertEquals(supportsBikes, routingInfo.isSupportsBikes());
+            assertEquals(supportsTravelModes, routingInfo.isSupportsTravelModes());
+            assertEquals(supportsMaxNumTransfers, routingInfo.isSupportsMaxNumTransfers());
+            assertEquals(supportsMaxTravelTime, routingInfo.isSupportsMaxTravelTime());
+            assertEquals(supportsMaxWalkingDuration, routingInfo.isSupportsMaxWalkingDuration());
+            assertEquals(supportsMinTransferDuration, routingInfo.isSupportsMinTransferDuration());
+        }
     }
 }

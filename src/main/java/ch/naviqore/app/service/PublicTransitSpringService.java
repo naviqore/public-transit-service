@@ -57,6 +57,21 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
+    public boolean hasAccessibilityInformation() {
+        return delegate.hasAccessibilityInformation();
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return delegate.hasBikeInformation();
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        return delegate.hasTravelModeInformation();
+    }
+
+    @Override
     public List<Stop> getStops(String like, SearchType searchType) {
         return delegate.getStops(like, searchType);
     }
@@ -74,6 +89,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Override
     public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
         return delegate.getNextDepartures(stop, from, until, limit);
+    }
+
+    @Override
+    public RoutingFeatures getRoutingFeatures() {
+        return delegate.getRoutingFeatures();
     }
 
     @Override

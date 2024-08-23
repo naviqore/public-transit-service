@@ -1,8 +1,8 @@
 package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
+import ch.naviqore.raptor.router.RaptorRouter;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -35,7 +35,7 @@ public class GtfsRaptorService implements PublicTransitService {
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
     private final WalkCalculator walkCalculator;
-    private final RaptorAlgorithm raptorAlgorithm;
+    private final RaptorRouter raptorRouter;
 
     GtfsRaptorService(ServiceConfig config, GtfsSchedule schedule,
                       KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
@@ -56,7 +56,23 @@ public class GtfsRaptorService implements PublicTransitService {
         RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
                 config.getTransferTimeSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
                 tripMaskProvider);
-        raptorAlgorithm = new GtfsToRaptorConverter(schedule, additionalTransfers, raptorConfig).convert();
+        raptorRouter = new GtfsToRaptorConverter(schedule, additionalTransfers, raptorConfig).convert();
+    }
+
+    @Override
+    public boolean hasAccessibilityInformation() {
+        return schedule.hasTripAccessibilityInformation();
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return schedule.hasTripBikeInformation();
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        // GTFS requires routes to have a mode, so this is always true
+        return true;
     }
 
     @Override
@@ -138,6 +154,12 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public RoutingFeatures getRoutingFeatures() {
+        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+                schedule.hasTripBikeInformation(), true);
+    }
+
+    @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
@@ -198,9 +220,9 @@ public class GtfsRaptorService implements PublicTransitService {
         List<ch.naviqore.raptor.Connection> connections;
         try {
             if (isDeparture) {
-                connections = raptorAlgorithm.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(config));
+                connections = raptorRouter.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(config));
             } else {
-                connections = raptorAlgorithm.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
+                connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
             }
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
@@ -294,8 +316,8 @@ public class GtfsRaptorService implements PublicTransitService {
 
         try {
             return mapToStopConnectionMap(
-                    raptorAlgorithm.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)),
-                    source, config, timeType);
+                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
+                    config, timeType);
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
@@ -308,7 +330,7 @@ public class GtfsRaptorService implements PublicTransitService {
 
         try {
             return mapToStopConnectionMap(
-                    raptorAlgorithm.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
+                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
                     config, timeType);
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);

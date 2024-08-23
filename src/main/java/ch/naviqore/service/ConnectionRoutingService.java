@@ -11,6 +11,13 @@ import java.util.Map;
 public interface ConnectionRoutingService {
 
     /**
+     * Retrieves the supported routing features of the service.
+     *
+     * @return the supported routing features
+     */
+    RoutingFeatures getRoutingFeatures();
+
+    /**
      * Retrieves possible connections between two locations at a specified time.
      *
      * @param source   the starting location

@@ -1,5 +1,6 @@
 package ch.naviqore.app.dto;
 
+import ch.naviqore.service.TimeType;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -109,7 +110,8 @@ public class StopConnection {
         if (connectingLeg.getTrip() == null) {
             return;
         }
-        Trip reducedTrip = new Trip(connectingLeg.getTrip().getHeadSign(), connectingLeg.getTrip().getRoute(), null);
+        Trip reducedTrip = new Trip(connectingLeg.getTrip().getHeadSign(), connectingLeg.getTrip().getRoute(), null,
+                connectingLeg.getTrip().isBikesAllowed(), connectingLeg.getTrip().isWheelchairAccessible());
         connectingLeg = new Leg(connectingLeg.getType(), connectingLeg.getFrom(), connectingLeg.getTo(),
                 connectingLeg.getFromStop(), connectingLeg.getToStop(), connectingLeg.getDepartureTime(),
                 connectingLeg.getArrivalTime(), reducedTrip);

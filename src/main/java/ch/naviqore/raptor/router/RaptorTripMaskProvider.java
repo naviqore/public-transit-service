@@ -1,5 +1,7 @@
 package ch.naviqore.raptor.router;
 
+import ch.naviqore.raptor.QueryConfig;
+
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -32,14 +34,15 @@ public interface RaptorTripMaskProvider {
     String getServiceIdForDate(LocalDate date);
 
     /**
-     * Get the trip mask for a given date.
+     * Get the trip mask for a given date and query config.
      * <p>
-     * This method should return a map of route ids to trip masks for the given date.
+     * This method should return a map of route ids to trip masks for the given date and query config.
      *
-     * @param date the date for which the trip mask should be returned.
+     * @param date        the date for which the trip mask should be returned.
+     * @param queryConfig the query config for which the trip mask should be returned.
      * @return the raptor day mask of the day.
      */
-    DayTripMask getDayTripMask(LocalDate date);
+    DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig);
 
     /**
      * This represents a service day trip mask for a given day.

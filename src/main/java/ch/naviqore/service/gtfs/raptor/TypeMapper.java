@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.type.*;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
@@ -31,7 +33,7 @@ final class TypeMapper {
     }
 
     public static Route map(ch.naviqore.gtfs.schedule.model.Route route) {
-        return new GtfsRaptorRoute(route.getId(), route.getLongName(), route.getShortName(),
+        return new GtfsRaptorRoute(route.getId(), route.getLongName(), route.getShortName(), map(route.getType()),
                 route.getType().getDescription(), route.getAgency().name());
     }
 
@@ -45,7 +47,9 @@ final class TypeMapper {
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
         GtfsRaptorTrip gtfsRaptorTrip = new GtfsRaptorTrip(trip.getId(), trip.getHeadSign(), map(trip.getRoute()),
-                stopTimes.stream().map(stopTime -> (StopTime) stopTime).toList());
+                stopTimes.stream().map(stopTime -> (StopTime) stopTime).toList(),
+                trip.getBikesAllowed() == BikeInformation.ALLOWED,
+                trip.getWheelchairAccessible() == AccessibilityInformation.ACCESSIBLE);
 
         // set trip on stop times impls
         stopTimes.forEach(stopTime -> stopTime.setTrip(gtfsRaptorTrip));
@@ -109,7 +113,8 @@ final class TypeMapper {
 
     public static QueryConfig map(ConnectionQueryConfig config) {
         return new QueryConfig(config.getMaximumWalkingDuration(), config.getMinimumTransferDuration(),
-                config.getMaximumTransferNumber(), config.getMaximumTravelTime());
+                config.getMaximumTransferNumber(), config.getMaximumTravelTime(), config.isWheelchairAccessible(),
+                config.isBikeAllowed(), map(config.getTravelModes()));
     }
 
     public static ch.naviqore.raptor.TimeType map(TimeType timeType) {
@@ -117,6 +122,43 @@ final class TypeMapper {
             case DEPARTURE -> ch.naviqore.raptor.TimeType.DEPARTURE;
             case ARRIVAL -> ch.naviqore.raptor.TimeType.ARRIVAL;
         };
+    }
+
+    public static EnumSet<ch.naviqore.raptor.TravelMode> map(EnumSet<TravelMode> travelModes) {
+        if (travelModes == null || travelModes.isEmpty()) {
+            return EnumSet.allOf(ch.naviqore.raptor.TravelMode.class);
+        }
+        EnumSet<ch.naviqore.raptor.TravelMode> raptorTravelModes = EnumSet.noneOf(ch.naviqore.raptor.TravelMode.class);
+        for (TravelMode travelMode : travelModes) {
+            raptorTravelModes.add(ch.naviqore.raptor.TravelMode.valueOf(travelMode.name()));
+        }
+        return raptorTravelModes;
+    }
+
+    private static TravelMode map(RouteType routeType) {
+        DefaultRouteType defaultRouteType = RouteTypeMapper.map(routeType);
+        switch (defaultRouteType) {
+            case BUS:
+            case TROLLEYBUS:
+                return TravelMode.BUS;
+            case TRAM:
+            case CABLE_TRAM:
+                return TravelMode.TRAM;
+            case RAIL:
+            case MONORAIL:
+                return TravelMode.RAIL;
+            case FERRY:
+                return TravelMode.SHIP;
+            case SUBWAY:
+                return TravelMode.SUBWAY;
+            case AERIAL_LIFT:
+                return TravelMode.AERIAL_LIFT;
+            case FUNICULAR:
+                return TravelMode.FUNICULAR;
+            default:
+                // should never happen
+                throw new IllegalArgumentException("Route type not supported");
+        }
     }
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule, int distance) {

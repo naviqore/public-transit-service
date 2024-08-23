@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static ch.naviqore.app.dto.DtoMapper.map;
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,6 +42,49 @@ public class ScheduleControllerTest {
 
     @InjectMocks
     private ScheduleController scheduleController;
+
+    @Nested
+    class ScheduleInfo {
+        static Stream<Arguments> provideScheduleInfoTestCombinations() {
+            boolean[] supportsAccessibility = {true, false};
+            boolean[] supportsBikes = {true, false};
+            boolean[] supportsTravelModes = {true, false};
+
+            // create all permutations based on the boolean arrays (not hard coded)
+            Stream<Arguments> stream = Stream.of();
+            for (boolean supportsAccessibilityValue : supportsAccessibility) {
+                for (boolean supportsBikesValue : supportsBikes) {
+                    for (boolean supportsTravelModesValue : supportsTravelModes) {
+                        stream = Stream.concat(stream, Stream.of(
+                                Arguments.of(supportsAccessibilityValue, supportsBikesValue,
+                                        supportsTravelModesValue)));
+                    }
+                }
+            }
+            return stream;
+        }
+
+        @ParameterizedTest(name = "scheduleInfo_{index}")
+        @MethodSource("provideScheduleInfoTestCombinations")
+        void testQueryConfigValues(boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
+            DummyService dummyService = new DummyService();
+            dummyService.setHasAccessibilityInformation(supportsAccessibility);
+            dummyService.setHasBikeInformation(supportsBikes);
+            dummyService.setHasTravelModeInformation(supportsTravelModes);
+
+            LocalDate expStartDate = dummyService.getValidity().getStartDate();
+            LocalDate expEndDate = dummyService.getValidity().getEndDate();
+
+            ScheduleController scheduleController = new ScheduleController(dummyService);
+
+            ch.naviqore.app.dto.ScheduleInfo routerInfo = scheduleController.getScheduleInfo();
+            assertEquals(supportsAccessibility, routerInfo.isHasAccessibility());
+            assertEquals(supportsBikes, routerInfo.isHasBikes());
+            assertEquals(supportsTravelModes, routerInfo.isHasTravelModes());
+            assertEquals(expStartDate, routerInfo.getScheduleValidity().getStartDate());
+            assertEquals(expEndDate, routerInfo.getScheduleValidity().getEndDate());
+        }
+    }
 
     @Nested
     class AutoCompleteStops {

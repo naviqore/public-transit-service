@@ -1,9 +1,8 @@
 package ch.naviqore.app.controller;
 
-import ch.naviqore.app.dto.Connection;
-import ch.naviqore.app.dto.StopConnection;
-import ch.naviqore.app.dto.TimeType;
+import ch.naviqore.app.dto.*;
 import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.RoutingFeatures;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -25,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 
 import static ch.naviqore.app.dto.DtoMapper.map;
@@ -47,6 +47,16 @@ public class RoutingController {
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
+    @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
+    @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
+    @GetMapping("")
+    public RoutingInfo getRoutingInfo() {
+        RoutingFeatures features = service.getRoutingFeatures();
+        return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
+                features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(),
+                features.supportsAccessibility(), features.supportsBikes(), features.supportsTravelModes());
+    }
+
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
@@ -63,8 +73,10 @@ public class RoutingController {
                                            @RequestParam(required = false) Integer maxWalkingDuration,
                                            @RequestParam(required = false) Integer maxTransferNumber,
                                            @RequestParam(required = false) Integer maxTravelTime,
-                                           @RequestParam(required = false, defaultValue = "0") int minTransferTime) {
-
+                                           @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                           @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
+                                           @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
+                                           @RequestParam(required = false) EnumSet<TravelMode> travelModes) {
         // get coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalValidator.StopType.SOURCE);
@@ -78,8 +90,7 @@ public class RoutingController {
         // configure routing request
         dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                minTransferTime);
-
+                minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
         // determine routing case and get connections
         try {
             if (sourceStop != null && targetStop != null) {
@@ -90,6 +101,8 @@ public class RoutingController {
             } else if (targetStop != null) {
                 return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
             } else {
+                assert sourceCoordinate != null; // never happens --> see RoutingRequestValidator.validateStopParameters
+                RoutingRequestValidator.validateCoordinates(sourceCoordinate, targetCoordinate);
                 return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
         } catch (ConnectionRoutingException e) {
@@ -112,6 +125,9 @@ public class RoutingController {
                                             @RequestParam(required = false) Integer maxTransferNumber,
                                             @RequestParam(required = false) Integer maxTravelTime,
                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                            @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
+                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
+                                            @RequestParam(required = false) EnumSet<TravelMode> travelModes,
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
         // get stops or coordinates if available
@@ -122,7 +138,7 @@ public class RoutingController {
         // configure routing request
         dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                minTransferTime);
+                minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get isolines
         try {
@@ -156,17 +172,25 @@ public class RoutingController {
 
         private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
                                                           @Nullable Integer maxTransferNumber,
-                                                          @Nullable Integer maxTravelTime, int minTransferTime) {
+                                                          @Nullable Integer maxTravelTime, int minTransferTime,
+                                                          boolean wheelchairAccessible, boolean bikeAllowed,
+                                                          @Nullable EnumSet<TravelMode> travelModes,
+                                                          PublicTransitService service) {
 
             // replace null values with integer max value
             maxWalkingDuration = setToMaxIfNull(maxWalkingDuration);
             maxTransferNumber = setToMaxIfNull(maxTransferNumber);
             maxTravelTime = setToMaxIfNull(maxTravelTime);
 
+            if (travelModes == null || travelModes.isEmpty()) {
+                travelModes = EnumSet.allOf(TravelMode.class);
+            }
+
             // validate and create config
             RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                    minTransferTime);
-            return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime);
+                    minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
+            return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime,
+                    wheelchairAccessible, bikeAllowed, map(travelModes));
         }
 
         private static int setToMaxIfNull(Integer value) {

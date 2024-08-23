@@ -5,8 +5,8 @@ import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.model.StopTime;
 import ch.naviqore.gtfs.schedule.model.Transfer;
 import ch.naviqore.gtfs.schedule.type.TransferType;
-import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
+import ch.naviqore.raptor.router.RaptorRouter;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
@@ -43,10 +43,10 @@ public class GtfsToRaptorConverter {
         this.partitioner = new GtfsRoutePartitioner(schedule);
         this.additionalTransfers = additionalTransfers;
         this.schedule = schedule;
-        this.builder = RaptorAlgorithm.builder(config);
+        this.builder = RaptorRouter.builder(config);
     }
 
-    public RaptorAlgorithm convert() {
+    public RaptorRouter convert() {
         log.info("Converting {} trips from GTFS schedule to Raptor data model", schedule.getTrips().size());
 
         for (var route : schedule.getRoutes().values()) {

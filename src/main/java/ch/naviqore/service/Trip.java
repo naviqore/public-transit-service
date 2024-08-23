@@ -17,4 +17,8 @@ public interface Trip {
 
     List<StopTime> getStopTimes();
 
+    boolean isWheelchairAccessible();
+
+    boolean isBikesAllowed();
+
 }
