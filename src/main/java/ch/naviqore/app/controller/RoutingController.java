@@ -101,6 +101,7 @@ public class RoutingController {
             } else if (targetStop != null) {
                 return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
             } else {
+                assert sourceCoordinate != null; // never happens --> see RoutingRequestValidator.validateStopParameters
                 RoutingRequestValidator.validateCoordinates(sourceCoordinate, targetCoordinate);
                 return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
