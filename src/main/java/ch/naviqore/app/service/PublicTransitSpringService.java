@@ -92,8 +92,8 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public SupportedRoutingFeatures getSupportedRoutingFeatures() {
-        return delegate.getSupportedRoutingFeatures();
+    public RoutingFeatures getRoutingFeatures() {
+        return delegate.getRoutingFeatures();
     }
 
     @Override

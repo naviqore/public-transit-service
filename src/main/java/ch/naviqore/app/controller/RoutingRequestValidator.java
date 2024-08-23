@@ -43,33 +43,31 @@ final class RoutingRequestValidator {
         }
 
         // check support of routing features
-        if (maxWalkingDuration != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures()
-                .supportsMaxWalkingDuration()) {
+        if (maxWalkingDuration != Integer.MAX_VALUE && !service.getRoutingFeatures().supportsMaxWalkingDuration()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Max Walking Duration is not supported by the router of this service.");
         }
-        if (maxTransferNumber != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures()
-                .supportsMaxNumTransfers()) {
+        if (maxTransferNumber != Integer.MAX_VALUE && !service.getRoutingFeatures().supportsMaxNumTransfers()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Max Transfer Number is not supported by the router of this service.");
         }
-        if (maxTravelTime != Integer.MAX_VALUE && !service.getSupportedRoutingFeatures().supportsMaxTravelTime()) {
+        if (maxTravelTime != Integer.MAX_VALUE && !service.getRoutingFeatures().supportsMaxTravelTime()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Max Travel Time is not supported by the router of this service.");
         }
-        if (minTransferTime != 0 && !service.getSupportedRoutingFeatures().supportsMinTransferDuration()) {
+        if (minTransferTime != 0 && !service.getRoutingFeatures().supportsMinTransferDuration()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Min Transfer Duration is not supported by the router of this service.");
         }
-        if (wheelchairAccessible && !service.getSupportedRoutingFeatures().supportsAccessibility()) {
+        if (wheelchairAccessible && !service.getRoutingFeatures().supportsAccessibility()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Wheelchair Accessible routing is not supported by the router of this service.");
         }
-        if (bikeAllowed && !service.getSupportedRoutingFeatures().supportsBikes()) {
+        if (bikeAllowed && !service.getRoutingFeatures().supportsBikes()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Bike friendly routing is not supported by the router of this service.");
         }
-        if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.getSupportedRoutingFeatures()
+        if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !service.getRoutingFeatures()
                 .supportsTravelModes()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Filtering travel modes is not supported by the router of this service.");

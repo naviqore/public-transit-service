@@ -2,9 +2,9 @@ package ch.naviqore.app.controller;
 
 import ch.naviqore.app.dto.*;
 import ch.naviqore.service.PublicTransitService;
+import ch.naviqore.service.RoutingFeatures;
 import ch.naviqore.service.ScheduleInformationService;
 import ch.naviqore.service.Stop;
-import ch.naviqore.service.SupportedRoutingFeatures;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -51,7 +51,7 @@ public class RoutingController {
     @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
     @GetMapping("")
     public RoutingInfo getRoutingInfo() {
-        SupportedRoutingFeatures features = service.getSupportedRoutingFeatures();
+        RoutingFeatures features = service.getRoutingFeatures();
         return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
                 features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(),
                 features.supportsAccessibility(), features.supportsBikes(), features.supportsTravelModes());

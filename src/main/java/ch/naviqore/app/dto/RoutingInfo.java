@@ -16,5 +16,5 @@ public class RoutingInfo {
     final boolean supportsAccessibility;
     final boolean supportsBikes;
     final boolean supportsTravelModes;
-    
+
 }

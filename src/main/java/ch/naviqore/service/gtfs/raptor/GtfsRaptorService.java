@@ -154,8 +154,8 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
-    public SupportedRoutingFeatures getSupportedRoutingFeatures() {
-        return new SupportedRoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+    public RoutingFeatures getRoutingFeatures() {
+        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
                 schedule.hasTripBikeInformation(), true);
     }
 

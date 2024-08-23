@@ -15,7 +15,7 @@ public interface ConnectionRoutingService {
      *
      * @return the supported routing features
      */
-    SupportedRoutingFeatures getSupportedRoutingFeatures();
+    RoutingFeatures getRoutingFeatures();
 
     /**
      * Retrieves possible connections between two locations at a specified time.

@@ -12,8 +12,7 @@ package ch.naviqore.service;
  * @param supportsBikes               whether the service supports routing for bike users
  * @param supportsTravelModes         whether the service supports routing for different travel modes
  */
-public record SupportedRoutingFeatures(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
-                                       boolean supportsMaxWalkingDuration, boolean supportsMinTransferDuration,
-                                       boolean supportsAccessibility, boolean supportsBikes,
-                                       boolean supportsTravelModes) {
+public record RoutingFeatures(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
+                              boolean supportsMaxWalkingDuration, boolean supportsMinTransferDuration,
+                              boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
 }
