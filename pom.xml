@@ -6,12 +6,12 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.2</version>
+        <version>3.3.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>ch.naviqore</groupId>
     <artifactId>public-transit-service</artifactId>
-    <version>0.4.0</version>
+    <version>0.5.0</version>
 
     <name>Public Transit Service</name>
     <description>
@@ -174,13 +174,13 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.6</version>
+            <version>1.5.7</version>
         </dependency>
         <!-- io -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.27.0</version>
+            <version>1.27.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
