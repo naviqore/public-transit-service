@@ -76,9 +76,8 @@ class DummyService implements PublicTransitService {
 
     @Override
     public RoutingFeatures getRoutingFeatures() {
-        return new RoutingFeatures(supportsMaxTransferNumber, supportsMaxTravelTime,
-                supportsMaxWalkingDuration, supportsMinTransferDuration, hasAccessibilityInformation,
-                hasBikeInformation, hasTravelModeInformation);
+        return new RoutingFeatures(supportsMaxTransferNumber, supportsMaxTravelTime, supportsMaxWalkingDuration,
+                supportsMinTransferDuration, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation);
     }
 
     @Override
