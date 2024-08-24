@@ -54,7 +54,7 @@ final class Benchmark {
      */
     private static final int DEPARTURE_TIME_LIMIT = 8 * 60 * 60;
     private static final long RANDOM_SEED = 1234;
-    private static final int SAMPLE_SIZE = 10_000;
+    private static final int SAMPLE_SIZE = 1_000;
 
     // constants
     private static final long MONITORING_INTERVAL_MS = 30000;
@@ -73,21 +73,26 @@ final class Benchmark {
 
         RaptorRouter raptor = initializeRaptor(schedule);
 
-        // range raptor with range 1800
-        raptor.setRaptorRange(1800);
-        BenchmarkingRaptor range1800BenchmarkingRaptor = new BenchmarkingRaptor("range_1800", raptor);
-        List<RoutingResult> results = new ArrayList<>(
-                Arrays.asList(processRequests(range1800BenchmarkingRaptor, requests)));
-
         // regular raptor
         raptor.setRaptorRange(-1);
         BenchmarkingRaptor regularBenchmarkingRaptor = new BenchmarkingRaptor("regular", raptor);
-        results.addAll(Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
+        List<RoutingResult> results = new ArrayList<>(
+                Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
+
+        // range raptor with range 1800
+        raptor.setRaptorRange(1800);
+        BenchmarkingRaptor range1800BenchmarkingRaptor = new BenchmarkingRaptor("range_1800", raptor);
+        results.addAll(Arrays.asList(processRequests(range1800BenchmarkingRaptor, requests)));
 
         // range raptor with range 3600
         raptor.setRaptorRange(3600);
         BenchmarkingRaptor range3600BenchmarkingRaptor = new BenchmarkingRaptor("range_3600", raptor);
         results.addAll(Arrays.asList(processRequests(range3600BenchmarkingRaptor, requests)));
+
+        // range raptor with range 7200
+        raptor.setRaptorRange(7200);
+        BenchmarkingRaptor range7200BenchmarkingRaptor = new BenchmarkingRaptor("range_7200", raptor);
+        results.addAll(Arrays.asList(processRequests(range7200BenchmarkingRaptor, requests)));
 
         writeResultsToCsv(results.toArray(new RoutingResult[0]));
     }
