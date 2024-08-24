@@ -11,6 +11,7 @@ import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouter;
+import ch.naviqore.raptor.simple.gtfs.Converter;
 import ch.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 import ch.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
 import ch.naviqore.utils.cache.EvictionCache;
@@ -70,14 +71,19 @@ final class Benchmark {
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
         RouteRequest[] requests = sampleRouteRequests(schedule);
+        List<RoutingResult> results = new ArrayList<>();
+
+        RaptorAlgorithm simpleRaptor = initializeSimpleRaptorRouter(schedule);
+        BenchmarkingRaptor simpleBenchmarkingRaptor = new BenchmarkingRaptor("simple", simpleRaptor);
+        //noinspection CollectionAddAllCanBeReplacedWithConstructor
+        results.addAll(Arrays.asList(processRequests(simpleBenchmarkingRaptor, requests)));
 
         RaptorRouter raptor = initializeRaptor(schedule);
 
         // regular raptor
         raptor.setRaptorRange(-1);
         BenchmarkingRaptor regularBenchmarkingRaptor = new BenchmarkingRaptor("regular", raptor);
-        List<RoutingResult> results = new ArrayList<>(
-                Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
+        results.addAll(Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
 
         // range raptor with range 1800
         raptor.setRaptorRange(1800);
@@ -116,6 +122,10 @@ final class Benchmark {
         manageResources();
 
         return raptor;
+    }
+
+    private static RaptorAlgorithm initializeSimpleRaptorRouter(GtfsSchedule schedule) throws InterruptedException {
+        return new Converter(schedule, SAME_STOP_TRANSFER_TIME).convert(SCHEDULE_DATE);
     }
 
     private static void manageResources() throws InterruptedException {
