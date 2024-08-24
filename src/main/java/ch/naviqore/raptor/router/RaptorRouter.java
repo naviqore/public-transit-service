@@ -51,6 +51,10 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         config.setRaptorRange(raptorRange);
     }
 
+    public void setDaysToScan(int daysToScan) {
+        config.setDaysToScan(daysToScan);
+    }
+
     public static RaptorRouterBuilder builder(RaptorConfig config) {
         return new RaptorRouterBuilder(config);
     }
