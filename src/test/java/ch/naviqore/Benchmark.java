@@ -64,12 +64,32 @@ final class Benchmark {
     private static final int MAX_DAYS_TO_SCAN = 3;
     private static final int RAPTOR_RANGE = -1; // No range raptor
 
+    record BenchmarkingRaptor(String id, RaptorAlgorithm raptor) {
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
-        RaptorAlgorithm raptor = initializeRaptor(schedule);
         RouteRequest[] requests = sampleRouteRequests(schedule);
-        RoutingResult[] results = processRequests(raptor, requests);
-        writeResultsToCsv(results);
+
+        RaptorRouter raptor = initializeRaptor(schedule);
+
+        // range raptor with range 1800
+        raptor.setRaptorRange(1800);
+        BenchmarkingRaptor range1800BenchmarkingRaptor = new BenchmarkingRaptor("range_1800", raptor);
+        List<RoutingResult> results = new ArrayList<>(
+                Arrays.asList(processRequests(range1800BenchmarkingRaptor, requests)));
+
+        // regular raptor
+        raptor.setRaptorRange(-1);
+        BenchmarkingRaptor regularBenchmarkingRaptor = new BenchmarkingRaptor("regular", raptor);
+        results.addAll(Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
+
+        // range raptor with range 3600
+        raptor.setRaptorRange(3600);
+        BenchmarkingRaptor range3600BenchmarkingRaptor = new BenchmarkingRaptor("range_3600", raptor);
+        results.addAll(Arrays.asList(processRequests(range3600BenchmarkingRaptor, requests)));
+
+        writeResultsToCsv(results.toArray(new RoutingResult[0]));
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
@@ -79,7 +99,7 @@ final class Benchmark {
         return schedule;
     }
 
-    private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
+    private static RaptorRouter initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
         RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, RAPTOR_RANGE, SAME_STOP_TRANSFER_TIME,
                 MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
         RaptorRouter raptor = new GtfsToRaptorConverter(schedule, config).convert();
@@ -129,7 +149,7 @@ final class Benchmark {
         return index;
     }
 
-    private static RoutingResult[] processRequests(RaptorAlgorithm raptor, RouteRequest[] requests) {
+    private static RoutingResult[] processRequests(BenchmarkingRaptor benchmarkableRaptor, RouteRequest[] requests) {
         RoutingResult[] responses = new RoutingResult[requests.length];
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
@@ -138,9 +158,10 @@ final class Benchmark {
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops, new QueryConfig());
+                List<Connection> connections = benchmarkableRaptor.raptor.routeEarliestArrival(sourceStops, targetStops,
+                        new QueryConfig());
                 long endTime = System.nanoTime();
-                responses[i] = toResult(i, requests[i], connections, startTime, endTime);
+                responses[i] = toResult(i, requests[i], connections, startTime, endTime, benchmarkableRaptor.id);
             } catch (IllegalArgumentException e) {
                 log.error("Could not process route request: {}", e.getMessage());
             }
@@ -150,7 +171,7 @@ final class Benchmark {
     }
 
     private static RoutingResult toResult(int id, RouteRequest request, List<Connection> connections, long startTime,
-                                          long endTime) {
+                                          long endTime, String raptorId) {
         Optional<LocalDateTime> earliestDepartureTime = connections.stream()
                 .map(Connection::getDepartureTime)
                 .min(Comparator.naturalOrder());
@@ -173,14 +194,14 @@ final class Benchmark {
         return new RoutingResult(id, request.sourceStop().getId(), request.targetStop().getId(),
                 request.sourceStop().getName(), request.targetStop.getName(), request.departureTime, connections.size(),
                 earliestDepartureTime, earliestArrivalTime, minDuration, maxDuration, minTransfers, maxTransfers,
-                beelineDistance, processingTime);
+                beelineDistance, processingTime, raptorId);
     }
 
     private static void writeResultsToCsv(RoutingResult[] results) throws IOException {
-        String[] headers = {"id", "source_stop_id", "target_stop_id", "source_stop_name", "target_stop_name",
-                "requested_departure_time", "connections", "earliest_departure_time", "earliest_arrival_time",
-                "min_duration", "max_duration", "min_transfers", "max_transfers", "beeline_distance",
-                "processing_time_ms"};
+        String[] headers = {"id", "raptor_id", "source_stop_id", "target_stop_id", "source_stop_name",
+                "target_stop_name", "requested_departure_time", "connections", "earliest_departure_time",
+                "earliest_arrival_time", "min_duration", "max_duration", "min_transfers", "max_transfers",
+                "beeline_distance", "processing_time_ms"};
         String header = String.join(",", headers);
         String folderPath = String.format("benchmark/output/%s", DATASET.name().toLowerCase());
         String fileName = String.format("%s_raptor_results.csv",
@@ -196,8 +217,8 @@ final class Benchmark {
             writer.println(header);
 
             for (RoutingResult result : results) {
-                writer.printf("%d,%s,%s,\"%s\",\"%s\",%s,%d,%s,%s,%d,%d,%d,%d,%d,%d%n", result.id, result.sourceStopId,
-                        result.targetStopId, result.sourceStopName, result.targetStopName,
+                writer.printf("%d,%s,%s,%s,\"%s\",\"%s\",%s,%d,%s,%s,%d,%d,%d,%d,%d,%d%n", result.id, result.raptorId,
+                        result.sourceStopId, result.targetStopId, result.sourceStopName, result.targetStopName,
                         result.requestedDepartureTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), result.connections,
                         result.earliestDepartureTime.map(dt -> dt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                                 .orElse("N/A"),
@@ -215,7 +236,7 @@ final class Benchmark {
                          LocalDateTime requestedDepartureTime, int connections,
                          Optional<LocalDateTime> earliestDepartureTime, Optional<LocalDateTime> earliestArrivalTime,
                          int minDuration, int maxDuration, int minTransfers, int maxTransfers, long beelineDistance,
-                         long processingTime) {
+                         long processingTime, String raptorId) {
     }
 
 }

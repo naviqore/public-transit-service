@@ -47,12 +47,12 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         validator = new InputValidator(lookup.stops());
     }
 
-    public static RaptorRouterBuilder builder(RaptorConfig config) {
-        return new RaptorRouterBuilder(config);
+    public void setRaptorRange(int raptorRange) {
+        config.setRaptorRange(raptorRange);
     }
 
-    public static RaptorRouter copyRouterWithDifferentConfig(RaptorRouter router, RaptorConfig config) {
-        return new RaptorRouter(router.lookup, router.stopContext, router.routeTraversal, config);
+    public static RaptorRouterBuilder builder(RaptorConfig config) {
+        return new RaptorRouterBuilder(config);
     }
 
     public void prepareStopTimesForDate(LocalDate date) {
