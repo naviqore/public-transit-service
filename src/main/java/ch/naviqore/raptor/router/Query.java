@@ -200,6 +200,10 @@ class Query {
             }
         }
 
+        if(rangeOffsets.isEmpty()) {
+            rangeOffsets.add(0);
+        }
+
         return rangeOffsets;
     }
 
