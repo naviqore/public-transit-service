@@ -51,6 +51,10 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         return new RaptorRouterBuilder(config);
     }
 
+    public static RaptorRouter copyRouterWithDifferentConfig(RaptorRouter router, RaptorConfig config) {
+        return new RaptorRouter(router.lookup, router.stopContext, router.routeTraversal, config);
+    }
+
     public void prepareStopTimesForDate(LocalDate date) {
         stopTimeProvider.getStopTimesForDate(date, new QueryConfig());
     }
