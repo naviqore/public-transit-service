@@ -82,23 +82,69 @@ final class Benchmark {
 
         // regular raptor
         raptor.setRaptorRange(-1);
+        raptor.setDaysToScan(1);
         BenchmarkingRaptor regularBenchmarkingRaptor = new BenchmarkingRaptor("regular", raptor);
         results.addAll(Arrays.asList(processRequests(regularBenchmarkingRaptor, requests)));
 
+        // 3-day raptor
+        raptor.setRaptorRange(-1);
+        raptor.setDaysToScan(3);
+        BenchmarkingRaptor threeDayBenchmarkingRaptor = new BenchmarkingRaptor("3_day", raptor);
+        results.addAll(Arrays.asList(processRequests(threeDayBenchmarkingRaptor, requests)));
+
+        // 5-day raptor
+        raptor.setRaptorRange(-1);
+        raptor.setDaysToScan(5);
+        BenchmarkingRaptor fiveDayBenchmarkingRaptor = new BenchmarkingRaptor("5_day", raptor);
+        results.addAll(Arrays.asList(processRequests(fiveDayBenchmarkingRaptor, requests)));
+
         // range raptor with range 1800
         raptor.setRaptorRange(1800);
+        raptor.setDaysToScan(1);
         BenchmarkingRaptor range1800BenchmarkingRaptor = new BenchmarkingRaptor("range_1800", raptor);
         results.addAll(Arrays.asList(processRequests(range1800BenchmarkingRaptor, requests)));
 
         // range raptor with range 3600
         raptor.setRaptorRange(3600);
+        raptor.setDaysToScan(1);
         BenchmarkingRaptor range3600BenchmarkingRaptor = new BenchmarkingRaptor("range_3600", raptor);
         results.addAll(Arrays.asList(processRequests(range3600BenchmarkingRaptor, requests)));
 
         // range raptor with range 7200
         raptor.setRaptorRange(7200);
+        raptor.setDaysToScan(1);
         BenchmarkingRaptor range7200BenchmarkingRaptor = new BenchmarkingRaptor("range_7200", raptor);
         results.addAll(Arrays.asList(processRequests(range7200BenchmarkingRaptor, requests)));
+
+        // range raptor with range 144400
+        raptor.setRaptorRange(14400);
+        raptor.setDaysToScan(1);
+        BenchmarkingRaptor range14400BenchmarkingRaptor = new BenchmarkingRaptor("range_14400", raptor);
+        results.addAll(Arrays.asList(processRequests(range14400BenchmarkingRaptor, requests)));
+
+        // three day range raptor with range 1800
+        raptor.setRaptorRange(1800);
+        raptor.setDaysToScan(3);
+        BenchmarkingRaptor threeDayRange1800BenchmarkingRaptor = new BenchmarkingRaptor("3_day_range_1800", raptor);
+        results.addAll(Arrays.asList(processRequests(threeDayRange1800BenchmarkingRaptor, requests)));
+
+        // three day range raptor with range 3600
+        raptor.setRaptorRange(3600);
+        raptor.setDaysToScan(3);
+        BenchmarkingRaptor threeDayRange3600BenchmarkingRaptor = new BenchmarkingRaptor("3_day_range_3600", raptor);
+        results.addAll(Arrays.asList(processRequests(threeDayRange3600BenchmarkingRaptor, requests)));
+
+        // three day range raptor with range 7200
+        raptor.setRaptorRange(7200);
+        raptor.setDaysToScan(3);
+        BenchmarkingRaptor threeDayRange7200BenchmarkingRaptor = new BenchmarkingRaptor("3_day_range_7200", raptor);
+        results.addAll(Arrays.asList(processRequests(threeDayRange7200BenchmarkingRaptor, requests)));
+
+        // three day range raptor with range 14400
+        raptor.setRaptorRange(14400);
+        raptor.setDaysToScan(3);
+        BenchmarkingRaptor threeDayRange14400BenchmarkingRaptor = new BenchmarkingRaptor("3_day_range_14400", raptor);
+        results.addAll(Arrays.asList(processRequests(threeDayRange14400BenchmarkingRaptor, requests)));
 
         writeResultsToCsv(results.toArray(new RoutingResult[0]));
     }
