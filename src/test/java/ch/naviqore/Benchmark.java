@@ -53,7 +53,7 @@ final class Benchmark {
      * Limit in seconds after midnight for the departure time. Only allow early departure times, otherwise many
      * connections crossing the complete schedule (region) are not feasible.
      */
-    private static final int DEPARTURE_TIME_LIMIT = 8 * 60 * 60;
+    private static final int DEPARTURE_TIME_LIMIT = 24 * 60 * 60;
     private static final long RANDOM_SEED = 1234;
     private static final int SAMPLE_SIZE = 1_000;
 
