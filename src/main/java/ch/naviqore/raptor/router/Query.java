@@ -200,6 +200,11 @@ class Query {
             }
         }
 
+        // if no range offsets are found, add 0 as default to allow "normal" raptor to run
+        if (rangeOffsets.isEmpty()) {
+            rangeOffsets.add(0);
+        }
+
         return rangeOffsets;
     }
 
