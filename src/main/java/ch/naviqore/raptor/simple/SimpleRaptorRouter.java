@@ -1,4 +1,4 @@
-package ch.naviqore.raptor.router;
+package ch.naviqore.raptor.simple;
 
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.QueryConfig;
@@ -7,6 +7,7 @@ import ch.naviqore.raptor.TimeType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -17,7 +18,7 @@ import java.util.*;
  * Raptor algorithm implementation
  */
 @Slf4j
-public class RaptorRouter implements RaptorAlgorithm, RaptorData {
+public class SimpleRaptorRouter implements RaptorAlgorithm, RaptorData {
 
     @Getter
     private final Lookup lookup;
@@ -28,39 +29,17 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final RouteTraversal routeTraversal;
 
-    @Getter
-    private final StopTimeProvider stopTimeProvider;
-
-    private final RaptorConfig config;
-
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, RaptorConfig config) {
+    SimpleRaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        // to prevent changing the raptor configuration after initialization the configuration is copied
-        this.config = config.copy();
-        config.getMaskProvider().setTripIds(lookup.routeTripIds());
-        this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
-                config.getStopTimeCacheStrategy());
         validator = new InputValidator(lookup.stops());
     }
 
-    public void setRaptorRange(int raptorRange) {
-        config.setRaptorRange(raptorRange);
-    }
-
-    public void setDaysToScan(int daysToScan) {
-        config.setDaysToScan(daysToScan);
-    }
-
-    public static RaptorRouterBuilder builder(RaptorConfig config) {
-        return new RaptorRouterBuilder(config);
-    }
-
-    public void prepareStopTimesForDate(LocalDate date) {
-        stopTimeProvider.getStopTimesForDate(date, new QueryConfig());
+    public static RaptorRouterBuilder builder(int defaultSameStopTransferTime) {
+        return new RaptorRouterBuilder(defaultSameStopTransferTime);
     }
 
     @Override
@@ -72,39 +51,35 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
 
-        return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
+        return getConnections(departureStops, arrivalStops, config);
     }
 
     @Override
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
                                                  Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
-        InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
-        InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
-
-        log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
-                arrivalStops.keySet(), arrivalStops.values().stream().toList());
-
-        return getConnections(arrivalStops, departureStops, TimeType.ARRIVAL, config);
+        throw new NotImplementedException("Latest departure not implemented.");
     }
 
     @Override
     public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
+        if (timeType == TimeType.ARRIVAL) {
+            throw new NotImplementedException("Arrival isolines not implemented.");
+        }
         InputValidator.checkNonNullOrEmptyStops(sourceStops, "Source");
         InputValidator.validateSourceStopTimes(sourceStops);
 
         log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
-        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
-        LocalDate referenceDate = referenceDateTime.toLocalDate();
+        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops);
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
                 DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops, referenceDate));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{}, refStopTimes,
-                new int[]{}, config, timeType, referenceDateTime, this.config).run();
+        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{},
+                refStopTimes, new int[]{}, config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
+        return new LabelPostprocessor(this).reconstructIsolines(bestLabelsPerRound, referenceDate);
     }
 
     /**
@@ -118,15 +93,13 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
      *
      * @param sourceStops is a map of stop ids and departure/arrival times depending on the time type
      * @param targetStops is a map of stop ids and walking durations to target stops
-     * @param timeType    is the type of time to route for (arrival or departure)
      * @param config      is the query configuration
      * @return a list of pareto-optimal connections
      */
     private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
-                                            TimeType timeType, QueryConfig config) {
+                                            QueryConfig config) {
         InputValidator.validateSourceStopTimes(sourceStops);
-        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
-        LocalDate referenceDate = referenceDateTime.toLocalDate();
+        LocalDate referenceDate = DateTimeUtils.getReferenceDate(sourceStops);
         Map<String, Integer> sourceStopsSecondsOfDay = DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops,
                 referenceDate);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
@@ -138,11 +111,11 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
-        List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
+        List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
+                sourceTimes, walkingDurationsToTarget, config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
-                validatedTargetStops, referenceDate);
+        return new LabelPostprocessor(this).reconstructParetoOptimalSolutions(bestLabelsPerRound, validatedTargetStops,
+                referenceDate);
     }
 
     /**
@@ -218,7 +191,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 if (stopsToIdx.containsKey(stopId)) {
                     validStopIds.put(stopsToIdx.get(stopId), time);
                 } else {
-                    log.debug("Stop ID {} not found in lookup removing from query.", entry.getKey());
+                    log.warn("Stop ID {} not found in lookup removing from query.", entry.getKey());
                 }
             }
 
