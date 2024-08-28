@@ -2,7 +2,6 @@ package ch.naviqore.raptor.simple;
 
 import ch.naviqore.raptor.Connection;
 import ch.naviqore.raptor.Leg;
-import ch.naviqore.raptor.TimeType;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDate;

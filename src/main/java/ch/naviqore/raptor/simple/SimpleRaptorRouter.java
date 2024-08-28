@@ -114,8 +114,8 @@ public class SimpleRaptorRouter implements RaptorAlgorithm, RaptorData {
         List<StopLabelsAndTimes.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices,
                 sourceTimes, walkingDurationsToTarget, config).run();
 
-        return new LabelPostprocessor(this).reconstructParetoOptimalSolutions(bestLabelsPerRound,
-                validatedTargetStops, referenceDate);
+        return new LabelPostprocessor(this).reconstructParetoOptimalSolutions(bestLabelsPerRound, validatedTargetStops,
+                referenceDate);
     }
 
     /**

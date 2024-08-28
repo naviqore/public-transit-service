@@ -200,7 +200,7 @@ class Query {
             }
         }
 
-        if(rangeOffsets.isEmpty()) {
+        if (rangeOffsets.isEmpty()) {
             rangeOffsets.add(0);
         }
 

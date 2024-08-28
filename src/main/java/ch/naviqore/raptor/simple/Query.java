@@ -1,7 +1,6 @@
 package ch.naviqore.raptor.simple;
 
 import ch.naviqore.raptor.QueryConfig;
-import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;

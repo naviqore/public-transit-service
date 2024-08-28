@@ -28,7 +28,7 @@ final class StopLabelsAndTimes {
 
         // set best times to initial value
         bestTimeForStops = new int[stopSize];
-        Arrays.fill(bestTimeForStops,INFINITY);
+        Arrays.fill(bestTimeForStops, INFINITY);
 
         // set empty labels for first round
         addNewRound();
