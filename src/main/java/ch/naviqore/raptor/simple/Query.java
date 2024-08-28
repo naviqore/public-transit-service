@@ -152,7 +152,7 @@ class Query {
     Set<Integer> removeSuboptimalLabelsForRound(int round, Set<Integer> markedStops) {
         int bestTime = getBestTimeForAllTargetStops();
 
-        if (bestTime == INFINITY || bestTime == -INFINITY) {
+        if (bestTime == INFINITY) {
             return markedStops;
         }
 
