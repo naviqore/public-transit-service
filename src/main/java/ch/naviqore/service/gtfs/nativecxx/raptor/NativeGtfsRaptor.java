@@ -2,6 +2,7 @@ package ch.naviqore.service.gtfs.nativecxx.raptor;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
 import java.nio.charset.StandardCharsets;
@@ -10,9 +11,9 @@ import java.nio.charset.StandardCharsets;
 public class NativeGtfsRaptor {
 
     public static void main(String[] args) throws Throwable {
-        // not so nice.... Expecting an absolute path of the library: src/main/java/ch/naviqore/service/gtfs/nativecxx/raptor/library.dll
-        System.load(
-                "C:\\Users\\MichaelBrunner\\source\\master-thesis\\raptor\\src\\main\\java\\ch\\naviqore\\service\\gtfs\\nativecxx\\raptor\\library.dll");
+        String relativePath = "src/main/java/ch/naviqore/service/gtfs/nativecxx/raptor/library.dll";
+        String absolutePath = System.getProperty("user.dir") + File.separator + relativePath;
+        System.load(absolutePath);
         Linker linker = Linker.nativeLinker();
         SymbolLookup lookup = SymbolLookup.loaderLookup();
 
