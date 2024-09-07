@@ -85,9 +85,28 @@ Using Visual Studio C++ compiler:
 ```bash
 cl /EHsc /Fe:library.dll /LD library.cpp
  ```
-
 Using GCC:
 
 ```bash
 g++ -shared -o library.dll -fPIC library.cpp
 ```
+
+### Using multiple DLLs
+
+Compile otherLibrary.cpp into a shared library:
+
+```Bash
+ cl /EHsc /LD /Fe:otherLibrary.dll otherLibrary.cpp
+```
+Compile library.cpp and link it with otherLibrary.dll:
+
+```Bash
+ cl /EHsc /Fe:library.dll /LD library.cpp otherLibrary.lib
+```
+
+Be aware of loading the dependent DLLs in the correct order.
+
+```Java
+System.load(absolutePath +File.separator+"otherLibrary.dll");
+System.load(absolutePath +File.separator+"library.dll");
+  ```

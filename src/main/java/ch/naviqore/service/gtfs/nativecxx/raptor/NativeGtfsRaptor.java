@@ -11,9 +11,15 @@ import java.nio.charset.StandardCharsets;
 public class NativeGtfsRaptor {
 
     public static void main(String[] args) throws Throwable {
-        String relativePath = "src/main/java/ch/naviqore/service/gtfs/nativecxx/raptor/library.dll";
+
+        String relativePath = "src/main/java/ch/naviqore/service/gtfs/nativecxx/raptor";
         String absolutePath = System.getProperty("user.dir") + File.separator + relativePath;
-        System.load(absolutePath);
+        System.setProperty("java.library.path", absolutePath);
+
+        //IMPORTANT: Load the libraries in the correct order!
+        System.load(absolutePath + File.separator + "otherLibrary.dll");
+        System.load(absolutePath + File.separator + "library.dll");
+
         Linker linker = Linker.nativeLinker();
         SymbolLookup lookup = SymbolLookup.loaderLookup();
 
@@ -27,6 +33,17 @@ public class NativeGtfsRaptor {
             int result = (int) addNumbers.invoke(10, 15);
 
             log.info("Result of add_numbers(10, 15): {}", result);
+        }
+        /* TEST FUNCTION TO ADD ONE (using shared libraries) */
+        {
+            MemorySegment addOneSymbol = lookup.find("addOne").orElseThrow();
+
+            MethodHandle addNumbers = linker.downcallHandle(addOneSymbol,
+                    FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+
+            int result = (int) addNumbers.invoke(10);
+
+            log.info("Result of addOne(10): {}", result);
         }
 
         /* FUNCTION GET SIZE OF MESSAGE IN C++ */

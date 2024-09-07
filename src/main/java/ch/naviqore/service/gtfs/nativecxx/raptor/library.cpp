@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cstring>
 #include <memory>
-
+#include "otherLibrary.h"
 
   class MyClass {
     std::string message;
@@ -56,4 +56,9 @@
         MyClass myClass;
         return myClass.messageLength();
       }
+
+      __declspec(dllexport) int addOne(int a)
+    {
+      return addOneToNumber(a);
+    }
   }
