@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfs.nativecxx.raptor;
+package ch.naviqore.raptor.nativeRaptor;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,7 +12,7 @@ public class NativeGtfsRaptor {
 
     public static void main(String[] args) throws Throwable {
 
-        String relativePath = "src/main/java/ch/naviqore/service/gtfs/nativecxx/raptor";
+        String relativePath = "src/main/java/ch/naviqore/raptor/nativeRaptor";
         String absolutePath = System.getProperty("user.dir") + File.separator + relativePath;
         System.setProperty("java.library.path", absolutePath);
 
