@@ -114,7 +114,7 @@ class RouteScanner {
         log.debug("Scanning routes for round {} ({})", round, routesToScan);
 
         // scan selected routes and mark stops with improved times
-        Set<Integer> markedStopsNext = new HashSet<>();
+        Set<Integer> markedStopsNext = new HashSet<>(stops.length);
         for (int currentRouteIdx : routesToScan) {
             scanRoute(currentRouteIdx, round, markedStops, markedStopsNext);
         }
@@ -128,7 +128,7 @@ class RouteScanner {
      * @param markedStops the set of marked stops from the previous round.
      */
     private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
-        Set<Integer> routesToScan = new HashSet<>();
+        Set<Integer> routesToScan = new HashSet<>(stops.length);
         for (int stopIdx : markedStops) {
             Stop currentStop = stops[stopIdx];
             int stopRouteIdx = currentStop.stopRouteIdx();
