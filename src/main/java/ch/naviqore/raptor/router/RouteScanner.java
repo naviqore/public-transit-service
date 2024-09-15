@@ -9,9 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static ch.naviqore.raptor.router.QueryState.INFINITY;
 
@@ -105,51 +103,55 @@ class RouteScanner {
     /**
      * Scans all routes passing marked stops for the given round.
      *
-     * @param round       the current round.
-     * @param markedStops the marked stops for this round.
-     * @return the marked stops for the next round.
+     * @param round           the current round.
+     * @param markedStopsMask the marked stops mask for this round.
+     * @return the marked stops mask for the next round.
      */
-    Set<Integer> scan(int round, Set<Integer> markedStops) {
-        Set<Integer> routesToScan = getRoutesToScan(markedStops);
+    boolean[] scan(int round, boolean[] markedStopsMask) {
+        boolean[] routesToScan = getRoutesToScan(markedStopsMask);
         log.debug("Scanning routes for round {} ({})", round, routesToScan);
 
         // scan selected routes and mark stops with improved times
-        Set<Integer> markedStopsNext = new HashSet<>(stops.length);
-        for (int currentRouteIdx : routesToScan) {
-            scanRoute(currentRouteIdx, round, markedStops, markedStopsNext);
+        boolean[] markedStopsMaskNext = new boolean[stops.length];
+        for (int currentRouteIdx = 0; currentRouteIdx < routesToScan.length; currentRouteIdx++) {
+            scanRoute(currentRouteIdx, round, markedStopsMask, markedStopsMaskNext);
         }
 
-        return markedStopsNext;
+        return markedStopsMaskNext;
     }
 
     /**
      * Get all routes to scan from the marked stops.
      *
-     * @param markedStops the set of marked stops from the previous round.
+     * @param markedStopsMask the mask of marked stops from the previous round.
+     * @return the mask of routes to scan.
      */
-    private Set<Integer> getRoutesToScan(Set<Integer> markedStops) {
-        Set<Integer> routesToScan = new HashSet<>(stops.length);
-        for (int stopIdx : markedStops) {
+    private boolean[] getRoutesToScan(boolean[] markedStopsMask) {
+        boolean[] routesToScanMask = new boolean[routes.length];
+        for (int stopIdx = 0; stopIdx < markedStopsMask.length; stopIdx++) {
+            if (!markedStopsMask[stopIdx]) {
+                continue;
+            }
             Stop currentStop = stops[stopIdx];
             int stopRouteIdx = currentStop.stopRouteIdx();
             int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
             while (stopRouteIdx < stopRouteEndIdx) {
-                routesToScan.add(stopRoutes[stopRouteIdx]);
+                routesToScanMask[stopRoutes[stopRouteIdx]] = true;
                 stopRouteIdx++;
             }
         }
-        return routesToScan;
+        return routesToScanMask;
     }
 
     /**
      * Scan a route in time type applicable direction to find the best times for each stop on route for given round.
      *
-     * @param currentRouteIdx the index of the current route.
-     * @param round           the current round.
-     * @param markedStops     the set of marked stops from the previous round.
-     * @param markedStopsNext the set of marked stops for the next round.
+     * @param currentRouteIdx     the index of the current route.
+     * @param round               the current round.
+     * @param markedStopsMask     the mask of marked stops from the previous round.
+     * @param markedStopsMaskNext the mask of marked stops for the next round.
      */
-    private void scanRoute(int currentRouteIdx, int round, Set<Integer> markedStops, Set<Integer> markedStopsNext) {
+    private void scanRoute(int currentRouteIdx, int round, boolean[] markedStopsMask, boolean[] markedStopsMaskNext) {
 
         final int lastRound = round - 1;
 
@@ -177,7 +179,7 @@ class RouteScanner {
             int bestStopTime = queryState.getComparableBestTime(stopIdx);
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(stop, bestStopTime, markedStops, stopIdx, stopOffset, currentRoute)) {
+                if (!canEnterAtStop(stop, bestStopTime, markedStopsMask, stopIdx, stopOffset, currentRoute)) {
                     continue;
                 }
             } else {
@@ -187,7 +189,7 @@ class RouteScanner {
                 int targetTime = rawStopTimes[(timeType == TimeType.DEPARTURE) ? stopTimeIndex : stopTimeIndex + 1];
                 targetTime += activeTrip.dayTimeOffset;
                 if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, stop, bestStopTime, stopIdx, round,
-                        lastRound, markedStopsNext, currentRouteIdx)) {
+                        lastRound, markedStopsMaskNext, currentRouteIdx)) {
                     continue;
                 }
             }
@@ -212,14 +214,14 @@ class RouteScanner {
      * performance reasons) assuming that this check is only run when not travelling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stop         the stop to check if a trip can be entered.
-     * @param stopTime     the time at the stop.
-     * @param markedStops  the set of marked stops from the previous round.
-     * @param stopIdx      the index of the stop to check if a trip can be entered.
-     * @param stopOffset   the offset of the stop in the route.
-     * @param currentRoute the current route.
+     * @param stop            the stop to check if a trip can be entered.
+     * @param stopTime        the time at the stop.
+     * @param markedStopsMask the mask of marked stops from the previous round.
+     * @param stopIdx         the index of the stop to check if a trip can be entered.
+     * @param stopOffset      the offset of the stop in the route.
+     * @param currentRoute    the current route.
      */
-    private boolean canEnterAtStop(Stop stop, int stopTime, Set<Integer> markedStops, int stopIdx, int stopOffset,
+    private boolean canEnterAtStop(Stop stop, int stopTime, boolean[] markedStopsMask, int stopIdx, int stopOffset,
                                    Route currentRoute) {
 
         int unreachableValue = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
@@ -237,7 +239,7 @@ class RouteScanner {
             return false;
         }
 
-        if (!markedStops.contains(stopIdx)) {
+        if (!markedStopsMask[stopIdx]) {
             // this stop has already been scanned in previous round without improved target time
             log.debug("Stop {} was not improved in previous round, continue", stop.id());
             return false;
@@ -291,18 +293,18 @@ class RouteScanner {
      * <p>If the time was not improved, an additional check will be needed to figure out if an earlier or later trip
      * from the stop is possible within the current round, thus the method returns true.</p>
      *
-     * @param targetTime      the stop time to check for an earlier or later trip.
-     * @param activeTrip      the active trip to check for an earlier or later trip.
-     * @param stop            the stop to check for an earlier or later trip.
-     * @param bestStopTime    the earliest or latest time at the stop based on the TimeType.
-     * @param stopIdx         the index of the stop to check for an earlier or later trip.
-     * @param markedStopsNext the set of marked stops for the next round.
-     * @param currentRouteIdx the index of the current route.
+     * @param targetTime          the stop time to check for an earlier or later trip.
+     * @param activeTrip          the active trip to check for an earlier or later trip.
+     * @param stop                the stop to check for an earlier or later trip.
+     * @param bestStopTime        the earliest or latest time at the stop based on the TimeType.
+     * @param stopIdx             the index of the stop to check for an earlier or later trip.
+     * @param markedStopsMaskNext the mask of marked stops for the next round.
+     * @param currentRouteIdx     the index of the current route.
      * @return true if an earlier or later trip is possible, false otherwise.
      */
     private boolean checkIfTripIsPossibleAndUpdateMarks(int targetTime, ActiveTrip activeTrip, Stop stop,
                                                         int bestStopTime, int stopIdx, int thisRound, int lastRound,
-                                                        Set<Integer> markedStopsNext, int currentRouteIdx) {
+                                                        boolean[] markedStopsMaskNext, int currentRouteIdx) {
 
         boolean isImproved = (timeType == TimeType.DEPARTURE) ? targetTime < bestStopTime : targetTime > bestStopTime;
 
@@ -313,7 +315,7 @@ class RouteScanner {
             QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
                     currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
             queryState.setLabel(thisRound, stopIdx, label);
-            markedStopsNext.add(stopIdx);
+            markedStopsMaskNext[stopIdx] = true;
 
             return false;
         } else {
