@@ -114,6 +114,9 @@ class RouteScanner {
         // scan selected routes and mark stops with improved times
         boolean[] markedStopsMaskNext = new boolean[stops.length];
         for (int currentRouteIdx = 0; currentRouteIdx < routesToScan.length; currentRouteIdx++) {
+            if (!routesToScan[currentRouteIdx]) {
+                continue;
+            }
             scanRoute(currentRouteIdx, round, markedStopsMask, markedStopsMaskNext);
         }
 
