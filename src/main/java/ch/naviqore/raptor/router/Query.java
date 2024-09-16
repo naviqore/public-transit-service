@@ -81,6 +81,21 @@ class Query {
     }
 
     /**
+     * Check if there are any marked stops in the marked stops mask.
+     *
+     * @param markedStopsMask the marked stops mask to check.
+     * @return true if there are any marked stops, false otherwise.
+     */
+    private static boolean hasMarkedStops(boolean[] markedStopsMask) {
+        for (boolean b : markedStopsMask) {
+            if (b) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Main control flow of the routing algorithm. Spawns from source stops, coordinates route scanning, footpath
      * relaxation, and time/label updates in the correct order.
      * <p>
@@ -185,21 +200,6 @@ class Query {
             markedStopsMask = markedStopsNext;
             round++;
         }
-    }
-
-    /**
-     * Check if there are any marked stops in the marked stops mask.
-     *
-     * @param markedStopsMask the marked stops mask to check.
-     * @return true if there are any marked stops, false otherwise.
-     */
-    private static boolean hasMarkedStops(boolean[] markedStopsMask) {
-        for (boolean b : markedStopsMask) {
-            if (b) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
