@@ -41,30 +41,27 @@ class FootpathRelaxer {
 
     /**
      * Relax all footpaths from all initial source stops.
-     *
-     * @param markedStopsMask the mask of the stops to be relaxed.
      */
-    void relaxInitial(boolean[] markedStopsMask) {
+    void relaxInitial() {
         log.debug("Initial relaxing of footpaths for source stops");
-        relax(0, markedStopsMask);
+        relax(0);
     }
 
     /**
      * Relax all footpaths from marked stops.
      *
-     * @param round           the current round.
-     * @param markedStopsMask the mask of the stops to be relaxed.
+     * @param round the current round.
      */
-    void relax(int round, boolean[] markedStopsMask) {
+    void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
         // to prevent extending transfers from stops that were only reached by footpath in the same round
-        boolean[] routeMarkedStops = markedStopsMask.clone();
+        boolean[] routeMarkedStops = queryState.getMarkedStopsMaskNextRoundClone();
 
-        for (int sourceStopIdx = 0; sourceStopIdx < markedStopsMask.length; sourceStopIdx++) {
+        for (int sourceStopIdx = 0; sourceStopIdx < routeMarkedStops.length; sourceStopIdx++) {
             if (!routeMarkedStops[sourceStopIdx]) {
                 continue;
             }
-            expandFootpathsFromStop(sourceStopIdx, round, markedStopsMask);
+            expandFootpathsFromStop(sourceStopIdx, round);
         }
     }
 
@@ -73,12 +70,10 @@ class FootpathRelaxer {
      * then the target stop is marked for the next round. And the improved target time is stored in the bestTimes array
      * and the bestLabelPerRound list (including the new transfer label).
      *
-     * @param stopIdx         the index of the stop to expand transfers from.
-     * @param round           the current round to relax footpaths for.
-     * @param markedStopsMask a mask of stop indices that have been marked for scanning in the next round, which will be
-     *                        extended if new stops improve due to relaxation.
+     * @param stopIdx the index of the stop to expand transfers from.
+     * @param round   the current round to relax footpaths for.
      */
-    private void expandFootpathsFromStop(int stopIdx, int round, boolean[] markedStopsMask) {
+    private void expandFootpathsFromStop(int stopIdx, int round) {
         // if stop has no transfers, then no footpaths can be expanded
         if (stops[stopIdx].numberOfTransfers() == 0) {
             return;
@@ -123,8 +118,7 @@ class FootpathRelaxer {
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
                     NO_INDEX, transfer.targetStopIdx(), queryState.getLabel(round, stopIdx));
             queryState.setLabel(round, transfer.targetStopIdx(), label);
-            // mark stop as improved
-            markedStopsMask[transfer.targetStopIdx()] = true;
+            queryState.mark(transfer.targetStopIdx());
         }
     }
 }

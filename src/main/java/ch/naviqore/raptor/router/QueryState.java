@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.TimeType;
+import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 
 /**
  * This object stores the current best labels and times of the raptor routing algorithm for a query instance.
+ * Additionally, it also stores information about marked stops for the current and last round.
  */
 final class QueryState {
 
@@ -18,12 +20,16 @@ final class QueryState {
 
     // the best labels per stop and round
     private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-
     // the global best time per stop
     private final int[] bestTimeForStops;
-
     private final int stopSize;
     private final TimeType timeType;
+
+    @Getter
+    private int round;
+
+    private boolean[] markedStopsMaskNextRound;
+    private boolean[] markedStopsMaskThisRound;
 
     QueryState(int stopSize, TimeType timeType) {
         this.stopSize = stopSize;
@@ -33,15 +39,39 @@ final class QueryState {
         bestTimeForStops = new int[stopSize];
         Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
 
+        markedStopsMaskThisRound = new boolean[stopSize];
+        markedStopsMaskNextRound = new boolean[stopSize];
+
+        round = -1;
+
         // set empty labels for first round
         addNewRound();
+    }
+
+    void resetRounds() {
+        round = 0;
+        Arrays.fill(markedStopsMaskThisRound, false);
+        Arrays.fill(markedStopsMaskNextRound, false);
     }
 
     /**
      * Adds a new round with empty labels.
      */
     void addNewRound() {
-        bestLabelsPerRound.add(new Label[stopSize]);
+        if (round != -1) {
+            // reset boolean marked stop masks, not needed when running the first time
+            boolean[] tmp = markedStopsMaskThisRound;
+            markedStopsMaskThisRound = markedStopsMaskNextRound;
+            markedStopsMaskNextRound = tmp;
+            Arrays.fill(markedStopsMaskNextRound, false);
+        }
+
+        round++;
+
+        // only add new round if it does not exist yet (-> in range raptor same round can occur more than once)
+        if (round >= bestLabelsPerRound.size()) {
+            bestLabelsPerRound.add(new Label[stopSize]);
+        }
     }
 
     Label getLabel(int round, int stopIdx) {
@@ -91,6 +121,35 @@ final class QueryState {
      */
     List<Label[]> getBestLabelsPerRound() {
         return Collections.unmodifiableList(bestLabelsPerRound);
+    }
+
+    boolean isMarkedThisRound(int stopIdx) {
+        return markedStopsMaskThisRound[stopIdx];
+    }
+
+    boolean isMarkedNextRound(int stopIdx) {
+        return markedStopsMaskNextRound[stopIdx];
+    }
+
+    void mark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = true;
+    }
+
+    void unmark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = false;
+    }
+
+    boolean hasMarkedStops() {
+        for (int i = 0; i < stopSize; i++) {
+            if (markedStopsMaskNextRound[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean[] getMarkedStopsMaskNextRoundClone() {
+        return markedStopsMaskNextRound.clone();
     }
 
     /**
