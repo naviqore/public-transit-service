@@ -127,19 +127,19 @@ class Query {
         return queryState.getBestLabelsPerRound();
     }
 
-    void doRangeRaptor(boolean[] markedStops) {
+    void doRangeRaptor(boolean[] markedStopsMask) {
         // prepare range offsets
         // get initial marked stops to reset after each range offset
         List<Integer> initialMarkedStops = new ArrayList<>();
-        for (int stopIdx = 0; stopIdx < markedStops.length; stopIdx++) {
-            if (markedStops[stopIdx]) {
+        for (int stopIdx = 0; stopIdx < markedStopsMask.length; stopIdx++) {
+            if (markedStopsMask[stopIdx]) {
                 initialMarkedStops.add(stopIdx);
             }
         }
         List<Integer> rangeOffsets = getRangeOffsets(initialMarkedStops, routeScanner);
         HashMap<Integer, Integer> stopIdxSourceTimes = new HashMap<>();
-        for (int stopIdx = 0; stopIdx < markedStops.length; stopIdx++) {
-            if (!markedStops[stopIdx]) {
+        for (int stopIdx = 0; stopIdx < markedStopsMask.length; stopIdx++) {
+            if (!markedStopsMask[stopIdx]) {
                 continue;
             }
             stopIdxSourceTimes.put(stopIdx, queryState.getLabel(0, stopIdx).targetTime());
@@ -156,7 +156,7 @@ class Query {
                 int targetTime = stopIdxSourceTimes.get(stopIdx) + timeFactor * rangeOffset;
                 queryState.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
             }
-            doRounds(markedStops);
+            doRounds(markedStopsMask);
         }
     }
 
@@ -190,14 +190,14 @@ class Query {
             queryState.addNewRound();
 
             // scan all routs and mark stops that have improved
-            boolean[] markedStopsNext = routeScanner.scan(round, markedStopsMask);
+            boolean[] nextMarkedStopsMask = routeScanner.scan(round, markedStopsMask);
 
             // relax footpaths for all newly marked stops
-            footpathRelaxer.relax(round, markedStopsNext);
+            footpathRelaxer.relax(round, nextMarkedStopsMask);
 
             // prepare next round
-            removeSuboptimalLabelsForRound(round, markedStopsNext);
-            markedStopsMask = markedStopsNext;
+            removeSuboptimalLabelsForRound(round, nextMarkedStopsMask);
+            markedStopsMask = nextMarkedStopsMask;
             round++;
         }
     }
