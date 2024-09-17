@@ -46,7 +46,7 @@ Access the service at http://localhost:8080 to explore schedules and query trans
 
 ## License
 
-This project is licensed under the GPL-3.0 license. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT license. See the [LICENSE](LICENSE) file for details.
 
 ## References
 

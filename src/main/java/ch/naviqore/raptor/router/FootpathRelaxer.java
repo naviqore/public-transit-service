@@ -3,10 +3,6 @@ package ch.naviqore.raptor.router;
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-
 import static ch.naviqore.raptor.router.QueryState.NO_INDEX;
 
 @Slf4j
@@ -45,37 +41,28 @@ class FootpathRelaxer {
 
     /**
      * Relax all footpaths from all initial source stops.
-     *
-     * @param stopIndices the indices of the stops to be relaxed.
-     * @return returns the newly marked stops due to the relaxation.
      */
-    Set<Integer> relaxInitial(int[] stopIndices) {
+    void relaxInitial() {
         log.debug("Initial relaxing of footpaths for source stops");
-        Set<Integer> newlyMarkedStops = new HashSet<>();
-
-        for (int sourceStopIdx : stopIndices) {
-            expandFootpathsFromStop(sourceStopIdx, 0, newlyMarkedStops);
-        }
-
-        return newlyMarkedStops;
+        relax(0);
     }
 
     /**
      * Relax all footpaths from marked stops.
      *
-     * @param round       the current round.
-     * @param stopIndices the indices of the stops to be relaxed.
-     * @return returns the newly marked stops due to the relaxation.
+     * @param round the current round.
      */
-    Set<Integer> relax(int round, Collection<Integer> stopIndices) {
+    void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
-        Set<Integer> newlyMarkedStops = new HashSet<>();
+        // to prevent extending transfers from stops that were only reached by footpath in the same round
+        boolean[] routeMarkedStops = queryState.cloneMarkedStopsMaskNextRound();
 
-        for (int sourceStopIdx : stopIndices) {
-            expandFootpathsFromStop(sourceStopIdx, round, newlyMarkedStops);
+        for (int sourceStopIdx = 0; sourceStopIdx < routeMarkedStops.length; sourceStopIdx++) {
+            if (!routeMarkedStops[sourceStopIdx]) {
+                continue;
+            }
+            expandFootpathsFromStop(sourceStopIdx, round);
         }
-
-        return newlyMarkedStops;
     }
 
     /**
@@ -83,12 +70,10 @@ class FootpathRelaxer {
      * then the target stop is marked for the next round. And the improved target time is stored in the bestTimes array
      * and the bestLabelPerRound list (including the new transfer label).
      *
-     * @param stopIdx     the index of the stop to expand transfers from.
-     * @param round       the current round to relax footpaths for.
-     * @param markedStops a set of stop indices that have been marked for scanning in the next round, which will be
-     *                    extended if new stops improve due to relaxation.
+     * @param stopIdx the index of the stop to expand transfers from.
+     * @param round   the current round to relax footpaths for.
      */
-    private void expandFootpathsFromStop(int stopIdx, int round, Set<Integer> markedStops) {
+    private void expandFootpathsFromStop(int stopIdx, int round) {
         // if stop has no transfers, then no footpaths can be expanded
         if (stops[stopIdx].numberOfTransfers() == 0) {
             return;
@@ -133,8 +118,7 @@ class FootpathRelaxer {
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
                     NO_INDEX, transfer.targetStopIdx(), queryState.getLabel(round, stopIdx));
             queryState.setLabel(round, transfer.targetStopIdx(), label);
-            // mark stop as improved
-            markedStops.add(transfer.targetStopIdx());
+            queryState.mark(transfer.targetStopIdx());
         }
     }
 }
