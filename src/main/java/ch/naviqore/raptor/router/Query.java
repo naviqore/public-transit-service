@@ -5,7 +5,10 @@ import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 import static ch.naviqore.raptor.router.QueryState.INFINITY;
 
@@ -29,6 +32,8 @@ class Query {
     private final QueryState queryState;
     private final FootpathRelaxer footpathRelaxer;
     private final RouteScanner routeScanner;
+
+    private final int numStops;
 
     private final int raptorRange;
 
@@ -65,6 +70,7 @@ class Query {
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
+        numStops = raptorData.getStopContext().stops().length;
         queryState = new QueryState(raptorData.getStopContext().stops().length, timeType);
 
         // set up footpath relaxer and route scanner and inject stop labels and times
@@ -72,6 +78,21 @@ class Query {
                 config.getMaximumWalkingDuration(), timeType);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDate,
                 raptorConfig.getDaysToScan());
+    }
+
+    /**
+     * Check if there are any marked stops in the marked stops mask.
+     *
+     * @param markedStopsMask the marked stops mask to check.
+     * @return true if there are any marked stops, false otherwise.
+     */
+    private static boolean hasMarkedStops(boolean[] markedStopsMask) {
+        for (boolean b : markedStopsMask) {
+            if (b) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -93,40 +114,47 @@ class Query {
     List<QueryState.Label[]> run() {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        Set<Integer> markedStops = initialize();
-        markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
-        markedStops = removeSuboptimalLabelsForRound(0, markedStops);
+        initialize();
+        footpathRelaxer.relaxInitial();
+        removeSuboptimalLabelsForRound(0);
 
         // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
         if (raptorRange <= 0) {
-            doRounds(markedStops);
+            doRounds();
         } else {
-            doRangeRaptor(markedStops);
+            doRangeRaptor();
         }
         return queryState.getBestLabelsPerRound();
     }
 
-    void doRangeRaptor(Set<Integer> markedStops) {
+    void doRangeRaptor() {
         // prepare range offsets
-        List<Integer> rangeOffsets = getRangeOffsets(markedStops, routeScanner);
+        // get initial marked stops to reset after each range offset
+        List<Integer> initialMarkedStops = new ArrayList<>();
         HashMap<Integer, Integer> stopIdxSourceTimes = new HashMap<>();
-        for (int stopIdx : markedStops) {
+        for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
+            if (!queryState.isMarkedNextRound(stopIdx)) {
+                continue;
+            }
+            initialMarkedStops.add(stopIdx);
             stopIdxSourceTimes.put(stopIdx, queryState.getLabel(0, stopIdx).targetTime());
         }
-
+        List<Integer> rangeOffsets = getRangeOffsets(initialMarkedStops, routeScanner);
         // scan all range offsets in reverse order (earliest arrival / latest departure first)
         for (int offsetIdx = rangeOffsets.size() - 1; offsetIdx >= 0; offsetIdx--) {
+            queryState.resetRounds();
             int rangeOffset = rangeOffsets.get(offsetIdx);
             int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
             log.debug("Running rounds with range offset {}", rangeOffset);
 
             // set source times to the source times of the previous round
-            for (int stopIdx : markedStops) {
+            for (int stopIdx : initialMarkedStops) {
                 QueryState.Label label = queryState.getLabel(0, stopIdx);
                 int targetTime = stopIdxSourceTimes.get(stopIdx) + timeFactor * rangeOffset;
                 queryState.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
+                queryState.mark(stopIdx);
             }
-            doRounds(markedStops);
+            doRounds();
         }
     }
 
@@ -146,26 +174,22 @@ class Query {
 
     /**
      * Method to perform the rounds of the routing algorithm (see {@link #run()}).
-     *
-     * @param markedStops the initially marked stops.
      */
-    private void doRounds(Set<Integer> markedStops) {
+    private void doRounds() {
 
-        // continue with further rounds as long as there are new marked stops
-        int round = 1;
-        while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
+        // check if marked stops has any true values
+        while (queryState.hasMarkedStops() && (queryState.getRound()) <= config.getMaximumTransferNumber()) {
             // add label layer for new round
             queryState.addNewRound();
 
             // scan all routs and mark stops that have improved
-            Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
+            routeScanner.scan(queryState.getRound());
 
             // relax footpaths for all newly marked stops
-            markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
+            footpathRelaxer.relax(queryState.getRound());
 
             // prepare next round
-            markedStops = removeSuboptimalLabelsForRound(round, markedStopsNext);
-            round++;
+            removeSuboptimalLabelsForRound(queryState.getRound());
         }
     }
 
@@ -180,13 +204,13 @@ class Query {
      * 10:10, 10:20, and Route B has departures at 10:05, 10:15, 10:25, the range offsets are be 0, 10, 20 and not 0, 5,
      * 10, 15, 20, 25 (note real values are in seconds and not minutes --> *60).
      *
-     * @param markedStops  the marked stops to get the range offsets for.
-     * @param routeScanner the route scanner to get the trip offsets for the stops.
+     * @param initialMarkedStops the initial marked stops to get the range offsets for.
+     * @param routeScanner       the route scanner to get the trip offsets for the stops.
      * @return the range offsets (in seconds) applicable for all marked stops.
      */
-    private List<Integer> getRangeOffsets(Set<Integer> markedStops, RouteScanner routeScanner) {
+    private List<Integer> getRangeOffsets(List<Integer> initialMarkedStops, RouteScanner routeScanner) {
         ArrayList<Integer> rangeOffsets = new ArrayList<>();
-        for (int stopIdx : markedStops) {
+        for (int stopIdx : initialMarkedStops) {
             List<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
             for (int i = 0; i < stopRangeOffsets.size(); i++) {
                 // if the rangeOffsets list is not long enough, add the offset
@@ -210,10 +234,8 @@ class Query {
 
     /**
      * Set up the best times per stop and best labels per round for a new query.
-     *
-     * @return the initially marked stops.
      */
-    Set<Integer> initialize() {
+    void initialize() {
         log.debug("Initializing global best times per stop and best labels per round");
 
         // fill target stops
@@ -224,7 +246,6 @@ class Query {
         }
 
         // set initial labels, best time and mark source stops
-        Set<Integer> markedStops = new HashSet<>();
         for (int i = 0; i < sourceStopIndices.length; i++) {
             int currentStopIdx = sourceStopIndices[i];
             int targetTime = sourceTimes[i];
@@ -233,42 +254,35 @@ class Query {
                     QueryState.NO_INDEX, QueryState.NO_INDEX, currentStopIdx, null);
             queryState.setLabel(0, currentStopIdx, label);
             queryState.setBestTime(currentStopIdx, targetTime);
-
-            markedStops.add(currentStopIdx);
+            queryState.mark(currentStopIdx);
         }
-
-        return markedStops;
     }
 
     /**
      * Nullify labels that are suboptimal for the current round. This method checks if the label time is worse than the
      * optimal time mark and removes the mark for the next round and nullifies the label in this case.
      *
-     * @param round       the round to remove suboptimal labels for.
-     * @param markedStops the marked stops to check for suboptimal labels.
+     * @param round the round to remove suboptimal labels for.
      */
-    Set<Integer> removeSuboptimalLabelsForRound(int round, Set<Integer> markedStops) {
+    void removeSuboptimalLabelsForRound(int round) {
         int bestTime = getBestTimeForAllTargetStops();
 
         if (bestTime == INFINITY || bestTime == -INFINITY) {
-            return markedStops;
+            return;
         }
 
-        Set<Integer> markedStopsClean = new HashSet<>();
-        for (int stopIdx : markedStops) {
+        for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
+            if (!queryState.isMarkedNextRound(stopIdx)) {
+                continue;
+            }
             QueryState.Label label = queryState.getLabel(round, stopIdx);
             if (label != null) {
-                if (timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) {
+                if ((timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) || (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime)) {
                     queryState.setLabel(round, stopIdx, null);
-                } else if (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime) {
-                    queryState.setLabel(round, stopIdx, null);
-                } else {
-                    markedStopsClean.add(stopIdx);
+                    queryState.unmark(stopIdx);
                 }
             }
         }
-
-        return markedStopsClean;
     }
 
     /**

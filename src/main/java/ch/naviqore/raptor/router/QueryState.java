@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.TimeType;
+import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -10,20 +11,27 @@ import java.util.List;
 
 /**
  * This object stores the current best labels and times of the raptor routing algorithm for a query instance.
+ * Additionally, it also stores information about marked stops for the current and last round.
  */
 final class QueryState {
 
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
 
+    private final int stopSize;
+    private final TimeType timeType;
+
     // the best labels per stop and round
     private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-
     // the global best time per stop
     private final int[] bestTimeForStops;
 
-    private final int stopSize;
-    private final TimeType timeType;
+    // the marked stops for route scanning and footpath relaxing
+    private boolean[] markedStopsMaskThisRound;
+    private boolean[] markedStopsMaskNextRound;
+
+    @Getter
+    private int round;
 
     QueryState(int stopSize, TimeType timeType) {
         this.stopSize = stopSize;
@@ -33,17 +41,51 @@ final class QueryState {
         bestTimeForStops = new int[stopSize];
         Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
 
+        markedStopsMaskThisRound = new boolean[stopSize];
+        markedStopsMaskNextRound = new boolean[stopSize];
+
+        round = -1;
+
         // set empty labels for first round
         addNewRound();
     }
 
     /**
-     * Adds a new round with empty labels.
+     * Resets the round and marked stops.
      */
-    void addNewRound() {
-        bestLabelsPerRound.add(new Label[stopSize]);
+    void resetRounds() {
+        round = 0;
+        Arrays.fill(markedStopsMaskThisRound, false);
+        Arrays.fill(markedStopsMaskNextRound, false);
     }
 
+    /**
+     * Adds a new round with empty labels and reset boolean marked stop masks.
+     */
+    void addNewRound() {
+        if (round != -1) {
+            // reset boolean marked stop masks, not needed when running the first time
+            boolean[] tmp = markedStopsMaskThisRound;
+            markedStopsMaskThisRound = markedStopsMaskNextRound;
+            markedStopsMaskNextRound = tmp;
+            Arrays.fill(markedStopsMaskNextRound, false);
+        }
+
+        round++;
+
+        // only add new round if it does not exist yet (-> in range raptor same round can occur more than once)
+        if (round >= bestLabelsPerRound.size()) {
+            bestLabelsPerRound.add(new Label[stopSize]);
+        }
+    }
+
+    /**
+     * Retrieves the label for a stop at a given round.
+     *
+     * @param round   the round to get the label from.
+     * @param stopIdx the index of the stop to retrieve the label for.
+     * @return the label for the stop in the specified round, or null if not present.
+     */
     Label getLabel(int round, int stopIdx) {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
@@ -91,6 +133,63 @@ final class QueryState {
      */
     List<Label[]> getBestLabelsPerRound() {
         return Collections.unmodifiableList(bestLabelsPerRound);
+    }
+
+    /**
+     * Checks if the stop was marked in the current round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop was marked in this round, false otherwise.
+     */
+    boolean isMarkedThisRound(int stopIdx) {
+        return markedStopsMaskThisRound[stopIdx];
+    }
+
+    /**
+     * Checks if the stop has been marked for the next round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop is marked for the next round, false otherwise.
+     */
+    boolean isMarkedNextRound(int stopIdx) {
+        return markedStopsMaskNextRound[stopIdx];
+    }
+
+    /**
+     * Marks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to mark.
+     */
+    void mark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = true;
+    }
+
+    /**
+     * Unmarks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to unmark.
+     */
+    void unmark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = false;
+    }
+
+    /**
+     * Checks if any stops have been marked for the next round.
+     */
+    boolean hasMarkedStops() {
+        for (int i = 0; i < stopSize; i++) {
+            if (markedStopsMaskNextRound[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Creates a deep copy of the marked stops mask for the next round.
+     */
+    boolean[] cloneMarkedStopsMaskNextRound() {
+        return markedStopsMaskNextRound.clone();
     }
 
     /**
