@@ -18,18 +18,20 @@ final class QueryState {
     public final static int INFINITY = Integer.MAX_VALUE;
     public final static int NO_INDEX = -1;
 
+    private final int stopSize;
+    private final TimeType timeType;
+
     // the best labels per stop and round
     private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
     // the global best time per stop
     private final int[] bestTimeForStops;
-    private final int stopSize;
-    private final TimeType timeType;
+
+    // the marked stops for route scanning and footpath relaxing
+    private boolean[] markedStopsMaskThisRound;
+    private boolean[] markedStopsMaskNextRound;
 
     @Getter
     private int round;
-
-    private boolean[] markedStopsMaskNextRound;
-    private boolean[] markedStopsMaskThisRound;
 
     QueryState(int stopSize, TimeType timeType) {
         this.stopSize = stopSize;
@@ -48,6 +50,9 @@ final class QueryState {
         addNewRound();
     }
 
+    /**
+     * Resets the round and marked stops.
+     */
     void resetRounds() {
         round = 0;
         Arrays.fill(markedStopsMaskThisRound, false);
@@ -55,7 +60,7 @@ final class QueryState {
     }
 
     /**
-     * Adds a new round with empty labels.
+     * Adds a new round with empty labels and reset boolean marked stop masks.
      */
     void addNewRound() {
         if (round != -1) {
@@ -74,6 +79,13 @@ final class QueryState {
         }
     }
 
+    /**
+     * Retrieves the label for a stop at a given round.
+     *
+     * @param round   the round to get the label from.
+     * @param stopIdx the index of the stop to retrieve the label for.
+     * @return the label for the stop in the specified round, or null if not present.
+     */
     Label getLabel(int round, int stopIdx) {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
@@ -123,22 +135,47 @@ final class QueryState {
         return Collections.unmodifiableList(bestLabelsPerRound);
     }
 
+    /**
+     * Checks if the stop was marked in the current round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop was marked in this round, false otherwise.
+     */
     boolean isMarkedThisRound(int stopIdx) {
         return markedStopsMaskThisRound[stopIdx];
     }
 
+    /**
+     * Checks if the stop has been marked for the next round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop is marked for the next round, false otherwise.
+     */
     boolean isMarkedNextRound(int stopIdx) {
         return markedStopsMaskNextRound[stopIdx];
     }
 
+    /**
+     * Marks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to mark.
+     */
     void mark(int stopIdx) {
         markedStopsMaskNextRound[stopIdx] = true;
     }
 
+    /**
+     * Unmarks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to unmark.
+     */
     void unmark(int stopIdx) {
         markedStopsMaskNextRound[stopIdx] = false;
     }
 
+    /**
+     * Checks if any stops have been marked for the next round.
+     */
     boolean hasMarkedStops() {
         for (int i = 0; i < stopSize; i++) {
             if (markedStopsMaskNextRound[i]) {
@@ -148,7 +185,10 @@ final class QueryState {
         return false;
     }
 
-    boolean[] getMarkedStopsMaskNextRoundClone() {
+    /**
+     * Creates a deep copy of the marked stops mask for the next round.
+     */
+    boolean[] cloneMarkedStopsMaskNextRound() {
         return markedStopsMaskNextRound.clone();
     }
 

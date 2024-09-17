@@ -55,7 +55,7 @@ class FootpathRelaxer {
     void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
         // to prevent extending transfers from stops that were only reached by footpath in the same round
-        boolean[] routeMarkedStops = queryState.getMarkedStopsMaskNextRoundClone();
+        boolean[] routeMarkedStops = queryState.cloneMarkedStopsMaskNextRound();
 
         for (int sourceStopIdx = 0; sourceStopIdx < routeMarkedStops.length; sourceStopIdx++) {
             if (!routeMarkedStops[sourceStopIdx]) {
