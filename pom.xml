@@ -11,7 +11,7 @@
     </parent>
     <groupId>ch.naviqore</groupId>
     <artifactId>public-transit-service</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.1</version>
 
     <name>Public Transit Service</name>
     <description>
