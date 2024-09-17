@@ -4,9 +4,7 @@ import ch.naviqore.raptor.QueryConfig;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static ch.naviqore.raptor.simple.StopLabelsAndTimes.INFINITY;
 
@@ -28,6 +26,8 @@ class Query {
     private final int[] targetStops;
     private final int cutoffTime;
     private final StopLabelsAndTimes stopLabelsAndTimes;
+
+    private final int numStops;
 
     /**
      * @param raptorData               the current raptor data structures.
@@ -58,6 +58,7 @@ class Query {
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
         stopLabelsAndTimes = new StopLabelsAndTimes(raptorData.getStopContext().stops().length);
+        numStops = raptorData.getStopContext().stops().length;
     }
 
     /**
@@ -84,25 +85,23 @@ class Query {
                 config.getMinimumTransferDuration());
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        Set<Integer> markedStops = initialize();
-        markedStops.addAll(footpathRelaxer.relaxInitial(sourceStopIndices));
-        markedStops = removeSuboptimalLabelsForRound(0, markedStops);
+        initialize();
+        footpathRelaxer.relaxInitial();
+        removeSuboptimalLabelsForRound(0);
 
         // continue with further rounds as long as there are new marked stops
-        int round = 1;
-        while (!markedStops.isEmpty() && (round - 1) <= config.getMaximumTransferNumber()) {
+        while (stopLabelsAndTimes.hasMarkedStops() && (stopLabelsAndTimes.getRound()) <= config.getMaximumTransferNumber()) {
             // add label layer for new round
             stopLabelsAndTimes.addNewRound();
 
             // scan all routs and mark stops that have improved
-            Set<Integer> markedStopsNext = routeScanner.scan(round, markedStops);
+            routeScanner.scan(stopLabelsAndTimes.getRound());
 
             // relax footpaths for all newly marked stops
-            markedStopsNext.addAll(footpathRelaxer.relax(round, markedStopsNext));
+            footpathRelaxer.relax(stopLabelsAndTimes.getRound());
 
             // prepare next round
-            markedStops = removeSuboptimalLabelsForRound(round, markedStopsNext);
-            round++;
+            removeSuboptimalLabelsForRound(stopLabelsAndTimes.getRound());
         }
 
         return stopLabelsAndTimes.getBestLabelsPerRound();
@@ -110,10 +109,8 @@ class Query {
 
     /**
      * Set up the best times per stop and best labels per round for a new query.
-     *
-     * @return the initially marked stops.
      */
-    Set<Integer> initialize() {
+    void initialize() {
         log.info("Initializing global best times per stop and best labels per round");
 
         // fill target stops
@@ -124,7 +121,6 @@ class Query {
         }
 
         // set initial labels, best time and mark source stops
-        Set<Integer> markedStops = new HashSet<>();
         for (int i = 0; i < sourceStopIndices.length; i++) {
             int currentStopIdx = sourceStopIndices[i];
             int targetTime = sourceTimes[i];
@@ -134,40 +130,35 @@ class Query {
                     currentStopIdx, null);
             stopLabelsAndTimes.setLabel(0, currentStopIdx, label);
             stopLabelsAndTimes.setBestTime(currentStopIdx, targetTime);
-
-            markedStops.add(currentStopIdx);
+            stopLabelsAndTimes.mark(currentStopIdx);
         }
-
-        return markedStops;
     }
 
     /**
      * Nullify labels that are suboptimal for the current round. This method checks if the label time is worse than the
      * optimal time mark and removes the mark for the next round and nullifies the label in this case.
      *
-     * @param round       the round to remove suboptimal labels for.
-     * @param markedStops the marked stops to check for suboptimal labels.
+     * @param round the round to remove suboptimal labels for.
      */
-    Set<Integer> removeSuboptimalLabelsForRound(int round, Set<Integer> markedStops) {
+    void removeSuboptimalLabelsForRound(int round) {
         int bestTime = getBestTimeForAllTargetStops();
 
         if (bestTime == INFINITY) {
-            return markedStops;
+            return;
         }
 
-        Set<Integer> markedStopsClean = new HashSet<>();
-        for (int stopIdx : markedStops) {
+        for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
+            if (!stopLabelsAndTimes.isMarkedNextRound(stopIdx)) {
+                continue;
+            }
             StopLabelsAndTimes.Label label = stopLabelsAndTimes.getLabel(round, stopIdx);
             if (label != null) {
                 if (label.targetTime() > bestTime) {
                     stopLabelsAndTimes.setLabel(round, stopIdx, null);
-                } else {
-                    markedStopsClean.add(stopIdx);
+                    stopLabelsAndTimes.unmark(stopIdx);
                 }
             }
         }
-
-        return markedStopsClean;
     }
 
     /**

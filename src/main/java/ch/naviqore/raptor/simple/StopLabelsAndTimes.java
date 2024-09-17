@@ -1,5 +1,6 @@
 package ch.naviqore.raptor.simple;
 
+import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -23,12 +24,24 @@ final class StopLabelsAndTimes {
 
     private final int stopSize;
 
+    // the marked stops for route scanning and footpath relaxing
+    private boolean[] markedStopsMaskThisRound;
+    private boolean[] markedStopsMaskNextRound;
+
+    @Getter
+    private int round;
+
     StopLabelsAndTimes(int stopSize) {
         this.stopSize = stopSize;
 
         // set best times to initial value
         bestTimeForStops = new int[stopSize];
         Arrays.fill(bestTimeForStops, INFINITY);
+
+        markedStopsMaskThisRound = new boolean[stopSize];
+        markedStopsMaskNextRound = new boolean[stopSize];
+
+        round = -1;
 
         // set empty labels for first round
         addNewRound();
@@ -38,6 +51,16 @@ final class StopLabelsAndTimes {
      * Adds a new round with empty labels.
      */
     void addNewRound() {
+        if (round != -1) {
+            // reset boolean marked stop masks, not needed when running the first time
+            boolean[] tmp = markedStopsMaskThisRound;
+            markedStopsMaskThisRound = markedStopsMaskNextRound;
+            markedStopsMaskNextRound = tmp;
+            Arrays.fill(markedStopsMaskNextRound, false);
+        }
+
+        round++;
+
         bestLabelsPerRound.add(new Label[stopSize]);
     }
 
@@ -88,6 +111,63 @@ final class StopLabelsAndTimes {
      */
     List<Label[]> getBestLabelsPerRound() {
         return Collections.unmodifiableList(bestLabelsPerRound);
+    }
+
+    /**
+     * Checks if the stop was marked in the current round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop was marked in this round, false otherwise.
+     */
+    boolean isMarkedThisRound(int stopIdx) {
+        return markedStopsMaskThisRound[stopIdx];
+    }
+
+    /**
+     * Checks if the stop has been marked for the next round.
+     *
+     * @param stopIdx the index of the stop to check.
+     * @return true if the stop is marked for the next round, false otherwise.
+     */
+    boolean isMarkedNextRound(int stopIdx) {
+        return markedStopsMaskNextRound[stopIdx];
+    }
+
+    /**
+     * Marks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to mark.
+     */
+    void mark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = true;
+    }
+
+    /**
+     * Unmarks the stop for the next round.
+     *
+     * @param stopIdx the index of the stop to unmark.
+     */
+    void unmark(int stopIdx) {
+        markedStopsMaskNextRound[stopIdx] = false;
+    }
+
+    /**
+     * Checks if any stops have been marked for the next round.
+     */
+    boolean hasMarkedStops() {
+        for (int i = 0; i < stopSize; i++) {
+            if (markedStopsMaskNextRound[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Creates a deep copy of the marked stops mask for the next round.
+     */
+    boolean[] cloneMarkedStopsMaskNextRound() {
+        return markedStopsMaskNextRound.clone();
     }
 
     /**
