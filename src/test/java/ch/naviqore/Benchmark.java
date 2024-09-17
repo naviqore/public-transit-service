@@ -62,7 +62,7 @@ final class Benchmark {
     private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int NOT_AVAILABLE = -1;
     private static final int SAME_STOP_TRANSFER_TIME = 120;
-    private static final int MAX_DAYS_TO_SCAN = 3;
+    private static final int MAX_DAYS_TO_SCAN = 5;
     private static final int RAPTOR_RANGE = -1; // No range raptor
 
     record BenchmarkingRaptor(String id, RaptorAlgorithm raptor) {
