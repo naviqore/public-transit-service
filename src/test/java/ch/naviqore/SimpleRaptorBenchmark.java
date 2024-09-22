@@ -34,7 +34,7 @@ public class SimpleRaptorBenchmark {
         initialized = true;
     }
 
-    private static void routeEarliestArrival(String fromStopId, String toStopId) {
+    private static long routeEarliestArrival(String fromStopId, String toStopId) {
 
         Stop fromStop = schedule.getStops().get(fromStopId);
         Stop toStop = schedule.getStops().get(toStopId);
@@ -51,14 +51,31 @@ public class SimpleRaptorBenchmark {
         List<Connection> connections = simpleRaptor.routeEarliestArrival(stops, targetStops, new QueryConfig());
         long endTime = System.nanoTime();
 
+        return endTime - startTime;
+    }
+
+    private static void benchmarkRoute(String fromStopId, String toStopId, int iterations) {
+        long totalTime = 0;
+        for (int i = 0; i < iterations; i++) {
+            totalTime += routeEarliestArrival(fromStopId, toStopId);
+        }
+        long averageTime = totalTime / iterations;
         System.out.println(
-                "Route from " + fromStop.getId() + " to " + toStop.getId() + " time in ms: " + (endTime - startTime) / 1_000_000);
+                "Average time for routing from " + fromStopId + " to " + toStopId + " over " + iterations + " iterations: " + averageTime / 1_000_000 + " ms");
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
         setUp();
-        routeEarliestArrival("8589640", "8579885");
-        routeEarliestArrival("8588889", "8589644");
+        // "8589640" "St. Gallen, Vonwil" to "8579885" "Mels, Bahnhof"
+        benchmarkRoute("8589640", "8579885", 100);
+        // "8574563","Maienfeld, Bahnhof" to "8587276" "Biel/Bienne, Taubenloch"
+        benchmarkRoute("8574563", "8587276", 100);
+        // "8588524","Sion, Hôpital Sud" to "8508896","Stans, Bahnhof"
+        benchmarkRoute("8588524", "8508896", 100);
+        // "8510709","Lugano, Via Domenico Fontana" to "8579255","Lausanne, Pont-de-Chailly"
+        benchmarkRoute("8510709", "8579255", 100);
+        // "8574848","Davos Dorf, Bahnhof" to "8576079","Rapperswil SG, Sonnenhof"
+        benchmarkRoute("8574848", "8576079", 100);
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
