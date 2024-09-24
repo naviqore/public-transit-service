@@ -91,7 +91,7 @@ class GtfsScheduleParser {
     private void parseTrips(CSVRecord record) {
         try {
             builder.addTrip(record.get("trip_id"), record.get("route_id"), record.get("service_id"),
-                    record.get("trip_headsign"),
+                    Utils.getStringFieldOrDefault(record, "trip_headsign", ""),
                     AccessibilityInformation.parse(Utils.getIntFieldOrDefault(record, "wheelchair_accessible", 0)),
                     BikeInformation.parse(Utils.getIntFieldOrDefault(record, "bikes_allowed", 0)));
         } catch (IllegalArgumentException e) {
