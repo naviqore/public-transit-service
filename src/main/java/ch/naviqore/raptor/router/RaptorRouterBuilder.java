@@ -26,7 +26,7 @@ public class RaptorRouterBuilder {
     private final RaptorConfig config;
     private final Map<String, Integer> stops = new HashMap<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
-    private final Map<String, List<Transfer>> transfers = new HashMap<>();
+    private final Map<String, Map<String, Transfer>> transfers = new HashMap<>();
     private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
 
@@ -100,9 +100,12 @@ public class RaptorRouterBuilder {
             return this;
         }
 
-        transfers.computeIfAbsent(sourceStopId, k -> new ArrayList<>())
-                .add(new Transfer(stops.get(targetStopId), duration));
-        transferSize++;
+        Map<String, Transfer> stopTransfers = transfers.computeIfAbsent(sourceStopId, k -> new HashMap<>());
+        String transferKey = sourceStopId + "-" + targetStopId;
+        if (!stopTransfers.containsKey(transferKey)) {
+            transferSize++;
+        }
+        stopTransfers.put(transferKey, new Transfer(stops.get(targetStopId), duration));
 
         return this;
     }
@@ -161,8 +164,9 @@ public class RaptorRouterBuilder {
             }
 
             // get the number of (optional) transfers
-            List<Transfer> currentTransfers = transfers.get(stopId);
-            int numberOfTransfers = currentTransfers == null ? 0 : currentTransfers.size();
+            Map<String, Transfer> currentTransfersMap = transfers.get(stopId);
+            Collection<Transfer> currentTransfers = currentTransfersMap == null ? new ArrayList<>() : currentTransfersMap.values();
+            int numberOfTransfers = currentTransfers.size();
 
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, config.getDefaultSameStopTransferTime());
 
@@ -171,10 +175,8 @@ public class RaptorRouterBuilder {
                     numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any
-            if (currentTransfers != null) {
-                for (Transfer transfer : currentTransfers) {
-                    transferArr[transferIdx++] = transfer;
-                }
+            for (Transfer transfer : currentTransfers) {
+                transferArr[transferIdx++] = transfer;
             }
 
             // add route index entries to stop route array
