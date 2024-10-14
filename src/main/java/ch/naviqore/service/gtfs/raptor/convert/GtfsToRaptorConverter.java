@@ -11,9 +11,7 @@ import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Maps GTFS schedule to Raptor
@@ -95,11 +93,20 @@ public class GtfsToRaptorConverter {
             builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
         }
 
+        // sometimes the parent stop might hold transfers for child stops, thus parent stops have to be checked as well,
+        // however to ensure that the explicit transfers between child stops have precedence this is handled
+        for (String stopId : addedStops) {
+            Stop stop = schedule.getStops().get(stopId);
+            Collection<TransferGenerator.Transfer> parentTransfers = stop.getParent().map(ps -> getParentTransfers(stop, ps)).orElse(Collections.emptyList());
+            for (TransferGenerator.Transfer transfer : parentTransfers) {
+                builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+            }
+        }
+
         // transfers from gtfs have precedence; already added additional transfers with the same source and target stop
         // will be overwritten, avoids costly lookups.
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
-
             for (Transfer transfer : stop.getTransfers()) {
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
                         .isPresent()) {
@@ -110,4 +117,34 @@ public class GtfsToRaptorConverter {
         }
 
     }
+
+    private Collection<TransferGenerator.Transfer> getParentTransfers(Stop fromStop, Stop parentStop) {
+        Map<Stop, TransferGenerator.Transfer> parentTransfers = new HashMap<>();
+        List<TransferGenerator.Transfer> otherTransfers = new ArrayList<>();
+
+        for (Transfer transfer : parentStop.getTransfers()) {
+            if (transfer.getTransferType() != TransferType.MINIMUM_TIME || transfer.getMinTransferTime()
+                    .isEmpty()) {
+                continue;
+            }
+            Stop toStop = transfer.getToStop();
+            if( addedStops.contains(toStop.getId()) ) {
+                otherTransfers.add(new TransferGenerator.Transfer(fromStop, toStop, transfer.getMinTransferTime().get()));
+            }
+            for( Stop childToStop : toStop.getChildren() ){
+                if( ! addedStops.contains(childToStop.getId()) ) {
+                    continue;
+                }
+                parentTransfers.put(childToStop, new TransferGenerator.Transfer(fromStop, childToStop, transfer.getMinTransferTime().get()));
+            }
+        }
+
+        // overwrite transfers derived from children when explicit transfer declaration exists
+        for( TransferGenerator.Transfer transfer : otherTransfers ) {
+            parentTransfers.put(transfer.to(), transfer);
+        }
+
+        return parentTransfers.values();
+    }
+
 }
