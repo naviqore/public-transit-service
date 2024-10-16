@@ -51,6 +51,21 @@ class GtfsToRaptorConverterIT {
 
     @Nested
     class ManualSchedule {
+        /*
+        All tests run with a fixed set of stops and routes in a gtfs schedule as shown below:
+
+            --------B1------------C1
+            |
+        A---|      (B)      ------C           (D)
+            |               |
+            --------B2 -----|    (C2)
+
+        Route 1 passes through A - B1 - C1
+        Route 2 passes through A - B2 - C
+
+        Stops B, C2 and D have no departures/arrivals and should not be included in the raptor conversion.
+        Stops B and C are parents of stops B1, B2 and C1, C2, respectively.
+         */
 
         @Test
         void noTransfers() throws NoSuchFieldException, IllegalAccessException {
