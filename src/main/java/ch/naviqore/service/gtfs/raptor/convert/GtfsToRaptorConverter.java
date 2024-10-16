@@ -53,7 +53,7 @@ public class GtfsToRaptorConverter {
             }
         }
 
-        addTransfers();
+        processAllTransfers();
 
         return builder.build();
     }
@@ -85,44 +85,90 @@ public class GtfsToRaptorConverter {
         }
     }
 
-    // add raptor transfer for each gtfs or additional transfer
-    private void addTransfers() {
+    /**
+     * Processes all transfers including additional transfers, parent-child transfers, and GTFS transfers, ensuring
+     * proper precedence between them.
+     */
+    private void processAllTransfers() {
+        addAdditionalTransfers();
+        processStopAndParentChildTransfers();
+        addGTFSTransfersWithPrecedence();
+    }
 
-        // add all additional transfers
+    /**
+     * Adds all additional transfers, these have the lowest priority and will be overwritten either by parent-child
+     * transfers derived from GTFS transfers and explicit GTFS transfers (if present).
+     */
+    private void addAdditionalTransfers() {
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
             builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
         }
+    }
 
-        // sometimes the parent stop might hold transfers for child stops, thus parent stops have to be checked as well,
-        // however to ensure that the explicit transfers between child stops have precedence this is handled
+    /**
+     * Processes transfers for each stop and handles parent-child relationships. These will later be overwritten, if
+     * explicit transfers between stops are defined in the GTFS schedule.
+     */
+    private void processStopAndParentChildTransfers() {
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
-            Collection<TransferGenerator.Transfer> parentTransfers = stop.getParent()
-                    .map(ps -> getParentTransfers(stop, ps))
-                    .orElse(Collections.emptyList());
-            for (TransferGenerator.Transfer transfer : parentTransfers) {
-                builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
-            }
-            for (Stop childStop : stop.getChildren()) {
-                for (TransferGenerator.Transfer childTransfer : getParentTransfers(stop, childStop)) {
-                    builder.addTransfer(stop.getId(), childTransfer.to().getId(), childTransfer.duration());
-                }
-            }
-            for (Transfer stopTransfer : stop.getTransfers()) {
-                if (stopTransfer.getTransferType() == TransferType.MINIMUM_TIME && stopTransfer.getMinTransferTime()
-                        .isPresent()) {
-                    for (Stop toChildStop : stopTransfer.getToStop().getChildren()) {
-                        if (addedStops.contains(toChildStop.getId())) {
-                            builder.addTransfer(stop.getId(), toChildStop.getId(),
-                                    stopTransfer.getMinTransferTime().get());
-                        }
+            processParentAndChildTransfersForStop(stop);
+        }
+    }
+
+    /**
+     * Processes parent and child transfers for a given stop, ensuring proper precedence.
+     *
+     * @param stop the stop for which parent and child transfers are being processed
+     */
+    private void processParentAndChildTransfersForStop(Stop stop) {
+        // Handle parent transfers
+        stop.getParent().ifPresent(parentStop -> deriveAllTransfersFromStop(stop, parentStop));
+
+        // Handle child transfers for each child of the current stop
+        for (Stop childStop : stop.getChildren()) {
+            deriveAllTransfersFromStop(stop, childStop);
+        }
+
+        // Handle direct transfers for the stop
+        addDirectStopTransfers(stop);
+    }
+
+    /**
+     * This method expands transfers defined on parent stops to all children stops linked to the transfer.
+     *
+     * @param fromStop the stop of interest, which transfers should be derived for
+     * @param toStop   the parent or child stop to process transfers for
+     */
+    private void deriveAllTransfersFromStop(Stop fromStop, Stop toStop) {
+        Collection<TransferGenerator.Transfer> transfers = collectTransfersBetweenStops(fromStop, toStop);
+        for (TransferGenerator.Transfer transfer : transfers) {
+            builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+        }
+    }
+
+    /**
+     * Adds direct transfers for a stop, ensuring minimum transfer time is handled correctly.
+     *
+     * @param stop the stop to process direct transfers for
+     */
+    private void addDirectStopTransfers(Stop stop) {
+        for (Transfer stopTransfer : stop.getTransfers()) {
+            if (stopTransfer.getTransferType() == TransferType.MINIMUM_TIME && stopTransfer.getMinTransferTime()
+                    .isPresent()) {
+                for (Stop toChildStop : stopTransfer.getToStop().getChildren()) {
+                    if (addedStops.contains(toChildStop.getId())) {
+                        builder.addTransfer(stop.getId(), toChildStop.getId(), stopTransfer.getMinTransferTime().get());
                     }
                 }
             }
         }
+    }
 
-        // transfers from gtfs have precedence; already added additional transfers with the same source and target stop
-        // will be overwritten, avoids costly lookups.
+    /**
+     * Adds GTFS transfers, ensuring precedence over additional transfers.
+     */
+    private void addGTFSTransfersWithPrecedence() {
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
@@ -133,10 +179,16 @@ public class GtfsToRaptorConverter {
                 }
             }
         }
-
     }
 
-    private Collection<TransferGenerator.Transfer> getParentTransfers(Stop fromStop, Stop parentStop) {
+    /**
+     * Collects transfers between a parent stop and a child stop, ensuring precedence of explicit transfers.
+     *
+     * @param fromStop   the originating stop
+     * @param parentStop the parent or child stop to collect transfers for
+     * @return a collection of transfers between the stops
+     */
+    private Collection<TransferGenerator.Transfer> collectTransfersBetweenStops(Stop fromStop, Stop parentStop) {
         Map<Stop, TransferGenerator.Transfer> parentTransfers = new HashMap<>();
         List<TransferGenerator.Transfer> otherTransfers = new ArrayList<>();
 
@@ -150,15 +202,14 @@ public class GtfsToRaptorConverter {
                         new TransferGenerator.Transfer(fromStop, toStop, transfer.getMinTransferTime().get()));
             }
             for (Stop childToStop : toStop.getChildren()) {
-                if (!addedStops.contains(childToStop.getId())) {
-                    continue;
+                if (addedStops.contains(childToStop.getId())) {
+                    parentTransfers.put(childToStop,
+                            new TransferGenerator.Transfer(fromStop, childToStop, transfer.getMinTransferTime().get()));
                 }
-                parentTransfers.put(childToStop,
-                        new TransferGenerator.Transfer(fromStop, childToStop, transfer.getMinTransferTime().get()));
             }
         }
 
-        // overwrite transfers derived from children when explicit transfer declaration exists
+        // Overwrite transfers derived from children when explicit transfer declaration exists
         for (TransferGenerator.Transfer transfer : otherTransfers) {
             parentTransfers.put(transfer.to(), transfer);
         }
