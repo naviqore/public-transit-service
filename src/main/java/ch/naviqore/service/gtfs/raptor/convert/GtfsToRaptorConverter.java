@@ -97,9 +97,27 @@ public class GtfsToRaptorConverter {
         // however to ensure that the explicit transfers between child stops have precedence this is handled
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
-            Collection<TransferGenerator.Transfer> parentTransfers = stop.getParent().map(ps -> getParentTransfers(stop, ps)).orElse(Collections.emptyList());
+            Collection<TransferGenerator.Transfer> parentTransfers = stop.getParent()
+                    .map(ps -> getParentTransfers(stop, ps))
+                    .orElse(Collections.emptyList());
             for (TransferGenerator.Transfer transfer : parentTransfers) {
                 builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+            }
+            for (Stop childStop : stop.getChildren()) {
+                for (TransferGenerator.Transfer childTransfer : getParentTransfers(stop, childStop)) {
+                    builder.addTransfer(stop.getId(), childTransfer.to().getId(), childTransfer.duration());
+                }
+            }
+            for (Transfer stopTransfer : stop.getTransfers()) {
+                if (stopTransfer.getTransferType() == TransferType.MINIMUM_TIME && stopTransfer.getMinTransferTime()
+                        .isPresent()) {
+                    for (Stop toChildStop : stopTransfer.getToStop().getChildren()) {
+                        if (addedStops.contains(toChildStop.getId())) {
+                            builder.addTransfer(stop.getId(), toChildStop.getId(),
+                                    stopTransfer.getMinTransferTime().get());
+                        }
+                    }
+                }
             }
         }
 
@@ -109,7 +127,7 @@ public class GtfsToRaptorConverter {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
-                        .isPresent()) {
+                        .isPresent() && addedStops.contains(transfer.getToStop().getId())) {
                     builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
                             transfer.getMinTransferTime().get());
                 }
@@ -123,24 +141,25 @@ public class GtfsToRaptorConverter {
         List<TransferGenerator.Transfer> otherTransfers = new ArrayList<>();
 
         for (Transfer transfer : parentStop.getTransfers()) {
-            if (transfer.getTransferType() != TransferType.MINIMUM_TIME || transfer.getMinTransferTime()
-                    .isEmpty()) {
+            if (transfer.getTransferType() != TransferType.MINIMUM_TIME || transfer.getMinTransferTime().isEmpty()) {
                 continue;
             }
             Stop toStop = transfer.getToStop();
-            if( addedStops.contains(toStop.getId()) ) {
-                otherTransfers.add(new TransferGenerator.Transfer(fromStop, toStop, transfer.getMinTransferTime().get()));
+            if (addedStops.contains(toStop.getId())) {
+                otherTransfers.add(
+                        new TransferGenerator.Transfer(fromStop, toStop, transfer.getMinTransferTime().get()));
             }
-            for( Stop childToStop : toStop.getChildren() ){
-                if( ! addedStops.contains(childToStop.getId()) ) {
+            for (Stop childToStop : toStop.getChildren()) {
+                if (!addedStops.contains(childToStop.getId())) {
                     continue;
                 }
-                parentTransfers.put(childToStop, new TransferGenerator.Transfer(fromStop, childToStop, transfer.getMinTransferTime().get()));
+                parentTransfers.put(childToStop,
+                        new TransferGenerator.Transfer(fromStop, childToStop, transfer.getMinTransferTime().get()));
             }
         }
 
         // overwrite transfers derived from children when explicit transfer declaration exists
-        for( TransferGenerator.Transfer transfer : otherTransfers ) {
+        for (TransferGenerator.Transfer transfer : otherTransfers) {
             parentTransfers.put(transfer.to(), transfer);
         }
 
