@@ -52,7 +52,7 @@ class GtfsToRaptorConverterIT {
     @Nested
     class ManualSchedule {
         /*
-        All tests run with a fixed set of stops and routes in a gtfs schedule as shown below:
+        All tests run with a fixed set of stops and routes in a GTFS schedule as shown below:
 
             --------B1------------C1
             |

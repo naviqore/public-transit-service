@@ -168,7 +168,7 @@ public class GtfsToRaptorConverter {
     /**
      * Adds GTFS transfers, ensuring precedence over additional transfers.
      */
-    private void addGTFSTransfersWithPrecedence() {
+    private void addGtfsTransfersWithPrecedence() {
         for (String stopId : addedStops) {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
