@@ -165,7 +165,7 @@ public class RaptorRouterBuilder {
 
             // get the number of (optional) transfers
             Map<String, Transfer> currentTransfersMap = transfers.get(stopId);
-            Collection<Transfer> currentTransfers = currentTransfersMap == null ? new ArrayList<>() : currentTransfersMap.values();
+            Collection<Transfer> currentTransfers = currentTransfersMap == null ? Collections.emptyList() : currentTransfersMap.values();
             int numberOfTransfers = currentTransfers.size();
 
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId, config.getDefaultSameStopTransferTime());
