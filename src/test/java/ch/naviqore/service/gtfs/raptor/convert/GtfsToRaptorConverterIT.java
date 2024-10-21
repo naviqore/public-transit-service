@@ -9,7 +9,8 @@ import ch.naviqore.gtfs.schedule.type.RouteType;
 import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.raptor.router.*;
+import ch.naviqore.raptor.router.RaptorConfig;
+import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -22,7 +23,10 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,6 +70,55 @@ class GtfsToRaptorConverterIT {
         Stops B, C2 and D have no departures/arrivals and should not be included in the raptor conversion.
         Stops B and C are parents of stops B1, B2 and C1, C2, respectively.
          */
+
+        static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
+                                               List<Transfer> additionalTransfers) throws NoSuchFieldException, IllegalAccessException {
+
+            GtfsScheduleBuilder scheduleBuilder = GtfsSchedule.builder();
+            scheduleBuilder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
+            scheduleBuilder.addAgency("agency", "Some Agency", "", "America/New_York");
+
+            scheduleBuilder.addStop("A", "A", 0.0, 0.0);
+            scheduleBuilder.addStop("B", "B", 0.0, 0.0);
+            scheduleBuilder.addStop("B1", "B1", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
+            scheduleBuilder.addStop("B2", "B2", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
+            scheduleBuilder.addStop("C", "C", 0.0, 0.0);
+            scheduleBuilder.addStop("C1", "C1", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
+            scheduleBuilder.addStop("C2", "C2", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
+            scheduleBuilder.addStop("D", "D", 0.0, 0.0);
+
+            // Route 1 goes from A, B1, C1
+            scheduleBuilder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
+            scheduleBuilder.addTrip("T1", "R1", "always", "C1");
+            scheduleBuilder.addStopTime("T1", "A", new ServiceDayTime(0), new ServiceDayTime(0));
+            scheduleBuilder.addStopTime("T1", "B1", new ServiceDayTime(0), new ServiceDayTime(0));
+            scheduleBuilder.addStopTime("T1", "C1", new ServiceDayTime(0), new ServiceDayTime(0));
+
+            // Route 2 goes from A, B2, C
+            scheduleBuilder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
+            scheduleBuilder.addTrip("T2", "R2", "always", "C");
+            scheduleBuilder.addStopTime("T2", "A", new ServiceDayTime(0), new ServiceDayTime(0));
+            scheduleBuilder.addStopTime("T2", "B2", new ServiceDayTime(0), new ServiceDayTime(0));
+            scheduleBuilder.addStopTime("T2", "C", new ServiceDayTime(0), new ServiceDayTime(0));
+
+            for (Transfer transfer : scheduleTransfers) {
+                scheduleBuilder.addTransfer(transfer.fromStopId, transfer.toStopId, TransferType.MINIMUM_TIME,
+                        transfer.duration);
+            }
+
+            GtfsSchedule schedule = scheduleBuilder.build();
+
+            List<TransferGenerator.Transfer> additionalTransfersList = additionalTransfers.stream()
+                    .map(transfer -> new TransferGenerator.Transfer(schedule.getStops().get(transfer.fromStopId()),
+                            schedule.getStops().get(transfer.toStopId()), transfer.duration()))
+                    .collect(Collectors.toList());
+
+            GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, additionalTransfersList,
+                    new RaptorConfig());
+            mapper.convert();
+
+            return new RaptorBuilderData(mapper);
+        }
 
         @Test
         void noTransfers() throws NoSuchFieldException, IllegalAccessException {
@@ -148,8 +201,7 @@ class GtfsToRaptorConverterIT {
         void betweenStopTransfersOnParentStops() throws NoSuchFieldException, IllegalAccessException {
             // since B1, B2, C, and C1 are active following transfers should be derived from B-C:
             // B1-C, B1-C1, B2-C, B2-C1, C-B1, C-B2, C1-B1, C1-B2
-            RaptorBuilderData data = convertRaptor(
-                    List.of(new Transfer("B", "C", 120), new Transfer("C", "B", 120)),
+            RaptorBuilderData data = convertRaptor(List.of(new Transfer("B", "C", 120), new Transfer("C", "B", 120)),
                     List.of());
             data.assertNumSameStopTransfers(0);
             data.assertNumNonSameStopTransfers(8);
@@ -165,57 +217,6 @@ class GtfsToRaptorConverterIT {
             // since additional transfers should not be applied if gtfs data exists B1-B1 should remain 120
             data.assertSameStopTransferDuration("B1", 120);
             data.assertSameStopTransferDuration("B2", 60);
-        }
-
-        static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
-                                               List<Transfer> additionalTransfers) throws NoSuchFieldException, IllegalAccessException {
-
-            GtfsScheduleBuilder scheduleBuilder = GtfsSchedule.builder();
-            scheduleBuilder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
-            scheduleBuilder.addAgency("agency", "Some Agency", "", "America/New_York");
-
-            scheduleBuilder.addStop("A", "A", 0.0, 0.0);
-            scheduleBuilder.addStop("B", "B", 0.0, 0.0);
-            scheduleBuilder.addStop("B1", "B1", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("B2", "B2", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("C", "C", 0.0, 0.0);
-            scheduleBuilder.addStop("C1", "C1", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("C2", "C2", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("D", "D", 0.0, 0.0);
-
-            // Route 1 goes from A, B1, C1
-            scheduleBuilder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
-            scheduleBuilder.addTrip("T1", "R1", "always", "C1");
-            scheduleBuilder.addStopTime("T1", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T1", "B1", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T1", "C1", new ServiceDayTime(0), new ServiceDayTime(0));
-
-            // Route 2 goes from A, B2, C
-            scheduleBuilder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
-            scheduleBuilder.addTrip("T2", "R2", "always", "C");
-            scheduleBuilder.addStopTime("T2", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T2", "B2", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T2", "C", new ServiceDayTime(0), new ServiceDayTime(0));
-
-            for (Transfer transfer : scheduleTransfers) {
-                scheduleBuilder.addTransfer(transfer.fromStopId, transfer.toStopId, TransferType.MINIMUM_TIME,
-                        transfer.duration);
-            }
-
-            GtfsSchedule schedule = scheduleBuilder.build();
-
-            List<TransferGenerator.Transfer> additionalTransfersList = additionalTransfers.stream()
-                    .map(transfer -> new TransferGenerator.Transfer(
-                            schedule.getStops().get(transfer.fromStopId()),
-                            schedule.getStops().get(transfer.toStopId()),
-                            transfer.duration()))
-                    .collect(Collectors.toList());
-
-
-            GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, additionalTransfersList, new RaptorConfig());
-            mapper.convert();
-
-            return new RaptorBuilderData(mapper);
         }
 
         record Transfer(String fromStopId, String toStopId, int duration) {
