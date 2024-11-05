@@ -70,6 +70,11 @@ class LabelPostprocessor {
                                                        Map<Integer, Integer> targetStops, LocalDate referenceDate) {
         final List<Connection> connections = new ArrayList<>();
 
+        // this additional tracking variable is needed to filter out non pareto optimal connections from range raptor,
+        // as the pareto optimal solution for a later departure might have actually been fastest with more rounds where
+        // the final best solution has fewer rounds and is faster
+        int overallBestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+
         // iterate over all rounds
         for (QueryState.Label[] labels : bestLabelsPerRound) {
 
@@ -86,15 +91,17 @@ class LabelPostprocessor {
 
                 if (timeType == TimeType.DEPARTURE) {
                     int actualArrivalTime = currentLabel.targetTime() + targetStopWalkingTime;
-                    if (actualArrivalTime < bestTime) {
+                    if (actualArrivalTime < bestTime && actualArrivalTime < overallBestTime) {
                         label = currentLabel;
                         bestTime = actualArrivalTime;
+                        overallBestTime = actualArrivalTime;
                     }
                 } else {
                     int actualDepartureTime = currentLabel.targetTime() - targetStopWalkingTime;
-                    if (actualDepartureTime > bestTime) {
+                    if (actualDepartureTime > bestTime && actualDepartureTime > overallBestTime) {
                         label = currentLabel;
                         bestTime = actualDepartureTime;
+                        overallBestTime = actualDepartureTime;
                     }
                 }
             }
