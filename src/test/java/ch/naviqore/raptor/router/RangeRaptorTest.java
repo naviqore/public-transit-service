@@ -18,6 +18,7 @@ public class RangeRaptorTest {
 
     private static final String STOP_A = "A";
     private static final String STOP_I = "I";
+    private static final String STOP_K = "K";
     private static final String STOP_N = "N";
 
     private static final LocalDateTime START_OF_DAY = LocalDateTime.of(2021, 1, 1, 0, 0);
@@ -259,6 +260,53 @@ public class RangeRaptorTest {
         // first connection is the one with the least route legs --> including the transfer
         RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 3,
                 STOP_A, STOP_N);
+    }
+
+    @Test
+    void ensureParetoOptimalConnections() {
+        // this test is based on a previous bug, where the range raptor router returned connections which were not
+        // pareto optimal (later arrival time and more rounds). This is owed to the fact that the range raptor spawns
+        // at different time points (range offsets) and potentially finds earliest arrival connections for the given
+        // offset with more rounds than the final best arrival time.
+        // this test reproduces this case by introducing a low frequency fast connection and a high frequency slower
+        // connection.
+
+        int headwayRoute1 = 15;
+        int headwayRoute2 = 60;
+        int headwayRoute3and4 = 5;
+
+        int dwellTime = 0; // simplification to better calculate times by hand
+
+        RaptorAlgorithm rangeRaptor = new RaptorRouterTestBuilder().withAddRoute1_AG(
+                        RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute1,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute2_HL(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute2,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute3_MQ(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute4_RS(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withSameStopTransferTime(0)
+                .withRaptorRange(900) // departures at 08:00 and 08:15
+                .withMaxDaysToScan(1)
+                .build();
+
+        // departure at 8:00 will yield only one fastest connection
+        // 08:00 A --> R1 --> 08:05 B
+        // 08:05 B --> R2 --> 08:20 K
+        LocalDateTime expectedDepartureTime = EIGHT_AM;
+        LocalDateTime expectedArrivalTime = expectedDepartureTime.plusMinutes(20);
+
+        // however since spawning at 08:15 (first range checked) will find following best solution, this test must
+        // ensure that this connection is not returned as it is not pareto optimal.
+        // 08:15 A --> R1 --> 08:40 F
+        // 08:40 F --> R4 --> 08:45 P
+        // 08:45 P --> R3 --> 09:00 K
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(rangeRaptor, STOP_A, STOP_K,
+                EIGHT_AM);
+        assertEquals(1, connections.size());
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 2,
+                STOP_A, STOP_K);
     }
 
     static class RangeRaptorHelpers {

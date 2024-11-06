@@ -70,11 +70,12 @@ class LabelPostprocessor {
                                                        Map<Integer, Integer> targetStops, LocalDate referenceDate) {
         final List<Connection> connections = new ArrayList<>();
 
+        int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+
         // iterate over all rounds
         for (QueryState.Label[] labels : bestLabelsPerRound) {
 
             QueryState.Label label = null;
-            int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
 
             for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
                 int targetStopIdx = entry.getKey();

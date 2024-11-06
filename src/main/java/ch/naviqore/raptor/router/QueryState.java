@@ -111,14 +111,22 @@ final class QueryState {
      * different label types (transfer vs. route), as the same stop transfer time is not considered.
      */
     int getActualBestTime(int stopIdx) {
-        for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
-            Label label = bestLabelsPerRound.get(i)[stopIdx];
+        int best_time = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
+
+        // because range raptor potentially fills target times in higher rounds which are not the best solutions, every
+        // round has to be looked at.
+        for (Label[] labels : bestLabelsPerRound) {
+            Label label = labels[stopIdx];
             if (label != null) {
-                return label.targetTime;
+                if (timeType == TimeType.DEPARTURE) {
+                    best_time = Math.min(best_time, label.targetTime);
+                } else {
+                    best_time = Math.max(best_time, label.targetTime);
+                }
             }
         }
 
-        return (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
+        return best_time;
     }
 
     /**

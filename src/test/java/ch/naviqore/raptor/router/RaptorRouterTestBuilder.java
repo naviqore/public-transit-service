@@ -160,6 +160,11 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
+    public RaptorRouterTestBuilder withAddRoute4_RS(int offset, int headway, int travelTime, int dwellTime) {
+        routes.add(new Route("R4", List.of("R", "P", "F", "S"), offset, headway, travelTime, dwellTime));
+        return this;
+    }
+
     public RaptorRouterTestBuilder withAddRoute5_AH_selfIntersecting() {
         routes.add(new Route("R5", List.of("A", "B", "C", "D", "E", "F", "P", "O", "N", "K", "J", "I", "B", "H")));
         return this;
