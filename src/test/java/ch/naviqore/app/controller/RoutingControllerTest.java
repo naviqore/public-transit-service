@@ -109,7 +109,7 @@ public class RoutingControllerTest {
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null));
     }
 
-    List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
+    ConnectionResponse getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
                                     String targetStopId, Double targetLatitude, Double targetLongitude,
                                     LocalDateTime departureDateTime) {
         return routingController.getConnections(sourceStopId, sourceLatitude, sourceLongitude, targetStopId,
@@ -117,7 +117,7 @@ public class RoutingControllerTest {
                 false, null);
     }
 
-    List<StopConnection> getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
+    IsoLineResponse getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
                                      LocalDateTime departureDateTime, TimeType timeType, boolean returnConnections) {
         return routingController.getIsolines(sourceStopId, sourceLatitude, sourceLongitude, departureDateTime, timeType,
                 null, null, null, 0, false, false, null, returnConnections);
@@ -138,11 +138,11 @@ public class RoutingControllerTest {
             LocalDateTime departureDateTime = LocalDateTime.now();
 
             // Act
-            List<Connection> connections = getConnections(sourceStopId, null, null, targetStopId, null, null,
+            ConnectionResponse response = getConnections(sourceStopId, null, null, targetStopId, null, null,
                     departureDateTime);
 
             // Assert
-            assertNotNull(connections);
+            assertNotNull(response.getConnections());
         }
 
         @Test
@@ -154,11 +154,11 @@ public class RoutingControllerTest {
             LocalDateTime departureDateTime = LocalDateTime.now();
 
             // Act
-            List<Connection> connections = getConnections(null, sourceLatitude, sourceLongitude, targetStopId, null,
+            ConnectionResponse response = getConnections(null, sourceLatitude, sourceLongitude, targetStopId, null,
                     null, departureDateTime);
 
             // Assert
-            assertNotNull(connections);
+            assertNotNull(response);
         }
 
         @Test
@@ -256,7 +256,7 @@ public class RoutingControllerTest {
 
         @ParameterizedTest(name = "connectionQueryConfig_{0}")
         @MethodSource("provideQueryConfigTestCombinations")
-        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+        void testQueryConfigValues(String ignoredName, Integer maxWalkingDuration, Integer maxTransferDuration,
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
@@ -296,7 +296,7 @@ public class RoutingControllerTest {
 
             // Act
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, time,
-                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, false);
+                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, false).getStopConnections();
 
             assertNotNull(stopConnections);
 
@@ -319,7 +319,7 @@ public class RoutingControllerTest {
             LocalDateTime expectedStartTime = LocalDateTime.now();
 
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
-                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, true);
+                    TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, true).getStopConnections();
 
             assertNotNull(stopConnections);
 
@@ -363,7 +363,7 @@ public class RoutingControllerTest {
 
             // Act
             List<StopConnection> stopConnections = getIsolines(null, sourceLatitude, sourceLongitude, time,
-                    TimeType.DEPARTURE, false);
+                    TimeType.DEPARTURE, false).getStopConnections();
 
             assertNotNull(stopConnections);
 
@@ -386,7 +386,7 @@ public class RoutingControllerTest {
             LocalDateTime expectedStartTime = LocalDateTime.now();
 
             List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
-                    sourceCoordinate.longitude(), null, TimeType.DEPARTURE, true);
+                    sourceCoordinate.longitude(), null, TimeType.DEPARTURE, true).getStopConnections();
 
             assertNotNull(stopConnections);
 
@@ -427,7 +427,7 @@ public class RoutingControllerTest {
             // Arrange
             String sourceStopId = "G";
 
-            List<StopConnection> stopConnections = getIsolines(sourceStopId, null, null, null, TimeType.ARRIVAL, true);
+            List<StopConnection> stopConnections = getIsolines(sourceStopId, null, null, null, TimeType.ARRIVAL, true).getStopConnections();
 
             // This tests if the time is set to now if null
             LocalDateTime expectedArrivalTime = LocalDateTime.now();
@@ -473,7 +473,7 @@ public class RoutingControllerTest {
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
 
             List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
-                    sourceCoordinate.longitude(), null, TimeType.ARRIVAL, true);
+                    sourceCoordinate.longitude(), null, TimeType.ARRIVAL, true).getStopConnections();
 
             // This tests if the time is set to now if null
             LocalDateTime expectedArrivalTime = LocalDateTime.now();
@@ -559,7 +559,7 @@ public class RoutingControllerTest {
 
         @ParameterizedTest(name = "isolineQueryConfig_{0}")
         @MethodSource("provideQueryConfigTestCombinations")
-        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+        void testQueryConfigValues(String ignoredName, Integer maxWalkingDuration, Integer maxTransferDuration,
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
