@@ -244,14 +244,10 @@ public class GtfsToRaptorConverter {
             Stop toStop = transfer.getToStop();
             // only add new transfers if the to stop also has departures, else the raptor router does not care about
             // this stop and the builder will throw an exception.
-            if (addedStops.contains(toStop.getId())) {
-                otherTransfers.add(new TransferGenerator.Transfer(stop, toStop, transfer.getMinTransferTime().get()));
-            }
+            otherTransfers.add(new TransferGenerator.Transfer(stop, toStop, transfer.getMinTransferTime().get()));
             for (Stop childToStop : toStop.getChildren()) {
-                if (addedStops.contains(childToStop.getId())) {
-                    parentTransfers.put(childToStop,
-                            new TransferGenerator.Transfer(stop, childToStop, transfer.getMinTransferTime().get()));
-                }
+                parentTransfers.put(childToStop,
+                        new TransferGenerator.Transfer(stop, childToStop, transfer.getMinTransferTime().get()));
             }
         }
 
