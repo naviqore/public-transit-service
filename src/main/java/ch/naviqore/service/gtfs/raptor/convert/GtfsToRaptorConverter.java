@@ -27,6 +27,7 @@ import java.util.*;
 public class GtfsToRaptorConverter {
 
     private final Set<String> addedStops = new HashSet<>();
+    private final Set<String> stopsForTransfers = new HashSet<>();
     private final RaptorRouterBuilder builder;
     private final GtfsRoutePartitioner partitioner;
     private final List<TransferGenerator.Transfer> additionalTransfers;
@@ -65,8 +66,7 @@ public class GtfsToRaptorConverter {
         List<String> stopIds = subRoute.getStopsSequence().stream().map(Stop::getId).toList();
         for (String stopId : stopIds) {
             if (!addedStops.contains(stopId)) {
-                builder.addStop(stopId);
-                addedStops.add(stopId);
+                this.addStop(stopId);
             }
         }
 
@@ -99,8 +99,14 @@ public class GtfsToRaptorConverter {
      */
     private void processAllTransfers() {
         addAdditionalTransfers();
-        processStopAndParentChildTransfers();
-        addGtfsTransfersWithPrecedence();
+        // It is possible that stops are added without departures in this loop, in that case this block will be
+        // re-run to ensure that transfers from those newly added stops are also included.
+        while (!stopsForTransfers.isEmpty()) {
+            Set<String> stopIterator = new HashSet<>(stopsForTransfers);
+            stopsForTransfers.clear();
+            processStopAndParentChildTransfers(stopIterator);
+            addGtfsTransfersWithPrecedence(stopIterator);
+        }
     }
 
     /**
@@ -108,15 +114,31 @@ public class GtfsToRaptorConverter {
      */
     private void addAdditionalTransfers() {
         for (TransferGenerator.Transfer transfer : additionalTransfers) {
-            builder.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
+            this.addTransfer(transfer.from().getId(), transfer.to().getId(), transfer.duration());
         }
+    }
+
+    private void addStop(String stopId) {
+        builder.addStop(stopId);
+        addedStops.add(stopId);
+        stopsForTransfers.add(stopId);
+    }
+
+    private void addTransfer(String fromId, String toId, int duration) {
+        if (!addedStops.contains(fromId)) {
+            this.addStop(fromId);
+        }
+        if (!addedStops.contains(toId)) {
+            this.addStop(toId);
+        }
+        builder.addTransfer(fromId, toId, duration);
     }
 
     /**
      * Processes transfers for each stop and handles parent-child relationships.
      */
-    private void processStopAndParentChildTransfers() {
-        for (String stopId : addedStops) {
+    private void processStopAndParentChildTransfers(Set<String> stopIterator) {
+        for (String stopId : stopIterator) {
             Stop stop = schedule.getStops().get(stopId);
             processParentAndChildTransfersForStop(stop);
         }
@@ -162,7 +184,7 @@ public class GtfsToRaptorConverter {
     private void applyTransfersFromOtherStop(Stop consumerStop, Stop providerStop) {
         Collection<TransferGenerator.Transfer> transfers = expandTransfersFromStop(providerStop);
         for (TransferGenerator.Transfer transfer : transfers) {
-            builder.addTransfer(consumerStop.getId(), transfer.to().getId(), transfer.duration());
+            this.addTransfer(consumerStop.getId(), transfer.to().getId(), transfer.duration());
         }
     }
 
@@ -177,11 +199,7 @@ public class GtfsToRaptorConverter {
             if (stopTransfer.getTransferType() == TransferType.MINIMUM_TIME && stopTransfer.getMinTransferTime()
                     .isPresent()) {
                 for (Stop toChildStop : stopTransfer.getToStop().getChildren()) {
-                    // only add new transfers if the to stop also has departures, else the raptor router does not care
-                    // about this stop and the builder will throw an exception.
-                    if (addedStops.contains(toChildStop.getId())) {
-                        builder.addTransfer(stop.getId(), toChildStop.getId(), stopTransfer.getMinTransferTime().get());
-                    }
+                    this.addTransfer(stop.getId(), toChildStop.getId(), stopTransfer.getMinTransferTime().get());
                 }
             }
         }
@@ -190,16 +208,13 @@ public class GtfsToRaptorConverter {
     /**
      * Adds transfers explicitly defined in the GTFS schedule, ensuring precedence over additional transfers.
      */
-    private void addGtfsTransfersWithPrecedence() {
-        for (String stopId : addedStops) {
+    private void addGtfsTransfersWithPrecedence(Set<String> stopIterator) {
+        for (String stopId : stopIterator) {
             Stop stop = schedule.getStops().get(stopId);
             for (Transfer transfer : stop.getTransfers()) {
-                // only add new transfers if the to stop also has departures, else the raptor router does not care about
-                // this stop and the builder will throw an exception.
                 if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
-                        .isPresent() && addedStops.contains(transfer.getToStop().getId())) {
-                    builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
-                            transfer.getMinTransferTime().get());
+                        .isPresent()) {
+                    this.addTransfer(stop.getId(), transfer.getToStop().getId(), transfer.getMinTransferTime().get());
                 }
             }
         }
