@@ -16,16 +16,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 
 import static ch.naviqore.app.dto.DtoMapper.map;
 
@@ -42,9 +41,15 @@ public class RoutingController {
         this.service = service;
     }
 
-    private static void handleConnectionRoutingException(ConnectionRoutingException e) {
+    private static ConnectionResponse handleConnectionRoutingException(ConnectionRoutingException e) {
         log.error("Connection routing exception", e);
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        return map(List.of(), e.getMessage(), MessageType.ERROR);
+    }
+
+    private static IsoLineResponse handleConnectionRoutingException(ConnectionRoutingException e, TimeType timeType,
+                                                                 boolean returnConnections) {
+        log.error("Connection routing exception", e);
+        return map(Map.of(), timeType, returnConnections, e.getMessage(), MessageType.ERROR);
     }
 
     @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
@@ -62,21 +67,21 @@ public class RoutingController {
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
     @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/connections")
-    public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
-                                           @RequestParam(required = false) Double sourceLatitude,
-                                           @RequestParam(required = false) Double sourceLongitude,
-                                           @RequestParam(required = false) String targetStopId,
-                                           @RequestParam(required = false) Double targetLatitude,
-                                           @RequestParam(required = false) Double targetLongitude,
-                                           @RequestParam(required = false) LocalDateTime dateTime,
-                                           @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                           @RequestParam(required = false) Integer maxWalkingDuration,
-                                           @RequestParam(required = false) Integer maxTransferNumber,
-                                           @RequestParam(required = false) Integer maxTravelTime,
-                                           @RequestParam(required = false, defaultValue = "0") int minTransferTime,
-                                           @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
-                                           @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
-                                           @RequestParam(required = false) EnumSet<TravelMode> travelModes) {
+    public ConnectionResponse getConnections(@RequestParam(required = false) String sourceStopId,
+                                             @RequestParam(required = false) Double sourceLatitude,
+                                             @RequestParam(required = false) Double sourceLongitude,
+                                             @RequestParam(required = false) String targetStopId,
+                                             @RequestParam(required = false) Double targetLatitude,
+                                             @RequestParam(required = false) Double targetLongitude,
+                                             @RequestParam(required = false) LocalDateTime dateTime,
+                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
+                                             @RequestParam(required = false) Integer maxWalkingDuration,
+                                             @RequestParam(required = false) Integer maxTransferNumber,
+                                             @RequestParam(required = false) Integer maxTravelTime,
+                                             @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                             @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
+                                             @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
+                                             @RequestParam(required = false) EnumSet<TravelMode> travelModes) {
         // get coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
                 GlobalValidator.StopType.SOURCE);
@@ -106,8 +111,7 @@ public class RoutingController {
                 return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
             }
         } catch (ConnectionRoutingException e) {
-            handleConnectionRoutingException(e);
-            return null;
+            return handleConnectionRoutingException(e);
         }
     }
 
@@ -116,19 +120,19 @@ public class RoutingController {
     @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
     @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
     @GetMapping("/isolines")
-    public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
-                                            @RequestParam(required = false) Double sourceLatitude,
-                                            @RequestParam(required = false) Double sourceLongitude,
-                                            @RequestParam(required = false) LocalDateTime dateTime,
-                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                            @RequestParam(required = false) Integer maxWalkingDuration,
-                                            @RequestParam(required = false) Integer maxTransferNumber,
-                                            @RequestParam(required = false) Integer maxTravelTime,
-                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime,
-                                            @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
-                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
-                                            @RequestParam(required = false) EnumSet<TravelMode> travelModes,
-                                            @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
+    public IsoLineResponse getIsolines(@RequestParam(required = false) String sourceStopId,
+                                       @RequestParam(required = false) Double sourceLatitude,
+                                       @RequestParam(required = false) Double sourceLongitude,
+                                       @RequestParam(required = false) LocalDateTime dateTime,
+                                       @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
+                                       @RequestParam(required = false) Integer maxWalkingDuration,
+                                       @RequestParam(required = false) Integer maxTransferNumber,
+                                       @RequestParam(required = false) Integer maxTravelTime,
+                                       @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                       @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
+                                       @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
+                                       @RequestParam(required = false) EnumSet<TravelMode> travelModes,
+                                       @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
 
         // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
@@ -150,8 +154,7 @@ public class RoutingController {
                         returnConnections);
             }
         } catch (ConnectionRoutingException e) {
-            handleConnectionRoutingException(e);
-            return null;
+            return handleConnectionRoutingException(e, timeType, returnConnections);
         }
     }
 
