@@ -76,17 +76,26 @@ public class DtoMapper {
         return new Connection(legs);
     }
 
-    public static List<Connection> map(List<ch.naviqore.service.Connection> connections) {
-        return connections.stream().map(DtoMapper::map).toList();
+    public static ConnectionResponse map(List<ch.naviqore.service.Connection> connections, String message, MessageType messageType) {
+        return new ConnectionResponse( connections.stream().map(DtoMapper::map).toList(), message, messageType);
     }
 
-    public static List<StopConnection> map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
-                                           TimeType timeType, boolean returnConnections) {
+    public static ConnectionResponse map(List<ch.naviqore.service.Connection> connections) {
+        return map( connections, "", MessageType.SUCCESS);
+    }
+
+    public static IsoLineResponse map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
+                                           TimeType timeType, boolean returnConnections, String message, MessageType messageType) {
         List<StopConnection> arrivals = new ArrayList<>();
         for (Map.Entry<ch.naviqore.service.Stop, ch.naviqore.service.Connection> entry : connections.entrySet()) {
             arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), map(timeType), returnConnections));
         }
-        return arrivals;
+        return new IsoLineResponse( arrivals, message, messageType);
+    }
+
+    public static IsoLineResponse map(Map<ch.naviqore.service.Stop, ch.naviqore.service.Connection> connections,
+                                      TimeType timeType, boolean returnConnections) {
+        return map(connections, timeType, returnConnections, "", MessageType.SUCCESS);
     }
 
     public static ScheduleValidity map(ch.naviqore.service.Validity validity) {

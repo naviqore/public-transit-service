@@ -144,15 +144,16 @@ class GtfsToRaptorConverterIT {
 
         @Test
         void sameStopTransfersOnAllActiveStops() throws NoSuchFieldException, IllegalAccessException {
-            // since C is also a parent stop, additional transfer C1 -> C and C -> C1 will also be generated
+            // since C is also a parent stop, additional transfer C1 -> C and C -> C1 will also be generated and
+            // C2 -> C, C -> C2, C1 -> C2, C2 -> C1 are also created even though C2 does not have departures.
             RaptorBuilderData data = convertRaptor(
                     List.of(new Transfer("A", "A", 120), new Transfer("B1", "B1", 120), new Transfer("B2", "B2", 120),
                             new Transfer("C", "C", 120), new Transfer("C1", "C1", 120)), List.of());
-            data.assertNumStops(5);
-            data.assertNumSameStopTransfers(5);
+            data.assertNumStops(6);
+            data.assertNumSameStopTransfers(6);
             // no way to test further as the Raptor.Transfer is not public
-            data.assertNumNonSameStopTransfers(2);
-            List<String> existingStops = List.of("A", "B1", "B2", "C", "C1");
+            data.assertNumNonSameStopTransfers(6);
+            List<String> existingStops = List.of("A", "B1", "B2", "C", "C1", "C2");
             for (String existingStop : existingStops) {
                 data.assertStopExists(existingStop);
                 data.assertSameStopTransferDuration(existingStop, 120);
@@ -161,18 +162,18 @@ class GtfsToRaptorConverterIT {
 
         @Test
         void sameStopTransfersOnParentStops() throws NoSuchFieldException, IllegalAccessException {
-            // since B is not active, but B1 and B2 are active, it should create B1-B1, B1-B2, B2-B2, B2-B1
+            // though B is not active, B1 and B2 are active, it should create B1-B1, B1-B2, B2-B2, B2-B1
             // and C and C1 are active thus will have C-C1, C-C, C1-C1, C1-C
-            // even though D is specified, it should not be included and the stop should not be created because it does
-            // not have any departures
+            // also C2 and B will be included even though they do not have departures, with following extra transfers:
+            // B-B, C2-C2, B-B1, B-B2, B1-B, B2-B, C2-C, C2-C1, C-C2, C1-C2
             RaptorBuilderData data = convertRaptor(
                     List.of(new Transfer("A", "A", 120), new Transfer("B", "B", 120), new Transfer("C", "C", 120),
                             new Transfer("D", "D", 120)), List.of());
-            data.assertNumStops(5);
-            data.assertNumSameStopTransfers(5);
+            data.assertNumStops(7);
+            data.assertNumSameStopTransfers(7);
             // no way to test further as the Raptor.Transfer is not public
-            data.assertNumNonSameStopTransfers(4);
-            List<String> existingStops = List.of("A", "B1", "B2", "C", "C1");
+            data.assertNumNonSameStopTransfers(12);
+            List<String> existingStops = List.of("A", "B", "B1", "B2", "C", "C1", "C2");
             for (String existingStop : existingStops) {
                 data.assertStopExists(existingStop);
                 data.assertSameStopTransferDuration(existingStop, 120);
@@ -186,25 +187,28 @@ class GtfsToRaptorConverterIT {
             RaptorBuilderData data = convertRaptor(
                     List.of(new Transfer("B", "B", 120), new Transfer("B1", "B1", 60), new Transfer("B2", "B2", 60)),
                     List.of());
-            data.assertNumStops(5);
-            data.assertNumSameStopTransfers(2);
+            data.assertNumStops(6);
+            data.assertNumSameStopTransfers(3);
             // no way to test further as the Raptor.Transfer is not public and make sure that transfer time is 120
-            data.assertNumNonSameStopTransfers(2);
-            List<String> stops = List.of("B1", "B2");
+            data.assertNumNonSameStopTransfers(6);
+            List<String> stops = List.of("B", "B1", "B2");
             for (String stop : stops) {
                 data.assertStopExists(stop);
-                data.assertSameStopTransferDuration(stop, 60);
+                int expectedDuration = stop.equals("B") ? 120 : 60;
+                data.assertSameStopTransferDuration(stop, expectedDuration);
             }
         }
 
         @Test
         void betweenStopTransfersOnParentStops() throws NoSuchFieldException, IllegalAccessException {
-            // since B1, B2, C, and C1 are active following transfers should be derived from B-C:
+            // since B1, B2, C, and C1 are active following transfers should be derived from B-C and C-B:
             // B1-C, B1-C1, B2-C, B2-C1, C-B1, C-B2, C1-B1, C1-B2
+            // also transfers between stops from B and C with no departures (B and C2) should be generated:
+            // B-C, B-C1, B-C2, B1-C2, B2-C2 C-B, C1-B, C2-B, C2-B1, C2-B2
             RaptorBuilderData data = convertRaptor(List.of(new Transfer("B", "C", 120), new Transfer("C", "B", 120)),
                     List.of());
             data.assertNumSameStopTransfers(0);
-            data.assertNumNonSameStopTransfers(8);
+            data.assertNumNonSameStopTransfers(18);
         }
 
         @Test
@@ -274,11 +278,11 @@ class GtfsToRaptorConverterIT {
             }
 
             void assertStopExists(String stopId) {
-                assertThat(stops.containsKey(stopId)).isTrue();
+                assertThat(stops.containsKey(stopId)).as("stop does not exist: " + stopId).isTrue();
             }
 
             void assertStopNotExists(String stopId) {
-                assertThat(stops.containsKey(stopId)).isFalse();
+                assertThat(stops.containsKey(stopId)).as("stop does exist: " + stopId).isFalse();
             }
 
             void assertStopHasNumRoutes(String stopId, int numRoutes) {
