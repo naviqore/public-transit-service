@@ -167,8 +167,8 @@ class GtfsToRaptorConverterIT {
             data.assertSameStopTransfers(
                     Set.of("A-120", "B-120", "B1-120", "B2-120", "C-120", "C1-120", "C2-120", "D-120"));
 
-            // D has no departures specified, it should be included but should not have any between stop transfers
-            // TODO: Do we want this behavior?
+            // D has no departures and not transfers specified, it should be included in the raptor data as stop,
+            // but should not have any between stop transfers
             data.assertBetweenStopTransfers(
                     Set.of("B-B1", "B-B2", "B1-B", "B1-B2", "B2-B", "B2-B1", "C-C1", "C-C2", "C1-C", "C1-C2", "C2-C",
                             "C2-C1"));
