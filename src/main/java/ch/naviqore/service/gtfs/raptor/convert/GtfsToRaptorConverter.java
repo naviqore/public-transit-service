@@ -81,12 +81,21 @@ public class GtfsToRaptorConverter {
 
     /**
      * Processes all types of transfers, ensuring the correct order of precedence:
-     * <p>
-     * 1. Additional transfers: These transfers have the lowest priority and are processed first. 2. Parent-child
-     * derived transfers: If a transfer is defined between two parent stops (e.g., A to B), this method derives
-     * corresponding transfers for their child stops (e.g., A1, A2, ... to B1, B2, ...). 3. GTFS schedule-defined
-     * transfers: Transfers explicitly defined in the GTFS schedule (e.g., A1 to B2) take the highest priority and are
-     * applied last, thereby overwriting transfers previously derived from parent stops.
+     * <ol>
+     *   <li>
+     *     <b>Additional transfers:</b> These transfers have the lowest priority and are processed first.
+     *   </li>
+     *   <li>
+     *     <b>Parent-child derived transfers:</b> If a transfer is defined between two parent stops
+     *     (e.g., A to B), this method derives corresponding transfers for their child stops
+     *     (e.g., A1, A2, ... to B1, B2, ...).
+     *   </li>
+     *   <li>
+     *     <b>GTFS schedule-defined transfers:</b> Transfers explicitly defined in the GTFS schedule
+     *     (e.g., A1 to B2) take the highest priority. These transfers are applied last,
+     *     overwriting any transfers previously derived from parent stops.
+     *   </li>
+     * </ol>
      * <p>
      * The method ensures that all transfers, whether additional, derived, or explicitly defined, are handled in the
      * correct priority order.
