@@ -82,7 +82,7 @@ final class Benchmark {
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
         RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, RAPTOR_RANGE, SAME_STOP_TRANSFER_TIME,
                 MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
-        RaptorRouter raptor = new GtfsToRaptorConverter(schedule, config).convert();
+        RaptorRouter raptor = new GtfsToRaptorConverter(config, schedule).run();
         manageResources();
 
         for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {

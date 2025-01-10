@@ -143,10 +143,10 @@ public class RoutingController {
         // determine routing case and get isolines
         try {
             if (sourceStop != null) {
-                return map(service.getIsoLines(sourceStop, dateTime, map(timeType), config), timeType,
+                return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType,
                         returnConnections);
             } else {
-                return map(service.getIsoLines(sourceCoordinate, dateTime, map(timeType), config), timeType,
+                return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType,
                         returnConnections);
             }
         } catch (ConnectionRoutingException e) {

@@ -3,15 +3,10 @@ package ch.naviqore.service.gtfs.raptor.convert;
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
-import ch.naviqore.gtfs.schedule.type.AccessibilityInformation;
-import ch.naviqore.gtfs.schedule.type.RouteType;
-import ch.naviqore.gtfs.schedule.type.ServiceDayTime;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
-import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,9 +16,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,8 +39,8 @@ class GtfsToRaptorConverterIT {
 
         @Test
         void shouldConvertGtfsScheduleToRaptor() {
-            GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(schedule, new RaptorConfig());
-            RaptorAlgorithm raptor = mapper.convert();
+            GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(new RaptorConfig(), schedule);
+            RaptorAlgorithm raptor = mapper.run();
             assertThat(raptor).isNotNull();
         }
 
@@ -71,49 +67,23 @@ class GtfsToRaptorConverterIT {
          */
         static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
                                                List<Transfer> additionalTransfers) throws NoSuchFieldException, IllegalAccessException {
-
-            GtfsScheduleBuilder scheduleBuilder = GtfsSchedule.builder();
-            scheduleBuilder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
-            scheduleBuilder.addAgency("agency", "Some Agency", "", "America/New_York");
-
-            scheduleBuilder.addStop("A", "A", 0.0, 0.0);
-            scheduleBuilder.addStop("B", "B", 0.0, 0.0);
-            scheduleBuilder.addStop("B1", "B1", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("B2", "B2", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("C", "C", 0.0, 0.0);
-            scheduleBuilder.addStop("C1", "C1", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("C2", "C2", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-            scheduleBuilder.addStop("D", "D", 0.0, 0.0);
-
-            // Route 1 goes from A, B1, C1
-            scheduleBuilder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
-            scheduleBuilder.addTrip("T1", "R1", "always", "C1");
-            scheduleBuilder.addStopTime("T1", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T1", "B1", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T1", "C1", new ServiceDayTime(0), new ServiceDayTime(0));
-
-            // Route 2 goes from A, B2, C
-            scheduleBuilder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
-            scheduleBuilder.addTrip("T2", "R2", "always", "C");
-            scheduleBuilder.addStopTime("T2", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T2", "B2", new ServiceDayTime(0), new ServiceDayTime(0));
-            scheduleBuilder.addStopTime("T2", "C", new ServiceDayTime(0), new ServiceDayTime(0));
-
+            // build GTFS test schedule
+            GtfsToRaptorTestSchedule builder = new GtfsToRaptorTestSchedule();
             for (Transfer transfer : scheduleTransfers) {
-                scheduleBuilder.addTransfer(transfer.fromStopId, transfer.toStopId, TransferType.MINIMUM_TIME,
+                builder.addTransfer(transfer.fromStopId, transfer.toStopId, TransferType.MINIMUM_TIME,
                         transfer.duration);
             }
+            GtfsSchedule schedule = builder.build();
 
-            GtfsSchedule schedule = scheduleBuilder.build();
-
-            List<TransferGenerator.Transfer> additionalTransfersList = additionalTransfers.stream()
+            List<TransferGenerator> transferGenerators = List.of(stops -> additionalTransfers.stream()
                     .map(transfer -> new TransferGenerator.Transfer(schedule.getStops().get(transfer.fromStopId()),
                             schedule.getStops().get(transfer.toStopId()), transfer.duration()))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
 
-            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(schedule, additionalTransfersList,
-                    new RaptorConfig());
-            converter.convert();
+            // run converter
+            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(new RaptorConfig(), schedule,
+                    transferGenerators);
+            converter.run();
 
             return new RaptorBuilderData(converter);
         }

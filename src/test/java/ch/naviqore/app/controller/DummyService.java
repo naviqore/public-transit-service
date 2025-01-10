@@ -128,7 +128,7 @@ class DummyService implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
@@ -146,7 +146,7 @@ class DummyService implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
