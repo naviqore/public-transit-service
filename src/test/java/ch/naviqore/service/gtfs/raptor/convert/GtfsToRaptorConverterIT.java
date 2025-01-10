@@ -66,8 +66,8 @@ class GtfsToRaptorConverterIT {
          *     <li><b>Route 1</b>: Passes through A - B1 - C1</li>
          *     <li><b>Route 2</b>: Passes through A - B2 - C</li>
          * </ul>
-         * Stops B, C2 and D have no departures/arrivals. Stops B and C are parents of stops B1, B2 and C1, C2,
-         * respectively.
+         * Stops B, C2 and D have no departures/arrivals and should not be included in the raptor conversion.
+         * Stops B and C are parents of stops B1, B2 and C1, C2, respectively.
          */
         static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
                                                List<Transfer> additionalTransfers) throws NoSuchFieldException, IllegalAccessException {
@@ -121,12 +121,12 @@ class GtfsToRaptorConverterIT {
         @Test
         void noTransfers() throws NoSuchFieldException, IllegalAccessException {
             RaptorBuilderData data = convertRaptor(List.of(), List.of());
+            Set<String> stopsWithDepartures = Set.of("A", "B1", "B2", "C", "C1");
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
+            data.assertStops(stopsWithDepartures);
             data.assertSameStopTransfers(Set.of());
             data.assertBetweenStopTransfers(Set.of());
 
-            List<String> stopsWithDepartures = List.of("A", "B1", "B2", "C", "C1");
             for (String stopWithDeparture : stopsWithDepartures) {
                 data.assertStopExists(stopWithDeparture);
                 if (stopWithDeparture.equals("A")) {
@@ -136,10 +136,10 @@ class GtfsToRaptorConverterIT {
                 }
             }
 
-            // they do not have any departures, but should still exist in the raptor data
-            List<String> stopsWithoutDepartures = List.of("B", "C2", "D");
+            // they do not have any departures, and therefore should not be included in the raptor data
+            Set<String> stopsWithoutDepartures = Set.of("B", "C2", "D");
             for (String stopWithoutDeparture : stopsWithoutDepartures) {
-                data.assertStopWithNoDeparturesExists(stopWithoutDeparture);
+                data.assertStopWithNoDeparturesNotExists(stopWithoutDeparture);
             }
         }
 
@@ -150,10 +150,10 @@ class GtfsToRaptorConverterIT {
 
             RaptorBuilderData data = convertRaptor(sameStopTransfers, List.of());
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
-            data.assertSameStopTransfers(Set.of("A-120", "B1-120", "B2-120", "C-120", "C1-120", "C2-120"));
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
+            data.assertSameStopTransfers(Set.of("A-120", "B1-120", "B2-120", "C-120", "C1-120"));
             // since C is also a parent stop, additional transfer C1 -> C and C -> C1 will also be generated
-            data.assertBetweenStopTransfers(Set.of("B-B1", "B-B2", "C-C1", "C-C2", "C1-C", "C1-C2", "C2-C", "C2-C1"));
+            data.assertBetweenStopTransfers(Set.of("C-C1", "C1-C"));
         }
 
         @Test
@@ -163,15 +163,11 @@ class GtfsToRaptorConverterIT {
 
             RaptorBuilderData data = convertRaptor(sameStopTransfers, List.of());
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
-            data.assertSameStopTransfers(
-                    Set.of("A-120", "B-120", "B1-120", "B2-120", "C-120", "C1-120", "C2-120", "D-120"));
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
+            data.assertSameStopTransfers(Set.of("A-120", "B1-120", "B2-120", "C-120", "C1-120"));
 
-            // D has no departures and not transfers specified, it should be included in the raptor data as stop,
-            // but should not have any between stop transfers
-            data.assertBetweenStopTransfers(
-                    Set.of("B-B1", "B-B2", "B1-B", "B1-B2", "B2-B", "B2-B1", "C-C1", "C-C2", "C1-C", "C1-C2", "C2-C",
-                            "C2-C1"));
+            // B is not active, but B1 and B2 are active and C and C1 are active:
+            data.assertBetweenStopTransfers(Set.of("B1-B2", "B2-B1", "C-C1", "C1-C"));
         }
 
         @Test
@@ -181,11 +177,11 @@ class GtfsToRaptorConverterIT {
 
             RaptorBuilderData data = convertRaptor(sameStopTransfers, List.of());
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
             // since explicit child same stop transfers are defined, the transfer time between B1-B1 and B2-B2 should
-            // be 60, whereas create B1-B2, B2-B1 should be 120
-            data.assertSameStopTransfers(Set.of("B-120", "B1-60", "B2-60"));
-            data.assertBetweenStopTransfers(Set.of("B-B1", "B-B2", "B1-B", "B1-B2", "B2-B", "B2-B1"));
+            // be 60:
+            data.assertSameStopTransfers(Set.of("B1-60", "B2-60"));
+            data.assertBetweenStopTransfers(Set.of("B1-B2", "B2-B1"));
         }
 
         @Test
@@ -194,13 +190,11 @@ class GtfsToRaptorConverterIT {
 
             RaptorBuilderData data = convertRaptor(scheduleTransfers, List.of());
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
             data.assertSameStopTransfers(Set.of());
 
             // since B1, B2, C, and C1 are active following transfers should be derived from B-C:
-            data.assertBetweenStopTransfers(
-                    Set.of("B-C", "B-C1", "B-C2", "B1-C", "B1-C1", "B1-C2", "B2-C", "B2-C1", "B2-C2", "C-B", "C-B1",
-                            "C-B2", "C1-B", "C1-B1", "C1-B2", "C2-B", "C2-B1", "C2-B2"));
+            data.assertBetweenStopTransfers(Set.of("B1-C", "B1-C1", "B2-C", "B2-C1", "C-B1", "C-B2", "C1-B1", "C1-B2"));
         }
 
         @Test
@@ -211,10 +205,10 @@ class GtfsToRaptorConverterIT {
 
             RaptorBuilderData data = convertRaptor(scheduleTransfers, additionalTransfers);
 
-            data.assertStops(Set.of("A", "B", "B1", "B2", "C", "C1", "C2", "D"));
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
             // since additional transfers should not be applied if gtfs data exists B1-B1 should remain 120
             data.assertSameStopTransfers(Set.of("B1-120", "B2-60"));
-            data.assertBetweenStopTransfers(Set.of("B-B1", "B1-B2"));
+            data.assertBetweenStopTransfers(Set.of("B1-B2"));
         }
 
         record Transfer(String fromStopId, String toStopId, int duration) {
@@ -303,8 +297,8 @@ class GtfsToRaptorConverterIT {
                 assertThat(stops.containsKey(stopId)).isTrue();
             }
 
-            void assertStopWithNoDeparturesExists(String stopId) {
-                assertThat(stops.containsKey(stopId)).isTrue();
+            void assertStopWithNoDeparturesNotExists(String stopId) {
+                assertThat(stops.containsKey(stopId)).isFalse();
             }
 
             void assertStopHasNumRoutes(String stopId, int numRoutes) {
