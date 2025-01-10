@@ -44,12 +44,6 @@ public class GtfsToRaptorConverter {
     public RaptorRouter convert() {
         log.info("Converting {} trips from GTFS schedule to Raptor data model", schedule.getTrips().size());
 
-        for (Stop stop : schedule.getStops().values()) {
-            String stopId = stop.getId();
-            builder.addStop(stopId);
-            addedStops.add(stopId);
-        }
-
         for (Route route : schedule.getRoutes().values()) {
             for (GtfsRoutePartitioner.SubRoute subRoute : partitioner.getSubRoutes(route)) {
                 addRoute(subRoute);
@@ -63,12 +57,21 @@ public class GtfsToRaptorConverter {
 
     // add raptor route for each sub route of the gtfs routes
     private void addRoute(GtfsRoutePartitioner.SubRoute subRoute) {
-        // add sub route as raptor route
+
+        // add stops of sub route that are not already added
         List<String> stopIds = subRoute.getStopsSequence().stream().map(Stop::getId).toList();
+        for (String stopId : stopIds) {
+            if (!addedStops.contains(stopId)) {
+                builder.addStop(stopId);
+                addedStops.add(stopId);
+            }
+        }
+
+        // add sub route as raptor route
         builder.addRoute(subRoute.getId(), stopIds);
 
         // add trips of sub route
-        for (var trip : subRoute.getTrips()) {
+        for (Trip trip : subRoute.getTrips()) {
             builder.addTrip(trip.getId(), subRoute.getId());
             List<StopTime> stopTimes = trip.getStopTimes();
             for (int i = 0; i < stopTimes.size(); i++) {
@@ -81,21 +84,12 @@ public class GtfsToRaptorConverter {
 
     /**
      * Processes all types of transfers, ensuring the correct order of precedence:
-     * <ol>
-     *   <li>
-     *     <b>Additional transfers:</b> These transfers have the lowest priority and are processed first.
-     *   </li>
-     *   <li>
-     *     <b>Parent-child derived transfers:</b> If a transfer is defined between two parent stops
-     *     (e.g., A to B), this method derives corresponding transfers for their child stops
-     *     (e.g., A1, A2, ... to B1, B2, ...).
-     *   </li>
-     *   <li>
-     *     <b>GTFS schedule-defined transfers:</b> Transfers explicitly defined in the GTFS schedule
-     *     (e.g., A1 to B2) take the highest priority. These transfers are applied last,
-     *     overwriting any transfers previously derived from parent stops.
-     *   </li>
-     * </ol>
+     * <p>
+     * 1. Additional transfers: These transfers have the lowest priority and are processed first. 2. Parent-child
+     * derived transfers: If a transfer is defined between two parent stops (e.g., A to B), this method derives
+     * corresponding transfers for their child stops (e.g., A1, A2, ... to B1, B2, ...). 3. GTFS schedule-defined
+     * transfers: Transfers explicitly defined in the GTFS schedule (e.g., A1 to B2) take the highest priority and are
+     * applied last, thereby overwriting transfers previously derived from parent stops.
      * <p>
      * The method ensures that all transfers, whether additional, derived, or explicitly defined, are handled in the
      * correct priority order.
