@@ -8,6 +8,7 @@ import ch.naviqore.raptor.router.RaptorRouterBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Maps GTFS schedule to Raptor
@@ -116,7 +117,10 @@ public class GtfsToRaptorConverter {
         // reverse order ensures that the lowest priority transfers are overwritten if a higher priority transfer
         // generator generated transfer or gtfs based transfer exists.
         transferGenerators.stream()
-                .sorted(Collections.reverseOrder())
+                .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
+                    Collections.reverse(list);
+                    return list.stream();
+                }))
                 .flatMap(generator -> generator.generateTransfers(addedStops).stream())
                 .forEach(transfer -> builder.addTransfer(transfer.from().getId(), transfer.to().getId(),
                         transfer.duration()));
