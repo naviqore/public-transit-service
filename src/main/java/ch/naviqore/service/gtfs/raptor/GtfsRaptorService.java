@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorRouter;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -211,11 +212,12 @@ public class GtfsRaptorService implements PublicTransitService {
             } else {
                 connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
             }
-        } catch (IllegalArgumentException e) {
-            log.debug("RaptorRouter exception: {}", e.getMessage());
+        } catch (RaptorAlgorithm.InvalidStopException e){
+            // TODO: try location based routing instead
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return List.of();
-            // TODO: Introduce exception handling or exception type on in raptor router.
-            //  throw new ConnectionRoutingException(e);
+        } catch (IllegalArgumentException e) {
+            throw new ConnectionRoutingException(e);
         }
 
         // assemble connection results
@@ -308,10 +310,11 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
                     config, timeType);
-        } catch (IllegalArgumentException e) {
-            log.debug(e.getMessage());
+        } catch (RaptorAlgorithm.InvalidStopException e){
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return Map.of();
-            // TODO: throw new ConnectionRoutingException(e);
+        } catch (IllegalArgumentException e) {
+            throw new ConnectionRoutingException(e);
         }
     }
 
@@ -324,10 +327,12 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
                     config, timeType);
-        } catch (IllegalArgumentException e) {
-            log.debug(e.getMessage());
+        } catch (RaptorAlgorithm.InvalidStopException e){
+            // TODO: Try location based iso line routing?
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return Map.of();
-            // TODO: throw new ConnectionRoutingException(e);
+        } catch (IllegalArgumentException e) {
+            throw new ConnectionRoutingException(e);
         }
     }
 
