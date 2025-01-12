@@ -37,8 +37,8 @@ class GtfsToRaptorConverterIT {
 
         @Test
         void shouldConvertGtfsScheduleToRaptor() {
-            GtfsToRaptorConverter mapper = new GtfsToRaptorConverter(new RaptorConfig(), schedule);
-            RaptorAlgorithm raptor = mapper.run();
+            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(new RaptorConfig(), schedule);
+            RaptorAlgorithm raptor = converter.run();
             assertThat(raptor).isNotNull();
         }
 
