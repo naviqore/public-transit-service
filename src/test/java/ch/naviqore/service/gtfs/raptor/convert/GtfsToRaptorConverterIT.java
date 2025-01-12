@@ -3,6 +3,7 @@ package ch.naviqore.service.gtfs.raptor.convert;
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.gtfs.schedule.model.Stop;
 import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
@@ -16,10 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,7 +64,7 @@ class GtfsToRaptorConverterIT {
          * Stops B and C are parents of stops B1, B2 and C1, C2, respectively.
          */
         static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
-                                               List<Transfer> additionalTransfers) throws NoSuchFieldException, IllegalAccessException {
+                                               List<TransferGenerator> transferGenerators) throws NoSuchFieldException, IllegalAccessException {
             // build GTFS test schedule
             GtfsToRaptorTestSchedule builder = new GtfsToRaptorTestSchedule();
             for (Transfer transfer : scheduleTransfers) {
@@ -74,11 +72,6 @@ class GtfsToRaptorConverterIT {
                         transfer.duration);
             }
             GtfsSchedule schedule = builder.build();
-
-            List<TransferGenerator> transferGenerators = List.of(stops -> additionalTransfers.stream()
-                    .map(transfer -> new TransferGenerator.Transfer(schedule.getStops().get(transfer.fromStopId()),
-                            schedule.getStops().get(transfer.toStopId()), transfer.duration()))
-                    .collect(Collectors.toList()));
 
             // run converter
             GtfsToRaptorConverter converter = new GtfsToRaptorConverter(new RaptorConfig(), schedule,
@@ -170,18 +163,65 @@ class GtfsToRaptorConverterIT {
         @Test
         void additionalTransfers() throws NoSuchFieldException, IllegalAccessException {
             List<Transfer> scheduleTransfers = List.of(new Transfer("B1", "B1", 120));
-            List<Transfer> additionalTransfers = List.of(new Transfer("B1", "B1", 60), new Transfer("B2", "B2", 60),
-                    new Transfer("B1", "B2", 120));
 
-            RaptorBuilderData data = convertRaptor(scheduleTransfers, additionalTransfers);
+            // Create a list of TransferGenerators that generate specific transfers
+            List<TransferGenerator> transferGenerators = List.of(new SimpleTransferGenerator(
+                    List.of(new Transfer("B1", "B1", 60), new Transfer("B2", "B2", 60),
+                            new Transfer("B1", "B2", 120))));
+
+            RaptorBuilderData data = convertRaptor(scheduleTransfers, transferGenerators);
 
             data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
-            // since additional transfers should not be applied if gtfs data exists B1-B1 should remain 120
+            // since LL should not be applied if gtfs data exists B1-B1 should remain 120
             data.assertSameStopTransfers(Set.of("B1-120", "B2-60"));
             data.assertBetweenStopTransfers(Set.of("B1-B2"));
         }
 
+        @Test
+        void multipleTransferGenerators() throws NoSuchFieldException, IllegalAccessException {
+            List<Transfer> scheduleTransfers = List.of(new Transfer("B1", "B1", 120));
+
+            TransferGenerator transferGenerator1 = new SimpleTransferGenerator(
+                    List.of(new Transfer("B1", "B1", 90), new Transfer("B2", "B2", 90)));
+
+            TransferGenerator transferGenerator2 = new SimpleTransferGenerator(
+                    List.of(new Transfer("B1", "B1", 60), new Transfer("B2", "B2", 60), new Transfer("C1", "C1", 60)));
+
+            List<TransferGenerator> transferGenerators = List.of(transferGenerator1, transferGenerator2);
+
+            RaptorBuilderData data = convertRaptor(scheduleTransfers, transferGenerators);
+            data.assertStops(Set.of("A", "B1", "B2", "C", "C1"));
+            // because schedule transfers have the highest priority B1-B1 should be 120
+            // in case of multiple transfer generators the first should have the highest and the last should have the
+            // lowest priority, therefore B2-B2 should be 90 (defined in both) and C1-C1 should be 60 (only defined
+            // in last transfer generator)
+            data.assertSameStopTransfers(Set.of("B1-120", "B2-90", "C1-60"));
+
+        }
+
         record Transfer(String fromStopId, String toStopId, int duration) {
+        }
+
+        class SimpleTransferGenerator implements TransferGenerator {
+
+            private List<ManualSchedule.Transfer> transfers;
+
+            public SimpleTransferGenerator(List<ManualSchedule.Transfer> transfers) {
+                this.transfers = transfers;
+            }
+
+            @Override
+            public List<Transfer> generateTransfers(Collection<Stop> stops) {
+                return this.transfers.stream()
+                        .map(transfer -> new Transfer(stops.stream()
+                                .filter(stop -> stop.getId().equals(transfer.fromStopId()))
+                                .findFirst()
+                                .orElseThrow(), stops.stream()
+                                .filter(stop -> stop.getId().equals(transfer.toStopId()))
+                                .findFirst()
+                                .orElseThrow(), transfer.duration))
+                        .toList();
+            }
         }
 
         static class RaptorBuilderData {
