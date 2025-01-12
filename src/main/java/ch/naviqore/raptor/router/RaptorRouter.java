@@ -149,24 +149,24 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         private static void checkNonNullOrEmptyStops(Map<String, ?> stops, String labelSource) {
             if (stops == null) {
-                throw new IllegalArgumentException(String.format("%s stops must not be null.", labelSource));
+                throw new InvalidStopException(String.format("%s stops must not be null.", labelSource));
             }
             if (stops.isEmpty()) {
-                throw new IllegalArgumentException(String.format("%s stops must not be empty.", labelSource));
+                throw new InvalidStopException(String.format("%s stops must not be empty.", labelSource));
             }
         }
 
         private static void validateSourceStopTimes(Map<String, LocalDateTime> sourceStops) {
             // check that no null values are present
             if (sourceStops.values().stream().anyMatch(Objects::isNull)) {
-                throw new IllegalArgumentException("Source stop times must not be null.");
+                throw new InvalidTimeException("Source stop times must not be null.");
             }
 
             // get min and max values
             LocalDateTime min = sourceStops.values().stream().min(LocalDateTime::compareTo).orElseThrow();
             LocalDateTime max = sourceStops.values().stream().max(LocalDateTime::compareTo).orElseThrow();
             if (Duration.between(min, max).getSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
-                throw new IllegalArgumentException("Difference between source stop times must be less than 24 hours.");
+                throw new InvalidTimeException("Difference between source stop times must be less than 24 hours.");
             }
         }
 
@@ -176,7 +176,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
             // ensure departure and arrival stops are not the same
             if (!Collections.disjoint(sourceStops.keySet(), targetStops.keySet())) {
-                throw new IllegalArgumentException("Source and target stop IDs must not be the same.");
+                throw new InvalidStopException("Source and target stop IDs must not be the same.");
             }
         }
 
@@ -191,14 +191,14 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
          * Validate the stops provided in the query. This method will check that the map of stop ids and their
          * corresponding departure / walk to target times are valid. This is done by checking if the map is not empty
          * and then checking each entry if the stop id is present in the lookup. If not it is removed from the query. If
-         * no valid stops are found an IllegalArgumentException is thrown.
+         * no valid stops are found an InvalidStopException is thrown.
          *
          * @param stops the stops to validate.
          * @return a map of valid stop IDs and their corresponding departure / walk to target times.
          */
         private Map<Integer, Integer> validateStopsAndGetIndices(Map<String, Integer> stops) {
             if (stops.isEmpty()) {
-                throw new IllegalArgumentException("At least one stop ID must be provided.");
+                throw new InvalidStopException("At least one stop ID must be provided.");
             }
 
             // loop over all stop pairs and check if stop exists in raptor, then validate departure time
@@ -215,7 +215,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             }
 
             if (validStopIds.isEmpty()) {
-                throw new IllegalArgumentException("No valid stops provided.");
+                throw new InvalidStopException("No valid stops provided.");
             }
 
             return validStopIds;
