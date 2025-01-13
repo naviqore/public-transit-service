@@ -296,8 +296,8 @@ public class GtfsRaptorService implements PublicTransitService {
     @RequiredArgsConstructor
     abstract class ConnectionQueryTemplate<S, T> {
 
-        private final S source;
-        private final T target;
+        protected final S source;
+        protected final T target;
         protected final LocalDateTime time;
         protected final TimeType timeType;
         protected final ConnectionQueryConfig config;
@@ -309,12 +309,18 @@ public class GtfsRaptorService implements PublicTransitService {
         protected abstract Connection postprocessConnection(S source, ch.naviqore.raptor.Connection connection,
                                                             T target);
 
-        protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
+        protected abstract ConnectionQueryTemplate<T, S> swap();
+
+        protected abstract List<Connection> handleInvalidStopException(
+                RaptorAlgorithm.InvalidStopException exception) throws ConnectionRoutingException;
 
         List<Connection> run() throws ConnectionRoutingException {
+            // TODO: / COMMENT: I think this is dangerous because if you run the query multiple times (e.g. when
+            // routing from location instead of stop due to InvalidStopException, the swap might occur twice resulting
+            // in incorrect results.
             // swap source and target if time type is arrival, which means routing in the reverse time dimension
             if (timeType == TimeType.ARRIVAL) {
-                return swap(source, target).process();
+                return swap().process();
             }
 
             return process();
@@ -339,9 +345,7 @@ public class GtfsRaptorService implements PublicTransitService {
                     connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
                 }
             } catch (RaptorAlgorithm.InvalidStopException e) {
-                // TODO: try location based routing instead
-                log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-                return List.of();
+                return this.handleInvalidStopException(e);
             } catch (IllegalArgumentException e) {
                 throw new ConnectionRoutingException(e);
             }
@@ -389,9 +393,14 @@ public class GtfsRaptorService implements PublicTransitService {
         }
 
         @Override
-        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, ch.naviqore.gtfs.schedule.model.Stop> swap(
-                ch.naviqore.gtfs.schedule.model.Stop source, ch.naviqore.gtfs.schedule.model.Stop target) {
+        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, ch.naviqore.gtfs.schedule.model.Stop> swap() {
             return new StopToStop(target, source, time, timeType, config);
+        }
+
+        @Override
+        protected List<Connection> handleInvalidStopException(
+                RaptorAlgorithm.InvalidStopException exception) throws ConnectionRoutingException {
+            return new GeoToGeo(source, target, time, timeType, config).process();
         }
     }
 
@@ -418,13 +427,20 @@ public class GtfsRaptorService implements PublicTransitService {
             LocalDateTime arrivalTime = connection.getArrivalTime();
             Walk lastMile = getLastWalk(target, connection.getToStopId(), arrivalTime);
 
+            // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator
+
             return TypeMapper.map(connection, null, lastMile, schedule);
         }
 
         @Override
-        protected ConnectionQueryTemplate<GeoCoordinate, ch.naviqore.gtfs.schedule.model.Stop> swap(
-                ch.naviqore.gtfs.schedule.model.Stop source, GeoCoordinate target) {
+        protected ConnectionQueryTemplate<GeoCoordinate, ch.naviqore.gtfs.schedule.model.Stop> swap() {
             return new GeoToStop(target, source, time, timeType, config);
+        }
+
+        @Override
+        protected List<Connection> handleInvalidStopException(
+                RaptorAlgorithm.InvalidStopException exception) throws ConnectionRoutingException {
+            return new GeoToGeo(source, target, time, timeType, config).process();
         }
     }
 
@@ -451,21 +467,50 @@ public class GtfsRaptorService implements PublicTransitService {
             LocalDateTime departureTime = connection.getDepartureTime();
             Walk firstMile = getFirstWalk(source, connection.getFromStopId(), departureTime);
 
+            // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator
+
             return TypeMapper.map(connection, firstMile, null, schedule);
         }
 
         @Override
-        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, GeoCoordinate> swap(
-                GeoCoordinate source, ch.naviqore.gtfs.schedule.model.Stop target) {
+        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, GeoCoordinate> swap() {
             return new StopToGeo(target, source, time, timeType, config);
+        }
+
+        @Override
+        protected List<Connection> handleInvalidStopException(
+                RaptorAlgorithm.InvalidStopException exception) throws ConnectionRoutingException {
+            return new GeoToGeo(source, target, time, timeType, config).process();
         }
     }
 
     private class GeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> {
 
+        private ch.naviqore.gtfs.schedule.model.Stop sourceStop = null;
+        private ch.naviqore.gtfs.schedule.model.Stop targetStop = null;
+
         public GeoToGeo(GeoCoordinate source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
                         ConnectionQueryConfig config) {
             super(source, target, time, timeType, config);
+        }
+
+        public GeoToGeo(GeoCoordinate source, ch.naviqore.gtfs.schedule.model.Stop target, LocalDateTime time,
+                        TimeType timeType, ConnectionQueryConfig config) {
+            super(source, target.getCoordinate(), time, timeType, config);
+            this.targetStop = target;
+        }
+
+        public GeoToGeo(ch.naviqore.gtfs.schedule.model.Stop source, GeoCoordinate target, LocalDateTime time,
+                        TimeType timeType, ConnectionQueryConfig config) {
+            super(source.getCoordinate(), target, time, timeType, config);
+            this.sourceStop = source;
+        }
+
+        public GeoToGeo(ch.naviqore.gtfs.schedule.model.Stop source, ch.naviqore.gtfs.schedule.model.Stop target,
+                        LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
+            super(source.getCoordinate(), target.getCoordinate(), time, timeType, config);
+            this.sourceStop = source;
+            this.targetStop = target;
         }
 
         @Override
@@ -487,13 +532,24 @@ public class GtfsRaptorService implements PublicTransitService {
             LocalDateTime arrivalTime = connection.getArrivalTime();
             Walk lastMile = getLastWalk(target, connection.getToStopId(), arrivalTime);
 
+            // TODO: Add sourceStop as source for firstMile if sourceStop != null
+            // TODO: Add targetStop as target for lastMile if targetStop != null
+            // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator?
+            // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator?
+
             return TypeMapper.map(connection, firstMile, lastMile, schedule);
         }
 
         @Override
-        protected ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> swap(GeoCoordinate source,
-                                                                             GeoCoordinate target) {
+        protected ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> swap() {
             return new GeoToGeo(target, source, time, timeType, config);
+        }
+
+        @Override
+        protected List<Connection> handleInvalidStopException(
+                RaptorAlgorithm.InvalidStopException exception) {
+            log.debug("{}: {}", exception.getClass().getSimpleName(), exception.getMessage());
+            return List.of();
         }
 
     }
@@ -522,6 +578,7 @@ public class GtfsRaptorService implements PublicTransitService {
             try {
                 isolines = raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config));
             } catch (RaptorAlgorithm.InvalidStopException e) {
+                // TODO: Implement abstract handleInvalidStopException method?
                 log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
                 return Map.of();
             } catch (IllegalArgumentException e) {
@@ -547,6 +604,7 @@ public class GtfsRaptorService implements PublicTransitService {
         }
     }
 
+    // TODO: Add case where source is stop but should be processed as geocoordinate -> see connection query template
     class GeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
         public GeoSource(GeoCoordinate source, LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
@@ -567,6 +625,9 @@ public class GtfsRaptorService implements PublicTransitService {
             } else if (timeType == TimeType.ARRIVAL) {
                 lastMile = getLastWalk(source, connection.getFromStopId(), connection.getDepartureTime());
             }
+
+            // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator
+            // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator
 
             return TypeMapper.map(connection, firstMile, lastMile, schedule);
         }
