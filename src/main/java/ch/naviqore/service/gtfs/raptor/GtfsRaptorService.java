@@ -256,72 +256,13 @@ public class GtfsRaptorService implements PublicTransitService {
     @Override
     public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
-        Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
-                config.getMaximumWalkingDuration(), timeType);
-
-        // no source stop is within walkable distance, and therefore no isolines are available
-        if (sourceStops.isEmpty()) {
-            return Map.of();
-        }
-
-        try {
-            return mapToStopConnectionMap(
-                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
-                    config, timeType);
-        } catch (RaptorAlgorithm.InvalidStopException e) {
-            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-            return Map.of();
-        } catch (IllegalArgumentException e) {
-            throw new ConnectionRoutingException(e);
-        }
+        return new GeoSource(source, time, timeType, config).run();
     }
 
     @Override
     public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
-        Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
-
-        try {
-            return mapToStopConnectionMap(
-                    raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
-                    config, timeType);
-        } catch (RaptorAlgorithm.InvalidStopException e) {
-            // TODO: Try location based iso line routing?
-            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-            return Map.of();
-        } catch (IllegalArgumentException e) {
-            throw new ConnectionRoutingException(e);
-        }
-    }
-
-    private Map<Stop, Connection> mapToStopConnectionMap(Map<String, ch.naviqore.raptor.Connection> isoLines,
-                                                         @Nullable GeoCoordinate source, ConnectionQueryConfig config,
-                                                         TimeType timeType) {
-        Map<Stop, Connection> result = new HashMap<>();
-
-        for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isoLines.entrySet()) {
-            ch.naviqore.raptor.Connection connection = entry.getValue();
-
-            Walk firstMile = null;
-            Walk lastMile = null;
-            if (timeType == TimeType.DEPARTURE && source != null) {
-                firstMile = getFirstWalk(source, connection.getFromStopId(), connection.getDepartureTime());
-            } else if (timeType == TimeType.ARRIVAL && source != null) {
-                lastMile = getLastWalk(source, connection.getFromStopId(), connection.getDepartureTime());
-            }
-
-            Stop stop = TypeMapper.map(schedule.getStops().get(entry.getKey()));
-            Connection serviceConnection = TypeMapper.map(connection, firstMile, lastMile, schedule);
-
-            // The raptor algorithm does not consider the firstMile walk time, so we need to filter out connections
-            // that exceed the maximum travel time here
-            if (Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
-                    .getSeconds() <= config.getMaximumTravelTime()) {
-                result.put(stop, serviceConnection);
-            }
-        }
-
-        return result;
+        return new StopSource(source, time, timeType, config).run();
     }
 
     private @Nullable Walk getFirstWalk(GeoCoordinate source, String firstStopId, LocalDateTime departureTime) {
@@ -557,4 +498,94 @@ public class GtfsRaptorService implements PublicTransitService {
 
     }
 
+    @RequiredArgsConstructor
+    abstract class IsolineQueryTemplate<T> {
+
+        private final T source;
+        protected final LocalDateTime time;
+        protected final TimeType timeType;
+        protected final ConnectionQueryConfig config;
+
+        protected abstract Map<String, LocalDateTime> prepareSourceStops(T source);
+
+        protected abstract Connection postprocessConnection(T source, ch.naviqore.raptor.Connection connection);
+
+        Map<Stop, Connection> run() throws ConnectionRoutingException {
+            Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
+
+            // no source stop is within walkable distance, and therefore no isolines are available
+            if (sourceStops.isEmpty()) {
+                return Map.of();
+            }
+
+            Map<String, ch.naviqore.raptor.Connection> isolines;
+            try {
+                isolines = raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config));
+            } catch (RaptorAlgorithm.InvalidStopException e) {
+                log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+                return Map.of();
+            } catch (IllegalArgumentException e) {
+                throw new ConnectionRoutingException(e);
+            }
+
+            Map<Stop, Connection> result = new HashMap<>();
+            for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isolines.entrySet()) {
+                ch.naviqore.raptor.Connection connection = entry.getValue();
+                Stop stop = TypeMapper.map(schedule.getStops().get(entry.getKey()));
+
+                Connection serviceConnection = postprocessConnection(source, connection);
+
+                // The raptor algorithm does not consider the firstMile walk time, so we need to filter out connections
+                // that exceed the maximum travel time here
+                if (Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
+                        .getSeconds() <= config.getMaximumTravelTime()) {
+                    result.put(stop, serviceConnection);
+                }
+            }
+
+            return result;
+        }
+    }
+
+    class GeoSource extends IsolineQueryTemplate<GeoCoordinate> {
+
+        public GeoSource(GeoCoordinate source, LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
+            super(source, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+            return getStopsWithWalkTimeFromLocation(source, time, config.getMaximumWalkingDuration(), timeType);
+        }
+
+        @Override
+        protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection) {
+            Walk firstMile = null;
+            Walk lastMile = null;
+            if (timeType == TimeType.DEPARTURE) {
+                firstMile = getFirstWalk(source, connection.getFromStopId(), connection.getDepartureTime());
+            } else if (timeType == TimeType.ARRIVAL) {
+                lastMile = getLastWalk(source, connection.getFromStopId(), connection.getDepartureTime());
+            }
+
+            return TypeMapper.map(connection, firstMile, lastMile, schedule);
+        }
+    }
+
+    class StopSource extends IsolineQueryTemplate<ch.naviqore.service.Stop> {
+
+        public StopSource(Stop source, LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
+            super(source, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(Stop source) {
+            return getAllChildStopsFromStop(source, time);
+        }
+
+        @Override
+        protected Connection postprocessConnection(Stop source, ch.naviqore.raptor.Connection connection) {
+            return TypeMapper.map(connection, null, null, schedule);
+        }
+    }
 }
