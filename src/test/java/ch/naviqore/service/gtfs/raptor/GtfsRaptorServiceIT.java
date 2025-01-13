@@ -358,7 +358,7 @@ class GtfsRaptorServiceIT {
         class Connection {
 
             @Test
-            void shouldThrowOnInvalidStop() throws StopNotFoundException, ConnectionRoutingException {
+            void shouldThrowOnInvalidStop() {
                 assertThrows(StopNotFoundException.class,
                         () -> service.getConnections(service.getStopById("NOT_A_STOP"), service.getStopById("C"),
                                 DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG));
@@ -405,7 +405,7 @@ class GtfsRaptorServiceIT {
         class Isolines {
 
             @Test
-            void shouldThrowOnInvalidStop() throws StopNotFoundException, ConnectionRoutingException {
+            void shouldThrowOnInvalidStop() {
                 assertThrows(StopNotFoundException.class,
                         () -> service.getIsolines(service.getStopById("NOT_A_STOP"), DATE_TIME, TimeType.DEPARTURE,
                                 QUERY_CONFIG));

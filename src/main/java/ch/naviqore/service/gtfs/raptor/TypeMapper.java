@@ -137,28 +137,15 @@ final class TypeMapper {
 
     private static TravelMode map(RouteType routeType) {
         DefaultRouteType defaultRouteType = RouteTypeMapper.map(routeType);
-        switch (defaultRouteType) {
-            case BUS:
-            case TROLLEYBUS:
-                return TravelMode.BUS;
-            case TRAM:
-            case CABLE_TRAM:
-                return TravelMode.TRAM;
-            case RAIL:
-            case MONORAIL:
-                return TravelMode.RAIL;
-            case FERRY:
-                return TravelMode.SHIP;
-            case SUBWAY:
-                return TravelMode.SUBWAY;
-            case AERIAL_LIFT:
-                return TravelMode.AERIAL_LIFT;
-            case FUNICULAR:
-                return TravelMode.FUNICULAR;
-            default:
-                // should never happen
-                throw new IllegalArgumentException("Route type not supported");
-        }
+        return switch (defaultRouteType) {
+            case BUS, TROLLEYBUS -> TravelMode.BUS;
+            case TRAM, CABLE_TRAM -> TravelMode.TRAM;
+            case RAIL, MONORAIL -> TravelMode.RAIL;
+            case FERRY -> TravelMode.SHIP;
+            case SUBWAY -> TravelMode.SUBWAY;
+            case AERIAL_LIFT -> TravelMode.AERIAL_LIFT;
+            case FUNICULAR -> TravelMode.FUNICULAR;
+        };
     }
 
     private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule, int distance) {

@@ -331,7 +331,7 @@ public class RoutingControllerTest {
                 Connection connection = stopConnection.getConnection();
                 // make sure each connection has a departure time after/equal the expected start time
                 assertFalse(connection.getLegs().getFirst().getDepartureTime().isBefore(expectedStartTime));
-                assertEquals(connection.getLegs().getFirst().getFromStop().getId(), sourceStopId);
+                assertEquals(sourceStopId, connection.getLegs().getFirst().getFromStop().getId());
 
                 Trip trip = stopConnection.getConnectingLeg().getTrip();
                 if (trip != null) {
@@ -444,7 +444,7 @@ public class RoutingControllerTest {
 
                 // make sure each connection has an arrival time after/equal the expected start time
                 assertFalse(connection.getLegs().getLast().getArrivalTime().isAfter(expectedArrivalTime));
-                assertEquals(connection.getLegs().getLast().getToStop().getId(), sourceStopId);
+                assertEquals(sourceStopId, connection.getLegs().getLast().getToStop().getId());
 
                 Trip trip = connectingLeg.getTrip();
                 if (trip != null) {
