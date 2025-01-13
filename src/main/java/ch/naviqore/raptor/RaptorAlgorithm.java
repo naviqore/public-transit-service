@@ -55,21 +55,11 @@ public interface RaptorAlgorithm {
         public InvalidStopException(String message) {
             super(message);
         }
-
-        public InvalidStopException(String message, Throwable cause) {
-            super(message, cause);
-        }
     }
-
-    class MyException extends IllegalArgumentException {}
 
     class InvalidTimeException extends IllegalArgumentException {
         public InvalidTimeException(String message) {
             super(message);
-        }
-
-        public InvalidTimeException(String message, Throwable cause) {
-            super(message, cause);
         }
     }
 
