@@ -117,6 +117,43 @@ public class GtfsRaptorService implements PublicTransitService {
                 .toList();
     }
 
+    @Override
+    public Stop getStopById(String stopId) throws StopNotFoundException {
+        ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(stopId);
+
+        if (stop == null) {
+            throw new StopNotFoundException(stopId);
+        }
+
+        return TypeMapper.map(stop);
+    }
+
+    @Override
+    public Trip getTripById(String tripId, LocalDate date) throws TripNotFoundException, TripNotActiveException {
+        ch.naviqore.gtfs.schedule.model.Trip trip = schedule.getTrips().get(tripId);
+
+        if (trip == null) {
+            throw new TripNotFoundException(tripId);
+        }
+
+        if (!trip.getCalendar().isServiceAvailable(date)) {
+            throw new TripNotActiveException(tripId, date);
+        }
+
+        return TypeMapper.map(trip, date);
+    }
+
+    @Override
+    public Route getRouteById(String routeId) throws RouteNotFoundException {
+        ch.naviqore.gtfs.schedule.model.Route route = schedule.getRoutes().get(routeId);
+
+        if (route == null) {
+            throw new RouteNotFoundException(routeId);
+        }
+
+        return TypeMapper.map(route);
+    }
+
     // returns all stops to be included in search
     private List<String> getAllStopIdsForStop(Stop stop) {
         ch.naviqore.gtfs.schedule.model.Stop scheduleStop = schedule.getStops().get(stop.getId());
@@ -135,16 +172,16 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public RoutingFeatures getRoutingFeatures() {
+        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+                schedule.hasTripBikeInformation(), true);
+    }
+
+    @Override
     public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return getConnections(schedule.getStops().get(source.getId()), null, schedule.getStops().get(target.getId()),
                 null, time, timeType, config);
-    }
-
-    @Override
-    public RoutingFeatures getRoutingFeatures() {
-        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
-                schedule.hasTripBikeInformation(), true);
     }
 
     @Override
@@ -248,8 +285,8 @@ public class GtfsRaptorService implements PublicTransitService {
         return result;
     }
 
-    public Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
-                                                                       int maxWalkDuration, TimeType timeType) {
+    private Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
+                                                                        int maxWalkDuration, TimeType timeType) {
         Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, maxWalkDuration);
         return stopsWithWalkTime.entrySet()
                 .stream()
@@ -259,7 +296,7 @@ public class GtfsRaptorService implements PublicTransitService {
 
     }
 
-    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
+    private Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
                 spatialStopIndex.rangeSearch(location, config.getWalkingSearchRadius()));
 
@@ -274,24 +311,27 @@ public class GtfsRaptorService implements PublicTransitService {
                 stopsWithWalkTime.put(stop.getId(), walkDuration);
             }
         }
+
         return stopsWithWalkTime;
     }
 
-    public Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
+    private Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, LocalDateTime> stopWithDateTime = new HashMap<>();
         for (String stopId : stopIds) {
             stopWithDateTime.put(stopId, time);
         }
+
         return stopWithDateTime;
     }
 
-    public Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
+    private Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (String stopId : stopIds) {
             stopsWithWalkTime.put(stopId, 0);
         }
+
         return stopsWithWalkTime;
     }
 
@@ -376,6 +416,7 @@ public class GtfsRaptorService implements PublicTransitService {
                     departureTime.minusSeconds(firstWalkDuration), departureTime, source, firstStop.getCoordinate(),
                     TypeMapper.map(firstStop));
         }
+
         return null;
     }
 
@@ -389,44 +430,8 @@ public class GtfsRaptorService implements PublicTransitService {
                     arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target,
                     TypeMapper.map(lastStop));
         }
+
         return null;
-    }
-
-    @Override
-    public Stop getStopById(String stopId) throws StopNotFoundException {
-        ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(stopId);
-
-        if (stop == null) {
-            throw new StopNotFoundException(stopId);
-        }
-
-        return TypeMapper.map(stop);
-    }
-
-    @Override
-    public Trip getTripById(String tripId, LocalDate date) throws TripNotFoundException, TripNotActiveException {
-        ch.naviqore.gtfs.schedule.model.Trip trip = schedule.getTrips().get(tripId);
-
-        if (trip == null) {
-            throw new TripNotFoundException(tripId);
-        }
-
-        if (!trip.getCalendar().isServiceAvailable(date)) {
-            throw new TripNotActiveException(tripId, date);
-        }
-
-        return TypeMapper.map(trip, date);
-    }
-
-    @Override
-    public Route getRouteById(String routeId) throws RouteNotFoundException {
-        ch.naviqore.gtfs.schedule.model.Route route = schedule.getRoutes().get(routeId);
-
-        if (route == null) {
-            throw new RouteNotFoundException(routeId);
-        }
-
-        return TypeMapper.map(route);
     }
 
 }
