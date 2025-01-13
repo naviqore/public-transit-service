@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -202,28 +201,6 @@ class GtfsToRaptorConverterIT {
         record Transfer(String fromStopId, String toStopId, int duration) {
         }
 
-        class SimpleTransferGenerator implements TransferGenerator {
-
-            private List<ManualSchedule.Transfer> transfers;
-
-            public SimpleTransferGenerator(List<ManualSchedule.Transfer> transfers) {
-                this.transfers = transfers;
-            }
-
-            @Override
-            public List<Transfer> generateTransfers(Collection<Stop> stops) {
-                return this.transfers.stream()
-                        .map(transfer -> new Transfer(stops.stream()
-                                .filter(stop -> stop.getId().equals(transfer.fromStopId()))
-                                .findFirst()
-                                .orElseThrow(), stops.stream()
-                                .filter(stop -> stop.getId().equals(transfer.toStopId()))
-                                .findFirst()
-                                .orElseThrow(), transfer.duration))
-                        .toList();
-            }
-        }
-
         static class RaptorBuilderData {
 
             Map<String, Integer> stops;
@@ -324,6 +301,28 @@ class GtfsToRaptorConverterIT {
                 assertThat(betweenStopTransferIds).containsExactlyInAnyOrderElementsOf(ids);
             }
 
+        }
+
+        class SimpleTransferGenerator implements TransferGenerator {
+
+            private final List<ManualSchedule.Transfer> transfers;
+
+            public SimpleTransferGenerator(List<ManualSchedule.Transfer> transfers) {
+                this.transfers = transfers;
+            }
+
+            @Override
+            public List<Transfer> generateTransfers(Collection<Stop> stops) {
+                return this.transfers.stream()
+                        .map(transfer -> new Transfer(stops.stream()
+                                .filter(stop -> stop.getId().equals(transfer.fromStopId()))
+                                .findFirst()
+                                .orElseThrow(), stops.stream()
+                                .filter(stop -> stop.getId().equals(transfer.toStopId()))
+                                .findFirst()
+                                .orElseThrow(), transfer.duration))
+                        .toList();
+            }
         }
 
     }

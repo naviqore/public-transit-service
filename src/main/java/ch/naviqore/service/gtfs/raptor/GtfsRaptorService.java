@@ -212,7 +212,7 @@ public class GtfsRaptorService implements PublicTransitService {
             } else {
                 connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
             }
-        } catch (RaptorAlgorithm.InvalidStopException e){
+        } catch (RaptorAlgorithm.InvalidStopException e) {
             // TODO: try location based routing instead
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return List.of();
@@ -310,7 +310,7 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
                     config, timeType);
-        } catch (RaptorAlgorithm.InvalidStopException e){
+        } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return Map.of();
         } catch (IllegalArgumentException e) {
@@ -327,7 +327,7 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
                     config, timeType);
-        } catch (RaptorAlgorithm.InvalidStopException e){
+        } catch (RaptorAlgorithm.InvalidStopException e) {
             // TODO: Try location based iso line routing?
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return Map.of();
