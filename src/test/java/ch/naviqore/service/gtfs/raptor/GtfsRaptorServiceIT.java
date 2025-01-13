@@ -368,7 +368,7 @@ class GtfsRaptorServiceIT {
             class StopWithoutDepartures {
 
                 @Test
-                void target_departure() throws ConnectionRoutingException, StopNotFoundException {
+                void targetDeparture() throws ConnectionRoutingException, StopNotFoundException {
                     List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("A"),
                             service.getStopById("D"), DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
 
@@ -376,7 +376,7 @@ class GtfsRaptorServiceIT {
                 }
 
                 @Test
-                void target_arrival() throws ConnectionRoutingException, StopNotFoundException {
+                void targetArrival() throws ConnectionRoutingException, StopNotFoundException {
                     List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("A"),
                             service.getStopById("D"), DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
 
@@ -384,7 +384,7 @@ class GtfsRaptorServiceIT {
                 }
 
                 @Test
-                void source_departure() throws ConnectionRoutingException, StopNotFoundException {
+                void sourceDeparture() throws ConnectionRoutingException, StopNotFoundException {
                     List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("D"),
                             service.getStopById("A"), DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
 
@@ -392,7 +392,7 @@ class GtfsRaptorServiceIT {
                 }
 
                 @Test
-                void source_arrival() throws ConnectionRoutingException, StopNotFoundException {
+                void sourceArrival() throws ConnectionRoutingException, StopNotFoundException {
                     List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("D"),
                             service.getStopById("A"), DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
 
