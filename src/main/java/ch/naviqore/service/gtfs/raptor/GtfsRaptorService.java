@@ -12,6 +12,7 @@ import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
@@ -180,109 +181,27 @@ public class GtfsRaptorService implements PublicTransitService {
     @Override
     public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return getConnections(schedule.getStops().get(source.getId()), null, schedule.getStops().get(target.getId()),
-                null, time, timeType, config);
+        return new StopToStop(schedule.getStops().get(source.getId()), schedule.getStops().get(target.getId()), time,
+                timeType, config).run();
     }
 
     @Override
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return getConnections(null, source, null, target, time, timeType, config);
+        return new GeoToGeo(source, target, time, timeType, config).run();
     }
 
     @Override
     public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return getConnections(schedule.getStops().get(source.getId()), null, null, target, time, timeType, config);
+        return new StopToGeo(schedule.getStops().get(source.getId()), target, time, timeType, config).run();
     }
 
     @Override
     public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return getConnections(null, source, schedule.getStops().get(target.getId()), null, time, timeType, config);
-    }
-
-    private List<Connection> getConnections(@Nullable ch.naviqore.gtfs.schedule.model.Stop departureStop,
-                                            @Nullable GeoCoordinate departureLocation,
-                                            @Nullable ch.naviqore.gtfs.schedule.model.Stop arrivalStop,
-                                            @Nullable GeoCoordinate arrivalLocation, LocalDateTime time,
-                                            TimeType timeType,
-                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
-
-        boolean isDeparture = timeType == TimeType.DEPARTURE;
-        ch.naviqore.gtfs.schedule.model.Stop sourceStop = isDeparture ? departureStop : arrivalStop;
-        GeoCoordinate sourceLocation = isDeparture ? departureLocation : arrivalLocation;
-        ch.naviqore.gtfs.schedule.model.Stop targetStop = isDeparture ? arrivalStop : departureStop;
-        GeoCoordinate targetLocation = isDeparture ? arrivalLocation : departureLocation;
-
-        Map<String, LocalDateTime> sourceStops;
-        Map<String, Integer> targetStops;
-
-        if (sourceStop != null) {
-            sourceStops = getAllChildStopsFromStop(TypeMapper.map(sourceStop), time);
-        } else if (sourceLocation != null) {
-            sourceStops = getStopsWithWalkTimeFromLocation(sourceLocation, time, config.getMaximumWalkingDuration(),
-                    timeType);
-        } else {
-            throw new IllegalArgumentException("Either sourceStop or sourceLocation must be provided.");
-        }
-
-        if (targetStop != null) {
-            targetStops = getAllChildStopsFromStop(TypeMapper.map(targetStop));
-        } else if (targetLocation != null) {
-            targetStops = getStopsWithWalkTimeFromLocation(targetLocation, config.getMaximumWalkingDuration());
-        } else {
-            throw new IllegalArgumentException("Either targetStop or targetLocation must be provided.");
-        }
-
-        // no source stop or target stop is within walkable distance, and therefore no connections are available
-        if (sourceStops.isEmpty() || targetStops.isEmpty()) {
-            return List.of();
-        }
-
-        // query connection from raptor
-        List<ch.naviqore.raptor.Connection> connections;
-        try {
-            if (isDeparture) {
-                connections = raptorRouter.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(config));
-            } else {
-                connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
-            }
-        } catch (RaptorAlgorithm.InvalidStopException e) {
-            // TODO: try location based routing instead
-            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-            return List.of();
-        } catch (IllegalArgumentException e) {
-            throw new ConnectionRoutingException(e);
-        }
-
-        // assemble connection results
-        List<Connection> result = new ArrayList<>();
-
-        for (ch.naviqore.raptor.Connection connection : connections) {
-            Walk firstMile = null;
-            Walk lastMile = null;
-
-            if (sourceStop == null) {
-                LocalDateTime departureTime = connection.getDepartureTime();
-                firstMile = getFirstWalk(sourceLocation, connection.getFromStopId(), departureTime);
-            }
-            if (targetStop == null) {
-                LocalDateTime arrivalTime = connection.getArrivalTime();
-                lastMile = getLastWalk(targetLocation, connection.getToStopId(), arrivalTime);
-            }
-
-            Connection serviceConnection = TypeMapper.map(connection, firstMile, lastMile, schedule);
-
-            // Filter needed because the raptor algorithm does not consider the firstMile and lastMile walk time
-            if (Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
-                    .getSeconds() <= config.getMaximumTravelTime()) {
-                result.add(serviceConnection);
-            }
-        }
-
-        return result;
+        return new GeoToStop(source, schedule.getStops().get(target.getId()), time, timeType, config).run();
     }
 
     private Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
@@ -293,7 +212,6 @@ public class GtfsRaptorService implements PublicTransitService {
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> timeType == TimeType.DEPARTURE ? startTime.plusSeconds(
                                 entry.getValue()) : startTime.minusSeconds(entry.getValue())));
-
     }
 
     private Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
@@ -432,6 +350,211 @@ public class GtfsRaptorService implements PublicTransitService {
         }
 
         return null;
+    }
+
+    @RequiredArgsConstructor
+    abstract class ConnectionQueryTemplate<S, T> {
+
+        private final S source;
+        private final T target;
+        protected final LocalDateTime time;
+        protected final TimeType timeType;
+        protected final ConnectionQueryConfig config;
+
+        protected abstract Map<String, LocalDateTime> prepareSourceStops(S source);
+
+        protected abstract Map<String, Integer> prepareTargetStops(T target);
+
+        protected abstract Connection postprocessConnection(S source, ch.naviqore.raptor.Connection connection,
+                                                            T target);
+
+        protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
+
+        List<Connection> run() throws ConnectionRoutingException {
+            // swap source and target if time type is arrival, which means routing in the reverse time dimension
+            if (timeType == TimeType.ARRIVAL) {
+                return swap(source, target).process();
+            }
+
+            return process();
+        }
+
+        List<Connection> process() throws ConnectionRoutingException {
+
+            Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
+            Map<String, Integer> targetStops = prepareTargetStops(target);
+
+            // no source stop or target stop is within walkable distance, and therefore no connections are available
+            if (sourceStops.isEmpty() || targetStops.isEmpty()) {
+                return List.of();
+            }
+
+            // query connection from raptor
+            List<ch.naviqore.raptor.Connection> connections;
+            try {
+                if (timeType == TimeType.DEPARTURE) {
+                    connections = raptorRouter.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(config));
+                } else {
+                    connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
+                }
+            } catch (RaptorAlgorithm.InvalidStopException e) {
+                // TODO: try location based routing instead
+                log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+                return List.of();
+            } catch (IllegalArgumentException e) {
+                throw new ConnectionRoutingException(e);
+            }
+
+            // assemble connection results
+            List<Connection> result = new ArrayList<>();
+
+            for (ch.naviqore.raptor.Connection raptorConnection : connections) {
+                Connection serviceConnection = postprocessConnection(source, raptorConnection, target);
+
+                // filter because the raptor algorithm does not consider the first mile and last mile walk time
+                if (Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
+                        .getSeconds() <= config.getMaximumTravelTime()) {
+                    result.add(serviceConnection);
+                }
+            }
+
+            return result;
+        }
+
+    }
+
+    private class StopToStop extends ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, ch.naviqore.gtfs.schedule.model.Stop> {
+
+        public StopToStop(ch.naviqore.gtfs.schedule.model.Stop source, ch.naviqore.gtfs.schedule.model.Stop target,
+                          LocalDateTime time, TimeType timeType, ConnectionQueryConfig config) {
+            super(source, target, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(ch.naviqore.gtfs.schedule.model.Stop source) {
+            return getAllChildStopsFromStop(TypeMapper.map(source), time);
+        }
+
+        @Override
+        protected Map<String, Integer> prepareTargetStops(ch.naviqore.gtfs.schedule.model.Stop target) {
+            return getAllChildStopsFromStop(TypeMapper.map(target));
+        }
+
+        @Override
+        protected Connection postprocessConnection(ch.naviqore.gtfs.schedule.model.Stop source,
+                                                   ch.naviqore.raptor.Connection connection,
+                                                   ch.naviqore.gtfs.schedule.model.Stop target) {
+            return TypeMapper.map(connection, null, null, schedule);
+        }
+
+        @Override
+        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, ch.naviqore.gtfs.schedule.model.Stop> swap(
+                ch.naviqore.gtfs.schedule.model.Stop source, ch.naviqore.gtfs.schedule.model.Stop target) {
+            return new StopToStop(target, source, time, timeType, config);
+        }
+    }
+
+    private class StopToGeo extends ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, GeoCoordinate> {
+
+        public StopToGeo(ch.naviqore.gtfs.schedule.model.Stop source, GeoCoordinate target, LocalDateTime time,
+                         TimeType timeType, ConnectionQueryConfig config) {
+            super(source, target, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(ch.naviqore.gtfs.schedule.model.Stop source) {
+            return getAllChildStopsFromStop(TypeMapper.map(source), time);
+        }
+
+        @Override
+        protected Map<String, Integer> prepareTargetStops(GeoCoordinate target) {
+            return getStopsWithWalkTimeFromLocation(target, config.getMaximumWalkingDuration());
+        }
+
+        @Override
+        protected Connection postprocessConnection(ch.naviqore.gtfs.schedule.model.Stop source,
+                                                   ch.naviqore.raptor.Connection connection, GeoCoordinate target) {
+            LocalDateTime arrivalTime = connection.getArrivalTime();
+            Walk lastMile = getLastWalk(target, connection.getToStopId(), arrivalTime);
+
+            return TypeMapper.map(connection, null, lastMile, schedule);
+        }
+
+        @Override
+        protected ConnectionQueryTemplate<GeoCoordinate, ch.naviqore.gtfs.schedule.model.Stop> swap(
+                ch.naviqore.gtfs.schedule.model.Stop source, GeoCoordinate target) {
+            return new GeoToStop(target, source, time, timeType, config);
+        }
+    }
+
+    private class GeoToStop extends ConnectionQueryTemplate<GeoCoordinate, ch.naviqore.gtfs.schedule.model.Stop> {
+
+        public GeoToStop(GeoCoordinate source, ch.naviqore.gtfs.schedule.model.Stop target, LocalDateTime time,
+                         TimeType timeType, ConnectionQueryConfig config) {
+            super(source, target, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+            return getStopsWithWalkTimeFromLocation(source, time, config.getMaximumWalkingDuration(), timeType);
+        }
+
+        @Override
+        protected Map<String, Integer> prepareTargetStops(ch.naviqore.gtfs.schedule.model.Stop target) {
+            return getAllChildStopsFromStop(TypeMapper.map(target));
+        }
+
+        @Override
+        protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                   ch.naviqore.gtfs.schedule.model.Stop target) {
+            LocalDateTime departureTime = connection.getDepartureTime();
+            Walk firstMile = getFirstWalk(source, connection.getFromStopId(), departureTime);
+
+            return TypeMapper.map(connection, firstMile, null, schedule);
+        }
+
+        @Override
+        protected ConnectionQueryTemplate<ch.naviqore.gtfs.schedule.model.Stop, GeoCoordinate> swap(
+                GeoCoordinate source, ch.naviqore.gtfs.schedule.model.Stop target) {
+            return new StopToGeo(target, source, time, timeType, config);
+        }
+    }
+
+    private class GeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> {
+
+        public GeoToGeo(GeoCoordinate source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+                        ConnectionQueryConfig config) {
+            super(source, target, time, timeType, config);
+        }
+
+        @Override
+        protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+            return getStopsWithWalkTimeFromLocation(source, time, config.getMaximumWalkingDuration(), timeType);
+        }
+
+        @Override
+        protected Map<String, Integer> prepareTargetStops(GeoCoordinate target) {
+            return getStopsWithWalkTimeFromLocation(target, config.getMaximumWalkingDuration());
+        }
+
+        @Override
+        protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                   GeoCoordinate target) {
+            LocalDateTime departureTime = connection.getDepartureTime();
+            Walk firstMile = getFirstWalk(source, connection.getFromStopId(), departureTime);
+
+            LocalDateTime arrivalTime = connection.getArrivalTime();
+            Walk lastMile = getLastWalk(target, connection.getToStopId(), arrivalTime);
+
+            return TypeMapper.map(connection, firstMile, lastMile, schedule);
+        }
+
+        @Override
+        protected ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> swap(GeoCoordinate source,
+                                                                             GeoCoordinate target) {
+            return new GeoToGeo(target, source, time, timeType, config);
+        }
+
     }
 
 }
