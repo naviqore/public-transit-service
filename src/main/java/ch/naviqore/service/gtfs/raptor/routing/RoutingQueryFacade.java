@@ -38,9 +38,6 @@ public class RoutingQueryFacade {
         this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptorRouter);
     }
 
-    /**
-     * Query connections between stops
-     */
     public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                              Stop source, Stop target) throws ConnectionRoutingException {
         return new ConnectionStopToStop(time, timeType, queryConfig, utils, source, target).run();
