@@ -60,6 +60,8 @@ public class GtfsRaptorService implements PublicTransitService {
 
     @Override
     public List<Stop> getStops(String like, SearchType searchType) {
+        log.info("Searching for stops matching '{}', with search type '{}'", like, searchType);
+
         return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
                 .stream()
                 .sorted(Comparator.comparing(ch.naviqore.gtfs.schedule.model.Stop::getName))
@@ -69,6 +71,9 @@ public class GtfsRaptorService implements PublicTransitService {
 
     @Override
     public Optional<Stop> getNearestStop(GeoCoordinate location) {
+        log.info("Searching for nearest stop to location '({}, {})'", location.getFirstComponent(),
+                location.getSecondComponent());
+
         ch.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbour(location);
 
         // if nearest stop, which could be null, is a child stop, return parent stop
@@ -81,6 +86,9 @@ public class GtfsRaptorService implements PublicTransitService {
 
     @Override
     public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
+        log.info("Searching for nearest stops to location '({}, {})', within radius '{}', limit '{}'",
+                location.getFirstComponent(), location.getSecondComponent(), radius, limit);
+
         List<ch.naviqore.gtfs.schedule.model.Stop> stops = new ArrayList<>();
 
         for (ch.naviqore.gtfs.schedule.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
@@ -100,6 +108,9 @@ public class GtfsRaptorService implements PublicTransitService {
 
     @Override
     public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
+        log.info("Getting next departures for stop '{}', from '{}', until '{}', limit '{}'", stop.getId(), from, until,
+                limit);
+
         return schedule.getRelatedStops(stop.getId())
                 .stream()
                 .flatMap(scheduleStop -> schedule.getNextDepartures(scheduleStop.getId(), from, limit).stream())
@@ -156,6 +167,9 @@ public class GtfsRaptorService implements PublicTransitService {
     @Override
     public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from stop '{}' to stop '{}', time '{}', time type '{}'", source.getId(),
+                target.getId(), time, timeType);
+
         return routing.queryConnections(time, timeType, config, source, target);
     }
 
@@ -163,30 +177,45 @@ public class GtfsRaptorService implements PublicTransitService {
     public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from location '({}, {})' to location '({}, {})', time '{}', time type '{}'",
+                source.getFirstComponent(), source.getSecondComponent(), target.getFirstComponent(),
+                target.getSecondComponent(), time, timeType);
+
         return routing.queryConnections(time, timeType, config, source, target);
     }
 
     @Override
     public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from stop '{}' to location '({}, {})', time '{}', time type '{}'", source.getId(),
+                target.getFirstComponent(), target.getSecondComponent(), time, timeType);
+
         return routing.queryConnections(time, timeType, config, source, target);
     }
 
     @Override
     public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from location '({}, {})' to stop '{}', time '{}', time type '{}'",
+                source.getFirstComponent(), source.getSecondComponent(), target.getId(), time, timeType);
+
         return routing.queryConnections(time, timeType, config, source, target);
     }
 
     @Override
     public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing isolines from location '({}, {})', time '{}', time type '{}'", source.getFirstComponent(),
+                source.getSecondComponent(), time, timeType);
+
         return routing.queryIsolines(time, timeType, config, source);
     }
 
     @Override
     public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing isolines from stop '{}', time '{}', time type '{}'", source.getId(), time, timeType);
+
         return routing.queryIsolines(time, timeType, config, source);
     }
 

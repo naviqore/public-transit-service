@@ -61,7 +61,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
         InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
 
-        log.info("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
+        log.debug("Routing earliest arrival from {} to {} departing at {}", departureStops.keySet(),
                 arrivalStops.keySet(), departureStops.values().stream().toList());
 
         return getConnections(departureStops, arrivalStops, TimeType.DEPARTURE, config);
@@ -73,7 +73,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
         InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
 
-        log.info("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
+        log.debug("Routing latest departure from {} to {} arriving at {}", departureStops.keySet(),
                 arrivalStops.keySet(), arrivalStops.values().stream().toList());
 
         return getConnections(arrivalStops, departureStops, TimeType.ARRIVAL, config);
@@ -85,7 +85,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.checkNonNullOrEmptyStops(sourceStops, "Source");
         InputValidator.validateSourceStopTimes(sourceStops);
 
-        log.info("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
+        log.debug("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
         LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
         LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
