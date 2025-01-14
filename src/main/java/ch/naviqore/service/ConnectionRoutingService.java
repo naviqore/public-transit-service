@@ -79,7 +79,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                       ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -92,6 +92,6 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+    Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                       ConnectionQueryConfig config) throws ConnectionRoutingException;
 }

@@ -1,17 +1,13 @@
 package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.router.RaptorConfig;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorRouter;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.exception.*;
-import ch.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
-import ch.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
-import ch.naviqore.service.gtfs.raptor.transfer.TransferGenerator;
 import ch.naviqore.service.walk.WalkCalculator;
-import ch.naviqore.utils.cache.EvictionCache;
 import ch.naviqore.utils.search.SearchIndex;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import ch.naviqore.utils.spatial.index.KDTree;
@@ -40,23 +36,14 @@ public class GtfsRaptorService implements PublicTransitService {
     GtfsRaptorService(ServiceConfig config, GtfsSchedule schedule,
                       KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
                       SearchIndex<ch.naviqore.gtfs.schedule.model.Stop> stopSearchIndex, WalkCalculator walkCalculator,
-                      List<TransferGenerator.Transfer> additionalTransfers) {
+                      RaptorRouter raptorRouter) {
         this.config = config;
         this.schedule = schedule;
         this.validity = new GtfsRaptorValidity(schedule);
         this.spatialStopIndex = spatialStopIndex;
         this.stopSearchIndex = stopSearchIndex;
         this.walkCalculator = walkCalculator;
-
-        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
-        GtfsTripMaskProvider tripMaskProvider = new GtfsTripMaskProvider(schedule, config.getCacheServiceDaySize(),
-                cacheStrategy);
-
-        // build raptor algorithm
-        RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
-                config.getTransferTimeSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
-                tripMaskProvider);
-        raptorRouter = new GtfsToRaptorConverter(schedule, additionalTransfers, raptorConfig).convert();
+        this.raptorRouter = raptorRouter;
     }
 
     @Override
@@ -130,6 +117,43 @@ public class GtfsRaptorService implements PublicTransitService {
                 .toList();
     }
 
+    @Override
+    public Stop getStopById(String stopId) throws StopNotFoundException {
+        ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(stopId);
+
+        if (stop == null) {
+            throw new StopNotFoundException(stopId);
+        }
+
+        return TypeMapper.map(stop);
+    }
+
+    @Override
+    public Trip getTripById(String tripId, LocalDate date) throws TripNotFoundException, TripNotActiveException {
+        ch.naviqore.gtfs.schedule.model.Trip trip = schedule.getTrips().get(tripId);
+
+        if (trip == null) {
+            throw new TripNotFoundException(tripId);
+        }
+
+        if (!trip.getCalendar().isServiceAvailable(date)) {
+            throw new TripNotActiveException(tripId, date);
+        }
+
+        return TypeMapper.map(trip, date);
+    }
+
+    @Override
+    public Route getRouteById(String routeId) throws RouteNotFoundException {
+        ch.naviqore.gtfs.schedule.model.Route route = schedule.getRoutes().get(routeId);
+
+        if (route == null) {
+            throw new RouteNotFoundException(routeId);
+        }
+
+        return TypeMapper.map(route);
+    }
+
     // returns all stops to be included in search
     private List<String> getAllStopIdsForStop(Stop stop) {
         ch.naviqore.gtfs.schedule.model.Stop scheduleStop = schedule.getStops().get(stop.getId());
@@ -148,16 +172,16 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public RoutingFeatures getRoutingFeatures() {
+        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+                schedule.hasTripBikeInformation(), true);
+    }
+
+    @Override
     public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return getConnections(schedule.getStops().get(source.getId()), null, schedule.getStops().get(target.getId()),
                 null, time, timeType, config);
-    }
-
-    @Override
-    public RoutingFeatures getRoutingFeatures() {
-        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
-                schedule.hasTripBikeInformation(), true);
     }
 
     @Override
@@ -225,6 +249,10 @@ public class GtfsRaptorService implements PublicTransitService {
             } else {
                 connections = raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(config));
             }
+        } catch (RaptorAlgorithm.InvalidStopException e) {
+            // TODO: try location based routing instead
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+            return List.of();
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
@@ -257,8 +285,8 @@ public class GtfsRaptorService implements PublicTransitService {
         return result;
     }
 
-    public Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
-                                                                       int maxWalkDuration, TimeType timeType) {
+    private Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
+                                                                        int maxWalkDuration, TimeType timeType) {
         Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, maxWalkDuration);
         return stopsWithWalkTime.entrySet()
                 .stream()
@@ -268,7 +296,7 @@ public class GtfsRaptorService implements PublicTransitService {
 
     }
 
-    public Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
+    private Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, int maxWalkDuration) {
         List<ch.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
                 spatialStopIndex.rangeSearch(location, config.getWalkingSearchRadius()));
 
@@ -283,29 +311,32 @@ public class GtfsRaptorService implements PublicTransitService {
                 stopsWithWalkTime.put(stop.getId(), walkDuration);
             }
         }
+
         return stopsWithWalkTime;
     }
 
-    public Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
+    private Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, LocalDateTime> stopWithDateTime = new HashMap<>();
         for (String stopId : stopIds) {
             stopWithDateTime.put(stopId, time);
         }
+
         return stopWithDateTime;
     }
 
-    public Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
+    private Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
         List<String> stopIds = getAllStopIdsForStop(stop);
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (String stopId : stopIds) {
             stopsWithWalkTime.put(stopId, 0);
         }
+
         return stopsWithWalkTime;
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
         Map<String, LocalDateTime> sourceStops = getStopsWithWalkTimeFromLocation(source, time,
                 config.getMaximumWalkingDuration(), timeType);
@@ -319,13 +350,16 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), source,
                     config, timeType);
+        } catch (RaptorAlgorithm.InvalidStopException e) {
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+            return Map.of();
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
         Map<String, LocalDateTime> sourceStops = getAllChildStopsFromStop(source, time);
 
@@ -333,6 +367,10 @@ public class GtfsRaptorService implements PublicTransitService {
             return mapToStopConnectionMap(
                     raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(config)), null,
                     config, timeType);
+        } catch (RaptorAlgorithm.InvalidStopException e) {
+            // TODO: Try location based iso line routing?
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+            return Map.of();
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
@@ -378,6 +416,7 @@ public class GtfsRaptorService implements PublicTransitService {
                     departureTime.minusSeconds(firstWalkDuration), departureTime, source, firstStop.getCoordinate(),
                     TypeMapper.map(firstStop));
         }
+
         return null;
     }
 
@@ -391,44 +430,8 @@ public class GtfsRaptorService implements PublicTransitService {
                     arrivalTime.plusSeconds(lastWalkDuration), lastStop.getCoordinate(), target,
                     TypeMapper.map(lastStop));
         }
+
         return null;
-    }
-
-    @Override
-    public Stop getStopById(String stopId) throws StopNotFoundException {
-        ch.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(stopId);
-
-        if (stop == null) {
-            throw new StopNotFoundException(stopId);
-        }
-
-        return TypeMapper.map(stop);
-    }
-
-    @Override
-    public Trip getTripById(String tripId, LocalDate date) throws TripNotFoundException, TripNotActiveException {
-        ch.naviqore.gtfs.schedule.model.Trip trip = schedule.getTrips().get(tripId);
-
-        if (trip == null) {
-            throw new TripNotFoundException(tripId);
-        }
-
-        if (!trip.getCalendar().isServiceAvailable(date)) {
-            throw new TripNotActiveException(tripId, date);
-        }
-
-        return TypeMapper.map(trip, date);
-    }
-
-    @Override
-    public Route getRouteById(String routeId) throws RouteNotFoundException {
-        ch.naviqore.gtfs.schedule.model.Route route = schedule.getRoutes().get(routeId);
-
-        if (route == null) {
-            throw new RouteNotFoundException(routeId);
-        }
-
-        return TypeMapper.map(route);
     }
 
 }

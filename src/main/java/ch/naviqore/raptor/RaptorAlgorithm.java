@@ -14,6 +14,9 @@ public interface RaptorAlgorithm {
      * @param config         Query configuration
      * @return a list of pareto-optimal earliest arrival connections sorted in ascending order by the number of route
      * legs (rounds)
+     * @throws InvalidStopException     if departure or arrival stops are invalid
+     * @throws InvalidTimeException     if departure or arrival times are invalid
+     * @throws IllegalArgumentException for other argument related errors
      */
     List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops, Map<String, Integer> arrivalStops,
                                           QueryConfig config);
@@ -26,6 +29,9 @@ public interface RaptorAlgorithm {
      * @param config         Query configuration
      * @return a list of pareto-optimal latest departure connections sorted in ascending order by the number of route
      * legs (rounds)
+     * @throws InvalidStopException     if departure or arrival stops are invalid
+     * @throws InvalidTimeException     if departure or arrival times are invalid
+     * @throws IllegalArgumentException for other argument related errors
      */
     List<Connection> routeLatestDeparture(Map<String, Integer> departureStops, Map<String, LocalDateTime> arrivalStops,
                                           QueryConfig config);
@@ -38,8 +44,23 @@ public interface RaptorAlgorithm {
      * @param timeType    is the type of time to route for (arrival or departure)
      * @param config      is the query configuration
      * @return the earliest arrival (timeType=departure) or latest departure (timeType=arrival) connection for each stop
+     * @throws InvalidStopException     if source stop is invalid
+     * @throws InvalidTimeException     if source time is invalid
+     * @throws IllegalArgumentException for other argument related errors
      */
     Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                           QueryConfig config);
+
+    class InvalidStopException extends IllegalArgumentException {
+        public InvalidStopException(String message) {
+            super(message);
+        }
+    }
+
+    class InvalidTimeException extends IllegalArgumentException {
+        public InvalidTimeException(String message) {
+            super(message);
+        }
+    }
 
 }

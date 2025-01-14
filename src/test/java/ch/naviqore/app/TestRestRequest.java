@@ -20,7 +20,7 @@ public class TestRestRequest {
     }
 
     public TestRestRequest setPort(int port) {
-        this.uriBuilder = UriComponentsBuilder.fromHttpUrl(String.format("http://localhost:%d", port));
+        this.uriBuilder = UriComponentsBuilder.fromUriString(String.format("http://localhost:%d", port));
         return this;
     }
 

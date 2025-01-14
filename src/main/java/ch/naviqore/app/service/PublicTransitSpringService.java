@@ -122,15 +122,15 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return delegate.getIsoLines(source, time, timeType, config);
+        return delegate.getIsolines(source, time, timeType, config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsoLines(Stop source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
-        return delegate.getIsoLines(source, time, timeType, config);
+        return delegate.getIsolines(source, time, timeType, config);
     }
 
     @Override

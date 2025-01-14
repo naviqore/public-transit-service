@@ -477,8 +477,8 @@ class RaptorRouterTest {
             Connection connection = connections.getFirst();
             Leg firstRouteLeg = connection.getLegs().getFirst();
             Leg walkTransferLeg = connection.getLegs().get(1);
-            assertEquals(firstRouteLeg.getType(), Leg.Type.ROUTE);
-            assertEquals(walkTransferLeg.getType(), Leg.Type.WALK_TRANSFER);
+            assertEquals(Leg.Type.ROUTE, firstRouteLeg.getType());
+            assertEquals(Leg.Type.WALK_TRANSFER, walkTransferLeg.getType());
             assertEquals(firstRouteLeg.getDepartureTime(), firstRouteLeg.getArrivalTime(),
                     "Departure time at C should be equal to arrival time at D");
             assertEquals(firstRouteLeg.getDepartureTime(), walkTransferLeg.getDepartureTime(),
@@ -921,21 +921,19 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorNullSourceStops() {
-            Map<String, LocalDateTime> sourceStops = null;
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertThrows(IllegalArgumentException.class,
-                    () -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops),
+                    () -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, null, targetStops),
                     "Source stops cannot be null");
         }
 
         @Test
         void throwErrorNullTargetStops() {
             Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
-            Map<String, Integer> targetStops = null;
 
             assertThrows(IllegalArgumentException.class,
-                    () -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops),
+                    () -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, null),
                     "Target stops cannot be null");
         }
 

@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfs.raptor.transfer;
+package ch.naviqore.service.gtfs.raptor.convert;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
@@ -14,10 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -177,9 +174,16 @@ public class WalkTransferGeneratorTest {
     @Nested
     class CreateTransfers {
 
+        private Set<Stop> stops;
+
+        @BeforeEach
+        void setUp() {
+            stops = new HashSet<>(schedule.getStops().values());
+        }
+
         @Test
         void expectedBehavior() {
-            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(stops);
             assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
@@ -190,7 +194,7 @@ public class WalkTransferGeneratorTest {
         void expectedBehavior_withIncreasedSearchRadius() {
             WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
                     DEFAULT_MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
-            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = generator.generateTransfers(stops);
             assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
@@ -202,7 +206,7 @@ public class WalkTransferGeneratorTest {
             int minimumTransferTime = 2000;
             WalkTransferGenerator highMinTimeGenerator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
                     minimumTransferTime, DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, spatialIndex);
-            List<TransferGenerator.Transfer> transfers = highMinTimeGenerator.generateTransfers(schedule);
+            List<TransferGenerator.Transfer> transfers = highMinTimeGenerator.generateTransfers(stops);
             assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");
             assertTransfersGenerated(transfers, "stop1", "stop3");
