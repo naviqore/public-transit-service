@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 class RoutingQueryUtils {
 
+    // TODO: Maybe give the methods more distinct names from the perspective of the templated cases.
+
     private final ServiceConfig serviceConfig;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
@@ -60,7 +62,6 @@ class RoutingQueryUtils {
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> timeType == TimeType.DEPARTURE ? startTime.plusSeconds(
                                 entry.getValue()) : startTime.minusSeconds(entry.getValue())));
-
     }
 
     Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, ConnectionQueryConfig queryConfig) {
