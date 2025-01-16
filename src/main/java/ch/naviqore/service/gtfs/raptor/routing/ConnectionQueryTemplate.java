@@ -29,6 +29,15 @@ abstract class ConnectionQueryTemplate<S, T> {
 
     protected abstract Map<String, Integer> prepareTargetStops(T target);
 
+    /**
+     * Handle case when there are no departures from or to requested stops.
+     * <p>
+     * Note: Strategy could be to try walking to other stops first.
+     */
+    protected abstract List<Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
+                                                                   S source,
+                                                                   T target) throws ConnectionRoutingException;
+
     protected abstract Connection postprocessConnection(S source, ch.naviqore.raptor.Connection connection, T target);
 
     protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
@@ -62,8 +71,7 @@ abstract class ConnectionQueryTemplate<S, T> {
             connections = utils.routeConnections(sourceStops, targetStops, timeType, queryConfig);
         } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-            // TODO: Implement abstract handleInvalidStopException method?
-            return List.of();
+            return handleInvalidStopException(e, source, target);
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }

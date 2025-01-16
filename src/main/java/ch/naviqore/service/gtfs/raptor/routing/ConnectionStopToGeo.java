@@ -1,13 +1,16 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.Connection;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
 import ch.naviqore.service.Walk;
 import ch.naviqore.service.config.ConnectionQueryConfig;
+import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
@@ -25,6 +28,12 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
     @Override
     protected Map<String, Integer> prepareTargetStops(GeoCoordinate target) {
         return utils.getStopsWithWalkTimeFromLocation(target, queryConfig);
+    }
+
+    @Override
+    protected List<Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception, Stop source,
+                                                          GeoCoordinate target) throws ConnectionRoutingException {
+        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source.getLocation(), target).process();
     }
 
     @Override
