@@ -7,9 +7,9 @@ import lombok.experimental.Accessors;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * General Transit Feed Specification (GTFS) schedule
@@ -83,10 +83,7 @@ public class GtfsSchedule {
      * @return A list of the next departures from the specified stop.
      */
     public List<StopTime> getNextDepartures(String stopId, LocalDateTime dateTime, int limit) {
-        Stop stop = stops.get(stopId);
-        if (stop == null) {
-            throw new IllegalArgumentException("Stop " + stopId + " not found");
-        }
+        Stop stop = getStop(stopId);
         return stop.getStopTimes()
                 .stream()
                 .filter(stopTime -> stopTime.departure().getTotalSeconds() >= dateTime.toLocalTime().toSecondOfDay())
@@ -106,7 +103,38 @@ public class GtfsSchedule {
                 .stream()
                 .filter(calendar -> calendar.isServiceAvailable(date))
                 .flatMap(calendar -> calendar.getTrips().stream())
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    /**
+     * Retrieves all stops for a given stop, including child stops if the stop has any.
+     *
+     * @param stopId the identifier of the stop.
+     * @return A list of stops including the stop itself and its children.
+     */
+    public List<Stop> getRelatedStops(String stopId) {
+        Stop stop = getStop(stopId);
+
+        if (stop.getChildren().isEmpty()) {
+            // child stop; return itself
+            return List.of(stop);
+        } else {
+            // parent stop; return all children and itself (departures on parent are possible)
+            List<Stop> stops = new ArrayList<>();
+            stops.add(stop);
+            stops.addAll(stop.getChildren());
+
+            return stops;
+        }
+    }
+
+    private Stop getStop(String stopId) {
+        Stop stop = stops.get(stopId);
+        if (stop == null) {
+            throw new IllegalArgumentException("Stop " + stopId + " not found");
+        }
+
+        return stop;
     }
 
 }
