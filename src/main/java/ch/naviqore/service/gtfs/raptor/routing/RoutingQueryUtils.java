@@ -1,7 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.router.RaptorRouter;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -37,21 +37,21 @@ class RoutingQueryUtils {
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final WalkCalculator walkCalculator;
-    private final RaptorRouter raptorRouter;
+    private final RaptorAlgorithm raptor;
 
     List<ch.naviqore.raptor.Connection> routeConnections(Map<String, LocalDateTime> sourceStops,
                                                          Map<String, Integer> targetStops, TimeType timeType,
                                                          ConnectionQueryConfig queryConfig) {
         if (timeType == TimeType.DEPARTURE) {
-            return raptorRouter.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(queryConfig));
+            return raptor.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(queryConfig));
         } else {
-            return raptorRouter.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(queryConfig));
+            return raptor.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(queryConfig));
         }
     }
 
     Map<String, ch.naviqore.raptor.Connection> createIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                               ConnectionQueryConfig queryConfig) {
-        return raptorRouter.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(queryConfig));
+        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(queryConfig));
     }
 
     Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,

@@ -1,7 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
-import ch.naviqore.raptor.router.RaptorRouter;
+import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.Connection;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
@@ -33,9 +33,9 @@ public class RoutingQueryFacade {
 
     public RoutingQueryFacade(ServiceConfig config, GtfsSchedule schedule,
                               KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
-                              WalkCalculator walkCalculator, RaptorRouter raptorRouter) {
+                              WalkCalculator walkCalculator, RaptorAlgorithm raptor) {
         this.schedule = schedule;
-        this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptorRouter);
+        this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptor);
     }
 
     public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
