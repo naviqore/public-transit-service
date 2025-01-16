@@ -85,7 +85,14 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         InputValidator.checkNonNullOrEmptyStops(sourceStops, "Source");
         InputValidator.validateSourceStopTimes(sourceStops);
 
-        log.debug("Routing isolines from {} with {}", sourceStops.keySet(), timeType);
+        if (timeType == TimeType.DEPARTURE) {
+            log.debug("Routing isolines departing from {} at {}", sourceStops.keySet(),
+                    sourceStops.values().stream().toList());
+        } else {
+            log.debug("Routing isolines arriving at {} at {}", sourceStops.keySet(),
+                    sourceStops.values().stream().toList());
+        }
+
         LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
         LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
