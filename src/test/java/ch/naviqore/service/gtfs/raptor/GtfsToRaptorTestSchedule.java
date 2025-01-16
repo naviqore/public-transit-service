@@ -1,4 +1,4 @@
-package ch.naviqore.service.gtfs.raptor.convert;
+package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
@@ -40,13 +40,13 @@ public class GtfsToRaptorTestSchedule {
         builder.addAgency("agency", "Some Agency", "", "America/New_York");
 
         builder.addStop("A", "A", 0.0, 0.0);
-        builder.addStop("B", "B", 0.0, 0.0);
-        builder.addStop("B1", "B1", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-        builder.addStop("B2", "B2", 0.0, 0.0, "B", AccessibilityInformation.UNKNOWN);
-        builder.addStop("C", "C", 0.0, 0.0);
-        builder.addStop("C1", "C1", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-        builder.addStop("C2", "C2", 0.0, 0.0, "C", AccessibilityInformation.UNKNOWN);
-        builder.addStop("D", "D", 0.0, 0.0);
+        builder.addStop("B", "B", 0.0, 1.0);
+        builder.addStop("B1", "B1", 0.0, 1.0, "B", AccessibilityInformation.UNKNOWN);
+        builder.addStop("B2", "B2", 0.0, 1.0, "B", AccessibilityInformation.UNKNOWN);
+        builder.addStop("C", "C", 0.0, 2.0);
+        builder.addStop("C1", "C1", 0.0, 2.0, "C", AccessibilityInformation.UNKNOWN);
+        builder.addStop("C2", "C2", 0.0, 2.0, "C", AccessibilityInformation.UNKNOWN);
+        builder.addStop("D", "D", 0.0, 3.0);
 
         // Route 1 goes from A, B1, C1
         builder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));

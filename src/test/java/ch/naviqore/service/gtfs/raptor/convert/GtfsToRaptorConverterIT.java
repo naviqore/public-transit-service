@@ -8,6 +8,7 @@ import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
+import ch.naviqore.service.gtfs.raptor.GtfsToRaptorTestSchedule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

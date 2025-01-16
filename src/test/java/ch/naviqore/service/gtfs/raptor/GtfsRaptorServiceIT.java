@@ -7,7 +7,6 @@ import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
 import ch.naviqore.service.exception.*;
-import ch.naviqore.service.gtfs.raptor.convert.GtfsToRaptorTestSchedule;
 import ch.naviqore.service.repo.GtfsScheduleRepository;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 import org.junit.jupiter.api.BeforeEach;
@@ -333,7 +332,7 @@ class GtfsRaptorServiceIT {
     @Nested
     class ManualSchedule {
 
-        private static final LocalDateTime DATE_TIME = LocalDateTime.MIN;
+        private static final LocalDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0);
         private static final ConnectionQueryConfig QUERY_CONFIG = new ConnectionQueryConfig(10 * 60, 2 * 60, 4,
                 24 * 60 * 60, false, false, null);
 
@@ -415,17 +414,32 @@ class GtfsRaptorServiceIT {
             class StopWithoutDepartures {
 
                 @Test
-                void departure() throws ConnectionRoutingException, StopNotFoundException {
+                void departure_withoutWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
                     Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("D"),
                             DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
                     assertThat(isolines).isEmpty();
                 }
 
                 @Test
-                void arrival() throws ConnectionRoutingException, StopNotFoundException {
+                void departure_withWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
+                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("C2"),
+                            DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
+                    // Expected behavior: Since no departures from stops C, C1 and C2, the result must be empty.
+                    assertThat(isolines).isEmpty();
+                }
+
+                @Test
+                void arrival_withoutWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
                     Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("D"),
                             DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
                     assertThat(isolines).isEmpty();
+                }
+
+                @Test
+                void arrival_withWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
+                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("C2"),
+                            DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
+                    assertThat(isolines).isNotEmpty();
                 }
             }
 
