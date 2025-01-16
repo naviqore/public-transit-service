@@ -42,6 +42,8 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
         LocalDateTime arrivalTime = connection.getArrivalTime();
         Walk lastMile = utils.createLastWalk(target, connection.getToStopId(), arrivalTime);
 
+        // TODO: Merge two walk legs
+
         return utils.composeConnection(connection, lastMile);
     }
 

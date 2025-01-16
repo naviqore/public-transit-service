@@ -338,7 +338,7 @@ class GtfsRaptorServiceIT {
 
         @BeforeEach
         void setUp() {
-            GtfsToRaptorTestSchedule builder = new GtfsToRaptorTestSchedule();
+            GtfsRaptorTestSchedule builder = new GtfsRaptorTestSchedule();
             GtfsSchedule schedule = builder.build();
 
             // do not create any transfers since all coordinates in the test schedule are at origin 0,0.

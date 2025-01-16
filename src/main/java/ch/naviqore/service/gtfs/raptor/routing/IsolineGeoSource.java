@@ -11,7 +11,6 @@ import ch.naviqore.utils.spatial.GeoCoordinate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-// TODO: Add case where source is stop but should be processed as geo-coordinate -> see connection query template
 class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
     IsolineGeoSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
@@ -35,6 +34,8 @@ class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
         // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator
         // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator
+
+        // TODO: Add case where source is stop but should be processed as geo-coordinate -> see connection query template
 
         return switch (timeType) {
             case ARRIVAL -> {

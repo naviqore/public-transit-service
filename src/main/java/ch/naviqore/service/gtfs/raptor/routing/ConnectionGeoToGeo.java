@@ -45,12 +45,11 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
 
         // TODO: Add sourceStop as source for firstMile if sourceStop != null
         // TODO: Add targetStop as target for lastMile if targetStop != null
-        //  COMMENT: I think this is already handled inside 'utils.createFirstWalk' and 'utils.createLastWalk'
+        //  COMMENT: Use a service.Transfer instead of a Walk --> utils.createDirectTransfer()
 
         // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator?
         // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator?
-        //  COMMENT: This means we would currently have a walk form our coordinate to the next stop, but then from
-        //  there another walk to another stop? Have we considered this case in the old version (non-refactored) version?
+        //  COMMENT: --> Solve via constructors.
 
         return utils.composeConnection(firstMile, connection, lastMile);
     }

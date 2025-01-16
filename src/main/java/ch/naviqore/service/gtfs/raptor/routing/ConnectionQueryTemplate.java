@@ -42,11 +42,11 @@ abstract class ConnectionQueryTemplate<S, T> {
 
     protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
 
+    /**
+     * Warning: Do not call this method outside the routing facade, use the process method directly instead. Otherwise,
+     * swapping could appear twice.
+     */
     List<Connection> run() throws ConnectionRoutingException {
-        // TODO: / COMMENT: This is dangerous because if you run the query multiple times (e.g. when routing from
-        //  location instead of stop due to InvalidStopException, the swap might occur twice resulting in incorrect
-        //  results.
-
         // swap source and target if time type is arrival, which means routing in the reverse time dimension
         if (timeType == TimeType.ARRIVAL) {
             return swap(source, target).process();
@@ -56,7 +56,6 @@ abstract class ConnectionQueryTemplate<S, T> {
     }
 
     List<Connection> process() throws ConnectionRoutingException {
-
         Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
         Map<String, Integer> targetStops = prepareTargetStops(target);
 

@@ -27,11 +27,11 @@ import java.util.EnumSet;
  * Stops B, C2 and D have no departures/arrivals and should not be included in the raptor conversion.
  * Stops B and C are parents of stops B1, B2 and C1, C2, respectively.
  */
-public class GtfsToRaptorTestSchedule {
+public class GtfsRaptorTestSchedule {
 
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
-    public GtfsToRaptorTestSchedule() {
+    public GtfsRaptorTestSchedule() {
         setup();
     }
 
