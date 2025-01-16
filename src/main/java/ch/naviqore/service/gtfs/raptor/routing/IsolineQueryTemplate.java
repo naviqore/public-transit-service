@@ -1,13 +1,11 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
-import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.Connection;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
-import ch.naviqore.service.gtfs.raptor.TypeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,10 +22,12 @@ abstract class IsolineQueryTemplate<T> {
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
 
-    private final GtfsSchedule schedule;
     private final T source;
 
     protected abstract Map<String, LocalDateTime> prepareSourceStops(T source);
+
+    protected abstract Map<Stop, Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
+                                                                        T source) throws ConnectionRoutingException;
 
     protected abstract Connection postprocessConnection(T source, ch.naviqore.raptor.Connection connection);
 
@@ -45,7 +45,7 @@ abstract class IsolineQueryTemplate<T> {
             isolines = utils.createIsolines(sourceStops, timeType, queryConfig);
         } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
-            return Map.of();
+            return handleInvalidStopException(e, source);
         } catch (IllegalArgumentException e) {
             throw new ConnectionRoutingException(e);
         }
@@ -54,7 +54,7 @@ abstract class IsolineQueryTemplate<T> {
         Map<Stop, Connection> result = new HashMap<>();
         for (Map.Entry<String, ch.naviqore.raptor.Connection> entry : isolines.entrySet()) {
             ch.naviqore.raptor.Connection connection = entry.getValue();
-            Stop stop = TypeMapper.map(schedule.getStops().get(entry.getKey()));
+            Stop stop = utils.getStopById(entry.getKey());
 
             Connection serviceConnection = postprocessConnection(source, connection);
 

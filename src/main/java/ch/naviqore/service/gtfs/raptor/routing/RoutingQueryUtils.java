@@ -83,6 +83,10 @@ class RoutingQueryUtils {
         return stopsWithWalkTime;
     }
 
+    Stop getStopById(String stopId) {
+        return TypeMapper.map(schedule.getStops().get(stopId));
+    }
+
     Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
         List<ch.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
         Map<String, LocalDateTime> stopWithDateTime = new HashMap<>();

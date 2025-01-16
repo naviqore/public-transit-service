@@ -28,13 +28,11 @@ import java.util.Map;
 //  - Test isoline cases.
 public class RoutingQueryFacade {
 
-    private final GtfsSchedule schedule;
     private final RoutingQueryUtils utils;
 
     public RoutingQueryFacade(ServiceConfig config, GtfsSchedule schedule,
                               KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
                               WalkCalculator walkCalculator, RaptorAlgorithm raptor) {
-        this.schedule = schedule;
         this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptor);
     }
 
@@ -61,11 +59,11 @@ public class RoutingQueryFacade {
 
     public Map<Stop, Connection> queryIsolines(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                                Stop source) throws ConnectionRoutingException {
-        return new IsolineStopSource(time, timeType, queryConfig, utils, schedule, source).run();
+        return new IsolineStopSource(time, timeType, queryConfig, utils, source).run();
     }
 
     public Map<Stop, Connection> queryIsolines(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                                GeoCoordinate source) throws ConnectionRoutingException {
-        return new IsolineGeoSource(time, timeType, queryConfig, utils, schedule, source).run();
+        return new IsolineGeoSource(time, timeType, queryConfig, utils, source).run();
     }
 }
