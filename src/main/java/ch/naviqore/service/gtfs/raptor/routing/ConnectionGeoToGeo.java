@@ -56,9 +56,6 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
 
     /**
      * No departures on either the source or the target stop. Try to walk on both ends to another stop.
-     * <p>
-     * Note: Due to the filter on minimum transfer time, the walk on the end of a stop with departures is filtered out.
-     * TODO: Make this step explicit? Since if the minimum walking time is changed to 0, we would have a walk from the same stop to the same stop.
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, Stop target) {
