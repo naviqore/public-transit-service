@@ -13,6 +13,12 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Template for executing an isoline query from a source location, encapsulating common logic and providing entry points
+ * for customization.
+ *
+ * @param <T> Type of the source location.
+ */
 @Slf4j
 @RequiredArgsConstructor
 abstract class IsolineQueryTemplate<T> {

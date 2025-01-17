@@ -11,6 +11,9 @@ import ch.naviqore.utils.spatial.GeoCoordinate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * An isoline query from a coordinate.
+ */
 class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
     IsolineGeoSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,

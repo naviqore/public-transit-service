@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A connection query between two transit stops.
+ */
 class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
 
     ConnectionStopToStop(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
@@ -31,8 +34,7 @@ class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
     @Override
     protected List<Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception, Stop source,
                                                           Stop target) throws ConnectionRoutingException {
-        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source.getLocation(),
-                target.getLocation()).process();
+        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source, target).process();
     }
 
     @Override

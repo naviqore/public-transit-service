@@ -71,15 +71,8 @@ public final class TypeMapper {
         };
     }
 
-    public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
-                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
-                                  @Nullable Stop stop) {
-        return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
-                targetLocation, stop);
-    }
-
-    public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Walk firstMile,
-                                 @Nullable Walk lastMile, GtfsSchedule schedule) {
+    public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
+                                 @Nullable Leg lastMile, GtfsSchedule schedule) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -150,7 +143,20 @@ public final class TypeMapper {
         };
     }
 
-    private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule, int distance) {
+    public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
+                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
+                                  @Nullable Stop stop) {
+        return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
+                targetLocation, stop);
+    }
+
+    public static Transfer createTransfer(int distance, int duration, LocalDateTime departureTime,
+                                          LocalDateTime arrivalTime, Stop sourceStop, Stop targetStop) {
+        return new GtfsRaptorTransfer(distance, duration, departureTime, arrivalTime, sourceStop, targetStop);
+    }
+
+    private static PublicTransitLeg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule,
+                                                           int distance) {
         ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.getTripId());
         LocalDate serviceDay = getServiceDay(leg, gtfsTrip);
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();

@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A connection query between a transit stop and a coordinate.
+ */
 class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
 
     ConnectionStopToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
@@ -33,7 +36,7 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
     @Override
     protected List<Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception, Stop source,
                                                           GeoCoordinate target) throws ConnectionRoutingException {
-        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source.getLocation(), target).process();
+        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source, target).process();
     }
 
     @Override

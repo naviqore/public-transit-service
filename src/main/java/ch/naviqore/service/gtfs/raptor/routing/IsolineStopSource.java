@@ -10,6 +10,9 @@ import ch.naviqore.service.exception.ConnectionRoutingException;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * An isoline query from a transit stop.
+ */
 class IsolineStopSource extends IsolineQueryTemplate<Stop> {
 
     IsolineStopSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,

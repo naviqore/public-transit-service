@@ -112,10 +112,25 @@ class RoutingQueryUtils {
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
         int firstWalkDuration = firstWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        // TODO: Move null check outside method
         if (firstWalkDuration > serviceConfig.getWalkingDurationMinimum()) {
             return TypeMapper.createWalk(firstWalk.distance(), firstWalkDuration, WalkType.FIRST_MILE,
                     departureTime.minusSeconds(firstWalkDuration), departureTime, source, firstStop.getCoordinate(),
+                    TypeMapper.map(firstStop));
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, LocalDateTime departureTime) {
+        ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
+        WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(sourceStop.getLocation(),
+                firstStop.getCoordinate());
+        int firstWalkDuration = firstWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
+
+        if (firstWalkDuration > serviceConfig.getWalkingDurationMinimum()) {
+            return TypeMapper.createTransfer(firstWalk.distance(), firstWalkDuration,
+                    departureTime.minusSeconds(firstWalkDuration), departureTime, sourceStop,
                     TypeMapper.map(firstStop));
         }
 
@@ -127,7 +142,6 @@ class RoutingQueryUtils {
         WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastScheduleStop.getCoordinate());
         int lastWalkDuration = lastWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        // TODO: Move null check outside method
         if (lastWalkDuration > serviceConfig.getWalkingDurationMinimum()) {
             return TypeMapper.createWalk(lastWalk.distance(), lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
                     arrivalTime.plusSeconds(lastWalkDuration), lastScheduleStop.getCoordinate(), target,
@@ -137,19 +151,34 @@ class RoutingQueryUtils {
         return null;
     }
 
+    @Nullable
+    public Transfer createLastWalkTransfer(Stop target, String lastStopId, LocalDateTime arrivalTime) {
+        ch.naviqore.gtfs.schedule.model.Stop lastScheduleStop = schedule.getStops().get(lastStopId);
+        WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target.getLocation(),
+                lastScheduleStop.getCoordinate());
+        int lastWalkDuration = lastWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
+
+        if (lastWalkDuration > serviceConfig.getWalkingDurationMinimum()) {
+            return TypeMapper.createTransfer(lastWalk.distance(), lastWalkDuration, arrivalTime,
+                    arrivalTime.plusSeconds(lastWalkDuration), TypeMapper.map(lastScheduleStop), target);
+        }
+
+        return null;
+    }
+
     Connection composeConnection(ch.naviqore.raptor.Connection connection) {
         return TypeMapper.map(connection, null, null, schedule);
     }
 
-    Connection composeConnection(Walk firstMile, ch.naviqore.raptor.Connection connection) {
+    Connection composeConnection(Leg firstMile, ch.naviqore.raptor.Connection connection) {
         return TypeMapper.map(connection, firstMile, null, schedule);
     }
 
-    Connection composeConnection(ch.naviqore.raptor.Connection connection, Walk lastMile) {
+    Connection composeConnection(ch.naviqore.raptor.Connection connection, Leg lastMile) {
         return TypeMapper.map(connection, null, lastMile, schedule);
     }
 
-    Connection composeConnection(Walk firstMile, ch.naviqore.raptor.Connection connection, Walk lastMile) {
+    Connection composeConnection(Leg firstMile, ch.naviqore.raptor.Connection connection, Leg lastMile) {
         return TypeMapper.map(connection, firstMile, lastMile, schedule);
     }
 
@@ -159,5 +188,4 @@ class RoutingQueryUtils {
         return Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
                 .getSeconds() <= queryConfig.getMaximumTravelTime();
     }
-
 }

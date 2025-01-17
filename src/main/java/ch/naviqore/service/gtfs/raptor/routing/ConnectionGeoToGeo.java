@@ -2,20 +2,69 @@ package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.Connection;
+import ch.naviqore.service.Leg;
+import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
-import ch.naviqore.service.Walk;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.utils.spatial.GeoCoordinate;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A connection query between two coordinates.
+ */
 class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> {
 
+    @Nullable
+    private final Stop sourceStop;
+
+    @Nullable
+    private final Stop targetStop;
+
+    /**
+     * A connection between two locations. Needs a first mile and last mile walk.
+     */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, GeoCoordinate target) {
         super(time, timeType, queryConfig, utils, source, target);
+        sourceStop = null;
+        targetStop = null;
+    }
+
+    /**
+     * No departures on the source stop, try to walk to another stop.
+     */
+    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+                       RoutingQueryUtils utils, Stop source, GeoCoordinate target) {
+        super(time, timeType, queryConfig, utils, source.getLocation(), target);
+        sourceStop = source;
+        targetStop = null;
+    }
+
+    /**
+     * No departures on the target stop, try to walk to another stop.
+     */
+    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+                       RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
+        super(time, timeType, queryConfig, utils, source, target.getLocation());
+        sourceStop = null;
+        targetStop = target;
+    }
+
+    /**
+     * No departures on either the source or the target stop. Try to walk on both ends to another stop.
+     * <p>
+     * Note: Due to the filter on minimum transfer time, the walk on the end of a stop with departures is filtered out.
+     * TODO: Make this step explicit? Since if the minimum walking time is changed to 0, we would have a walk from the same stop to the same stop.
+     */
+    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+                       RoutingQueryUtils utils, Stop source, Stop target) {
+        super(time, timeType, queryConfig, utils, source.getLocation(), target.getLocation());
+        sourceStop = source;
+        targetStop = target;
     }
 
     @Override
@@ -37,15 +86,18 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     @Override
     protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
                                                GeoCoordinate target) {
+
+        // create first mile; this can either be a walk from the last stop in the RAPTOR connection to a coordinate or
+        // in the special cases (see constructors), a walk from the last stop to another stop, which has no public
+        // transit departures and therefore does not exist in the RAPTOR router.
         LocalDateTime departureTime = connection.getDepartureTime();
-        Walk firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
+        Leg firstMile = sourceStop == null ? utils.createFirstWalk(source, connection.getFromStopId(),
+                departureTime) : utils.createFirstWalkTransfer(sourceStop, connection.getFromStopId(), departureTime);
 
+        // create last mile; same options as above...
         LocalDateTime arrivalTime = connection.getArrivalTime();
-        Walk lastMile = utils.createLastWalk(target, connection.getToStopId(), arrivalTime);
-
-        // TODO: Add sourceStop as source for firstMile if sourceStop != null
-        // TODO: Add targetStop as target for lastMile if targetStop != null
-        //  COMMENT: Use a service.Transfer instead of a Walk --> utils.createDirectTransfer()
+        Leg lastMile = targetStop == null ? utils.createLastWalk(target, connection.getToStopId(),
+                arrivalTime) : utils.createLastWalkTransfer(targetStop, connection.getToStopId(), arrivalTime);
 
         // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator?
         // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator?

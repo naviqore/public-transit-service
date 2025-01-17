@@ -13,6 +13,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Template for executing a connection query between a source and a target location, encapsulating common logic and
+ * providing entry points for customization.
+ *
+ * @param <S> Type of the source location.
+ * @param <T> Type of the target location.
+ */
 @RequiredArgsConstructor
 @Slf4j
 abstract class ConnectionQueryTemplate<S, T> {
