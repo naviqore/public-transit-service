@@ -41,26 +41,28 @@ public class GtfsRaptorTestSchedule {
 
         builder.addStop("A", "A", 0.0, 0.0);
         builder.addStop("B", "B", 0.0, 1.0);
-        builder.addStop("B1", "B1", 0.0, 1.0, "B", AccessibilityInformation.UNKNOWN);
-        builder.addStop("B2", "B2", 0.0, 1.0, "B", AccessibilityInformation.UNKNOWN);
+        builder.addStop("B1", "B1", 0.001, 1.0, "B", AccessibilityInformation.UNKNOWN);
+        builder.addStop("B2", "B2", -0.001, 1.0, "B", AccessibilityInformation.UNKNOWN);
         builder.addStop("C", "C", 0.0, 2.0);
-        builder.addStop("C1", "C1", 0.0, 2.0, "C", AccessibilityInformation.UNKNOWN);
-        builder.addStop("C2", "C2", 0.0, 2.0, "C", AccessibilityInformation.UNKNOWN);
+        builder.addStop("C1", "C1", 0.001, 2.0, "C", AccessibilityInformation.UNKNOWN);
+        builder.addStop("C2", "C2", -0.001, 2.0, "C", AccessibilityInformation.UNKNOWN);
         builder.addStop("D", "D", 0.0, 3.0);
 
         // Route 1 goes from A, B1, C1
         builder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
         builder.addTrip("T1", "R1", "always", "C1");
-        builder.addStopTime("T1", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-        builder.addStopTime("T1", "B1", new ServiceDayTime(0), new ServiceDayTime(0));
-        builder.addStopTime("T1", "C1", new ServiceDayTime(0), new ServiceDayTime(0));
+        builder.addStopTime("T1", "A", new ServiceDayTime(60), new ServiceDayTime(120));
+        builder.addStopTime("T1", "B1", new ServiceDayTime(180), new ServiceDayTime(240));
+        builder.addStopTime("T1", "C1", new ServiceDayTime(301), new ServiceDayTime(360));
+        // TODO: Non-deterministic behavior; what happens when two solution are exactly the same?
+        //  Change arrival time above to 300 to observe this.
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
         builder.addTrip("T2", "R2", "always", "C");
-        builder.addStopTime("T2", "A", new ServiceDayTime(0), new ServiceDayTime(0));
-        builder.addStopTime("T2", "B2", new ServiceDayTime(0), new ServiceDayTime(0));
-        builder.addStopTime("T2", "C", new ServiceDayTime(0), new ServiceDayTime(0));
+        builder.addStopTime("T2", "A", new ServiceDayTime(60), new ServiceDayTime(120));
+        builder.addStopTime("T2", "B2", new ServiceDayTime(180), new ServiceDayTime(240));
+        builder.addStopTime("T2", "C", new ServiceDayTime(300), new ServiceDayTime(360));
     }
 
     public void addTransfer(String fromStopId, String toStopId, TransferType type, int duration) {

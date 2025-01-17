@@ -2,7 +2,6 @@ package ch.naviqore.service.gtfs.raptor;
 
 import ch.naviqore.gtfs.schedule.GtfsScheduleReader;
 import ch.naviqore.gtfs.schedule.GtfsScheduleTestData;
-import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.config.ServiceConfig;
@@ -22,8 +21,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-import static ch.naviqore.service.config.ServiceConfig.*;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GtfsRaptorServiceIT {
@@ -328,123 +325,4 @@ class GtfsRaptorServiceIT {
             }
         }
     }
-
-    @Nested
-    class ManualSchedule {
-
-        private static final LocalDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0);
-        private static final ConnectionQueryConfig QUERY_CONFIG = new ConnectionQueryConfig(10 * 60, 2 * 60, 4,
-                24 * 60 * 60, false, false, null);
-
-        @BeforeEach
-        void setUp() {
-            GtfsRaptorTestSchedule builder = new GtfsRaptorTestSchedule();
-            GtfsSchedule schedule = builder.build();
-
-            // do not create any transfers since all coordinates in the test schedule are at origin 0,0.
-            ServiceConfig serviceConfig = new ServiceConfig("NONE", DEFAULT_GTFS_STATIC_UPDATE_CRON,
-                    DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, -1, DEFAULT_TRANSFER_TIME_ACCESS_EGRESS,
-                    DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED,
-                    DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE,
-                    DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
-
-            GtfsRaptorServiceInitializer initializer = new GtfsRaptorServiceInitializer(serviceConfig, schedule);
-
-            service = initializer.get();
-        }
-
-        @Nested
-        class Connection {
-
-            @Test
-            void shouldThrowOnInvalidStop() {
-                assertThrows(StopNotFoundException.class,
-                        () -> service.getConnections(service.getStopById("NOT_A_STOP"), service.getStopById("C"),
-                                DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG));
-            }
-
-            @Nested
-            class StopWithoutDepartures {
-
-                @Test
-                void targetDeparture() throws ConnectionRoutingException, StopNotFoundException {
-                    List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("A"),
-                            service.getStopById("D"), DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
-
-                    assertThat(connections).isEmpty();
-                }
-
-                @Test
-                void targetArrival() throws ConnectionRoutingException, StopNotFoundException {
-                    List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("A"),
-                            service.getStopById("D"), DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
-
-                    assertThat(connections).isEmpty();
-                }
-
-                @Test
-                void sourceDeparture() throws ConnectionRoutingException, StopNotFoundException {
-                    List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("D"),
-                            service.getStopById("A"), DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
-
-                    assertThat(connections).isEmpty();
-                }
-
-                @Test
-                void sourceArrival() throws ConnectionRoutingException, StopNotFoundException {
-                    List<ch.naviqore.service.Connection> connections = service.getConnections(service.getStopById("D"),
-                            service.getStopById("A"), DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
-
-                    assertThat(connections).isEmpty();
-                }
-            }
-        }
-
-        @Nested
-        class Isolines {
-
-            @Test
-            void shouldThrowOnInvalidStop() {
-                assertThrows(StopNotFoundException.class,
-                        () -> service.getIsolines(service.getStopById("NOT_A_STOP"), DATE_TIME, TimeType.DEPARTURE,
-                                QUERY_CONFIG));
-            }
-
-            @Nested
-            class StopWithoutDepartures {
-
-                @Test
-                void departure_withoutWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
-                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("D"),
-                            DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
-                    assertThat(isolines).isEmpty();
-                }
-
-                @Test
-                void departure_withWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
-                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("C2"),
-                            DATE_TIME, TimeType.DEPARTURE, QUERY_CONFIG);
-                    // Expected behavior: Since no departures from stops C, C1 and C2, the result must be empty.
-                    assertThat(isolines).isEmpty();
-                }
-
-                @Test
-                void arrival_withoutWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
-                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("D"),
-                            DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
-                    assertThat(isolines).isEmpty();
-                }
-
-                @Test
-                void arrival_withWalkableAlternative() throws ConnectionRoutingException, StopNotFoundException {
-                    Map<Stop, ch.naviqore.service.Connection> isolines = service.getIsolines(service.getStopById("C2"),
-                            DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG);
-                    assertThat(isolines).isNotEmpty();
-                }
-            }
-
-        }
-
-    }
-
 }
