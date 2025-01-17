@@ -21,11 +21,6 @@ import java.util.Map;
  * and geo-to-stop) and isolines (stop-source and geo-source). Hides the complexity of the preparation and execution of
  * the underlying RAPTOR routing calls and result construction for the service layer.
  */
-// TODO: Add test cases for the manual schedule (GtfsToRaptorTestSchedule --> update coordinates to enable feasible walks).
-//  Note: Tests are currently passing even if the swap logic is omitted.
-//  - Test arrival/departure time types.
-//  - Test connection cases.
-//  - Test isoline cases.
 public class RoutingQueryFacade {
 
     private final RoutingQueryUtils utils;

@@ -252,7 +252,7 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
+                assertThat(legs).hasSize(3);
 
                 assertFirstMileWalk(legs.getFirst());
                 assertPublicTransitLeg(legs.get(1));

@@ -2,9 +2,9 @@ package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.Connection;
+import ch.naviqore.service.Leg;
 import ch.naviqore.service.Stop;
 import ch.naviqore.service.TimeType;
-import ch.naviqore.service.Walk;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -43,13 +43,13 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     @Override
     protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
                                                Stop target) {
+
         LocalDateTime departureTime = connection.getDepartureTime();
-        Walk firstMile = utils.createLastWalk(source, connection.getFromStopId(), departureTime);
-        Walk lastMile = utils.createLastWalk(source, connection.getFromStopId(), departureTime);
+        Leg firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
 
         // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator
 
-        return utils.composeConnection(firstMile, connection, lastMile);
+        return utils.composeConnection(firstMile, connection);
     }
 
     @Override
