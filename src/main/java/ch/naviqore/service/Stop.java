@@ -9,6 +9,6 @@ public interface Stop extends Location<GeoCoordinate> {
 
     String getName();
 
-    GeoCoordinate getLocation();
+    GeoCoordinate getCoordinate();
 
 }

@@ -28,7 +28,7 @@ class IsolineStopSource extends IsolineQueryTemplate<Stop> {
     @Override
     protected Map<Stop, Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
                                                                Stop source) throws ConnectionRoutingException {
-        return new IsolineGeoSource(time, timeType, queryConfig, utils, source.getLocation()).run();
+        return new IsolineGeoSource(time, timeType, queryConfig, utils, source.getCoordinate()).run();
     }
 
     @Override

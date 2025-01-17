@@ -94,7 +94,7 @@ public final class TypeMapper {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
-        int distance = (int) Math.round(sourceStop.getLocation().distanceTo(targetStop.getLocation()));
+        int distance = (int) Math.round(sourceStop.getCoordinate().distanceTo(targetStop.getCoordinate()));
 
         return switch (leg.getType()) {
             case WALK_TRANSFER ->

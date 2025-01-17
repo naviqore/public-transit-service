@@ -14,6 +14,6 @@ public class GtfsRaptorStop implements Stop {
 
     private final String id;
     private final String name;
-    private final GeoCoordinate location;
+    private final GeoCoordinate coordinate;
 
 }

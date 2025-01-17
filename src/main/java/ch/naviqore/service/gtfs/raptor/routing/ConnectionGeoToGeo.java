@@ -39,7 +39,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, GeoCoordinate target) {
-        super(time, timeType, queryConfig, utils, source.getLocation(), target);
+        super(time, timeType, queryConfig, utils, source.getCoordinate(), target);
         sourceStop = source;
         targetStop = null;
     }
@@ -49,7 +49,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
-        super(time, timeType, queryConfig, utils, source, target.getLocation());
+        super(time, timeType, queryConfig, utils, source, target.getCoordinate());
         sourceStop = null;
         targetStop = target;
     }
@@ -62,7 +62,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, Stop target) {
-        super(time, timeType, queryConfig, utils, source.getLocation(), target.getLocation());
+        super(time, timeType, queryConfig, utils, source.getCoordinate(), target.getCoordinate());
         sourceStop = source;
         targetStop = target;
     }
