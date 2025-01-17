@@ -101,8 +101,12 @@ class RoutingQueryFacadeIT {
             assertThat(publicTransitLeg.getTrip().getRoute().getId()).isEqualTo("R2");
 
             assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo("A");
-            assertThat(publicTransitLeg.getDeparture().getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
             assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
+
+            // TODO: Somehow we have a problem with the date in arrival routing; we jump back from the 15th to the 14th:
+            //  expected: 2008-05-15T00:02 (java.time.LocalDateTime)
+            //  but was: 2008-05-14T00:02 (java.time.LocalDateTime)
+            assertThat(publicTransitLeg.getDeparture().getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
             assertThat(publicTransitLeg.getArrival().getArrivalTime()).isEqualTo("2008-05-15T00:05:00");
         }
 
@@ -115,6 +119,9 @@ class RoutingQueryFacadeIT {
 
             assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
             assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
+
+            assertThat(walk.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
+            assertThat(walk.getArrivalTime()).isEqualTo("2008-05-15T00:02:00");
         }
 
         private void assertLastMileWalk(Leg leg) {
@@ -126,6 +133,9 @@ class RoutingQueryFacadeIT {
 
             assertThat(walk.getSourceLocation().distanceTo(targetStop.getCoordinate())).isCloseTo(0, within(EPSILON));
             assertThat(walk.getTargetLocation().distanceTo(targetCoordinate)).isCloseTo(0, within(EPSILON));
+
+            assertThat(walk.getDepartureTime()).isEqualTo("2008-05-15T00:05:00");
+            assertThat(walk.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
         }
 
         @BeforeEach
@@ -268,7 +278,7 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
+                assertThat(legs).hasSize(3);
 
                 assertFirstMileWalk(legs.getFirst());
                 assertPublicTransitLeg(legs.get(1));

@@ -1,10 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.raptor.RaptorAlgorithm;
-import ch.naviqore.service.Connection;
-import ch.naviqore.service.Stop;
-import ch.naviqore.service.TimeType;
-import ch.naviqore.service.Walk;
+import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
 import ch.naviqore.service.exception.ConnectionRoutingException;
 import ch.naviqore.utils.spatial.GeoCoordinate;
@@ -42,12 +39,21 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
     @Override
     protected Connection postprocessConnection(Stop source, ch.naviqore.raptor.Connection connection,
                                                GeoCoordinate target) {
-        LocalDateTime arrivalTime = connection.getArrivalTime();
-        Walk lastMile = utils.createLastWalk(target, connection.getToStopId(), arrivalTime);
 
-        // TODO: Merge two walk legs
+        // TODO: Merge two walk legs --> walkCalculator?
 
-        return utils.composeConnection(connection, lastMile);
+        return switch (timeType) {
+            case DEPARTURE -> {
+                LocalDateTime arrivalTime = connection.getArrivalTime();
+                Walk lastMile = utils.createLastWalk(target, connection.getToStopId(), arrivalTime);
+                yield utils.composeConnection(connection, lastMile);
+            }
+            case ARRIVAL -> {
+                LocalDateTime departureTime = connection.getDepartureTime();
+                Leg firstMile = utils.createFirstWalk(target, connection.getFromStopId(), departureTime);
+                yield utils.composeConnection(firstMile, connection);
+            }
+        };
     }
 
     @Override
