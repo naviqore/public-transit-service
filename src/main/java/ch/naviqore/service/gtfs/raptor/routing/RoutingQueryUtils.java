@@ -107,6 +107,7 @@ class RoutingQueryUtils {
         return stopsWithWalkTime;
     }
 
+    // TODO: Refactor walk and transfer generation, remove duplicate code
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, LocalDateTime departureTime) {
         ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());

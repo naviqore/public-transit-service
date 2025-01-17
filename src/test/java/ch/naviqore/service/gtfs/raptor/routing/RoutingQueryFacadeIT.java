@@ -93,6 +93,23 @@ class RoutingQueryFacadeIT {
         private Stop targetStop;
         private GeoCoordinate targetCoordinate;
 
+        private void assertFirstMileWalk(Leg leg) {
+            assertThat(leg).isInstanceOf(Walk.class);
+            Walk walk = (Walk) leg;
+
+            assertThat(walk.getStop()).isPresent();
+            assertThat(walk.getStop().get().getId()).isEqualTo("A");
+
+            assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
+            assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
+
+            // TODO: Somehow we have a problem with the date in arrival routing; we jump back from the 15th to the 14th:
+            //  Expected :2008-05-15T00:00:02 (java.time.LocalDateTime)
+            //  Actual   :2008-05-14T00:00:02 (java.time.LocalDateTime)
+            assertThat(walk.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
+            assertThat(walk.getArrivalTime()).isEqualTo("2008-05-15T00:02:00");
+        }
+
         private static void assertPublicTransitLeg(Leg leg) {
             assertThat(leg).isInstanceOf(PublicTransitLeg.class);
             PublicTransitLeg publicTransitLeg = (PublicTransitLeg) leg;
@@ -104,24 +121,10 @@ class RoutingQueryFacadeIT {
             assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
 
             // TODO: Somehow we have a problem with the date in arrival routing; we jump back from the 15th to the 14th:
-            //  expected: 2008-05-15T00:02 (java.time.LocalDateTime)
-            //  but was: 2008-05-14T00:02 (java.time.LocalDateTime)
+            //  Expected :2008-05-15T00:02 (java.time.LocalDateTime)
+            //  Actual   :2008-05-14T00:02 (java.time.LocalDateTime)
             assertThat(publicTransitLeg.getDeparture().getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
             assertThat(publicTransitLeg.getArrival().getArrivalTime()).isEqualTo("2008-05-15T00:05:00");
-        }
-
-        private void assertFirstMileWalk(Leg leg) {
-            assertThat(leg).isInstanceOf(Walk.class);
-            Walk walk = (Walk) leg;
-
-            assertThat(walk.getStop()).isPresent();
-            assertThat(walk.getStop().get().getId()).isEqualTo("A");
-
-            assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
-            assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
-
-            assertThat(walk.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
-            assertThat(walk.getArrivalTime()).isEqualTo("2008-05-15T00:02:00");
         }
 
         private void assertLastMileWalk(Leg leg) {
@@ -134,6 +137,9 @@ class RoutingQueryFacadeIT {
             assertThat(walk.getSourceLocation().distanceTo(targetStop.getCoordinate())).isCloseTo(0, within(EPSILON));
             assertThat(walk.getTargetLocation().distanceTo(targetCoordinate)).isCloseTo(0, within(EPSILON));
 
+            // TODO: Somehow we have a problem with the date in arrival routing; we jump back from the 15th to the 14th:
+            //  Expected :2008-05-15T00:05 (java.time.LocalDateTime)
+            //  Actual   :2008-05-14T00:05 (java.time.LocalDateTime)
             assertThat(walk.getDepartureTime()).isEqualTo("2008-05-15T00:05:00");
             assertThat(walk.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
         }
