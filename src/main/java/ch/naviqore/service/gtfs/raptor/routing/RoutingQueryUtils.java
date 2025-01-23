@@ -107,15 +107,14 @@ class RoutingQueryUtils {
         return stopsWithWalkTime;
     }
 
-    // TODO: Refactor walk and transfer generation, remove duplicate code
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, LocalDateTime departureTime) {
         ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
-        int firstWalkDuration = firstWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
+        int duration = firstWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        if (firstWalkDuration > serviceConfig.getWalkingDurationMinimum() && firstWalk.duration() > 0) {
-            return TypeMapper.createWalk(firstWalk.distance(), firstWalkDuration, WalkType.FIRST_MILE,
-                    departureTime.minusSeconds(firstWalkDuration), departureTime, source, firstStop.getCoordinate(),
+        if (shouldCreateWalk(duration, firstWalk)) {
+            return TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
+                    departureTime.minusSeconds(duration), departureTime, source, firstStop.getCoordinate(),
                     TypeMapper.map(firstStop));
         }
 
@@ -127,26 +126,24 @@ class RoutingQueryUtils {
         ch.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalkTransfer = walkCalculator.calculateWalk(sourceStop.getCoordinate(),
                 firstStop.getCoordinate());
-        int firstWalkDuration = firstWalkTransfer.duration() + serviceConfig.getTransferTimeAccessEgress();
+        int duration = firstWalkTransfer.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        if (firstWalkDuration > serviceConfig.getWalkingDurationMinimum() && firstWalkTransfer.duration() > 0) {
-            return TypeMapper.createTransfer(firstWalkTransfer.distance(), firstWalkDuration,
-                    departureTime.minusSeconds(firstWalkDuration), departureTime, sourceStop,
-                    TypeMapper.map(firstStop));
+        if (shouldCreateWalk(duration, firstWalkTransfer)) {
+            return TypeMapper.createTransfer(firstWalkTransfer.distance(), duration,
+                    departureTime.minusSeconds(duration), departureTime, sourceStop, TypeMapper.map(firstStop));
         }
 
         return null;
     }
 
     @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, LocalDateTime arrivalTime) {
-        ch.naviqore.gtfs.schedule.model.Stop lastScheduleStop = schedule.getStops().get(lastStopId);
-        WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastScheduleStop.getCoordinate());
-        int lastWalkDuration = lastWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
+        ch.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
+        WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastStop.getCoordinate());
+        int duration = lastWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        if (lastWalkDuration > serviceConfig.getWalkingDurationMinimum() && lastWalk.duration() > 0) {
-            return TypeMapper.createWalk(lastWalk.distance(), lastWalkDuration, WalkType.LAST_MILE, arrivalTime,
-                    arrivalTime.plusSeconds(lastWalkDuration), lastScheduleStop.getCoordinate(), target,
-                    TypeMapper.map(lastScheduleStop));
+        if (shouldCreateWalk(duration, lastWalk)) {
+            return TypeMapper.createWalk(lastWalk.distance(), duration, WalkType.LAST_MILE, arrivalTime,
+                    arrivalTime.plusSeconds(duration), lastStop.getCoordinate(), target, TypeMapper.map(lastStop));
         }
 
         return null;
@@ -154,17 +151,24 @@ class RoutingQueryUtils {
 
     @Nullable
     public Transfer createLastWalkTransfer(Stop target, String lastStopId, LocalDateTime arrivalTime) {
-        ch.naviqore.gtfs.schedule.model.Stop lastScheduleStop = schedule.getStops().get(lastStopId);
+        ch.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
         WalkCalculator.Walk lastWalkTransfer = walkCalculator.calculateWalk(target.getCoordinate(),
-                lastScheduleStop.getCoordinate());
-        int lastWalkDuration = lastWalkTransfer.duration() + serviceConfig.getTransferTimeAccessEgress();
+                lastStop.getCoordinate());
+        int duration = lastWalkTransfer.duration() + serviceConfig.getTransferTimeAccessEgress();
 
-        if (lastWalkDuration > serviceConfig.getWalkingDurationMinimum() && lastWalkTransfer.duration() > 0) {
-            return TypeMapper.createTransfer(lastWalkTransfer.distance(), lastWalkDuration, arrivalTime,
-                    arrivalTime.plusSeconds(lastWalkDuration), TypeMapper.map(lastScheduleStop), target);
+        if (shouldCreateWalk(duration, lastWalkTransfer)) {
+            return TypeMapper.createTransfer(lastWalkTransfer.distance(), duration, arrivalTime,
+                    arrivalTime.plusSeconds(duration), TypeMapper.map(lastStop), target);
         }
 
         return null;
+    }
+
+    // Only map the walk to the service level if it is longer than the walking duration minimum defined in the service,
+    // and it is not a walk from the same location to the same location (this is a fallback; in most cases,
+    // this will be filtered out by the first condition).
+    private boolean shouldCreateWalk(int duration, WalkCalculator.Walk walk) {
+        return duration > serviceConfig.getWalkingDurationMinimum() && walk.duration() > 0;
     }
 
     Connection composeConnection(ch.naviqore.raptor.Connection connection) {
