@@ -86,22 +86,18 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
         // create first mile; this can either be a walk from the last stop in the RAPTOR connection to a coordinate or
         // in the special cases (see constructors), a walk from the last stop to another stop, which has no public
         // transit departures and therefore does not exist in the RAPTOR router.
-        LocalDateTime departureTime = connection.getDepartureTime();
-        Leg firstMile = sourceStop == null ? utils.createFirstWalk(source, connection.getFromStopId(),
-                departureTime) : utils.createFirstWalkTransfer(sourceStop, connection.getFromStopId(), departureTime);
-
-        // create last mile; same options as above...
-        LocalDateTime arrivalTime = connection.getArrivalTime();
-        Leg lastMile = targetStop == null ? utils.createLastWalk(target, connection.getToStopId(),
-                arrivalTime) : utils.createLastWalkTransfer(targetStop, connection.getToStopId(), arrivalTime);
-
-        return utils.composeConnection(firstMile, connection, lastMile);
+        return getConnection(target, connection, source, sourceStop, targetStop);
     }
 
     @Override
     protected Connection postprocessArrivalConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
                                                       GeoCoordinate target) {
-        // switch the departure case, since we are going back in time
+        // switch the departure case, since we are going back in time in arrival
+        return getConnection(source, connection, target, targetStop, sourceStop);
+    }
+
+    private Connection getConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                     GeoCoordinate target, Stop targetStop, Stop sourceStop) {
         LocalDateTime departureTime = connection.getDepartureTime();
         Leg firstMile = targetStop == null ? utils.createFirstWalk(target, connection.getFromStopId(),
                 departureTime) : utils.createFirstWalkTransfer(targetStop, connection.getFromStopId(), departureTime);
