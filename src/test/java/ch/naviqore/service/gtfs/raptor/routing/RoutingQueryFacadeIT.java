@@ -358,61 +358,41 @@ class RoutingQueryFacadeIT {
                 @Test
                 void departure() throws ConnectionRoutingException {
                     List<ch.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
-                            TimeType.DEPARTURE, QUERY_CONFIG, source, target);
+                            TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate, targetCoordinate);
 
-                    // check connection result
                     assertThat(connections).hasSize(1);
                     Connection connection = connections.getFirst();
+
+                    // assert departure and arrival time of complete connection, has to be the same day
+                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
+                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
+
                     List<Leg> legs = connection.getLegs();
+                    assertThat(legs).hasSize(3);
 
-                    // assert the first walk transfer is filtered, since distance is 0
-                    assertThat(legs).hasSize(2);
-
-                    // check first leg: transit
-                    Leg firstLeg = legs.getFirst();
-                    assertThat(firstLeg).isInstanceOf(PublicTransitLeg.class);
-                    PublicTransitLeg publicTransitLeg = (PublicTransitLeg) firstLeg;
-                    assertThat(publicTransitLeg.getTrip().getId()).isEqualTo("T2");
-                    assertThat(publicTransitLeg.getTrip().getRoute().getId()).isEqualTo("R2");
-                    assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo("A");
-                    assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
-
-                    // check second leg: transfer
-                    Leg secondLeg = legs.get(1);
-                    assertThat(secondLeg).isInstanceOf(Transfer.class);
-                    Transfer transfer = (Transfer) secondLeg;
-                    assertThat(transfer.getSourceStop().getId()).isEqualTo("C");
-                    assertThat(transfer.getTargetStop().getId()).isEqualTo("C2");
+                    assertFirstMileWalk(legs.getFirst());
+                    assertPublicTransitLeg(legs.get(1));
+                    assertLastMileWalk(legs.get(2));
                 }
 
                 @Test
                 void arrival() throws ConnectionRoutingException {
                     List<ch.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
-                            TimeType.ARRIVAL, QUERY_CONFIG, source, target);
+                            TimeType.ARRIVAL, QUERY_CONFIG, sourceCoordinate, targetCoordinate);
 
-                    // check connection result
                     assertThat(connections).hasSize(1);
                     Connection connection = connections.getFirst();
+
+                    // assert departure and arrival time of complete connection, has to be the previous day
+                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02");
+                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58");
+
                     List<Leg> legs = connection.getLegs();
+                    assertThat(legs).hasSize(3);
 
-                    // assert the first walk transfer is filtered, since distance is 0
-                    assertThat(legs).hasSize(2);
-
-                    // check first leg: transit
-                    Leg firstLeg = legs.getFirst();
-                    assertThat(firstLeg).isInstanceOf(PublicTransitLeg.class);
-                    PublicTransitLeg publicTransitLeg = (PublicTransitLeg) firstLeg;
-                    assertThat(publicTransitLeg.getTrip().getId()).isEqualTo("T2");
-                    assertThat(publicTransitLeg.getTrip().getRoute().getId()).isEqualTo("R2");
-                    assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo("A");
-                    assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
-
-                    // check second leg: transfer
-                    Leg secondLeg = legs.get(1);
-                    assertThat(secondLeg).isInstanceOf(Transfer.class);
-                    Transfer transfer = (Transfer) secondLeg;
-                    assertThat(transfer.getSourceStop().getId()).isEqualTo("C");
-                    assertThat(transfer.getTargetStop().getId()).isEqualTo("C2");
+                    assertFirstMileWalk(legs.getFirst());
+                    assertPublicTransitLeg(legs.get(1));
+                    assertLastMileWalk(legs.get(2));
                 }
             }
         }
