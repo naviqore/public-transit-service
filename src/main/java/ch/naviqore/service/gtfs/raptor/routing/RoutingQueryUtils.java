@@ -31,8 +31,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 class RoutingQueryUtils {
 
-    // TODO: Maybe give the methods more distinct names from the perspective of the templated cases.
-
     private final ServiceConfig serviceConfig;
     private final GtfsSchedule schedule;
     private final KDTree<ch.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
