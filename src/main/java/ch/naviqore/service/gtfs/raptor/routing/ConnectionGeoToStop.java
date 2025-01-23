@@ -43,9 +43,6 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     @Override
     protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
                                                Stop target) {
-
-        // TODO: Merge two walk legs --> walkCalculator?
-
         return switch (timeType) {
             case DEPARTURE -> {
                 LocalDateTime departureTime = connection.getDepartureTime();

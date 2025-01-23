@@ -83,9 +83,6 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     @Override
     protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
                                                GeoCoordinate target) {
-
-        // TODO: Merge two walk legs --> walkCalculator?
-
         return switch (timeType) {
             case DEPARTURE -> {
                 // create first mile; this can either be a walk from the last stop in the RAPTOR connection to a coordinate or

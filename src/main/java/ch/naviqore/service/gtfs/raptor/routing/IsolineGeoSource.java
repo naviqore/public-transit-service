@@ -34,10 +34,6 @@ class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
     @Override
     protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection) {
-
-        // TODO: Handle case where firstMile is not null and first leg is a transfer --> use walkCalculator
-        // TODO: Handle case where lastMile is not null and last leg is a transfer --> use walkCalculator
-
         return switch (timeType) {
             case ARRIVAL -> {
                 Walk lastMile = utils.createLastWalk(source, connection.getToStopId(), connection.getArrivalTime());
