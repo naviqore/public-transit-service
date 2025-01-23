@@ -45,7 +45,11 @@ abstract class ConnectionQueryTemplate<S, T> {
                                                                    S source,
                                                                    T target) throws ConnectionRoutingException;
 
-    protected abstract Connection postprocessConnection(S source, ch.naviqore.raptor.Connection connection, T target);
+    protected abstract Connection postprocessDepartureConnection(S source, ch.naviqore.raptor.Connection connection,
+                                                                 T target);
+
+    protected abstract Connection postprocessArrivalConnection(S source, ch.naviqore.raptor.Connection connection,
+                                                               T target);
 
     protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
 
@@ -86,7 +90,10 @@ abstract class ConnectionQueryTemplate<S, T> {
         List<Connection> result = new ArrayList<>();
         for (ch.naviqore.raptor.Connection raptorConnection : connections) {
 
-            Connection serviceConnection = postprocessConnection(source, raptorConnection, target);
+            Connection serviceConnection = switch (timeType) {
+                case ARRIVAL -> postprocessArrivalConnection(source, raptorConnection, target);
+                case DEPARTURE -> postprocessDepartureConnection(source, raptorConnection, target);
+            };
 
             if (utils.isBelowMaximumTravelTime(serviceConnection, queryConfig)) {
                 result.add(serviceConnection);

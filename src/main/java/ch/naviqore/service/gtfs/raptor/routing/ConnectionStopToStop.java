@@ -38,7 +38,14 @@ class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
     }
 
     @Override
-    protected Connection postprocessConnection(Stop source, ch.naviqore.raptor.Connection connection, Stop target) {
+    protected Connection postprocessDepartureConnection(Stop source, ch.naviqore.raptor.Connection connection,
+                                                        Stop target) {
+        return utils.composeConnection(connection);
+    }
+
+    @Override
+    protected Connection postprocessArrivalConnection(Stop source, ch.naviqore.raptor.Connection connection,
+                                                      Stop target) {
         return utils.composeConnection(connection);
     }
 

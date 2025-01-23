@@ -81,39 +81,36 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     }
 
     @Override
-    protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
-                                               GeoCoordinate target) {
-        return switch (timeType) {
-            case DEPARTURE -> {
-                // create first mile; this can either be a walk from the last stop in the RAPTOR connection to a coordinate or
-                // in the special cases (see constructors), a walk from the last stop to another stop, which has no public
-                // transit departures and therefore does not exist in the RAPTOR router.
-                LocalDateTime departureTime = connection.getDepartureTime();
-                Leg firstMile = sourceStop == null ? utils.createFirstWalk(source, connection.getFromStopId(),
-                        departureTime) : utils.createFirstWalkTransfer(sourceStop, connection.getFromStopId(),
-                        departureTime);
+    protected Connection postprocessDepartureConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                        GeoCoordinate target) {
+        // create first mile; this can either be a walk from the last stop in the RAPTOR connection to a coordinate or
+        // in the special cases (see constructors), a walk from the last stop to another stop, which has no public
+        // transit departures and therefore does not exist in the RAPTOR router.
+        LocalDateTime departureTime = connection.getDepartureTime();
+        Leg firstMile = sourceStop == null ? utils.createFirstWalk(source, connection.getFromStopId(),
+                departureTime) : utils.createFirstWalkTransfer(sourceStop, connection.getFromStopId(), departureTime);
 
-                // create last mile; same options as above...
-                LocalDateTime arrivalTime = connection.getArrivalTime();
-                Leg lastMile = targetStop == null ? utils.createLastWalk(target, connection.getToStopId(),
-                        arrivalTime) : utils.createLastWalkTransfer(targetStop, connection.getToStopId(), arrivalTime);
+        // create last mile; same options as above...
+        LocalDateTime arrivalTime = connection.getArrivalTime();
+        Leg lastMile = targetStop == null ? utils.createLastWalk(target, connection.getToStopId(),
+                arrivalTime) : utils.createLastWalkTransfer(targetStop, connection.getToStopId(), arrivalTime);
 
-                yield utils.composeConnection(firstMile, connection, lastMile);
-            }
-            case ARRIVAL -> {
-                // switch the departure case, since we are going back in time
-                LocalDateTime departureTime = connection.getDepartureTime();
-                Leg firstMile = targetStop == null ? utils.createFirstWalk(target, connection.getFromStopId(),
-                        departureTime) : utils.createFirstWalkTransfer(targetStop, connection.getFromStopId(),
-                        departureTime);
+        return utils.composeConnection(firstMile, connection, lastMile);
+    }
 
-                LocalDateTime arrivalTime = connection.getArrivalTime();
-                Leg lastMile = sourceStop == null ? utils.createLastWalk(source, connection.getToStopId(),
-                        arrivalTime) : utils.createLastWalkTransfer(sourceStop, connection.getToStopId(), arrivalTime);
+    @Override
+    protected Connection postprocessArrivalConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                      GeoCoordinate target) {
+        // switch the departure case, since we are going back in time
+        LocalDateTime departureTime = connection.getDepartureTime();
+        Leg firstMile = targetStop == null ? utils.createFirstWalk(target, connection.getFromStopId(),
+                departureTime) : utils.createFirstWalkTransfer(targetStop, connection.getFromStopId(), departureTime);
 
-                yield utils.composeConnection(firstMile, connection, lastMile);
-            }
-        };
+        LocalDateTime arrivalTime = connection.getArrivalTime();
+        Leg lastMile = sourceStop == null ? utils.createLastWalk(source, connection.getToStopId(),
+                arrivalTime) : utils.createLastWalkTransfer(sourceStop, connection.getToStopId(), arrivalTime);
+
+        return utils.composeConnection(firstMile, connection, lastMile);
     }
 
     @Override

@@ -41,20 +41,19 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     }
 
     @Override
-    protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
-                                               Stop target) {
-        return switch (timeType) {
-            case DEPARTURE -> {
-                LocalDateTime departureTime = connection.getDepartureTime();
-                Leg firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
-                yield utils.composeConnection(firstMile, connection);
-            }
-            case ARRIVAL -> {
-                LocalDateTime arrivalTime = connection.getArrivalTime();
-                Leg lastMile = utils.createLastWalk(source, connection.getToStopId(), arrivalTime);
-                yield utils.composeConnection(connection, lastMile);
-            }
-        };
+    protected Connection postprocessDepartureConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                        Stop target) {
+        LocalDateTime departureTime = connection.getDepartureTime();
+        Leg firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
+        return utils.composeConnection(firstMile, connection);
+    }
+
+    @Override
+    protected Connection postprocessArrivalConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection,
+                                                      Stop target) {
+        LocalDateTime arrivalTime = connection.getArrivalTime();
+        Leg lastMile = utils.createLastWalk(source, connection.getToStopId(), arrivalTime);
+        return utils.composeConnection(connection, lastMile);
     }
 
     @Override

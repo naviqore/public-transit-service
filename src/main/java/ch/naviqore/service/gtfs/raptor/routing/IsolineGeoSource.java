@@ -33,17 +33,16 @@ class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
     }
 
     @Override
-    protected Connection postprocessConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection) {
-        return switch (timeType) {
-            case ARRIVAL -> {
-                Walk lastMile = utils.createLastWalk(source, connection.getToStopId(), connection.getArrivalTime());
-                yield utils.composeConnection(connection, lastMile);
-            }
-            case DEPARTURE -> {
-                Walk firstMile = utils.createFirstWalk(source, connection.getFromStopId(),
-                        connection.getDepartureTime());
-                yield utils.composeConnection(firstMile, connection);
-            }
-        };
+    protected Connection postprocessDepartureConnection(GeoCoordinate source,
+                                                        ch.naviqore.raptor.Connection connection) {
+        Walk firstMile = utils.createFirstWalk(source, connection.getFromStopId(), connection.getDepartureTime());
+        return utils.composeConnection(firstMile, connection);
     }
+
+    @Override
+    protected Connection postprocessArrivalConnection(GeoCoordinate source, ch.naviqore.raptor.Connection connection) {
+        Walk lastMile = utils.createLastWalk(source, connection.getToStopId(), connection.getArrivalTime());
+        return utils.composeConnection(connection, lastMile);
+    }
+
 }

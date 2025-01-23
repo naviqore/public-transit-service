@@ -35,7 +35,9 @@ abstract class IsolineQueryTemplate<T> {
     protected abstract Map<Stop, Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
                                                                         T source) throws ConnectionRoutingException;
 
-    protected abstract Connection postprocessConnection(T source, ch.naviqore.raptor.Connection connection);
+    protected abstract Connection postprocessDepartureConnection(T source, ch.naviqore.raptor.Connection connection);
+
+    protected abstract Connection postprocessArrivalConnection(T source, ch.naviqore.raptor.Connection connection);
 
     Map<Stop, Connection> run() throws ConnectionRoutingException {
         Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
@@ -62,7 +64,10 @@ abstract class IsolineQueryTemplate<T> {
             ch.naviqore.raptor.Connection connection = entry.getValue();
             Stop stop = utils.getStopById(entry.getKey());
 
-            Connection serviceConnection = postprocessConnection(source, connection);
+            Connection serviceConnection = switch (timeType) {
+                case ARRIVAL -> postprocessArrivalConnection(source, connection);
+                case DEPARTURE -> postprocessDepartureConnection(source, connection);
+            };
 
             if (utils.isBelowMaximumTravelTime(serviceConnection, queryConfig)) {
                 result.put(stop, serviceConnection);
