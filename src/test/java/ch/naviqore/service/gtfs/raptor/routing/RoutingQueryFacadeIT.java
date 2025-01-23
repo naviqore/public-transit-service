@@ -390,17 +390,6 @@ class RoutingQueryFacadeIT {
                     List<ch.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
                             TimeType.ARRIVAL, QUERY_CONFIG, source, target);
 
-                    // Request: A - C2
-
-                    // Expected:
-                    // 1. Public Transit: A - C
-                    // 2. Transfer: C - C2
-
-                    // Actual:
-                    // 1. Transfer: WALK C2 - A
-                    // 2. Public Transit: A - C
-                    // 3. Transfer: C - A
-
                     // check connection result
                     assertThat(connections).hasSize(1);
                     Connection connection = connections.getFirst();
