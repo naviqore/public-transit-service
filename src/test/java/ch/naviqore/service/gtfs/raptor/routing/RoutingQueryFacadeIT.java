@@ -50,6 +50,11 @@ class RoutingQueryFacadeIT {
     private GtfsSchedule schedule;
     private RoutingQueryFacade facade;
 
+    private Stop sourceStop;
+    private GeoCoordinate sourceCoordinate;
+    private Stop targetStop;
+    private GeoCoordinate targetCoordinate;
+
     @BeforeEach
     void setUp() {
         // build schedule
@@ -79,19 +84,33 @@ class RoutingQueryFacadeIT {
 
         // assemble facade
         facade = new RoutingQueryFacade(SERVICE_CONFIG, schedule, spatialStopIndex, walkCalculator, raptor);
+
+        // setup stops and locations for connection and isoline queries
+        sourceStop = getStopById("A");
+        sourceCoordinate = new GeoCoordinate(sourceStop.getCoordinate().latitude(),
+                sourceStop.getCoordinate().longitude() - LONGITUDE_OFFSET);
+        targetStop = getStopById("C");
+        targetCoordinate = new GeoCoordinate(targetStop.getCoordinate().latitude(),
+                targetStop.getCoordinate().longitude() + LONGITUDE_OFFSET);
     }
 
     private Stop getStopById(String id) {
         return TypeMapper.map(schedule.getStops().get(id));
     }
 
+    private void assertFirstMileWalk(Leg leg) {
+        assertThat(leg).isInstanceOf(Walk.class);
+        Walk walk = (Walk) leg;
+
+        assertThat(walk.getStop()).isPresent();
+        assertThat(walk.getStop().get().getId()).isEqualTo("A");
+
+        assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
+        assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
+    }
+
     @Nested
     class Connections {
-
-        private Stop sourceStop;
-        private GeoCoordinate sourceCoordinate;
-        private Stop targetStop;
-        private GeoCoordinate targetCoordinate;
 
         private static void assertPublicTransitLeg(Leg leg) {
             assertThat(leg).isInstanceOf(PublicTransitLeg.class);
@@ -104,17 +123,6 @@ class RoutingQueryFacadeIT {
             assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
         }
 
-        private void assertFirstMileWalk(Leg leg) {
-            assertThat(leg).isInstanceOf(Walk.class);
-            Walk walk = (Walk) leg;
-
-            assertThat(walk.getStop()).isPresent();
-            assertThat(walk.getStop().get().getId()).isEqualTo("A");
-
-            assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
-            assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
-        }
-
         private void assertLastMileWalk(Leg leg) {
             assertThat(leg).isInstanceOf(Walk.class);
             Walk walk = (Walk) leg;
@@ -124,16 +132,6 @@ class RoutingQueryFacadeIT {
 
             assertThat(walk.getSourceLocation().distanceTo(targetStop.getCoordinate())).isCloseTo(0, within(EPSILON));
             assertThat(walk.getTargetLocation().distanceTo(targetCoordinate)).isCloseTo(0, within(EPSILON));
-        }
-
-        @BeforeEach
-        void setUp() {
-            sourceStop = getStopById("A");
-            sourceCoordinate = new GeoCoordinate(sourceStop.getCoordinate().latitude(),
-                    sourceStop.getCoordinate().longitude() - LONGITUDE_OFFSET);
-            targetStop = getStopById("C");
-            targetCoordinate = new GeoCoordinate(targetStop.getCoordinate().latitude(),
-                    targetStop.getCoordinate().longitude() + LONGITUDE_OFFSET);
         }
 
         @Nested
@@ -406,24 +404,32 @@ class RoutingQueryFacadeIT {
 
             @Test
             void departure() throws ConnectionRoutingException {
-                Stop sourceStop = getStopById("A");
-
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.DEPARTURE,
                         QUERY_CONFIG, sourceStop);
 
-                // TODO: asserts
-                assertThat(isolines).isEmpty();
+                assertThat(isolines).hasSize(4);
+
+                for (Connection isoline : isolines.values()) {
+                    assertThat(isoline.getLegs()).hasSize(1);
+
+                    // assert departure time of complete connection, has to be the same day
+                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
+                }
             }
 
             @Test
             void arrival() throws ConnectionRoutingException {
-                Stop sourceStop = getStopById("C");
-
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceStop);
+                        QUERY_CONFIG, targetStop);
 
-                // TODO: asserts
-                assertThat(isolines).isEmpty();
+                assertThat(isolines).hasSize(3);
+
+                for (Connection isoline : isolines.values()) {
+                    assertThat(isoline.getLegs()).hasSize(1);
+
+                    // assert arrival time of complete connection, has to be the previous day
+                    assertThat(isoline.getArrivalTime().toLocalDate()).isEqualTo("2008-05-14");
+                }
             }
 
         }
@@ -433,28 +439,43 @@ class RoutingQueryFacadeIT {
 
             @Test
             void departure() throws ConnectionRoutingException {
-                Stop sourceStop = getStopById("A");
-                GeoCoordinate sourceCoordinate = new GeoCoordinate(sourceStop.getCoordinate().latitude(),
-                        sourceStop.getCoordinate().longitude() - LONGITUDE_OFFSET);
-
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.DEPARTURE,
                         QUERY_CONFIG, sourceCoordinate);
 
-                // TODO: asserts
-                assertThat(isolines).isEmpty();
+                assertThat(isolines).hasSize(4);
+
+                for (Connection isoline : isolines.values()) {
+                    assertThat(isoline.getLegs()).hasSize(2);
+
+                    // assert departure time of complete connection, has to be the same day
+                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
+
+                    assertFirstMileWalk(isoline.getLegs().getFirst());
+                }
             }
 
             @Test
             void arrival() throws ConnectionRoutingException {
-                Stop sourceStop = getStopById("C");
-                GeoCoordinate sourceCoordinate = new GeoCoordinate(sourceStop.getCoordinate().latitude(),
-                        sourceStop.getCoordinate().longitude() - LONGITUDE_OFFSET);
-
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceCoordinate);
+                        QUERY_CONFIG, targetCoordinate);
 
-                // TODO: asserts
-                assertThat(isolines).isEmpty();
+                assertThat(isolines).hasSize(3);
+
+                for (Connection isoline : isolines.values()) {
+                    assertThat(isoline.getLegs()).hasSize(2);
+
+                    // assert arrival time of complete connection, has to be the previous day
+                    assertThat(isoline.getArrivalTime().toLocalDate()).isEqualTo("2008-05-14");
+
+                    // last mile walking leg
+                    Leg leg = isoline.getLegs().getLast();
+                    assertThat(leg).isInstanceOf(Walk.class);
+                    Walk walk = (Walk) leg;
+
+                    assertThat(walk.getStop()).isPresent();
+                    assertThat(walk.getStop().get().getId()).isIn("C", "C1");
+                    assertThat(walk.getTargetLocation().distanceTo(targetCoordinate)).isCloseTo(0, within(EPSILON));
+                }
             }
 
         }
@@ -497,11 +518,28 @@ class RoutingQueryFacadeIT {
 
                 @Test
                 void arrival() throws ConnectionRoutingException {
+                    Stop source = getStopById("C2");
                     Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME,
-                            TimeType.ARRIVAL, QUERY_CONFIG, getStopById("C2"));
+                            TimeType.ARRIVAL, QUERY_CONFIG, source);
 
-                    assertThat(isolines).isNotEmpty();
-                    // TODO: asserts
+                    assertThat(isolines).hasSize(3);
+
+                    for (Connection isoline : isolines.values()) {
+                        assertThat(isoline.getLegs()).hasSize(2);
+
+                        // assert arrival time of complete connection, has to be the previous day
+                        assertThat(isoline.getArrivalTime().toLocalDate()).isEqualTo("2008-05-14");
+
+                        // last mile walking leg
+                        Leg leg = isoline.getLegs().getLast();
+                        assertThat(leg).isInstanceOf(Walk.class);
+                        Walk walk = (Walk) leg;
+
+                        assertThat(walk.getStop()).isPresent();
+                        assertThat(walk.getStop().get().getId()).isIn("C", "C1");
+                        assertThat(walk.getTargetLocation().distanceTo(source.getCoordinate())).isCloseTo(0,
+                                within(EPSILON));
+                    }
                 }
             }
         }
