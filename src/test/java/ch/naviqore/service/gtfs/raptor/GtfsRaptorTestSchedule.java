@@ -54,8 +54,6 @@ public class GtfsRaptorTestSchedule {
         builder.addStopTime("T1", "A", new ServiceDayTime(60), new ServiceDayTime(120));
         builder.addStopTime("T1", "B1", new ServiceDayTime(180), new ServiceDayTime(240));
         builder.addStopTime("T1", "C1", new ServiceDayTime(301), new ServiceDayTime(360));
-        // TODO: Non-deterministic behavior; what happens when two solution are exactly the same?
-        //  Change arrival time above to 300 to observe this.
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
