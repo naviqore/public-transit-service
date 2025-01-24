@@ -315,14 +315,15 @@ class DummyService implements PublicTransitService {
             int walkDuration = 2 * SECONDS_BETWEEN_STOPS;
             if (timeType == TimeType.DEPARTURE) {
                 walk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE, date,
-                        date.plusSeconds(walkDuration), startCoordinate, routeStartStop.getLocation(), routeStartStop);
+                        date.plusSeconds(walkDuration), startCoordinate, routeStartStop.getCoordinate(),
+                        routeStartStop);
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, endStop, date.plusSeconds(walkDuration), timeType);
             } else {
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, endStop, date, timeType);
                 LocalDateTime legArrival = leg.getArrival().getArrivalTime();
                 walk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE,
-                        legArrival.minusSeconds(walkDuration), legArrival, routeStartStop.getLocation(),
-                        endStop.getLocation(), routeStartStop);
+                        legArrival.minusSeconds(walkDuration), legArrival, routeStartStop.getCoordinate(),
+                        endStop.getCoordinate(), routeStartStop);
             }
             return new DummyServiceModels.Connection(List.of(walk, leg));
 
@@ -343,11 +344,12 @@ class DummyService implements PublicTransitService {
                 leg = getPublicTransitLeg(ROUTE_1, startStop, routeEndStop, date, timeType);
                 LocalDateTime legArrival = leg.getArrival().getArrivalTime();
                 walk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE, legArrival,
-                        legArrival.plusSeconds(walkDuration), routeEndStop.getLocation(), endCoordinate, routeEndStop);
+                        legArrival.plusSeconds(walkDuration), routeEndStop.getCoordinate(), endCoordinate,
+                        routeEndStop);
             } else {
                 LocalDateTime walkDeparture = date.minusSeconds(walkDuration);
                 walk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE,
-                        walkDeparture, date, routeEndStop.getLocation(), endCoordinate, routeEndStop);
+                        walkDeparture, date, routeEndStop.getCoordinate(), endCoordinate, routeEndStop);
                 leg = getPublicTransitLeg(ROUTE_1, startStop, routeEndStop, walkDeparture, timeType);
             }
             return new DummyServiceModels.Connection(List.of(leg, walk));
@@ -364,22 +366,23 @@ class DummyService implements PublicTransitService {
             int walkDuration = 2 * SECONDS_BETWEEN_STOPS;
             if (timeType == TimeType.DEPARTURE) {
                 firstWalk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE, date,
-                        date.plusSeconds(walkDuration), startCoordinate, routeStartStop.getLocation(), routeStartStop);
+                        date.plusSeconds(walkDuration), startCoordinate, routeStartStop.getCoordinate(),
+                        routeStartStop);
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, routeEndStop, date.plusSeconds(walkDuration),
                         timeType);
                 LocalDateTime legArrival = leg.getArrival().getArrivalTime();
                 lastWalk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE,
-                        legArrival, legArrival.plusSeconds(walkDuration), routeEndStop.getLocation(), endCoordinate,
+                        legArrival, legArrival.plusSeconds(walkDuration), routeEndStop.getCoordinate(), endCoordinate,
                         routeEndStop);
             } else {
                 LocalDateTime walkDeparture = date.minusSeconds(walkDuration);
                 lastWalk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE,
-                        walkDeparture, date, routeEndStop.getLocation(), endCoordinate, routeEndStop);
+                        walkDeparture, date, routeEndStop.getCoordinate(), endCoordinate, routeEndStop);
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, routeEndStop, walkDeparture, timeType);
                 LocalDateTime legDeparture = leg.getDeparture().getDepartureTime();
                 firstWalk = new DummyServiceModels.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE,
                         legDeparture.minusSeconds(walkDuration), legDeparture, startCoordinate,
-                        routeStartStop.getLocation(), routeStartStop);
+                        routeStartStop.getCoordinate(), routeStartStop);
             }
             return new DummyServiceModels.Connection(List.of(firstWalk, leg, lastWalk));
         }

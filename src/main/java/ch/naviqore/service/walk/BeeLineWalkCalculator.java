@@ -22,28 +22,30 @@ public class BeeLineWalkCalculator implements WalkCalculator {
      */
     public static final double BEELINE_DISTANCE_FACTOR = 1.3;
 
-    private final double walkSpeed;
+    private final double walkingSpeed;
 
     /**
      * Creates a new BeeLineWalkCalculator with the given walking speed.
      *
-     * @param walkSpeed Walking speed in meters per second (m/s).
+     * @param walkingSpeed Walking speed in meters per second (m/s).
      */
-    public BeeLineWalkCalculator(double walkSpeed) {
-        if (walkSpeed <= 0) {
-            throw new IllegalArgumentException("walkSpeed needs to be greater than 0");
+    public BeeLineWalkCalculator(double walkingSpeed) {
+        if (walkingSpeed <= 0) {
+            throw new IllegalArgumentException("Walking speed needs to be greater than 0.");
         }
-        this.walkSpeed = walkSpeed;
+        this.walkingSpeed = walkingSpeed;
     }
 
     @Override
     public Walk calculateWalk(GeoCoordinate from, GeoCoordinate to) {
         if (from == null || to == null) {
-            throw new IllegalArgumentException("from and to cannot be null");
+            throw new IllegalArgumentException("The from and to coordinates cannot be null.");
         }
+
         double beelineDistance = from.distanceTo(to);
         double adjustedDistance = beelineDistance * BEELINE_DISTANCE_FACTOR;
-        int duration = (int) Math.round(adjustedDistance / walkSpeed);
+        int duration = (int) Math.round(adjustedDistance / walkingSpeed);
+
         return new Walk(duration, (int) Math.round(adjustedDistance));
     }
 }

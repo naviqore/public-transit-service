@@ -14,11 +14,11 @@ import java.util.Map;
 public class DtoMapper {
 
     public static Stop map(ch.naviqore.service.Stop stop) {
-        return new Stop(stop.getId(), stop.getName(), stop.getLocation());
+        return new Stop(stop.getId(), stop.getName(), stop.getCoordinate());
     }
 
     public static DistanceToStop map(ch.naviqore.service.Stop stop, double latitude, double longitude) {
-        return new DistanceToStop(map(stop), stop.getLocation().distanceTo(latitude, longitude));
+        return new DistanceToStop(map(stop), stop.getCoordinate().distanceTo(latitude, longitude));
     }
 
     public static Departure map(ch.naviqore.service.StopTime stopTime) {
@@ -96,8 +96,8 @@ public class DtoMapper {
     private static class LegVisitorImpl implements LegVisitor<Leg> {
         @Override
         public Leg visit(PublicTransitLeg publicTransitLeg) {
-            return new Leg(LegType.ROUTE, publicTransitLeg.getDeparture().getStop().getLocation(),
-                    publicTransitLeg.getArrival().getStop().getLocation(),
+            return new Leg(LegType.ROUTE, publicTransitLeg.getDeparture().getStop().getCoordinate(),
+                    publicTransitLeg.getArrival().getStop().getCoordinate(),
                     map(publicTransitLeg.getDeparture().getStop()), map(publicTransitLeg.getArrival().getStop()),
                     publicTransitLeg.getDeparture().getDepartureTime(), publicTransitLeg.getArrival().getArrivalTime(),
                     map(publicTransitLeg.getTrip()));
@@ -105,9 +105,9 @@ public class DtoMapper {
 
         @Override
         public Leg visit(Transfer transfer) {
-            return new Leg(LegType.WALK, transfer.getSourceStop().getLocation(), transfer.getTargetStop().getLocation(),
-                    map(transfer.getSourceStop()), map(transfer.getTargetStop()), transfer.getDepartureTime(),
-                    transfer.getArrivalTime(), null);
+            return new Leg(LegType.WALK, transfer.getSourceStop().getCoordinate(),
+                    transfer.getTargetStop().getCoordinate(), map(transfer.getSourceStop()),
+                    map(transfer.getTargetStop()), transfer.getDepartureTime(), transfer.getArrivalTime(), null);
         }
 
         @Override

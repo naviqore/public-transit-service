@@ -20,7 +20,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
-final class TypeMapper {
+public final class TypeMapper {
 
     private static final int SECONDS_IN_DAY = 86400;
 
@@ -71,15 +71,8 @@ final class TypeMapper {
         };
     }
 
-    public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
-                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
-                                  @Nullable Stop stop) {
-        return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
-                targetLocation, stop);
-    }
-
-    public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Walk firstMile,
-                                 @Nullable Walk lastMile, GtfsSchedule schedule) {
+    public static Connection map(ch.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
+                                 @Nullable Leg lastMile, GtfsSchedule schedule) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -101,7 +94,7 @@ final class TypeMapper {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
-        int distance = (int) Math.round(sourceStop.getLocation().distanceTo(targetStop.getLocation()));
+        int distance = (int) Math.round(sourceStop.getCoordinate().distanceTo(targetStop.getCoordinate()));
 
         return switch (leg.getType()) {
             case WALK_TRANSFER ->
@@ -128,10 +121,12 @@ final class TypeMapper {
         if (travelModes == null || travelModes.isEmpty()) {
             return EnumSet.allOf(ch.naviqore.raptor.TravelMode.class);
         }
+
         EnumSet<ch.naviqore.raptor.TravelMode> raptorTravelModes = EnumSet.noneOf(ch.naviqore.raptor.TravelMode.class);
         for (TravelMode travelMode : travelModes) {
             raptorTravelModes.add(ch.naviqore.raptor.TravelMode.valueOf(travelMode.name()));
         }
+
         return raptorTravelModes;
     }
 
@@ -148,7 +143,20 @@ final class TypeMapper {
         };
     }
 
-    private static Leg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule, int distance) {
+    public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
+                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
+                                  @Nullable Stop stop) {
+        return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
+                targetLocation, stop);
+    }
+
+    public static Transfer createTransfer(int distance, int duration, LocalDateTime departureTime,
+                                          LocalDateTime arrivalTime, Stop sourceStop, Stop targetStop) {
+        return new GtfsRaptorTransfer(distance, duration, departureTime, arrivalTime, sourceStop, targetStop);
+    }
+
+    private static PublicTransitLeg createPublicTransitLeg(ch.naviqore.raptor.Leg leg, GtfsSchedule schedule,
+                                                           int distance) {
         ch.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.getTripId());
         LocalDate serviceDay = getServiceDay(leg, gtfsTrip);
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
@@ -188,12 +196,14 @@ final class TypeMapper {
     private static LocalDate getServiceDay(ch.naviqore.raptor.Leg leg, ch.naviqore.gtfs.schedule.model.Trip trip) {
         String StopId = leg.getFromStopId();
         LocalTime departureTime = leg.getDepartureTime().toLocalTime();
+
         for (ch.naviqore.gtfs.schedule.model.StopTime stopTime : trip.getStopTimes()) {
             if (stopTime.stop().getId().equals(StopId) && stopTime.departure().toLocalTime().equals(departureTime)) {
                 int dayShift = stopTime.departure().getTotalSeconds() / SECONDS_IN_DAY;
                 return leg.getDepartureTime().toLocalDate().minusDays(dayShift);
             }
         }
+
         throw new IllegalStateException("Could not find service day for leg");
     }
 }

@@ -130,7 +130,7 @@ class DummyServiceModels {
     static class Stop implements ch.naviqore.service.Stop {
         private final String id;
         private final String name;
-        private final GeoCoordinate location;
+        private final GeoCoordinate coordinate;
 
     }
 

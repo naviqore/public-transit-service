@@ -8,6 +8,7 @@ import ch.naviqore.gtfs.schedule.type.TransferType;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.raptor.router.RaptorConfig;
 import ch.naviqore.raptor.router.RaptorRouterBuilder;
+import ch.naviqore.service.gtfs.raptor.GtfsRaptorTestSchedule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,7 @@ class GtfsToRaptorConverterIT {
         static RaptorBuilderData convertRaptor(List<Transfer> scheduleTransfers,
                                                List<TransferGenerator> transferGenerators) throws NoSuchFieldException, IllegalAccessException {
             // build GTFS test schedule
-            GtfsToRaptorTestSchedule builder = new GtfsToRaptorTestSchedule();
+            GtfsRaptorTestSchedule builder = new GtfsRaptorTestSchedule();
             for (Transfer transfer : scheduleTransfers) {
                 builder.addTransfer(transfer.fromStopId, transfer.toStopId, TransferType.MINIMUM_TIME,
                         transfer.duration);

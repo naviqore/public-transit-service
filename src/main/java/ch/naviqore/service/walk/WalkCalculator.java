@@ -3,7 +3,7 @@ package ch.naviqore.service.walk;
 import ch.naviqore.utils.spatial.GeoCoordinate;
 
 /**
- * Calculates the walk duration between two points.
+ * Calculates a walk between two points.
  */
 public interface WalkCalculator {
 
