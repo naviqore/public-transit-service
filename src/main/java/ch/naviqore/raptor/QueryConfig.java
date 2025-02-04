@@ -28,6 +28,16 @@ public class QueryConfig {
     @Setter
     private EnumSet<TravelMode> allowedTravelModes = EnumSet.allOf(TravelMode.class);
 
+    @Setter
+    private boolean doInitialTransferRelaxation = true;
+    @Setter
+    private boolean allowConsecutiveTransfers = false;
+    @Setter
+    private boolean allowSourceTransfer = true;
+    @Setter
+    private boolean allowTargetTransfer = true;
+
+
     public QueryConfig(int maximumWalkingDuration, int minimumTransferDuration, int maximumTransferNumber,
                        int maximumTravelTime, boolean wheelchairAccessible, boolean bikeAccessible,
                        EnumSet<TravelMode> allowedTravelModes) {
