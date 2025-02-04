@@ -100,8 +100,11 @@ class Query {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         initialize();
-        footpathRelaxer.relaxInitial();
-        removeSuboptimalLabelsForRound(0);
+
+        if (config.isDoInitialTransferRelaxation()) {
+            footpathRelaxer.relaxInitial();
+            removeSuboptimalLabelsForRound(0);
+        }
 
         // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
         if (raptorRange <= 0) {
