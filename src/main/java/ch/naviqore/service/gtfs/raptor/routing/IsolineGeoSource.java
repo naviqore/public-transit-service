@@ -18,7 +18,7 @@ class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
     IsolineGeoSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
                      GeoCoordinate source) {
-        super(time, timeType, queryConfig, utils, source);
+        super(time, timeType, queryConfig, utils, source, false);
     }
 
     @Override

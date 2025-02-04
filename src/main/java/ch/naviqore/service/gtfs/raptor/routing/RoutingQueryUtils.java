@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -39,17 +40,39 @@ class RoutingQueryUtils {
 
     List<ch.naviqore.raptor.Connection> routeConnections(Map<String, LocalDateTime> sourceStops,
                                                          Map<String, Integer> targetStops, TimeType timeType,
-                                                         ConnectionQueryConfig queryConfig) {
+                                                         ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                         boolean allowTargetTransfer) {
+        QueryConfig config = prepareQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
+
         if (timeType == TimeType.DEPARTURE) {
-            return raptor.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(queryConfig));
+            return raptor.routeEarliestArrival(sourceStops, targetStops, config);
         } else {
-            return raptor.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(queryConfig));
+            return raptor.routeLatestDeparture(targetStops, sourceStops, config);
         }
     }
 
     Map<String, ch.naviqore.raptor.Connection> createIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
-                                                              ConnectionQueryConfig queryConfig) {
-        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(queryConfig));
+                                                              ConnectionQueryConfig queryConfig,
+                                                              boolean allowSourceTransfer) {
+        // TODO: discuss whether allowTargetTransfers  should be modifiable
+        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
+                prepareQueryConfig(queryConfig, allowSourceTransfer, true));
+    }
+
+    private static QueryConfig prepareQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                  boolean allowTargetTransfer) {
+        QueryConfig config = TypeMapper.map(queryConfig);
+        // TODO: discuss whether this should be modifiable
+        // we don't want consecutive transfers in connections
+        config.setAllowConsecutiveTransfers(false);
+        // TODO: discuss whether this should be modifiable
+        // we don't want two one leg results if connection can be achieved with initial transfer (Round 0) and a one leg
+        // connection (that is faster) --> Round 1
+        config.setDoInitialTransferRelaxation(false);
+        config.setAllowSourceTransfer(allowSourceTransfer);
+        config.setAllowTargetTransfer(allowTargetTransfer);
+
+        return config;
     }
 
     Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,

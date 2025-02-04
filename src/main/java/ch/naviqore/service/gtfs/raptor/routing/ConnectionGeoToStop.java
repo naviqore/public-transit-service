@@ -20,7 +20,7 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
 
     ConnectionGeoToStop(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                         RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
-        super(time, timeType, queryConfig, utils, source, target);
+        super(time, timeType, queryConfig, utils, source, target, false, true);
     }
 
     @Override
