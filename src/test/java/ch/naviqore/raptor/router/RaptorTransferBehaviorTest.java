@@ -59,6 +59,25 @@ public class RaptorTransferBehaviorTest {
             assertEquals(1, connection.getRouteLegs().size());
             assertEquals(0, connection.getWalkTransfers().size());
         }
+
+        @Test
+        void connectBetweenStops_withoutInitialFootpathRelaxationOnlyByTransfer(RaptorRouterTestBuilder builder) {
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 5, 30);
+            QueryConfig config = new QueryConfig();
+            config.setDoInitialTransferRelaxation(false);
+
+            // ensure that no routes are active anymore
+            LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_END_HOUR + 1, 0);
+
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "B", startTime, config);
+
+            // even though initial transfer relaxation is turned off, in round 1 transfer relaxation should be performed
+            // from source stops (after no faster route trips were found!).
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            assertEquals(0, connection.getRouteLegs().size());
+            assertEquals(1, connection.getWalkTransfers().size());
+        }
     }
 
     static class TransferBehaviorHelpers {
