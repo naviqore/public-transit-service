@@ -81,6 +81,11 @@ class FootpathRelaxer {
         Stop sourceStop = stops[stopIdx];
         QueryState.Label previousLabel = queryState.getLabel(round, stopIdx);
 
+        // handle case where initial transfer relaxation was not performed
+        if( round == 1 && previousLabel == null ){
+            previousLabel = queryState.getLabel(0, stopIdx);
+        }
+
         // do not relax footpath from stop that was only reached by footpath in the same round
         if (previousLabel == null || previousLabel.type() == QueryState.LabelType.TRANSFER) {
             return;
@@ -116,7 +121,7 @@ class FootpathRelaxer {
             queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), queryState.getLabel(round, stopIdx));
+                    NO_INDEX, transfer.targetStopIdx(), previousLabel);
             queryState.setLabel(round, transfer.targetStopIdx(), label);
             queryState.mark(transfer.targetStopIdx());
         }
