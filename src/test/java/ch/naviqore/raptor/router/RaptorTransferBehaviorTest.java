@@ -1,6 +1,7 @@
 package ch.naviqore.raptor.router;
 
 import ch.naviqore.raptor.Connection;
+import ch.naviqore.raptor.Leg;
 import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import org.junit.jupiter.api.Nested;
@@ -78,6 +79,57 @@ public class RaptorTransferBehaviorTest {
             assertEquals(0, connection.getRouteLegs().size());
             assertEquals(1, connection.getWalkTransfers().size());
         }
+    }
+
+    @Nested
+    class SourceTransferRelaxation {
+
+        @Test
+        void connectBetweenStops_withSourceTransfer(RaptorRouterTestBuilder builder) {
+            // setting route time between stops greater han transfer time between stops allows for the possibility
+            // that the transfer allows catching up with an already departed route trip at the next stop
+            // --> source transfer
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            QueryConfig config = new QueryConfig();
+            config.setAllowSourceTransfer(true);
+
+            // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM). if start
+            // time is set to 08:01 AM and the transfer time to B is 5 minutes B can be reached at 8:06 AM, allowing to
+            // embark the route for the remaining trip
+            LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 1);
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            Leg firstLeg = connection.getLegs().getFirst();
+            assertEquals(Leg.Type.WALK_TRANSFER, firstLeg.getType());
+        }
+
+        @Test
+        void connectBetweenStops_withoutSourceTransfer(RaptorRouterTestBuilder builder) {
+            // setting route time between stops greater han transfer time between stops allows for the possibility
+            // that the transfer allows catching up with an already departed route trip at the next stop
+            // --> source transfer
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            QueryConfig config = new QueryConfig();
+            // however this test should check that source transfers can be disabled, i.e. the slower solution should be
+            // returned
+            config.setAllowSourceTransfer(false);
+
+            // first trip leaves "A" at start time (8:00 AM), second trip leaves "A" at 08:15 AM. Since no transfers
+            // from the source stop are allowed, the solution must start with the 8:15 AM trip when the start time is
+            // set to 08:01 AM.
+            LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 1);
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            Leg firstLeg = connection.getLegs().getFirst();
+            assertEquals(Leg.Type.ROUTE, firstLeg.getType());
+            // check that departure time is 08:15 AM
+            assertEquals(startTime.plusMinutes(14), connection.getDepartureTime());
+        }
+
     }
 
     static class TransferBehaviorHelpers {
