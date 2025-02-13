@@ -31,8 +31,6 @@ public class QueryConfig {
     @Setter
     private boolean doInitialTransferRelaxation = true;
     @Setter
-    private boolean allowConsecutiveTransfers = false;
-    @Setter
     private boolean allowSourceTransfer = true;
     @Setter
     private boolean allowTargetTransfer = true;

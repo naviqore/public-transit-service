@@ -76,7 +76,7 @@ class Query {
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
                 config.getMaximumWalkingDuration(), timeType, config.isAllowSourceTransfer(),
-                config.isAllowTargetTransfer(), config.isAllowConsecutiveTransfers(), targetStopIndices);
+                config.isAllowTargetTransfer(), targetStopIndices);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDate,
                 raptorConfig.getDaysToScan());
     }

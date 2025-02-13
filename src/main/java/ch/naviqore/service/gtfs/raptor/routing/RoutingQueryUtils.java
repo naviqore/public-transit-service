@@ -63,9 +63,6 @@ class RoutingQueryUtils {
                                                   boolean allowTargetTransfer) {
         QueryConfig config = TypeMapper.map(queryConfig);
         // TODO: discuss whether this should be modifiable
-        // we don't want consecutive transfers in connections
-        config.setAllowConsecutiveTransfers(false);
-        // TODO: discuss whether this should be modifiable
         // we don't want two one leg results if connection can be achieved with initial transfer (Round 0) and a one leg
         // connection (that is faster) --> Round 1
         config.setDoInitialTransferRelaxation(false);
