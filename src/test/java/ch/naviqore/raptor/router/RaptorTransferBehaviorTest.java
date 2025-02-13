@@ -132,6 +132,55 @@ public class RaptorTransferBehaviorTest {
 
     }
 
+    @Nested
+    class TargetTransferRelaxation {
+
+        @Test
+        void connectBetweenStops_withTargetTransfer(RaptorRouterTestBuilder builder) {
+            // setting route time between stops greater han transfer time between stops allows for the possibility
+            // that the transfer allows passing a route trip to arrive earlier at the final destination
+            // --> target transfer
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            QueryConfig config = new QueryConfig();
+            config.setAllowTargetTransfer(true);
+
+            // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM) and continues
+            // on to "C" to arrive at 08:20. However, walking from B-C would allow arriving C at 08:15.
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            Leg lastLeg = connection.getLegs().getLast();
+            assertEquals(Leg.Type.WALK_TRANSFER, lastLeg.getType());
+            assertEquals(DAY_START_HOUR, connection.getArrivalTime().getHour());
+            assertEquals(15, connection.getArrivalTime().getMinute());
+        }
+
+        @Test
+        void connectBetweenStops_withoutInitialTransfer(RaptorRouterTestBuilder builder) {
+            // setting route time between stops greater han transfer time between stops allows for the possibility
+            // that the transfer allows passing a route trip to arrive earlier at the final destination
+            // --> target transfer
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            QueryConfig config = new QueryConfig();
+            config.setAllowTargetTransfer(true);
+
+            // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM) and continues
+            // on to "C" to arrive at 08:20. However, walking from B-C would allow arriving C at 08:15. However, since
+            // target transfers are not allowed, arrival time should be 08:20.
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            Leg lastLeg = connection.getLegs().getLast();
+            assertEquals(Leg.Type.ROUTE, lastLeg.getType());
+            assertEquals(DAY_START_HOUR, connection.getArrivalTime().getHour());
+            assertEquals(20, connection.getArrivalTime().getMinute());
+        }
+
+    }
+
+
     static class TransferBehaviorHelpers {
         /**
          * Tests will only use a simplified version of a raptor schedule. Focus will lie on the stop sequence A - B - C,
