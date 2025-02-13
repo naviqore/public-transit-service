@@ -70,7 +70,8 @@ public class RaptorTransferBehaviorTest {
             // ensure that no routes are active anymore
             LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_END_HOUR + 1, 0);
 
-            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "B", startTime, config);
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "B", startTime,
+                    config);
 
             // even though initial transfer relaxation is turned off, in round 1 transfer relaxation should be performed
             // from source stops (after no faster route trips were found!).
@@ -97,7 +98,8 @@ public class RaptorTransferBehaviorTest {
             // time is set to 08:01 AM and the transfer time to B is 5 minutes B can be reached at 8:06 AM, allowing to
             // embark the route for the remaining trip
             LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 1);
-            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", startTime,
+                    config);
 
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
@@ -120,7 +122,8 @@ public class RaptorTransferBehaviorTest {
             // from the source stop are allowed, the solution must start with the 8:15 AM trip when the start time is
             // set to 08:01 AM.
             LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 1);
-            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", config);
+            List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", startTime,
+                    config);
 
             assertEquals(1, connections.size());
             Connection connection = connections.getFirst();
@@ -140,7 +143,7 @@ public class RaptorTransferBehaviorTest {
             // setting route time between stops greater han transfer time between stops allows for the possibility
             // that the transfer allows passing a route trip to arrive earlier at the final destination
             // --> target transfer
-            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 30, 5);
             QueryConfig config = new QueryConfig();
             config.setAllowTargetTransfer(true);
 
@@ -157,13 +160,13 @@ public class RaptorTransferBehaviorTest {
         }
 
         @Test
-        void connectBetweenStops_withoutInitialTransfer(RaptorRouterTestBuilder builder) {
+        void connectBetweenStops_withoutTargetTransfer(RaptorRouterTestBuilder builder) {
             // setting route time between stops greater han transfer time between stops allows for the possibility
             // that the transfer allows passing a route trip to arrive earlier at the final destination
             // --> target transfer
-            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
+            RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 30, 5);
             QueryConfig config = new QueryConfig();
-            config.setAllowTargetTransfer(true);
+            config.setAllowTargetTransfer(false);
 
             // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM) and continues
             // on to "C" to arrive at 08:20. However, walking from B-C would allow arriving C at 08:15. However, since
@@ -180,7 +183,6 @@ public class RaptorTransferBehaviorTest {
 
     }
 
-
     static class TransferBehaviorHelpers {
         /**
          * Tests will only use a simplified version of a raptor schedule. Focus will lie on the stop sequence A - B - C,
@@ -188,12 +190,17 @@ public class RaptorTransferBehaviorTest {
          * trips between all stops depending on the query configuration.
          */
         static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
-                                             int transferTimeBetweenStops) {
+                                             int abTransferTime, int bcTransferTime) {
             builder.withAddRoute1_AG(0, 15, routeTimeBetweenStops, 0);
-            builder.withAddTransfer("A", "B", transferTimeBetweenStops);
-            builder.withAddTransfer("B", "C", transferTimeBetweenStops);
+            builder.withAddTransfer("A", "B", abTransferTime);
+            builder.withAddTransfer("B", "C", bcTransferTime);
             builder.withMaxDaysToScan(1);
             return builder.build(DAY_START_HOUR, DAY_END_HOUR);
+        }
+
+        static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
+                                             int transferTime) {
+            return prepareRouter(builder, routeTimeBetweenStops, transferTime, transferTime);
         }
 
         static List<Connection> routeBetweenStops(RaptorAlgorithm router, QueryConfig config) {
