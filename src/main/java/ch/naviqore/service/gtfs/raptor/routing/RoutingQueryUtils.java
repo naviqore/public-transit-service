@@ -54,7 +54,7 @@ class RoutingQueryUtils {
     Map<String, ch.naviqore.raptor.Connection> createIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
                                                               ConnectionQueryConfig queryConfig,
                                                               boolean allowSourceTransfer) {
-        // TODO: discuss whether allowTargetTransfers  should be modifiable
+        // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
                 prepareQueryConfig(queryConfig, allowSourceTransfer, true));
     }
@@ -62,10 +62,6 @@ class RoutingQueryUtils {
     private static QueryConfig prepareQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
                                                   boolean allowTargetTransfer) {
         QueryConfig config = TypeMapper.map(queryConfig);
-        // TODO: discuss whether this should be modifiable
-        // we don't want two one leg results if connection can be achieved with initial transfer (Round 0) and a one leg
-        // connection (that is faster) --> Round 1
-        config.setDoInitialTransferRelaxation(false);
         config.setAllowSourceTransfer(allowSourceTransfer);
         config.setAllowTargetTransfer(allowTargetTransfer);
 

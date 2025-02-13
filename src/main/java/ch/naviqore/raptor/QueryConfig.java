@@ -29,8 +29,6 @@ public class QueryConfig {
     private EnumSet<TravelMode> allowedTravelModes = EnumSet.allOf(TravelMode.class);
 
     @Setter
-    private boolean doInitialTransferRelaxation = true;
-    @Setter
     private boolean allowSourceTransfer = true;
     @Setter
     private boolean allowTargetTransfer = true;

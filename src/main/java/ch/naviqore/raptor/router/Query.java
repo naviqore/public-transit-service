@@ -102,10 +102,8 @@ class Query {
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         initialize();
 
-        if (config.isDoInitialTransferRelaxation()) {
-            footpathRelaxer.relaxInitial();
-            removeSuboptimalLabelsForRound(0);
-        }
+        footpathRelaxer.relaxInitial();
+        removeSuboptimalLabelsForRound(0);
 
         // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
         if (raptorRange <= 0) {
@@ -173,16 +171,6 @@ class Query {
 
             // scan all routs and mark stops that have improved
             routeScanner.scan(queryState.getRound());
-
-            // this is a special case where no initial transfer relaxation was done, to ensure that transfers from
-            // source stops are still accounted for these are manually marked in round 1 (after route scanning for
-            // performance reasons)
-            if( !config.isDoInitialTransferRelaxation() && queryState.getRound() == 1 ){
-                // mark all source stops for transfer relaxation after round 1
-                for (int sourceStopIndex : sourceStopIndices) {
-                    queryState.mark(sourceStopIndex);
-                }
-            }
 
             // relax footpaths for all newly marked stops
             footpathRelaxer.relax(queryState.getRound());
