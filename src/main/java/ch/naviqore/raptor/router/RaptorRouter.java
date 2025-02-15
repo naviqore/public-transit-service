@@ -209,7 +209,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             }
 
             // loop over all stop pairs and check if stop exists in raptor, then validate departure time
-            Map<Integer, Integer> validStopIds = new HashMap<>();
+            Map<Integer, Integer> validStopIds = new LinkedHashMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
                 String stopId = entry.getKey();
                 int time = entry.getValue();

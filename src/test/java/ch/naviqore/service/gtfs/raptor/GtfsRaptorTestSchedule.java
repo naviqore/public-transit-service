@@ -57,7 +57,7 @@ public class GtfsRaptorTestSchedule {
         builder.addTrip("T1", "R1", "always", "D1");
         builder.addStopTime("T1", "A", new ServiceDayTime(60), new ServiceDayTime(120));
         builder.addStopTime("T1", "B1", new ServiceDayTime(180), new ServiceDayTime(240));
-        builder.addStopTime("T1", "C1", new ServiceDayTime(301), new ServiceDayTime(360));
+        builder.addStopTime("T1", "C1", new ServiceDayTime(300), new ServiceDayTime(360));
         builder.addStopTime("T1", "D1", new ServiceDayTime(420), new ServiceDayTime(480));
 
         // Route 2 goes from A, B2, C
