@@ -46,14 +46,15 @@ public class GtfsRaptorTestSchedule {
         builder.addStop("C", "C", 0.0, 2.0);
         builder.addStop("C1", "C1", 0.001, 2.0, "C", AccessibilityInformation.UNKNOWN);
         builder.addStop("C2", "C2", -0.001, 2.0, "C", AccessibilityInformation.UNKNOWN);
+        // D, D1 and D2 are more than 500 m apart!
         builder.addStop("D", "D", 0.0, 3.0);
-        builder.addStop("D1", "D1", 0.001, 3.0, "D", AccessibilityInformation.UNKNOWN);
-        builder.addStop("D2", "D2", -0.001, 3.0, "D", AccessibilityInformation.UNKNOWN);
+        builder.addStop("D1", "D1", 0.005, 3.0, "D", AccessibilityInformation.UNKNOWN);
+        builder.addStop("D2", "D2", -0.005, 3.0, "D", AccessibilityInformation.UNKNOWN);
         builder.addStop("E", "E", 0.0, 4.0);
 
         // Route 1 goes from A, B1, C1, D2
         builder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
-        builder.addTrip("T1", "R1", "always", "C1");
+        builder.addTrip("T1", "R1", "always", "D1");
         builder.addStopTime("T1", "A", new ServiceDayTime(60), new ServiceDayTime(120));
         builder.addStopTime("T1", "B1", new ServiceDayTime(180), new ServiceDayTime(240));
         builder.addStopTime("T1", "C1", new ServiceDayTime(301), new ServiceDayTime(360));
@@ -61,7 +62,7 @@ public class GtfsRaptorTestSchedule {
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
-        builder.addTrip("T2", "R2", "always", "C");
+        builder.addTrip("T2", "R2", "always", "D2");
         builder.addStopTime("T2", "A", new ServiceDayTime(60), new ServiceDayTime(120));
         builder.addStopTime("T2", "B2", new ServiceDayTime(180), new ServiceDayTime(240));
         builder.addStopTime("T2", "C", new ServiceDayTime(300), new ServiceDayTime(360));

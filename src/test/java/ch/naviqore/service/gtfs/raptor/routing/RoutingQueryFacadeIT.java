@@ -30,6 +30,7 @@ import java.util.Map;
 import static ch.naviqore.service.config.ServiceConfig.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RoutingQueryFacadeIT {
 
@@ -99,39 +100,52 @@ class RoutingQueryFacadeIT {
     }
 
     private void assertFirstMileWalk(Leg leg) {
+        assertFirstMileWalk(leg, sourceStop, sourceCoordinate);
+    }
+
+    private void assertFirstMileWalk(Leg leg, Stop stop, GeoCoordinate coordinate) {
         assertThat(leg).isInstanceOf(Walk.class);
         Walk walk = (Walk) leg;
 
         assertThat(walk.getStop()).isPresent();
-        assertThat(walk.getStop().get().getId()).isEqualTo("A");
+        assertThat(walk.getStop().get().getId()).isEqualTo(stop.getId());
 
-        assertThat(walk.getSourceLocation().distanceTo(sourceCoordinate)).isCloseTo(0, within(EPSILON));
-        assertThat(walk.getTargetLocation().distanceTo(sourceStop.getCoordinate())).isCloseTo(0, within(EPSILON));
+        assertThat(walk.getSourceLocation().distanceTo(coordinate)).isCloseTo(0, within(EPSILON));
+        assertThat(walk.getTargetLocation().distanceTo(stop.getCoordinate())).isCloseTo(0, within(EPSILON));
     }
 
     @Nested
     class Connections {
 
         private static void assertPublicTransitLeg(Leg leg) {
+            assertPublicTransitLeg(leg, "A", "C", "T2", "R2");
+        }
+
+        private static void assertPublicTransitLeg(Leg leg, String departureStopId, String arrivalStopId, String tripId,
+                                                   String routeId) {
             assertThat(leg).isInstanceOf(PublicTransitLeg.class);
             PublicTransitLeg publicTransitLeg = (PublicTransitLeg) leg;
 
-            assertThat(publicTransitLeg.getTrip().getId()).isEqualTo("T2");
-            assertThat(publicTransitLeg.getTrip().getRoute().getId()).isEqualTo("R2");
+            assertThat(publicTransitLeg.getTrip().getId()).isEqualTo(tripId);
+            assertThat(publicTransitLeg.getTrip().getRoute().getId()).isEqualTo(routeId);
 
-            assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo("A");
-            assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo("C");
+            assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo(departureStopId);
+            assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo(arrivalStopId);
         }
 
         private void assertLastMileWalk(Leg leg) {
+            assertLastMileWalk(leg, targetStop, targetCoordinate);
+        }
+
+        private void assertLastMileWalk(Leg leg, Stop stop, GeoCoordinate coordinate) {
             assertThat(leg).isInstanceOf(Walk.class);
             Walk walk = (Walk) leg;
 
             assertThat(walk.getStop()).isPresent();
-            assertThat(walk.getStop().get().getId()).isEqualTo("C");
+            assertThat(walk.getStop().get().getId()).isEqualTo(stop.getId());
 
-            assertThat(walk.getSourceLocation().distanceTo(targetStop.getCoordinate())).isCloseTo(0, within(EPSILON));
-            assertThat(walk.getTargetLocation().distanceTo(targetCoordinate)).isCloseTo(0, within(EPSILON));
+            assertThat(walk.getSourceLocation().distanceTo(stop.getCoordinate())).isCloseTo(0, within(EPSILON));
+            assertThat(walk.getTargetLocation().distanceTo(coordinate)).isCloseTo(0, within(EPSILON));
         }
 
         @Nested
@@ -215,6 +229,29 @@ class RoutingQueryFacadeIT {
                 assertPublicTransitLeg(legs.getFirst());
                 assertLastMileWalk(legs.get(1));
             }
+
+            @Test
+            void departure_targetOutOfRange() throws ConnectionRoutingException {
+                // this is 440 m from C1 and 560 m from C away, which makes C1 in range of location search and C outside
+                // (range search looks within 500 m --> ServiceConfig.DEFAULT_WALKING_SEARCH_RADIUS)
+                GeoCoordinate targetCoordinate = new GeoCoordinate(0.005, 2.0);
+
+                // routing from B2 only connects to C and not C1 --> no connection possible
+                List<ch.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
+                        TimeType.DEPARTURE, QUERY_CONFIG, getStopById("B2"), targetCoordinate);
+                assertThat(connections).hasSize(0);
+
+                // ensuring that an arrival at C1 allows reaching the target location --> routing B1 -> target
+                // (through C1)
+                connections = facade.queryConnections(DATE_TIME, TimeType.ARRIVAL, QUERY_CONFIG, getStopById("B1"),
+                        targetCoordinate);
+                assertThat(connections).hasSize(1);
+                Connection connection = connections.getFirst();
+                assertThat(connection.getLegs()).hasSize(2);
+
+                assertPublicTransitLeg(connection.getLegs().getFirst(), "B1", "C1", "T1", "R1");
+                assertLastMileWalk(connection.getLegs().getLast(), getStopById("C1"), targetCoordinate);
+            }
         }
 
         @Nested
@@ -256,6 +293,34 @@ class RoutingQueryFacadeIT {
 
                 assertFirstMileWalk(legs.getFirst());
                 assertPublicTransitLeg(legs.get(1));
+            }
+
+            @Test
+            void departure_sourceOutOfRange() throws ConnectionRoutingException {
+                // this is 440 m from B1 and 670 m from B2 away, which makes B1 in range of location search and B2
+                // outside (range search looks within 500 m --> ServiceConfig.DEFAULT_WALKING_SEARCH_RADIUS)
+                GeoCoordinate sourceCoordinate = new GeoCoordinate(0.005, 1.0);
+
+                // since walking to stop B1 will take ~5 minutes and this will miss the only trip of the day the default
+                // start time is set back by 5 minutes.
+                LocalDateTime startTime = DATE_TIME.minusMinutes(5);
+
+                // from source coordinate only departures from stop B1 (i.e. Route 1 going to D1) should be usable,
+                // routes departing from same stop complex at B2 (i.e. Route 2 going to D2) should be unusable.
+                List<Connection> connections = facade.queryConnections(startTime, TimeType.DEPARTURE, QUERY_CONFIG,
+                        sourceCoordinate, getStopById("D1"));
+                assertThat(connections).hasSize(1);
+                Connection connection = connections.getFirst();
+                assertThat(connection.getLegs()).hasSize(2);
+
+                assertFirstMileWalk(connection.getLegs().getFirst(), getStopById("B1"), sourceCoordinate);
+                assertPublicTransitLeg(connection.getLegs().getLast(), "B1", "D1", "T1", "R1");
+
+                // when the original request to route to D2 fails, it will fall back to GeoToGeo coordinate routing,
+                // however since D1 and D2 are more than 500 m apart this will also fail.
+                connections = facade.queryConnections(startTime, TimeType.DEPARTURE, QUERY_CONFIG,
+                        sourceCoordinate, getStopById("D2"));
+                assertThat(connections).hasSize(0);
             }
 
         }
