@@ -320,7 +320,7 @@ class RoutingQueryFacadeIT {
                 @BeforeEach
                 void setUp() {
                     source = getStopById("A");
-                    target = getStopById("D");
+                    target = getStopById("E");
                 }
 
                 @Test
@@ -407,7 +407,7 @@ class RoutingQueryFacadeIT {
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.DEPARTURE,
                         QUERY_CONFIG, sourceStop);
 
-                assertThat(isolines).hasSize(4);
+                assertThat(isolines).hasSize(6);
 
                 for (Connection isoline : isolines.values()) {
                     assertThat(isoline.getLegs()).hasSize(1);
@@ -442,7 +442,7 @@ class RoutingQueryFacadeIT {
                 Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME, TimeType.DEPARTURE,
                         QUERY_CONFIG, sourceCoordinate);
 
-                assertThat(isolines).hasSize(4);
+                assertThat(isolines).hasSize(6);
 
                 for (Connection isoline : isolines.values()) {
                     assertThat(isoline.getLegs()).hasSize(2);
@@ -497,7 +497,7 @@ class RoutingQueryFacadeIT {
                 @Test
                 void arrival() throws ConnectionRoutingException {
                     Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME,
-                            TimeType.ARRIVAL, QUERY_CONFIG, getStopById("D"));
+                            TimeType.ARRIVAL, QUERY_CONFIG, getStopById("E"));
 
                     assertThat(isolines).isEmpty();
                 }
@@ -510,9 +510,9 @@ class RoutingQueryFacadeIT {
                 @Test
                 void departure() throws ConnectionRoutingException {
                     Map<Stop, ch.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME,
-                            TimeType.DEPARTURE, QUERY_CONFIG, getStopById("C2"));
+                            TimeType.DEPARTURE, QUERY_CONFIG, getStopById("D"));
 
-                    // Expected behavior: Since no departures from stops C, C1 and C2, the result must be empty.
+                    // Expected behavior: Since no departures from stops D, D1 and D2, the result must be empty.
                     assertThat(isolines).isEmpty();
                 }
 
