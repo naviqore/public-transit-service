@@ -29,7 +29,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, GeoCoordinate target) {
-        super(time, timeType, queryConfig, utils, source, target);
+        super(time, timeType, queryConfig, utils, source, target, false, false);
         sourceStop = null;
         targetStop = null;
     }
@@ -39,7 +39,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, GeoCoordinate target) {
-        super(time, timeType, queryConfig, utils, source.getCoordinate(), target);
+        super(time, timeType, queryConfig, utils, source.getCoordinate(), target, false, false);
         sourceStop = source;
         targetStop = null;
     }
@@ -49,7 +49,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
-        super(time, timeType, queryConfig, utils, source, target.getCoordinate());
+        super(time, timeType, queryConfig, utils, source, target.getCoordinate(), false, false);
         sourceStop = null;
         targetStop = target;
     }
@@ -59,7 +59,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
      */
     ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, Stop target) {
-        super(time, timeType, queryConfig, utils, source.getCoordinate(), target.getCoordinate());
+        super(time, timeType, queryConfig, utils, source.getCoordinate(), target.getCoordinate(), false, false);
         sourceStop = source;
         targetStop = target;
     }

@@ -18,7 +18,7 @@ class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
 
     ConnectionStopToStop(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                          RoutingQueryUtils utils, Stop source, Stop target) {
-        super(time, timeType, queryConfig, utils, source, target);
+        super(time, timeType, queryConfig, utils, source, target, true, true);
     }
 
     @Override
