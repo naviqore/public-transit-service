@@ -38,8 +38,8 @@ class RoutingQueryUtils {
     private final WalkCalculator walkCalculator;
     private final RaptorAlgorithm raptor;
 
-    private static QueryConfig prepareQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
-                                                  boolean allowTargetTransfer) {
+    private static QueryConfig prepareRaptorQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                        boolean allowTargetTransfer) {
         QueryConfig config = TypeMapper.map(queryConfig);
         config.setAllowSourceTransfer(allowSourceTransfer);
         config.setAllowTargetTransfer(allowTargetTransfer);
@@ -51,7 +51,7 @@ class RoutingQueryUtils {
                                                          Map<String, Integer> targetStops, TimeType timeType,
                                                          ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
                                                          boolean allowTargetTransfer) {
-        QueryConfig config = prepareQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
+        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
 
         if (timeType == TimeType.DEPARTURE) {
             return raptor.routeEarliestArrival(sourceStops, targetStops, config);
@@ -65,7 +65,7 @@ class RoutingQueryUtils {
                                                               boolean allowSourceTransfer) {
         // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
-                prepareQueryConfig(queryConfig, allowSourceTransfer, true));
+                prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
     }
 
     Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
