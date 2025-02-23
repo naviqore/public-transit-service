@@ -38,6 +38,15 @@ class RoutingQueryUtils {
     private final WalkCalculator walkCalculator;
     private final RaptorAlgorithm raptor;
 
+    private static QueryConfig prepareQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                  boolean allowTargetTransfer) {
+        QueryConfig config = TypeMapper.map(queryConfig);
+        config.setAllowSourceTransfer(allowSourceTransfer);
+        config.setAllowTargetTransfer(allowTargetTransfer);
+
+        return config;
+    }
+
     List<ch.naviqore.raptor.Connection> routeConnections(Map<String, LocalDateTime> sourceStops,
                                                          Map<String, Integer> targetStops, TimeType timeType,
                                                          ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
@@ -57,15 +66,6 @@ class RoutingQueryUtils {
         // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
                 prepareQueryConfig(queryConfig, allowSourceTransfer, true));
-    }
-
-    private static QueryConfig prepareQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
-                                                  boolean allowTargetTransfer) {
-        QueryConfig config = TypeMapper.map(queryConfig);
-        config.setAllowSourceTransfer(allowSourceTransfer);
-        config.setAllowTargetTransfer(allowTargetTransfer);
-
-        return config;
     }
 
     Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class to test all transfer handling rules in the QueryConfig
@@ -21,6 +21,38 @@ public class RaptorTransferBehaviorTest {
 
     private static final int DAY_START_HOUR = 8;
     private static final int DAY_END_HOUR = 9;
+
+    static class TransferBehaviorHelpers {
+        /**
+         * Tests will only use a simplified version of a raptor schedule. Focus will lie on the stop sequence A - B - C,
+         * which are connected by route 1 (A-G) and have transfers between each-other. Therefore, allowing completing
+         * trips between all stops depending on the query configuration.
+         */
+        static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
+                                             int abTransferTime, int bcTransferTime) {
+            builder.withAddRoute1_AG(0, 15, routeTimeBetweenStops, 0);
+            builder.withAddTransfer("A", "B", abTransferTime);
+            builder.withAddTransfer("B", "C", bcTransferTime);
+            builder.withMaxDaysToScan(1);
+            return builder.build(DAY_START_HOUR, DAY_END_HOUR);
+        }
+
+        static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
+                                             int transferTime) {
+            return prepareRouter(builder, routeTimeBetweenStops, transferTime, transferTime);
+        }
+
+        static List<Connection> routeBetweenStops(RaptorAlgorithm router, String stop1, String stop2,
+                                                  QueryConfig config) {
+            LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 0);
+            return routeBetweenStops(router, stop1, stop2, startTime, config);
+        }
+
+        static List<Connection> routeBetweenStops(RaptorAlgorithm router, String stop1, String stop2,
+                                                  LocalDateTime startTime, QueryConfig config) {
+            return RaptorRouterTestHelpers.routeEarliestArrival(router, stop1, stop2, startTime, config);
+        }
+    }
 
     @Nested
     class SourceTransferRelaxation {
@@ -121,42 +153,6 @@ public class RaptorTransferBehaviorTest {
             assertEquals(20, connection.getArrivalTime().getMinute());
         }
 
-    }
-
-    static class TransferBehaviorHelpers {
-        /**
-         * Tests will only use a simplified version of a raptor schedule. Focus will lie on the stop sequence A - B - C,
-         * which are connected by route 1 (A-G) and have transfers between each-other. Therefore, allowing completing
-         * trips between all stops depending on the query configuration.
-         */
-        static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
-                                             int abTransferTime, int bcTransferTime) {
-            builder.withAddRoute1_AG(0, 15, routeTimeBetweenStops, 0);
-            builder.withAddTransfer("A", "B", abTransferTime);
-            builder.withAddTransfer("B", "C", bcTransferTime);
-            builder.withMaxDaysToScan(1);
-            return builder.build(DAY_START_HOUR, DAY_END_HOUR);
-        }
-
-        static RaptorAlgorithm prepareRouter(RaptorRouterTestBuilder builder, int routeTimeBetweenStops,
-                                             int transferTime) {
-            return prepareRouter(builder, routeTimeBetweenStops, transferTime, transferTime);
-        }
-
-        static List<Connection> routeBetweenStops(RaptorAlgorithm router, QueryConfig config) {
-            return routeBetweenStops(router, "A", "C", config);
-        }
-
-        static List<Connection> routeBetweenStops(RaptorAlgorithm router, String stop1, String stop2,
-                                                  QueryConfig config) {
-            LocalDateTime startTime = LocalDateTime.of(2000, 1, 1, DAY_START_HOUR, 0);
-            return routeBetweenStops(router, stop1, stop2, startTime, config);
-        }
-
-        static List<Connection> routeBetweenStops(RaptorAlgorithm router, String stop1, String stop2,
-                                                  LocalDateTime startTime, QueryConfig config) {
-            return RaptorRouterTestHelpers.routeEarliestArrival(router, stop1, stop2, startTime, config);
-        }
     }
 
 }

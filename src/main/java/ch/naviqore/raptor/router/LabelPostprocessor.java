@@ -340,7 +340,9 @@ class LabelPostprocessor {
                                         TimeType timeType) {
         if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeLabel.targetTime() && stopTime.departure() >= transferLabel.sourceTime()) {
             return true;
-        } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeLabel.targetTime() && stopTime.arrival() <= transferLabel.sourceTime();
+        } else {
+            return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeLabel.targetTime() && stopTime.arrival() <= transferLabel.sourceTime();
+        }
     }
 
     /**

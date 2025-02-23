@@ -30,7 +30,6 @@ import java.util.Map;
 import static ch.naviqore.service.config.ServiceConfig.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RoutingQueryFacadeIT {
 
@@ -318,8 +317,8 @@ class RoutingQueryFacadeIT {
 
                 // when the original request to route to D2 fails, it will fall back to GeoToGeo coordinate routing,
                 // however since D1 and D2 are more than 500 m apart this will also fail.
-                connections = facade.queryConnections(startTime, TimeType.DEPARTURE, QUERY_CONFIG,
-                        sourceCoordinate, getStopById("D2"));
+                connections = facade.queryConnections(startTime, TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate,
+                        getStopById("D2"));
                 assertThat(connections).hasSize(0);
             }
 

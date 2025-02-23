@@ -3,7 +3,6 @@ package ch.naviqore.raptor.router;
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -26,17 +25,17 @@ class FootpathRelaxer {
     private final QueryState queryState;
 
     /**
-     * @param queryState                the query state with the best time per stop and label per stop and round.
-     * @param raptorData                the current raptor data structures.
-     * @param minimumTransferDuration   The minimum transfer duration time, since this is intended as rest period (e.g.
-     *                                  coffee break) it is added to the walk time.
-     * @param maximumWalkingDuration    The maximum walking duration to reach the target stop. If the walking duration
-     *                                  exceeds this value, the target stop is not reached.
-     * @param timeType                  the time type (arrival or departure).
-     * @param allowSourceTransfers      defines if transfers from source stops are possible
-     * @param allowTargetTransfers      defines if transfers to target stops are possible
-     * @param targetStopIndices         array holding all indices of target stops, used to check if transfer target is
-     *                                  target stop in case allowTargetTransfers is false
+     * @param queryState              the query state with the best time per stop and label per stop and round.
+     * @param raptorData              the current raptor data structures.
+     * @param minimumTransferDuration The minimum transfer duration time, since this is intended as rest period (e.g.
+     *                                coffee break) it is added to the walk time.
+     * @param maximumWalkingDuration  The maximum walking duration to reach the target stop. If the walking duration
+     *                                exceeds this value, the target stop is not reached.
+     * @param timeType                the time type (arrival or departure).
+     * @param allowSourceTransfers    defines if transfers from source stops are possible
+     * @param allowTargetTransfers    defines if transfers to target stops are possible
+     * @param targetStopIndices       array holding all indices of target stops, used to check if transfer target is
+     *                                target stop in case allowTargetTransfers is false
      */
     FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration,
                     int maximumWalkingDuration, TimeType timeType, boolean allowSourceTransfers,
@@ -112,7 +111,7 @@ class FootpathRelaxer {
         QueryState.Label previousLabel = queryState.getLabel(round, stopIdx);
 
         // handle case where initial transfer relaxation was not performed
-        if( round == 1 && previousLabel == null ){
+        if (round == 1 && previousLabel == null) {
             previousLabel = queryState.getLabel(0, stopIdx);
         }
 
