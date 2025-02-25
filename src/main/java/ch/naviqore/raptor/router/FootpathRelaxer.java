@@ -3,6 +3,10 @@ package ch.naviqore.raptor.router;
 import ch.naviqore.raptor.TimeType;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import static ch.naviqore.raptor.router.QueryState.NO_INDEX;
 
 @Slf4j
@@ -14,6 +18,9 @@ class FootpathRelaxer {
     private final int minTransferDuration;
     private final int maxWalkingDuration;
     private final TimeType timeType;
+    private final boolean allowSourceTransfers;
+    private final boolean allowTargetTransfers;
+    private final Set<Integer> targetStopIndices;
 
     private final QueryState queryState;
 
@@ -25,9 +32,14 @@ class FootpathRelaxer {
      * @param maximumWalkingDuration  The maximum walking duration to reach the target stop. If the walking duration
      *                                exceeds this value, the target stop is not reached.
      * @param timeType                the time type (arrival or departure).
+     * @param allowSourceTransfers    defines if transfers from source stops are possible
+     * @param allowTargetTransfers    defines if transfers to target stops are possible
+     * @param targetStopIndices       array holding all indices of target stops, used to check if transfer target is
+     *                                target stop in case allowTargetTransfers is false
      */
     FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration,
-                    int maximumWalkingDuration, TimeType timeType) {
+                    int maximumWalkingDuration, TimeType timeType, boolean allowSourceTransfers,
+                    boolean allowTargetTransfers, int[] targetStopIndices) {
         // constant data structures
         this.transfers = raptorData.getStopContext().transfers();
         this.stops = raptorData.getStopContext().stops();
@@ -37,6 +49,9 @@ class FootpathRelaxer {
         this.timeType = timeType;
         // note: will also change outside of relaxer, due to route scanning
         this.queryState = queryState;
+        this.allowSourceTransfers = allowSourceTransfers;
+        this.allowTargetTransfers = allowTargetTransfers;
+        this.targetStopIndices = IntStream.of(targetStopIndices).boxed().collect(Collectors.toSet());
     }
 
     /**
@@ -61,6 +76,20 @@ class FootpathRelaxer {
             if (!routeMarkedStops[sourceStopIdx]) {
                 continue;
             }
+            if (!allowSourceTransfers) {
+                // in round 0 all transfers to expand are from source stops
+                if (round == 0) {
+                    continue;
+                } else if (round == 1 && queryState.getLabel(round, sourceStopIdx) == null) {
+                    // this case handles "initial transfer relaxation" in round 1 when doInitialTransferRelaxation is
+                    // false, using label from round 0 because source stops are always round 0!
+                    QueryState.Label label = queryState.getLabel(0, sourceStopIdx);
+                    if (label != null && label.type() == QueryState.LabelType.INITIAL) {
+                        continue;
+                    }
+                }
+            }
+
             expandFootpathsFromStop(sourceStopIdx, round);
         }
     }
@@ -81,6 +110,11 @@ class FootpathRelaxer {
         Stop sourceStop = stops[stopIdx];
         QueryState.Label previousLabel = queryState.getLabel(round, stopIdx);
 
+        // handle case where initial transfer relaxation was not performed
+        if (round == 1 && previousLabel == null) {
+            previousLabel = queryState.getLabel(0, stopIdx);
+        }
+
         // do not relax footpath from stop that was only reached by footpath in the same round
         if (previousLabel == null || previousLabel.type() == QueryState.LabelType.TRANSFER) {
             return;
@@ -91,6 +125,9 @@ class FootpathRelaxer {
 
         for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
             Transfer transfer = transfers[i];
+            if (!allowTargetTransfers && targetStopIndices.contains(transfer.targetStopIdx())) {
+                continue;
+            }
             Stop targetStop = stops[transfer.targetStopIdx()];
             int duration = transfer.duration();
             if (maxWalkingDuration < duration) {
@@ -116,7 +153,7 @@ class FootpathRelaxer {
             queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), queryState.getLabel(round, stopIdx));
+                    NO_INDEX, transfer.targetStopIdx(), previousLabel);
             queryState.setLabel(round, transfer.targetStopIdx(), label);
             queryState.mark(transfer.targetStopIdx());
         }

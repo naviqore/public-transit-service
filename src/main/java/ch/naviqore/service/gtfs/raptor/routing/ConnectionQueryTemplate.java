@@ -32,6 +32,9 @@ abstract class ConnectionQueryTemplate<S, T> {
     private final S source;
     private final T target;
 
+    private final boolean allowSourceTransfers;
+    private final boolean allowTargetTransfers;
+
     protected abstract Map<String, LocalDateTime> prepareSourceStops(S source);
 
     protected abstract Map<String, Integer> prepareTargetStops(T target);
@@ -78,7 +81,8 @@ abstract class ConnectionQueryTemplate<S, T> {
         // query connection from raptor
         List<ch.naviqore.raptor.Connection> connections;
         try {
-            connections = utils.routeConnections(sourceStops, targetStops, timeType, queryConfig);
+            connections = utils.routeConnections(sourceStops, targetStops, timeType, queryConfig, allowSourceTransfers,
+                    allowTargetTransfers);
         } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return handleInvalidStopException(e, source, target);

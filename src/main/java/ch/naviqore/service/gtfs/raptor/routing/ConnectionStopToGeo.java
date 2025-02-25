@@ -17,7 +17,7 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
 
     ConnectionStopToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                         RoutingQueryUtils utils, Stop source, GeoCoordinate target) {
-        super(time, timeType, queryConfig, utils, source, target);
+        super(time, timeType, queryConfig, utils, source, target, true, false);
     }
 
     @Override

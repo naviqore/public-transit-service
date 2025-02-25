@@ -17,7 +17,7 @@ class IsolineStopSource extends IsolineQueryTemplate<Stop> {
 
     IsolineStopSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
                       Stop source) {
-        super(time, timeType, queryConfig, utils, source);
+        super(time, timeType, queryConfig, utils, source, true);
     }
 
     @Override

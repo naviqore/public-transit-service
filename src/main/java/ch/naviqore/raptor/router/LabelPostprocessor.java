@@ -261,8 +261,8 @@ class LabelPostprocessor {
         // if stopTime is null, then the stop is not part of the trip of the route label, if stop time is not null, then
         // check if the temporal order of the stop time and the route label is correct (e.g. for time type departure the
         // stop time departure must be before the route label target time)
-        if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel.targetTime(),
-                timeType) : !canStopTimeBeSource(stopTime, routeLabel.sourceTime(), timeType))) {
+        if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel, transferLabel,
+                timeType) : !canStopTimeBeSource(stopTime, routeLabel, transferLabel, timeType))) {
             if (!fromTarget) {
                 maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
             }
@@ -330,15 +330,19 @@ class LabelPostprocessor {
      * before the route target time for departure time type and the stop time arrival is after the route target time for
      * arrival time type.
      *
-     * @param stopTime        the stop time to check.
-     * @param routeTargetTime the target time of the route, of the potential source stop time.
-     * @param timeType        the time type (arrival or departure).
+     * @param stopTime      the stop time to check.
+     * @param routeLabel    the second label of the connection (a route leg)
+     * @param transferLabel the first label of the connection which may be replaced by the route (a transfer leg)
+     * @param timeType      the time type (arrival or departure).
      * @return true if the stop time can be the source of the route target time, false otherwise.
      */
-    private boolean canStopTimeBeSource(StopTime stopTime, int routeTargetTime, TimeType timeType) {
-        if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeTargetTime) {
+    private boolean canStopTimeBeSource(StopTime stopTime, QueryState.Label routeLabel, QueryState.Label transferLabel,
+                                        TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.departure() <= routeLabel.targetTime() && stopTime.departure() >= transferLabel.sourceTime()) {
             return true;
-        } else return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeTargetTime;
+        } else {
+            return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeLabel.targetTime() && stopTime.arrival() <= transferLabel.sourceTime();
+        }
     }
 
     /**
@@ -346,15 +350,19 @@ class LabelPostprocessor {
      * after the route source time for departure time type and the stop time departure is before the route source time
      * for arrival time type.
      *
-     * @param stopTime        the stop time to check.
-     * @param routeSourceTime the source time of the route, of the potential target stop time.
-     * @param timeType        the time type (arrival or departure).
+     * @param stopTime      the stop time to check.
+     * @param routeLabel    second last label of the connection done by route
+     * @param transferLabel last label of the connection which is a transfer
+     * @param timeType      the time type (arrival or departure).
      * @return true if the stop time can be the target of the route source time, false otherwise.
      */
-    private boolean canStopTimeBeTarget(StopTime stopTime, int routeSourceTime, TimeType timeType) {
-        if (timeType == TimeType.DEPARTURE && stopTime.arrival() >= routeSourceTime) {
+    private boolean canStopTimeBeTarget(StopTime stopTime, QueryState.Label routeLabel, QueryState.Label transferLabel,
+                                        TimeType timeType) {
+        if (timeType == TimeType.DEPARTURE && stopTime.arrival() >= routeLabel.sourceTime() && stopTime.arrival() <= transferLabel.targetTime()) {
             return true;
-        } else return timeType == TimeType.ARRIVAL && stopTime.departure() <= routeSourceTime;
+        } else {
+            return timeType == TimeType.ARRIVAL && stopTime.departure() <= routeLabel.sourceTime() && stopTime.departure() >= transferLabel.targetTime();
+        }
     }
 
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {

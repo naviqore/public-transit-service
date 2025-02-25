@@ -75,7 +75,8 @@ class Query {
 
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
-                config.getMaximumWalkingDuration(), timeType);
+                config.getMaximumWalkingDuration(), timeType, config.isAllowSourceTransfer(),
+                config.isAllowTargetTransfer(), targetStopIndices);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDate,
                 raptorConfig.getDaysToScan());
     }
@@ -100,6 +101,7 @@ class Query {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         initialize();
+
         footpathRelaxer.relaxInitial();
         removeSuboptimalLabelsForRound(0);
 
@@ -266,6 +268,9 @@ class Query {
                     queryState.setLabel(round, stopIdx, null);
                     queryState.unmark(stopIdx);
                 }
+            } else {
+                // if label is null there is no reason to mark the stop!
+                queryState.unmark(stopIdx);
             }
         }
     }
