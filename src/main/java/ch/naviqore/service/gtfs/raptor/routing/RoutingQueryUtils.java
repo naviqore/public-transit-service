@@ -1,6 +1,7 @@
 package ch.naviqore.service.gtfs.raptor.routing;
 
 import ch.naviqore.gtfs.schedule.model.GtfsSchedule;
+import ch.naviqore.raptor.QueryConfig;
 import ch.naviqore.raptor.RaptorAlgorithm;
 import ch.naviqore.service.*;
 import ch.naviqore.service.config.ConnectionQueryConfig;
@@ -37,19 +38,34 @@ class RoutingQueryUtils {
     private final WalkCalculator walkCalculator;
     private final RaptorAlgorithm raptor;
 
+    private static QueryConfig prepareRaptorQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                        boolean allowTargetTransfer) {
+        QueryConfig config = TypeMapper.map(queryConfig);
+        config.setAllowSourceTransfer(allowSourceTransfer);
+        config.setAllowTargetTransfer(allowTargetTransfer);
+
+        return config;
+    }
+
     List<ch.naviqore.raptor.Connection> routeConnections(Map<String, LocalDateTime> sourceStops,
                                                          Map<String, Integer> targetStops, TimeType timeType,
-                                                         ConnectionQueryConfig queryConfig) {
+                                                         ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
+                                                         boolean allowTargetTransfer) {
+        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
+
         if (timeType == TimeType.DEPARTURE) {
-            return raptor.routeEarliestArrival(sourceStops, targetStops, TypeMapper.map(queryConfig));
+            return raptor.routeEarliestArrival(sourceStops, targetStops, config);
         } else {
-            return raptor.routeLatestDeparture(targetStops, sourceStops, TypeMapper.map(queryConfig));
+            return raptor.routeLatestDeparture(targetStops, sourceStops, config);
         }
     }
 
     Map<String, ch.naviqore.raptor.Connection> createIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
-                                                              ConnectionQueryConfig queryConfig) {
-        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType), TypeMapper.map(queryConfig));
+                                                              ConnectionQueryConfig queryConfig,
+                                                              boolean allowSourceTransfer) {
+        // allow target transfers does not work for isolines since no targets are defined
+        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
+                prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
     }
 
     Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
