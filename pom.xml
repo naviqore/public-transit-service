@@ -9,7 +9,7 @@
         <version>3.4.4</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>ch.naviqore</groupId>
+    <groupId>org.naviqore</groupId>
     <artifactId>public-transit-service</artifactId>
     <version>1.2.0</version>
 
