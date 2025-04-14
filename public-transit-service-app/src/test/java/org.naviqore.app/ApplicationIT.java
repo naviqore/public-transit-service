@@ -10,7 +10,8 @@ import org.springframework.http.ResponseEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        "gtfs.static.uri=../public-transit-service/src/test/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip"})
 class ApplicationIT {
 
     @Autowired

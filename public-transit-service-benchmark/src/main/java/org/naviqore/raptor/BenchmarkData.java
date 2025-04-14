@@ -1,4 +1,4 @@
-package org.naviqore;
+package org.naviqore.raptor;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -35,7 +35,7 @@ public final class BenchmarkData {
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     @Getter
     public enum Dataset {
-        SWITZERLAND("https://opentransportdata.swiss/en/dataset/timetable-2024-gtfs2020/permalink"),
+        SWITZERLAND("https://data.opentransportdata.swiss/dataset/timetable-2025-gtfs2020/permalink"),
         GERMANY("https://download.gtfs.de/germany/free/latest.zip"),
         ZURICH_TRAMS("https://connolly.ch/zuerich-trams.zip"),
         ZURICH("https://connolly.ch/zvv.zip");

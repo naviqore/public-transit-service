@@ -19,7 +19,7 @@ public final class GtfsScheduleTestData {
     public static final String RESOURCE_PATH = "org/naviqore/gtfs/schedule/" + SAMPLE_FEED_ZIP;
 
     public static File prepareZipDataset(@TempDir Path tempDir) throws IOException {
-        try (InputStream is = GtfsScheduleReaderIT.class.getClassLoader().getResourceAsStream(RESOURCE_PATH)) {
+        try (InputStream is = GtfsScheduleTestData.class.getClassLoader().getResourceAsStream(RESOURCE_PATH)) {
             if (is == null) {
                 throw new FileNotFoundException("Resource file not found: " + RESOURCE_PATH);
             }
@@ -38,7 +38,7 @@ public final class GtfsScheduleTestData {
             throw new IOException("Could not create directory for unzipped GTFS data");
         }
 
-        try (InputStream is = GtfsScheduleReaderIT.class.getClassLoader().getResourceAsStream(RESOURCE_PATH)) {
+        try (InputStream is = GtfsScheduleTestData.class.getClassLoader().getResourceAsStream(RESOURCE_PATH)) {
             if (is == null) {
                 throw new FileNotFoundException("Resource file not found: " + RESOURCE_PATH);
             }

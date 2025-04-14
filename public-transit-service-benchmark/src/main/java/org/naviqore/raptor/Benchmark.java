@@ -1,17 +1,14 @@
-package org.naviqore;
+package org.naviqore.raptor;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.naviqore.BenchmarkData.Dataset;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.Stop;
 import org.naviqore.gtfs.schedule.model.StopTime;
 import org.naviqore.gtfs.schedule.model.Trip;
-import org.naviqore.raptor.Connection;
-import org.naviqore.raptor.QueryConfig;
-import org.naviqore.raptor.RaptorAlgorithm;
+import org.naviqore.raptor.BenchmarkData.Dataset;
 import org.naviqore.raptor.router.RaptorConfig;
 import org.naviqore.raptor.router.RaptorRouter;
 import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
@@ -30,7 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Benchmark for Raptor routing algorithm.
+ * org.naviqore.raptor.Benchmark for Raptor routing algorithm.
  * <p>
  * Measures the time it takes to route a number of requests using Raptor algorithm on large GTFS datasets.
  * <p>
@@ -45,7 +42,7 @@ final class Benchmark {
 
     // dataset
     private static final Dataset DATASET = Dataset.SWITZERLAND;
-    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2024, 4, 26);
+    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2025, 4, 26);
 
     // sampling
     /**
