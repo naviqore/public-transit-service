@@ -10,7 +10,7 @@ Public transit schedule information and connection routing service based on GTFS
   routes [2].
 - **RESTful API:** Provides an API for querying transit schedule information and connections.
 
-## Project Structure
+## Installation
 
 This project is structured as a Maven multi-module project under `org.naviqore`:
 
@@ -19,7 +19,7 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
 - **public-transit-service-app**: Spring Boot application that exposes the public transit service via RESTful APIs.
 - **public-transit-service-benchmark**: Benchmarking the performance of the public transit service library.
 
-## Installation
+Follow the steps below to build and run the project locally:
 
 1. Clone the repository:
    ```bash
@@ -33,7 +33,7 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
    mvn clean install
    ```
 
-3. Run the application:
+3. Run the application module:
 
    ```bash
    export GTFS_STATIC_URI=<URL or PATH>
@@ -50,8 +50,6 @@ docker run -p 8080:8080 -e GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public
 
 For more configuration options, refer to
 the [application.properties](public-transit-service-app/src/main/resources/application.properties) file.
-
-## Usage
 
 Access the service at http://localhost:8080 to explore schedules and query transit connections.
 
