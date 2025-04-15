@@ -12,7 +12,7 @@
     <artifactId>public-transit-service</artifactId>
     <name>Public Transit Service</name>
     <description>
-        Public transit service library based on GTFS data and the RAPTOR algorithm.
+        Library for transit schedule queries and connection routing using GTFS data and the RAPTOR algorithm.
     </description>
 
     <properties>

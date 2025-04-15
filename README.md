@@ -10,6 +10,15 @@ Public transit schedule information and connection routing service based on GTFS
   routes [2].
 - **RESTful API:** Provides an API for querying transit schedule information and connections.
 
+## Project Structure
+
+This project is structured as a Maven multi-module project under `org.naviqore`:
+
+- **public-transit-service**: Library for transit schedule queries and connection routing using GTFS data and the
+  RAPTOR algorithm.
+- **public-transit-service-app**: Spring Boot application that exposes the public transit service via RESTful APIs.
+- **public-transit-service-benchmark**: Benchmarking the performance of the public transit service library.
+
 ## Installation
 
 1. Clone the repository:
@@ -27,7 +36,8 @@ Public transit schedule information and connection routing service based on GTFS
 3. Run the application:
 
    ```bash
-    mvn spring-boot:run
+   export GTFS_STATIC_URI=<URL or PATH>
+   mvn spring-boot:run -pl public-transit-service-app
    ```
 
 ## Deployment
@@ -44,6 +54,11 @@ the [application.properties](public-transit-service-app/src/main/resources/appli
 ## Usage
 
 Access the service at http://localhost:8080 to explore schedules and query transit connections.
+
+## Contributing
+
+We welcome contributions! See our [Contribution Guidelines](CONTRIBUTING.md) for how to submit bug reports, feature
+requests, and pull requests.
 
 ## License
 

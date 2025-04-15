@@ -1,50 +1,36 @@
 # Contributing
 
-We appreciate all kinds of contributions. The following is a set of guidelines for contributing to this repository on
-GitHub. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this
-document in a pull request.
-
-By submitting a contribution to this repository you agree that you do this under the [License](LICENSE) of the
-repository and certify that you have all the rights to do so.
+Thanks for considering a contribution! These are guidelines, not strict rules, so use your best judgment. By
+contributing, you agree to the [License](LICENSE) and confirm you have the rights to your contribution.
 
 ## Found an Issue?
 
-If you find a bug in the source code or a mistake in the documentation, you can help us by submitting an issue.
-Including an issue reproduction is the best way to help the team quickly diagnose the problem. Screenshots are also
-helpful.
-
-You can help the team even more and create a Pull Request with a fix.
+- Open an issue with details or reproduction steps. Screenshots are helpful.
+- Even better: submit a pull request with a fix!
 
 ## Want a Feature?
 
-You can *request* a new feature by submitting an issue. If you would like to *implement* a new feature, please submit an
-issue with a proposal for your work first, to be sure that we can use it.
-
-Please consider what kind of change it is:
-
-* For a **Major Feature**, first open an issue and outline your proposal so that it can be
-  discussed. This will also allow us to better coordinate our efforts, prevent duplication of work,
-  and help you to craft the change so that it is successfully accepted into the project.
-* **Small Features** can be crafted and directly submitted as a Pull Request.
+- Submit an issue to request a new feature.
+- Want to build it?
+    - **Major Feature**: Open an issue to discuss your proposal first.
+    - **Small Feature**: Open a pull request directly.
 
 ## Submitting a Pull Request (PR)
 
-Before you submit your Pull Request (PR) consider the following guidelines:
+Before submitting a PR:
 
-* Checkout a new branch: `feature/xxx` or `bugfix/xxx`
-* Create your feature or patch, **including appropriate test cases**.
-* Run tests and ensure that all tests pass.
-* Commit your changes using a descriptive commit message that follows our **Commit Message Guidelines**.
-* Push your branch to GitHub.
-
-* In GitHub, create a pull request to `main`.
-  The PR title and message should as well conform to the Commit Message Guidelines.
+1. Create a new branch: `feature/xyz` or `bugfix/xyz`.
+2. Add your changes **with tests**.
+3. Run all tests and ensure they pass.
+4. Commit your changes using a clear, Conventional Commit message.
+5. Push your branch and open a PR to `main` in GitHub. The PR title and message should conform to Conventional Commit
+   guidelines.
 
 ## Commit Message Guidelines
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) to generate the changelog.
+We follow [Conventional Commits](https://www.conventionalcommits.org/) to automate releases.
 
-### Commit Message Format
+### Format
 
 ```
 <type>(<optional scope>): <subject>
@@ -54,63 +40,44 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) t
 <footer>
 ```
 
-Any line of the commit message cannot be longer 100 characters! This allows the message to be easier
-to read on GitHub as well as in various git tools.
+- Use the following structure for your commit messages:
+    - **type**: type of the commit (e.g., `feat!`, `fix`, `docs`).
+    - **scope**: optional, describes the area affected (e.g., `raptor`, `gtfs`).
+    - **subject**: a concise description of the change
+    - **body**: provide context for the change and contrast with previous behavior.
+    - **footer**: reference issues or declare breaking changes (e.g., `Refs #123`, `Closes #123`,
+      `BREAKING CHANGE: explanation`).
+- Keep lines under **100 characters**.
+- Use the **imperative present tense**: "change" not "changed" nor "changes".
+- No dot (.) at the end of the subject line.
 
-### Type
+### Types
 
-Must be one of the following:
+Use one of the following types for your commit:
 
-* **feat**: A new feature
-* **fix**: A bug fix
-* **docs**: Documentation only changes
-* **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semicolons, ...)
-* **refactor**: A code change that neither fixes a bug nor adds a feature
-* **perf**: A code change that improves performance
-* **test**: Adding missing tests or correcting existing tests
-* **build**: Changes that affect the build system, CI configuration or external dependencies (example scopes:
-  maven, ci, ...)
-* **chore**: Other changes that don't modify `src` or `test` files
-
-### Scope
-
-The scope could be anything specifying place of the commit change. For example `raptor`, `gtfs`, etc.
-
-### Subject
-
-The subject line provides a concise description of the change:
-
-* use the imperative, present tense: "change" not "changed" nor "changes"
-* don't capitalize first letter
-* no dot (.) at the end
-
-### Body
-
-Just as in the **subject**, use the imperative, present tense: "change" not "changed" nor "changes".
-The body should include the motivation for the change and contrast this with previous behavior.
-
-### Footer
-
-The footer should contain any information about **Breaking Changes** and is also the place to
-reference GitHub issues that this commit **Refs** or **Closes**.
-
-**Breaking Changes** should start with the word `BREAKING CHANGE:` with a space or two newlines.
-The rest of the commit message is then used for this.
+- `feat`: new feature
+- `fix`: bug fix
+- `docs`: documentation only
+- `style`: formatting changes (no code changes)
+- `refactor`: code change without feature/fix
+- `perf`: performance improvement
+- `test`: adding/fixing tests
+- `build`: build system or CI changes
+- `chore`: other changes that don't modify `src` or `test` files
 
 ## Release
 
-Releases in this repository are managed using [release-please](https://github.com/googleapis/release-please), an
-automated GitHub Action that updates project versions and generates release notes based on commit messages. With Maven
-configured in the project, `release-please` identifies version changes, updates `pom.xml`, and ensures new versions are
-pushed to GitHub Packages.
+We use [release-please](https://github.com/googleapis/release-please) for automated versioning and changelogs.
 
-## How It Works
+### How it works
 
-1. **Commit-based Version Bumps**: Commit messages trigger version increments (`feat:`, `fix:`, etc.) based
-   on Conventional Commits.
-2. **Release Creation**: `release-please` runs to create a new release and drafts the corresponding release notes.
-3. **Maven Deployment**: A second job builds the project and deploys artifacts to GitHub Packages using Maven.
-4. **Docker Publish**: A third job builds an image of the project and publishes it to the GitHub Container Registry.
+1. **Commits trigger version bumps** via Conventional Commits:
+    - `feat`: minor version
+    - `feat!` or any commit with `BREAKING CHANGE`: major version
+    - `fix`: patch version
+2. **release-please** creates a PR with version bump and changelog. After merging:
+3. **Maven** builds the project and publishes artifacts to GitHub Packages.
+4. **Docker** builds and pushes the image to GitHub Container Registry.
+5. **release-please** creates a PR to restore the **SNAPSHOT version** for continued development.
 
-For detailed configuration and usage, refer to
-the [release-please Java and Maven Strategies](https://github.com/googleapis/release-please/blob/main/docs/java.md).
+More details: [release-please Java & Maven](https://github.com/googleapis/release-please/blob/main/docs/java.md)
