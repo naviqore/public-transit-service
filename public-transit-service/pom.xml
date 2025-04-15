@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.naviqore</groupId>
         <artifactId>naviqore</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>public-transit-service</artifactId>
