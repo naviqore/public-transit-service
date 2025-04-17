@@ -1,0 +1,27 @@
+# maven build directories
+**/target/
+**/reports/
+
+# ide configuration files
+*.iml
+.idea/
+*.swp
+
+# markdown documentation files
+**/*.md
+
+# git files and directories
+.git
+.gitignore
+
+# specific test output directories
+**/failsafe-reports/
+**/surefire-reports/
+
+# log files
+**/*.log
+
+# miscellaneous files
+*.DS_Store
+benchmark/input
+benchmark/output
