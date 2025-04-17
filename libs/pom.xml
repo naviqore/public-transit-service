@@ -9,20 +9,20 @@
         <version>1.2.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>libs</artifactId>
+    <artifactId>naviqore-libs</artifactId>
     <packaging>pom</packaging>
 
-    <name>Libraries</name>
+    <name>Naviqore Libraries</name>
     <description>
-        Naviqore libraries to be published.
+        Naviqore public transit libraries.
     </description>
 
     <modules>
-        <module>public-transit-service</module>
+        <module>utils</module>
         <module>gtfs</module>
         <module>gtfs-test-data</module>
         <module>raptor</module>
-        <module>utils</module>
+        <module>public-transit-service</module>
     </modules>
 
     <properties>
