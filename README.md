@@ -12,6 +12,20 @@ Public transit schedule information and connection routing service based on GTFS
 
 ## Installation
 
+This project is structured as a Maven multi-module project under `org.naviqore`:
+
+- **naviqore-app**: Spring REST application that exposes the public transit service library through HTTP endpoints.
+- **naviqore-libs**: Naviqore public transit libraries.
+    - **public-transit-service**: Library for transit schedule queries and connection routing using GTFS data and the
+      RAPTOR algorithm.
+    - **raptor**: Implementation of the RAPTOR algorithm.
+    - **gtfs**: Implementation of the General Transit Feed Specification.
+    - **gtfs-test-data**: Access to GTFS sample datasets for testing purposes.
+    - **utils**: Common utility classes shared across the Naviqore libraries.
+- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
+
+Follow the steps below to build and run the project locally:
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/naviqore/public-transit-service.git
@@ -24,10 +38,11 @@ Public transit schedule information and connection routing service based on GTFS
    mvn clean install
    ```
 
-3. Run the application:
+3. Run the application module:
 
    ```bash
-    mvn spring-boot:run
+   export GTFS_STATIC_URI=<URL or PATH>
+   mvn spring-boot:run -pl public-transit-service-app
    ```
 
 ## Deployment
@@ -38,11 +53,15 @@ To deploy `public-transit-service` using Docker, run the following command:
 docker run -p 8080:8080 -e GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public-transit-service:latest
 ```
 
-For more configuration options, refer to the [application.properties](src/main/resources/application.properties) file.
-
-## Usage
+For more configuration options, refer to
+the [application.properties](app/src/main/resources/application.properties) file.
 
 Access the service at http://localhost:8080 to explore schedules and query transit connections.
+
+## Contributing
+
+We welcome contributions! See our [Contribution Guidelines](CONTRIBUTING.md) for how to submit bug reports, feature
+requests, and pull requests.
 
 ## License
 
