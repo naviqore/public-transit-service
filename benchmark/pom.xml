@@ -24,13 +24,13 @@
     <dependencies>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>public-transit-service</artifactId>
+            <artifactId>naviqore-public-transit-service</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs-sample</artifactId>
+            <artifactId>naviqore-gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>

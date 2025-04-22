@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>public-transit-service</artifactId>
-    <name>Public Transit Service</name>
+    <artifactId>naviqore-public-transit-service</artifactId>
+    <name>Naviqore Public Transit Service</name>
     <description>
         Public transit schedule queries and connection routing service.
     </description>
@@ -25,25 +25,25 @@
     <dependencies>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs</artifactId>
+            <artifactId>naviqore-gtfs</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>raptor</artifactId>
+            <artifactId>naviqore-raptor</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>utils</artifactId>
+            <artifactId>naviqore-utils</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs-sample</artifactId>
+            <artifactId>naviqore-gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>

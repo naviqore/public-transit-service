@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>utils</artifactId>
-    <name>Utils</name>
+    <artifactId>naviqore-utils</artifactId>
+    <name>Naviqore Utils</name>
     <description>
         Common utility classes shared across the Naviqore libraries.
     </description>

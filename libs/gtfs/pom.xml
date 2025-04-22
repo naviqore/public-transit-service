@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>gtfs</artifactId>
-    <name>GTFS</name>
+    <artifactId>naviqore-gtfs</artifactId>
+    <name>Naviqore GTFS</name>
     <description>
         Implementation of the General Transit Feed Specification.
     </description>
@@ -25,13 +25,13 @@
     <dependencies>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>utils</artifactId>
+            <artifactId>naviqore-utils</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs-sample</artifactId>
+            <artifactId>naviqore-gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>

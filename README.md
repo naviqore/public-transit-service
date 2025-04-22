@@ -14,14 +14,15 @@ Public transit schedule information and connection routing service based on GTFS
 
 This project is structured as a Maven multi-module project under `org.naviqore`:
 
-- **naviqore-app**: Spring REST application that exposes the public transit service library through HTTP endpoints.
-- **naviqore-libs**: Naviqore public transit libraries.
-    - **public-transit-service**: Public transit schedule queries and connection routing service.
-    - **raptor**: Implementation of the RAPTOR algorithm.
-    - **gtfs**: Implementation of the General Transit Feed Specification.
-    - **gtfs-sample**: Access to GTFS sample datasets for testing purposes.
-    - **utils**: Common utility classes shared across the Naviqore libraries.
-- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
+- **naviqore**: Parent POM for the public transit schedule information and connection routing service project.
+    - **naviqore-libs**: Parent POM for Naviqore public transit libraries.
+        - **naviqore-pts**: Public transit schedule queries and connection routing service.
+        - **naviqore-raptor**: Implementation of the RAPTOR algorithm.
+        - **naviqore-gtfs**: Implementation of the General Transit Feed Specification.
+        - **naviqore-gtfs-sample**: Access to GTFS sample datasets for testing purposes.
+        - **naviqore-utils**: Common utility classes shared across the Naviqore libraries.
+    - **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
+    - **naviqore-app**: Spring REST application that exposes the public transit service library through HTTP endpoints.
 
 Follow the steps below to build and run the project locally:
 

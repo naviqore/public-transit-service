@@ -14,7 +14,7 @@
 
     <name>Naviqore Libraries</name>
     <description>
-        Naviqore public transit libraries.
+        Parent POM for Naviqore public transit libraries.
     </description>
 
     <modules>
