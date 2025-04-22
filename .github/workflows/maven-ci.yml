@@ -20,5 +20,5 @@ jobs:
           cache: 'maven'
 
       - name: Build
-        # use verify instead of package to include integration tests
-        run: mvn -B verify --file pom.xml
+        # use 'verify' instead of package to include integration tests
+        run: mvn --batch-mode --file pom.xml -DLOG_LEVEL=INFO verify
