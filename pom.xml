@@ -33,14 +33,17 @@
         <developer>
             <id>munterfi</id>
             <name>Merlin Unterfinger</name>
+            <url>https://github.com/munterfi</url>
         </developer>
         <developer>
             <id>brunner246</id>
             <name>Michael Brunner</name>
+            <url>https://github.com/Brunner246</url>
         </developer>
         <developer>
             <id>clukas1</id>
             <name>Lukas Connolly</name>
+            <url>https://github.com/clukas1</url>
         </developer>
     </developers>
 
@@ -49,14 +52,6 @@
         <developerConnection>scm:git:ssh://github.com/naviqore/public-transit-service.git</developerConnection>
         <url>https://github.com/naviqore/public-transit-service</url>
     </scm>
-
-    <distributionManagement>
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/naviqore/public-transit-service</url>
-        </repository>
-    </distributionManagement>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -106,39 +101,6 @@
 
     <build>
         <plugins>
-            <!-- sources -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- javadoc -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.11.2</version>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <additionalJOptions>
-                        <additionalJOption>-Xdoclint:none</additionalJOption>
-                    </additionalJOptions>
-                </configuration>
-            </plugin>
             <!-- integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -169,6 +131,30 @@
                         <include>**/*IT.java</include>
                         <include>**/*IT$*.java</include>
                     </includes>
+                </configuration>
+            </plugin>
+            <!-- sign and publish to maven central -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.7</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <deploymentName>${project.artifactId}:${project.version}</deploymentName>
+                    <autoPublish>false</autoPublish>
+                    <waitUntil>validated</waitUntil>
                 </configuration>
             </plugin>
         </plugins>

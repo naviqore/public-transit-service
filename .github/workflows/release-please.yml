@@ -37,12 +37,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-          server-id: github
-          settings-path: ${{ github.workspace }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          server-id: central
+          server-username: SONATYPE_USERNAME
+          server-password: SONATYPE_TOKEN
       - name: Publish Maven package
-        run: mvn --batch-mode --settings $GITHUB_WORKSPACE/settings.xml --projects '!app' -DLOG_LEVEL=INFO deploy
+        run: mvn --batch-mode --projects '!app,!benchmark' -DLOG_LEVEL=INFO deploy
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_PASSPHRASE: ''
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_TOKEN: ${{ secrets.SONATYPE_TOKEN }}
 
   docker-release:
     needs: release-please

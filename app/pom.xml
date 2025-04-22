@@ -69,27 +69,6 @@
 
     <build>
         <plugins>
-            <!-- do not generate sources and javadoc, since app should not be published -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
             <!-- configure spring boot maven build -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -139,15 +118,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <!-- do not publish app module -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.1.4</version>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
             </plugin>
         </plugins>
     </build>
