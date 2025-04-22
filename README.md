@@ -16,7 +16,7 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
 
 - **naviqore**: Parent POM for the public transit schedule information and connection routing service project.
     - **naviqore-libs**: Parent POM for Naviqore public transit libraries.
-        - **naviqore-pts**: Public transit schedule queries and connection routing service.
+        - **naviqore-public-transit-service**: Public transit schedule queries and connection routing service.
         - **naviqore-raptor**: Implementation of the RAPTOR algorithm.
         - **naviqore-gtfs**: Implementation of the General Transit Feed Specification.
         - **naviqore-gtfs-sample**: Access to GTFS sample datasets for testing purposes.
