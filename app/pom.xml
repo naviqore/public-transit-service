@@ -38,6 +38,7 @@
             <groupId>org.naviqore</groupId>
             <artifactId>public-transit-service</artifactId>
             <version>${project.parent.version}</version>
+            <scope>compile</scope>
         </dependency>
         <!-- spring boot rest app -->
         <dependency>

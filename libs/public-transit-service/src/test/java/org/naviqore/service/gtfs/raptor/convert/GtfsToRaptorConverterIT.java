@@ -4,8 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.naviqore.gtfs.schedule.GtfsScheduleDataset;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
-import org.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.Stop;
 import org.naviqore.gtfs.schedule.type.TransferType;
@@ -31,7 +31,7 @@ class GtfsToRaptorConverterIT {
 
         @BeforeEach
         void setUp(@TempDir Path tempDir) throws IOException {
-            File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
+            File zipFile = GtfsScheduleDataset.SAMPLE_FEED_1.getZip(tempDir);
             schedule = new GtfsScheduleReader().read(zipFile.getAbsolutePath());
         }
 

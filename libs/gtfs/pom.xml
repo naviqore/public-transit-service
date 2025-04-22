@@ -27,6 +27,7 @@
             <groupId>org.naviqore</groupId>
             <artifactId>utils</artifactId>
             <version>${project.parent.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>

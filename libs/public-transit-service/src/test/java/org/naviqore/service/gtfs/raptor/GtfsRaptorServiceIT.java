@@ -4,8 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.naviqore.gtfs.schedule.GtfsScheduleDataset;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
-import org.naviqore.gtfs.schedule.GtfsScheduleTestData;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
@@ -32,7 +32,7 @@ class GtfsRaptorServiceIT {
 
         @BeforeEach
         void setUp(@TempDir Path tempDir) throws IOException, InterruptedException {
-            File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
+            File zipFile = GtfsScheduleDataset.SAMPLE_FEED_1.getZip(tempDir);
 
             // implement repo for gtfs schedule file reader
             GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());

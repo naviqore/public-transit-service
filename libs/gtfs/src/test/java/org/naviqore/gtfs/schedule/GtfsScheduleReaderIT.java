@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class GtfsScheduleReaderIT {
 
+    private static final GtfsScheduleDataset GTFS_SCHEDULE_DATASET = GtfsScheduleDataset.SAMPLE_FEED_1;
+
     private GtfsScheduleReader gtfsScheduleReader;
 
     @BeforeEach
@@ -33,21 +35,21 @@ class GtfsScheduleReaderIT {
 
     @Test
     void shouldReadFromZipFile(@TempDir Path tempDir) throws IOException {
-        File zipFile = GtfsScheduleTestData.prepareZipDataset(tempDir);
+        File zipFile = GTFS_SCHEDULE_DATASET.getZip(tempDir);
         GtfsSchedule schedule = gtfsScheduleReader.read(zipFile.getAbsolutePath());
         assertScheduleSizes(schedule);
     }
 
     @Test
     void shouldReadFromDirectory(@TempDir Path tempDir) throws IOException {
-        File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
+        File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
         GtfsSchedule schedule = gtfsScheduleReader.read(unzippedDir.getAbsolutePath());
         assertScheduleSizes(schedule);
     }
 
     @Test
     void shouldRead_withoutCalendarFile(@TempDir Path tempDir) throws IOException {
-        File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
+        File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
         File calendarFile = new File(unzippedDir, "calendar.txt");
         if (calendarFile.exists() && !calendarFile.delete()) {
             throw new IOException("Failed to delete calendar file");
@@ -64,7 +66,7 @@ class GtfsScheduleReaderIT {
 
     @Test
     void shouldRead_withoutCalendarDatesFile(@TempDir Path tempDir) throws IOException {
-        File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
+        File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
         File calendarDatesFile = new File(unzippedDir, "calendar_dates.txt");
         if (calendarDatesFile.exists() && !calendarDatesFile.delete()) {
             throw new IOException("Failed to delete calendar dates file");
@@ -81,7 +83,7 @@ class GtfsScheduleReaderIT {
 
     @Test
     void shouldRead_withoutTransfersFile(@TempDir Path tempDir) throws IOException {
-        File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
+        File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
         File calendarDatesFile = new File(unzippedDir, "transfers.txt");
         if (calendarDatesFile.exists() && !calendarDatesFile.delete()) {
             throw new IOException("Failed to delete transfer file");
@@ -98,7 +100,7 @@ class GtfsScheduleReaderIT {
 
     @Test
     void shouldNotReadFromDirectory_withoutCalendarAndCalendarDatesFiles(@TempDir Path tempDir) throws IOException {
-        File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(tempDir);
+        File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
         File calendarFile = new File(unzippedDir, "calendar.txt");
         if (calendarFile.exists() && !calendarFile.delete()) {
             throw new IOException("Failed to delete calendar file");
@@ -128,7 +130,7 @@ class GtfsScheduleReaderIT {
             if (!subTestTempDir.toFile().mkdir()) {
                 throw new IOException("Could not create directory for unzipped GTFS data");
             }
-            File unzippedDir = GtfsScheduleTestData.prepareUnzippedDataset(subTestTempDir);
+            File unzippedDir = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir);
             File file = new File(unzippedDir, missingFile);
             if (file.exists() && !file.delete()) {
                 throw new IOException("Failed to delete " + missingFile);

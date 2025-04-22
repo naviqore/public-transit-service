@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.naviqore.gtfs.schedule.GtfsScheduleDataset;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.Stop;
@@ -11,11 +12,11 @@ import org.naviqore.gtfs.schedule.model.Trip;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
-import org.naviqore.raptor.router.BenchmarkData.Dataset;
 import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 import org.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
 import org.naviqore.utils.cache.EvictionCache;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -42,7 +43,8 @@ import java.util.*;
 final class RaptorRouterBenchmark {
 
     // dataset
-    private static final Dataset DATASET = Dataset.SWITZERLAND;
+    private static final Path INPUT_DATA_DIRECTORY = Path.of("benchmark/input");
+    private static final GtfsScheduleDataset DATASET = GtfsScheduleDataset.SWITZERLAND;
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2025, 4, 26);
 
     // sampling
@@ -71,8 +73,8 @@ final class RaptorRouterBenchmark {
     }
 
     private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
-        String path = BenchmarkData.get(DATASET);
-        GtfsSchedule schedule = new GtfsScheduleReader().read(path);
+        File file = DATASET.getZip(INPUT_DATA_DIRECTORY);
+        GtfsSchedule schedule = new GtfsScheduleReader().read(file.getPath());
         manageResources();
         return schedule;
     }
