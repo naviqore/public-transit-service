@@ -104,8 +104,8 @@ public class GtfsScheduleReader {
 
     private static void readCsvRecords(InputStreamReader reader, GtfsScheduleParser recordParser,
                                        GtfsScheduleFile fileType) throws IOException {
-        CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setIgnoreHeaderCase(true).setTrim(true).build();
-        try (CSVParser csvParser = new CSVParser(reader, format)) {
+        CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setIgnoreHeaderCase(true).setTrim(true).get();
+        try (CSVParser csvParser = format.parse(reader)) {
             log.debug("CSV Headers: {}", csvParser.getHeaderMap().keySet());
             csvParser.forEach(record -> recordParser.parse(record, fileType));
 

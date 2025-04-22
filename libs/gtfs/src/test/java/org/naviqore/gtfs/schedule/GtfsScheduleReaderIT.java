@@ -111,7 +111,7 @@ class GtfsScheduleReaderIT {
         assertThatThrownBy(() -> gtfsScheduleReader.read(unzippedDir.getAbsolutePath())).isInstanceOf(
                 FileNotFoundException.class).hasMessageContaining("Conditional requirement not met:");
 
-        // Re Run with Zipped Directory
+        // rerun with zipped directory
         File zipFile = new File(tempDir.toFile(), "gtfs_schedule.zip");
         zipDirectory(unzippedDir, zipFile);
         assertThatThrownBy(() -> gtfsScheduleReader.read(zipFile.getAbsolutePath())).isInstanceOf(
@@ -137,7 +137,7 @@ class GtfsScheduleReaderIT {
             assertThatThrownBy(() -> gtfsScheduleReader.read(unzippedDir.getAbsolutePath())).isInstanceOf(
                     FileNotFoundException.class).hasMessageContaining("Required GTFS CSV file");
 
-            // Re Run with Zipped Directory
+            // rerun with zipped directory
             File zipFile = new File(subTestTempDir.toFile(), "gtfs_schedule.zip");
             zipDirectory(unzippedDir, zipFile);
             assertThatThrownBy(() -> gtfsScheduleReader.read(zipFile.getAbsolutePath())).isInstanceOf(
@@ -156,7 +156,7 @@ class GtfsScheduleReaderIT {
         assertThat(schedule.getTrips()).as("Trips").hasSize(withCalendarTextFile ? 11 : 7);
     }
 
-    // Helper method to zip a directory
+    // helper method to zip a directory
     private void zipDirectory(File sourceDir, File zipFile) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
             Path sourcePath = sourceDir.toPath();
