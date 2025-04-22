@@ -30,7 +30,7 @@
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs-test-data</artifactId>
+            <artifactId>gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>

@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>gtfs-test-data</artifactId>
-    <name>GTFS Test Data</name>
+    <artifactId>gtfs-sample</artifactId>
+    <name>GTFS Sample</name>
     <description>
         Access to GTFS sample datasets for testing purposes.
     </description>

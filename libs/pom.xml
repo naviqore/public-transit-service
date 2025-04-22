@@ -20,7 +20,7 @@
     <modules>
         <module>utils</module>
         <module>gtfs</module>
-        <module>gtfs-test-data</module>
+        <module>gtfs-sample</module>
         <module>raptor</module>
         <module>public-transit-service</module>
     </modules>

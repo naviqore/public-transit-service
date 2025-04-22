@@ -13,7 +13,7 @@
     <artifactId>public-transit-service</artifactId>
     <name>Public Transit Service</name>
     <description>
-        Library for transit schedule queries and connection routing using GTFS data and the RAPTOR algorithm.
+        Public transit schedule queries and connection routing service.
     </description>
 
     <properties>
@@ -40,7 +40,7 @@
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
-            <artifactId>gtfs-test-data</artifactId>
+            <artifactId>gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
