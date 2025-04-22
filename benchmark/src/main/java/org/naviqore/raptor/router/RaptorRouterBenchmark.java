@@ -40,7 +40,7 @@ import java.util.*;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
-final class RaptorRouterBenchmark {
+public final class RaptorRouterBenchmark {
 
     // dataset
     private static final Path INPUT_DATA_DIRECTORY = Path.of("benchmark/input");
