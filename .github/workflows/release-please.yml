@@ -42,7 +42,7 @@ jobs:
           server-username: SONATYPE_USERNAME
           server-password: SONATYPE_TOKEN
       - name: Publish Maven package
-        run: mvn --batch-mode --projects '!app,!benchmark' -DLOG_LEVEL=INFO deploy
+        run: mvn --batch-mode --projects '!app,!benchmark' -DTEST_LOG_LEVEL=INFO deploy
         env:
           GPG_PASSPHRASE: ''
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}

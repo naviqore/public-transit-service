@@ -21,4 +21,4 @@ jobs:
 
       - name: Build
         # use 'verify' instead of package to include integration tests
-        run: mvn --batch-mode --file pom.xml -DLOG_LEVEL=INFO verify
+        run: mvn --batch-mode --file pom.xml -DTEST_LOG_LEVEL=INFO verify
