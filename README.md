@@ -23,6 +23,8 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
     - **naviqore-utils**: Common utility classes shared across the Naviqore libraries.
 - **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
 
+### Build Locally
+
 Follow the steps below to build and run the project locally:
 
 1. Clone the repository:
@@ -34,15 +36,30 @@ Follow the steps below to build and run the project locally:
 2. Build the project using Maven:
 
    ```bash
-   mvn clean install
+   ./mvnw clean install
    ```
 
 3. Run the application module:
 
    ```bash
    export GTFS_STATIC_URI=<URL or PATH>
-   mvn spring-boot:run -pl app
+   ./mvnw spring-boot:run -pl app
    ```
+
+### Maven Central
+
+The project's library modules are available in
+the [Maven Central Repository](https://central.sonatype.com/namespace/org.naviqore) and can be added to Maven projects
+as needed. For example, to use the public transit service, include the following dependency:
+
+```xml
+
+<dependency>
+    <groupId>org.naviqore</groupId>
+    <artifactId>naviqore-public-transit-service</artifactId>
+    <version>x.x.x</version> <!-- Replace with latest version -->
+</dependency>
+```
 
 ## Deployment
 
