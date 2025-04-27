@@ -152,7 +152,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <deploymentName>${project.artifactId}:${project.version}</deploymentName>
-                    <autoPublish>false</autoPublish>
+                    <autoPublish>true</autoPublish>
                     <waitUntil>validated</waitUntil>
                 </configuration>
             </plugin>
