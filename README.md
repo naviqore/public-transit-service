@@ -65,23 +65,24 @@ A simple working example of how to use the public transit service in your Java a
 
 ```java
 public class ConnectionRoutingExample {
-
     public static final String GTFS_STATIC_URI = "https://github.com/google/transit/raw/refs/heads/master/gtfs/spec/en/examples/sample-feed-1.zip";
     public static final String ORIG_STOP_ID = "STAGECOACH";
     public static final GeoCoordinate DEST_LOCATION = new GeoCoordinate(36.9149, -116.7614);
     public static final LocalDateTime DEPARTURE_TIME = LocalDateTime.of(2007, 1, 1, 0, 0, 0);
 
-    public static void main(
-            String[] args) throws IOException, InterruptedException, ConnectionRoutingException, StopNotFoundException {
-        new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
+    public static void main(String[] args) throws ConnectionRoutingException, StopNotFoundException {
 
-        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsStaticUri(GTFS_STATIC_URI).build();
-        GtfsSchedule gtfs = new GtfsScheduleReader().read("gtfs.zip");
-        PublicTransitService pts = new GtfsRaptorServiceInitializer(serviceConfig, gtfs).get();
+        GtfsScheduleRepository repo = () -> {
+            new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
+            return new GtfsScheduleReader().read("gtfs.zip");
+        };
 
-        Stop orig = pts.getStopById(ORIG_STOP_ID);
+        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsScheduleRepository(repo).build();
+        PublicTransitService service = new PublicTransitServiceFactory(serviceConfig).create();
+
+        Stop orig = service.getStopById(ORIG_STOP_ID);
         ConnectionQueryConfig queryConfig = ConnectionQueryConfig.builder().build();
-        List<Connection> connections = pts.getConnections(orig, DEST_LOCATION, DEPARTURE_TIME, TimeType.DEPARTURE,
+        List<Connection> connections = service.getConnections(orig, DEST_LOCATION, DEPARTURE_TIME, TimeType.DEPARTURE,
                 queryConfig);
     }
 }
