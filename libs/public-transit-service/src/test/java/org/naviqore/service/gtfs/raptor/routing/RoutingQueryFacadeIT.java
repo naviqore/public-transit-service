@@ -16,6 +16,7 @@ import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 import org.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
 import org.naviqore.service.gtfs.raptor.convert.TransferGenerator;
 import org.naviqore.service.gtfs.raptor.convert.WalkTransferGenerator;
+import org.naviqore.service.repo.NoGtfsScheduleRepository;
 import org.naviqore.service.walk.BeeLineWalkCalculator;
 import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.cache.EvictionCache;
@@ -48,7 +49,7 @@ class RoutingQueryFacadeIT {
             .bikeAllowed(false)
             .build();
     private static final ServiceConfig SERVICE_CONFIG = ServiceConfig.builder()
-            .gtfsStaticUri("NONE")
+            .gtfsScheduleRepository(new NoGtfsScheduleRepository())
             .walkingDurationMinimum(WALKING_DURATION_MINIMUM)
             .build();
     private GtfsSchedule schedule;

@@ -2,6 +2,7 @@ package org.naviqore.service.config;
 
 import lombok.Builder;
 import lombok.Value;
+import org.naviqore.service.repo.GtfsScheduleRepository;
 
 /**
  * Configuration to create a public transit service.
@@ -28,7 +29,7 @@ public class ServiceConfig {
     public static final int DEFAULT_CACHE_SIZE = 5;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
-    String gtfsStaticUri;
+    GtfsScheduleRepository gtfsScheduleRepository;
 
     @Builder.Default
     String gtfsStaticUpdateCron = DEFAULT_GTFS_STATIC_UPDATE_CRON;
@@ -66,12 +67,13 @@ public class ServiceConfig {
     @Builder.Default
     CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
 
-    public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
-                         int transferTimeBetweenStopsMinimum, int transferTimeAccessEgress, int walkingSearchRadius,
+    public ServiceConfig(GtfsScheduleRepository gtfsScheduleRepository, String gtfsStaticUpdateCron,
+                         int transferTimeSameStopDefault, int transferTimeBetweenStopsMinimum,
+                         int transferTimeAccessEgress, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
                          int raptorDaysToScan, int raptorRange, int cacheServiceDaySize,
                          CacheEvictionStrategy cacheEvictionStrategy) {
-        this.gtfsStaticUri = validateNonNull(gtfsStaticUri, "gtfsStaticUrl");
+        this.gtfsScheduleRepository = validateNonNull(gtfsScheduleRepository, "gtfsScheduleRepository");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferTimeSameStopDefault = validateNonNegative(transferTimeSameStopDefault,
                 "transferTimeSameStopDefault");

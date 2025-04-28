@@ -1,13 +1,24 @@
 package org.naviqore.app.service;
 
 import lombok.Getter;
+import org.naviqore.app.infrastructure.GtfsScheduleFile;
+import org.naviqore.app.infrastructure.GtfsScheduleUrl;
 import org.naviqore.service.config.ServiceConfig;
+import org.naviqore.service.repo.GtfsScheduleRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 @Getter
 public class ServiceConfigParser {
+
+    private static final List<String> URL_ALLOWED_SCHEMES = Arrays.asList("http", "https");
 
     private final ServiceConfig serviceConfig;
 
@@ -26,7 +37,7 @@ public class ServiceConfigParser {
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
         this.serviceConfig = ServiceConfig.builder()
-                .gtfsStaticUri(gtfsStaticUri)
+                .gtfsScheduleRepository(getRepository(gtfsStaticUri))
                 .gtfsStaticUpdateCron(gtfsStaticUpdateCron)
                 .transferTimeSameStopDefault(transferTimeSameStopDefault)
                 .transferTimeBetweenStopsMinimum(transferTimeBetweenStopsMinimum)
@@ -42,4 +53,28 @@ public class ServiceConfigParser {
                 .build();
     }
 
+    private static GtfsScheduleRepository getRepository(String gtfsStaticUrl) {
+        if (isLocalFile(gtfsStaticUrl)) {
+            return new GtfsScheduleFile(gtfsStaticUrl);
+        } else if (isValidUrl(gtfsStaticUrl)) {
+            return new GtfsScheduleUrl(gtfsStaticUrl);
+        } else {
+            throw new IllegalArgumentException("Invalid GTFS static URI value: " + gtfsStaticUrl);
+        }
+    }
+
+    private static boolean isLocalFile(String path) {
+        File file = new File(path);
+        return file.exists() && file.isFile();
+    }
+
+    private static boolean isValidUrl(String urlString) {
+        try {
+            URI uri = new URI(urlString);
+            String scheme = uri.getScheme();
+            return scheme != null && URL_ALLOWED_SCHEMES.contains(scheme);
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
 }
