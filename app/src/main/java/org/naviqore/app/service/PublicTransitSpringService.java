@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,13 +35,21 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Scheduled(cron = "${gtfs.static.update.cron}")
     public void updateStaticScheduleTask() {
         log.info("Updating public transit service with static GTFS");
-        // no need to synchronize; the service operates on the old delegate until its reference is set to the new one
-        delegate = createDelegate();
-        log.info("Successfully updated public transit service with static GTFS");
+        try {
+            // no need to synchronize; the service operates on the old delegate until its reference is set to the new one
+            delegate = createDelegate();
+            log.info("Successfully updated public transit service with static GTFS");
+        } catch (Exception e) {
+            log.error("Failed to update public transit service", e);
+        }
     }
 
     private PublicTransitService createDelegate() {
-        return new PublicTransitServiceFactory(config).create();
+        try {
+            return new PublicTransitServiceFactory(config).create();
+        } catch (IOException | InterruptedException e) {
+            throw new IllegalStateException("Failed to create public transit service", e);
+        }
     }
 
     @Override

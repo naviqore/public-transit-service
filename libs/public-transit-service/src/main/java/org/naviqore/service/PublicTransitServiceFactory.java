@@ -11,12 +11,8 @@ public class PublicTransitServiceFactory {
 
     private final ServiceConfig config;
 
-    public PublicTransitService create() {
-        try {
-            return new GtfsRaptorServiceInitializer(config).get();
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    public PublicTransitService create() throws IOException, InterruptedException {
+        return new GtfsRaptorServiceInitializer(config).get();
     }
 
 }
