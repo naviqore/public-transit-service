@@ -57,8 +57,34 @@ as needed. For example, to use the public transit service, include the following
 <dependency>
     <groupId>org.naviqore</groupId>
     <artifactId>naviqore-public-transit-service</artifactId>
-    <version>x.x.x</version> <!-- Replace with latest version -->
+    <version>x.x.x</version> <!-- replace with latest version -->
 </dependency>
+```
+
+A simple working example of how to use the public transit service in your Java application:
+
+```java
+public class ConnectionRoutingExample {
+
+    public static final String GTFS_STATIC_URI = "https://github.com/google/transit/raw/refs/heads/master/gtfs/spec/en/examples/sample-feed-1.zip";
+    public static final String ORIG_STOP_ID = "STAGECOACH";
+    public static final GeoCoordinate DEST_LOCATION = new GeoCoordinate(36.9149, -116.7614);
+    public static final LocalDateTime DEPARTURE_TIME = LocalDateTime.of(2007, 1, 1, 0, 0, 0);
+
+    public static void main(
+            String[] args) throws IOException, InterruptedException, ConnectionRoutingException, StopNotFoundException {
+        new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
+
+        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsStaticUri(GTFS_STATIC_URI).build();
+        GtfsSchedule gtfs = new GtfsScheduleReader().read("gtfs.zip");
+        PublicTransitService pts = new GtfsRaptorServiceInitializer(serviceConfig, gtfs).get();
+
+        Stop orig = pts.getStopById(ORIG_STOP_ID);
+        ConnectionQueryConfig queryConfig = ConnectionQueryConfig.builder().build();
+        List<Connection> connections = pts.getConnections(orig, DEST_LOCATION, DEPARTURE_TIME, TimeType.DEPARTURE,
+                queryConfig);
+    }
+}
 ```
 
 ## Deployment
