@@ -40,8 +40,14 @@ class RoutingQueryFacadeIT {
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
     private static final LocalDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0);
-    private static final ConnectionQueryConfig QUERY_CONFIG = new ConnectionQueryConfig(10 * 60, 2 * 60, 4,
-            24 * 60 * 60, false, false, null);
+    private static final ConnectionQueryConfig QUERY_CONFIG = ConnectionQueryConfig.builder()
+            .maximumWalkingDuration(10 * 60)
+            .minimumTransferDuration(2 * 60)
+            .maximumTransferNumber(4)
+            .maximumTravelTime(24 * 60 * 60)
+            .wheelchairAccessible(false)
+            .bikeAllowed(false)
+            .build();
     private static final ServiceConfig SERVICE_CONFIG = new ServiceConfig("NONE", DEFAULT_GTFS_STATIC_UPDATE_CRON,
             DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
             DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE,
