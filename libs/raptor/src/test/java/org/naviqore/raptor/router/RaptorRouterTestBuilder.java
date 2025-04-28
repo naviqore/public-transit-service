@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Test builder to set up a raptor for testing purposes.
+ * Test builder to set up a RaptorRouter instance for testing purposes.
  * <p>
  * Simple example schedule for testing:
  * <pre>

@@ -12,12 +12,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Maps GTFS schedule to Raptor
+ * Maps GTFS schedule to RAPTOR
  * <p>
- * For each sub-route in a GTFS route a route in Raptor is created. Only the "minimum time" transfers between different
- * stops are considered as Raptor transfers. In the Raptor model, transfers are treated exclusively as pedestrian paths
+ * For each sub-route in a GTFS route a route in RAPTOR is created. Only the "minimum time" transfers between different
+ * stops are considered as RAPTOR transfers. In the RAPTOR model, transfers are treated exclusively as pedestrian paths
  * between stops, reflecting necessary walking connections. Thus, other types of GTFS transfers are omitted from the
- * mapping process to align with Raptor's conceptual model.
+ * mapping process to align with RAPTOR's conceptual model.
  *
  * @author munterfi
  */
@@ -44,7 +44,7 @@ public class GtfsToRaptorConverter {
     }
 
     public RaptorRouter run() {
-        log.info("Converting {} trips from GTFS schedule to Raptor data model", schedule.getTrips().size());
+        log.info("Converting {} trips from GTFS schedule to RAPTOR data model", schedule.getTrips().size());
 
         for (Route route : schedule.getRoutes().values()) {
             for (GtfsRoutePartitioner.SubRoute subRoute : partitioner.getSubRoutes(route)) {

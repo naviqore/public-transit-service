@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 /**
- * Interface to provide trip masks for the raptor routing.
+ * Interface to provide trip masks for the RAPTOR routing.
  * <p>
  * The trip mask provider should be able to provide information if a route trip is taking place on a given date.
  * Internally this will then be used to create a stop time array for the route scanner.
@@ -15,7 +15,7 @@ public interface RaptorTripMaskProvider {
     /**
      * Set the trip ids for each route.
      * <p>
-     * This method is called when the raptor data is loaded by the raptor instance. And passes the reference to the trip
+     * This method is called when the RAPTOR data is loaded by the RAPTOR instance. And passes the reference to the trip
      * mask provider containing a map of route ids to an array of trip ids.
      *
      * @param routeTripIds a map of route ids to an array of trip ids.
@@ -40,7 +40,7 @@ public interface RaptorTripMaskProvider {
      *
      * @param date        the date for which the trip mask should be returned.
      * @param queryConfig the query config for which the trip mask should be returned.
-     * @return the raptor day mask of the day.
+     * @return the RAPTOR day mask of the day.
      */
     DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig);
 

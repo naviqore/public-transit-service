@@ -8,8 +8,8 @@ import java.util.*;
 import static org.naviqore.raptor.router.QueryState.NO_INDEX;
 
 /**
- * Builds the Raptor and its internal data structures. Ensures that all stops, routes, trips, stop times, and transfers
- * are correctly added and validated before constructing the Raptor model:
+ * Builds the RAPTOR router and its internal data structures. Ensures that all stops, routes, trips, stop times, and
+ * transfers are correctly added and validated before constructing the RAPTOR data model:
  * <ul>
  *     <li>All stops must have at least one route serving them.</li>
  *     <li>All stops of a route must be known before adding the route.</li>
@@ -111,7 +111,7 @@ public class RaptorRouterBuilder {
     }
 
     public RaptorRouter build() {
-        log.info("Initializing Raptor with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
+        log.info("Initializing RAPTOR router with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 
         // build route containers and the raptor array-based data structures

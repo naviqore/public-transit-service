@@ -13,7 +13,7 @@ import java.util.List;
 import static org.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
- * The query represents a request to the raptor router and coordinates the routing logic. Each request needs a new query
+ * The query represents a request to the RAPTOR router and coordinates the routing logic. Each request needs a new query
  * instance.
  */
 @Slf4j
