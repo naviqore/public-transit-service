@@ -25,15 +25,21 @@ public class ServiceConfigParser {
                                @Value("${cache.service.day.size}") int cacheServiceDaySize,
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
-        ServiceConfig.WalkCalculatorType walkCalculatorTypeEnum = ServiceConfig.WalkCalculatorType.valueOf(
-                walkingCalculatorType.toUpperCase());
-        ServiceConfig.CacheEvictionStrategy cacheEvictionStrategyEnum = ServiceConfig.CacheEvictionStrategy.valueOf(
-                cacheEvictionStrategy.toUpperCase());
-
-        this.serviceConfig = new ServiceConfig(gtfsStaticUri, gtfsStaticUpdateCron, transferTimeSameStopDefault,
-                transferTimeBetweenStopsMinimum, transferTimeAccessEgress, walkingSearchRadius, walkCalculatorTypeEnum,
-                walkingSpeed, walkingDurationMinimum, raptorDaysToScan, raptorRange, cacheServiceDaySize,
-                cacheEvictionStrategyEnum);
+        this.serviceConfig = ServiceConfig.builder()
+                .gtfsStaticUri(gtfsStaticUri)
+                .gtfsStaticUpdateCron(gtfsStaticUpdateCron)
+                .transferTimeSameStopDefault(transferTimeSameStopDefault)
+                .transferTimeBetweenStopsMinimum(transferTimeBetweenStopsMinimum)
+                .transferTimeAccessEgress(transferTimeAccessEgress)
+                .walkingSearchRadius(walkingSearchRadius)
+                .walkingCalculatorType(ServiceConfig.WalkCalculatorType.valueOf(walkingCalculatorType.toUpperCase()))
+                .walkingSpeed(walkingSpeed)
+                .walkingDurationMinimum(walkingDurationMinimum)
+                .raptorDaysToScan(raptorDaysToScan)
+                .raptorRange(raptorRange)
+                .cacheServiceDaySize(cacheServiceDaySize)
+                .cacheEvictionStrategy(ServiceConfig.CacheEvictionStrategy.valueOf(cacheEvictionStrategy.toUpperCase()))
+                .build();
     }
 
 }

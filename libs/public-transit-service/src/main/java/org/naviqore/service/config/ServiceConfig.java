@@ -1,13 +1,13 @@
 package org.naviqore.service.config;
 
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Builder;
+import lombok.Value;
 
 /**
  * Configuration to create a public transit service.
  */
-@Getter
-@ToString
+@Builder
+@Value
 public class ServiceConfig {
 
     // note: The defaults should match the default values in the application.properties file.
@@ -22,33 +22,55 @@ public class ServiceConfig {
     public static final double DEFAULT_WALKING_SPEED = 1.4;
     public static final int DEFAULT_WALKING_DURATION_MINIMUM = 120;
 
-    public static final int DEFAULT_MAX_DAYS_TO_SCAN = 3;
+    public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
     public static final int DEFAULT_RAPTOR_RANGE = -1; // -1 means no range raptor
 
     public static final int DEFAULT_CACHE_SIZE = 5;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
-    private final String gtfsStaticUri;
-    private final String gtfsStaticUpdateCron;
-    private final int transferTimeSameStopDefault;
-    private final int transferTimeBetweenStopsMinimum;
-    private final int transferTimeAccessEgress;
-    private final int walkingSearchRadius;
-    private final WalkCalculatorType walkingCalculatorType;
-    private final double walkingSpeed;
-    private final int walkingDurationMinimum;
-    private final int raptorRange;
-    private final int raptorDaysToScan;
-    private final int cacheServiceDaySize;
+    String gtfsStaticUri;
 
-    private final CacheEvictionStrategy cacheEvictionStrategy;
+    @Builder.Default
+    String gtfsStaticUpdateCron = DEFAULT_GTFS_STATIC_UPDATE_CRON;
+
+    @Builder.Default
+    int transferTimeSameStopDefault = DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT;
+
+    @Builder.Default
+    int transferTimeBetweenStopsMinimum = DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM;
+
+    @Builder.Default
+    int transferTimeAccessEgress = DEFAULT_TRANSFER_TIME_ACCESS_EGRESS;
+
+    @Builder.Default
+    int walkingSearchRadius = DEFAULT_WALKING_SEARCH_RADIUS;
+
+    @Builder.Default
+    WalkCalculatorType walkingCalculatorType = DEFAULT_WALKING_CALCULATOR_TYPE;
+
+    @Builder.Default
+    double walkingSpeed = DEFAULT_WALKING_SPEED;
+
+    @Builder.Default
+    int walkingDurationMinimum = DEFAULT_WALKING_DURATION_MINIMUM;
+
+    @Builder.Default
+    int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
+
+    @Builder.Default
+    int raptorRange = DEFAULT_RAPTOR_RANGE;
+
+    @Builder.Default
+    int cacheServiceDaySize = DEFAULT_CACHE_SIZE;
+
+    @Builder.Default
+    CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
 
     public ServiceConfig(String gtfsStaticUri, String gtfsStaticUpdateCron, int transferTimeSameStopDefault,
                          int transferTimeBetweenStopsMinimum, int transferTimeAccessEgress, int walkingSearchRadius,
                          WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
                          int raptorDaysToScan, int raptorRange, int cacheServiceDaySize,
                          CacheEvictionStrategy cacheEvictionStrategy) {
-
         this.gtfsStaticUri = validateNonNull(gtfsStaticUri, "gtfsStaticUrl");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferTimeSameStopDefault = validateNonNegative(transferTimeSameStopDefault,
@@ -64,17 +86,6 @@ public class ServiceConfig {
         this.raptorRange = raptorRange;
         this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
-    }
-
-    /**
-     * Constructor with defaults
-     */
-    public ServiceConfig(String gtfsStaticUri) {
-        this(gtfsStaticUri, DEFAULT_GTFS_STATIC_UPDATE_CRON, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
-                DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_ACCESS_EGRESS,
-                DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE, DEFAULT_WALKING_SPEED,
-                DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE, DEFAULT_CACHE_SIZE,
-                DEFAULT_CACHE_EVICTION_STRATEGY);
     }
 
     private static <T> T validateNonNull(T value, String name) {

@@ -37,7 +37,7 @@ class GtfsRaptorServiceIT {
             // implement repo for gtfs schedule file reader
             GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());
             GtfsRaptorServiceInitializer initializer = new GtfsRaptorServiceInitializer(
-                    new ServiceConfig(zipFile.getAbsolutePath()), repo.get());
+                    ServiceConfig.builder().gtfsStaticUri(zipFile.getAbsolutePath()).build(), repo.get());
 
             service = initializer.get();
         }

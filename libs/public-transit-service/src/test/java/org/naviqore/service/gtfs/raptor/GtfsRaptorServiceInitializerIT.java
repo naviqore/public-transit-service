@@ -21,7 +21,7 @@ class GtfsRaptorServiceInitializerIT {
     @BeforeEach
     void setUp(@TempDir Path tempDir) throws IOException, InterruptedException {
         File zipFile = GtfsScheduleDataset.SAMPLE_FEED_1.getZip(tempDir);
-        ServiceConfig config = new ServiceConfig(zipFile.getAbsolutePath());
+        ServiceConfig config = ServiceConfig.builder().gtfsStaticUri(zipFile.getAbsolutePath()).build();
         GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());
         initializer = new GtfsRaptorServiceInitializer(config, repo.get());
     }

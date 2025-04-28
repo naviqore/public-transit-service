@@ -37,7 +37,7 @@ public class ServiceConfigParserIT {
                 DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
                 DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS,
                 DEFAULT_WALKING_CALCULATOR_TYPE.name(), DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM,
-                DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE, DEFAULT_CACHE_SIZE,
+                DEFAULT_RAPTOR_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE, DEFAULT_CACHE_SIZE,
                 DEFAULT_CACHE_EVICTION_STRATEGY.name());
         return parser.getServiceConfig();
     }
@@ -53,7 +53,7 @@ public class ServiceConfigParserIT {
         assertEquals(DEFAULT_WALKING_SPEED, config.getWalkingSpeed());
         assertEquals(DEFAULT_WALKING_SEARCH_RADIUS, config.getWalkingSearchRadius());
         assertEquals(DEFAULT_WALKING_DURATION_MINIMUM, config.getWalkingDurationMinimum());
-        assertEquals(DEFAULT_MAX_DAYS_TO_SCAN, config.getRaptorDaysToScan());
+        assertEquals(DEFAULT_RAPTOR_DAYS_TO_SCAN, config.getRaptorDaysToScan());
         assertEquals(DEFAULT_CACHE_SIZE, config.getCacheServiceDaySize());
         assertEquals(CacheEvictionStrategy.LRU, config.getCacheEvictionStrategy());
     }
@@ -64,7 +64,7 @@ public class ServiceConfigParserIT {
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT,
                         DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, "INVALID",
-                        DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN,
+                        DEFAULT_WALKING_SPEED, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_RAPTOR_DAYS_TO_SCAN,
                         DEFAULT_RAPTOR_RANGE, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()));
     }
 
@@ -77,8 +77,8 @@ public class ServiceConfigParserIT {
                 () -> new ServiceConfigParser(GTFS_STATIC_URI, DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         transferTimeSameStopDefault, transferTimeBetweenStopsMinimum,
                         DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, walkingSearchRadius, walkingCalculatorType.toUpperCase(),
-                        walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE,
-                        DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
+                        walkingSpeed, DEFAULT_WALKING_DURATION_MINIMUM, DEFAULT_RAPTOR_DAYS_TO_SCAN,
+                        DEFAULT_RAPTOR_RANGE, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
     }
 
 }

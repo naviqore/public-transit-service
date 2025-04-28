@@ -29,7 +29,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
-import static org.naviqore.service.config.ServiceConfig.*;
 
 class RoutingQueryFacadeIT {
 
@@ -48,11 +47,10 @@ class RoutingQueryFacadeIT {
             .wheelchairAccessible(false)
             .bikeAllowed(false)
             .build();
-    private static final ServiceConfig SERVICE_CONFIG = new ServiceConfig("NONE", DEFAULT_GTFS_STATIC_UPDATE_CRON,
-            DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
-            DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE,
-            DEFAULT_WALKING_SPEED, WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE,
-            DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
+    private static final ServiceConfig SERVICE_CONFIG = ServiceConfig.builder()
+            .gtfsStaticUri("NONE")
+            .walkingDurationMinimum(WALKING_DURATION_MINIMUM)
+            .build();
     private GtfsSchedule schedule;
     private RoutingQueryFacade facade;
 
