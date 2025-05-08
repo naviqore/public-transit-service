@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/naviqore/public-transit-service/compare/v2.1.0...v2.1.1) (2025-05-08)
+
+
+### Bug Fixes
+
+* correct version tag of image ([90fbaf4](https://github.com/naviqore/public-transit-service/commit/90fbaf4224cd33fe8341e6ac34c2e6aff13a423b))
+* correct version tag of image ([3a907c8](https://github.com/naviqore/public-transit-service/commit/3a907c8f50640beaaa9b3c69356002859309c85c))
+
 ## [2.1.0](https://github.com/naviqore/public-transit-service/compare/v2.0.0...v2.1.0) (2025-05-08)
 
 
