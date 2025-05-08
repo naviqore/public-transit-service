@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.1.0](https://github.com/naviqore/public-transit-service/compare/v2.0.0...v2.1.0) (2025-05-08)
+
+
+### Features
+
+* add repository to config directly instead of gtfs uri ([8b57cbb](https://github.com/naviqore/public-transit-service/commit/8b57cbbdd39cccb3045a1fa088916e3a22a22881))
+* **app:** add support for loading GTFS feed from S3 URI ([284941b](https://github.com/naviqore/public-transit-service/commit/284941b7d26b3d632d6fd2c68bffefba15404139))
+* fully automate release pipeline ([4b012c0](https://github.com/naviqore/public-transit-service/commit/4b012c042b84f7255a6db7c2fe61b587fe9f6037))
+* introduce a builder pattern for connection query config ([0bf1a1b](https://github.com/naviqore/public-transit-service/commit/0bf1a1b9452a368c2777660575dd1da7a5c8f9e2))
+* introduce a builder pattern for service config ([aa1bba5](https://github.com/naviqore/public-transit-service/commit/aa1bba5755994a9a558620b31f980701dd125774))
+* move error handling from library to app layer ([a07e9f0](https://github.com/naviqore/public-transit-service/commit/a07e9f0bb3c068085efd0ac6fbb08686751ef843))
+
+
+### Bug Fixes
+
+* add spring-boot-starter-validation to resolve Bean Validation provider issue ([eb2f930](https://github.com/naviqore/public-transit-service/commit/eb2f930f63000129b498c60a22f70257c1853866))
+* correct folder path org.naviqore.app ([207c6f5](https://github.com/naviqore/public-transit-service/commit/207c6f587f474d8f823a2755851d092a53fe9433))
+
+
+### Documentation
+
+* add a hint to maven central in README ([57a1b54](https://github.com/naviqore/public-transit-service/commit/57a1b543c0cbb9572cf3abb39b38754cb9c95fe4))
+* refer to RAPTOR in upper case ([577abff](https://github.com/naviqore/public-transit-service/commit/577abff53bac8e9fa7ba4483177b01f1cc2c2ddf))
+* update public transit service example ([8925ddd](https://github.com/naviqore/public-transit-service/commit/8925dddf630f078a777c6787dbd160d16597bdef))
+
 ## [2.0.0](https://github.com/naviqore/public-transit-service/compare/v1.2.0...v2.0.0) (2025-04-27)
 
 
