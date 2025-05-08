@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -69,8 +70,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ needs.release-please.outputs.version }}
             type=raw,value=latest
+            type=raw,value=${{ needs.release-please.outputs.version }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
