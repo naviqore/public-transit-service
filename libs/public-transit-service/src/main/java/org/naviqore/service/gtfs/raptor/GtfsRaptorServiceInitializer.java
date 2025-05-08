@@ -19,6 +19,7 @@ import org.naviqore.utils.search.SearchIndexBuilder;
 import org.naviqore.utils.spatial.index.KDTree;
 import org.naviqore.utils.spatial.index.KDTreeBuilder;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,10 +34,10 @@ public class GtfsRaptorServiceInitializer {
     private final KDTree<Stop> spatialStopIndex;
     private final RaptorRouter raptorRouter;
 
-    public GtfsRaptorServiceInitializer(ServiceConfig config, GtfsSchedule schedule) {
+    public GtfsRaptorServiceInitializer(ServiceConfig config) throws IOException, InterruptedException {
         log.debug("Initializing with config: {}", config);
         this.config = config;
-        this.schedule = schedule;
+        this.schedule = config.getGtfsScheduleRepository().get();
         this.walkCalculator = initializeWalkCalculator(config);
         this.stopSearchIndex = createStopSearchIndex(schedule);
         this.spatialStopIndex = createSpatialStopIndex(schedule);

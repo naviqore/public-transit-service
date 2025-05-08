@@ -11,7 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Test class for the raptor algorithm in range raptor mode.
+ * Test class for the raptor algorithm in range RAPTOR mode.
  */
 @ExtendWith(RaptorRouterTestExtension.class)
 public class RangeRaptorTest {

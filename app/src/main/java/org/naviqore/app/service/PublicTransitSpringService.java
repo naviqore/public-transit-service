@@ -2,24 +2,18 @@ package org.naviqore.app.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
-import org.naviqore.app.infrastructure.GtfsScheduleFile;
-import org.naviqore.app.infrastructure.GtfsScheduleUrl;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.*;
-import org.naviqore.service.repo.GtfsScheduleRepository;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,14 +35,21 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Scheduled(cron = "${gtfs.static.update.cron}")
     public void updateStaticScheduleTask() {
         log.info("Updating public transit service with static GTFS");
-        // no need to synchronize; the service operates on the old delegate until its reference is set to the new one
-        delegate = createDelegate();
-        log.info("Successfully updated public transit service with static GTFS");
+        try {
+            // no need to synchronize; the service operates on the old delegate until its reference is set to the new one
+            delegate = createDelegate();
+            log.info("Successfully updated public transit service with static GTFS");
+        } catch (Exception e) {
+            log.error("Failed to update public transit service", e);
+        }
     }
 
     private PublicTransitService createDelegate() {
-        return new PublicTransitServiceFactory(config,
-                InputValidator.getRepository(config.getGtfsStaticUri())).create();
+        try {
+            return new PublicTransitServiceFactory(config).create();
+        } catch (IOException | InterruptedException e) {
+            throw new IllegalStateException("Failed to create public transit service", e);
+        }
     }
 
     @Override
@@ -146,37 +147,6 @@ public class PublicTransitSpringService implements PublicTransitService {
     @Override
     public Route getRouteById(String routeId) throws RouteNotFoundException {
         return delegate.getRouteById(routeId);
-    }
-
-    private static class InputValidator {
-
-        private static final List<String> ALLOWED_SCHEMES = Arrays.asList("http", "https");
-
-        private static GtfsScheduleRepository getRepository(String gtfsStaticUrl) {
-            if (isLocalFile(gtfsStaticUrl)) {
-                return new GtfsScheduleFile(gtfsStaticUrl);
-            } else if (isValidUrl(gtfsStaticUrl)) {
-                return new GtfsScheduleUrl(gtfsStaticUrl);
-            } else {
-                throw new IllegalArgumentException("Invalid GTFS static URI value: " + gtfsStaticUrl);
-            }
-        }
-
-        private static boolean isLocalFile(String path) {
-            File file = new File(path);
-            return file.exists() && file.isFile();
-        }
-
-        private static boolean isValidUrl(String urlString) {
-            try {
-                URI uri = new URI(urlString);
-                String scheme = uri.getScheme();
-                return scheme != null && ALLOWED_SCHEMES.contains(scheme);
-            } catch (URISyntaxException e) {
-                return false;
-            }
-        }
-
     }
 
 }

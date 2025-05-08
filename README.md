@@ -23,6 +23,8 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
     - **naviqore-utils**: Common utility classes shared across the Naviqore libraries.
 - **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
 
+### Build Locally
+
 Follow the steps below to build and run the project locally:
 
 1. Clone the repository:
@@ -34,15 +36,58 @@ Follow the steps below to build and run the project locally:
 2. Build the project using Maven:
 
    ```bash
-   mvn clean install
+   ./mvnw clean install
    ```
 
 3. Run the application module:
 
    ```bash
    export GTFS_STATIC_URI=<URL or PATH>
-   mvn spring-boot:run -pl app
+   ./mvnw spring-boot:run -pl app
    ```
+
+### Maven Central
+
+The project's library modules are available in
+the [Maven Central Repository](https://central.sonatype.com/namespace/org.naviqore) and can be added to Maven projects
+as needed. For example, to use the public transit service, include the following dependency:
+
+```xml
+
+<dependency>
+    <groupId>org.naviqore</groupId>
+    <artifactId>naviqore-public-transit-service</artifactId>
+    <version>x.x.x</version> <!-- replace with latest version -->
+</dependency>
+```
+
+A simple working example of how to use the public transit service in your Java application:
+
+```java
+public class PublicTransitServiceExample {
+    public static final String GTFS_STATIC_URI = "https://github.com/google/transit/raw/refs/heads/master/gtfs/spec/en/examples/sample-feed-1.zip";
+    public static final String ORIG_STOP_ID = "STAGECOACH";
+    public static final GeoCoordinate DEST_LOCATION = new GeoCoordinate(36.9149, -116.7614);
+    public static final LocalDateTime DEPARTURE_TIME = LocalDateTime.of(2007, 1, 1, 0, 0, 0);
+
+    public static void main(
+            String[] args) throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
+
+        GtfsScheduleRepository repo = () -> {
+            new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
+            return new GtfsScheduleReader().read("gtfs.zip");
+        };
+
+        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsScheduleRepository(repo).build();
+        PublicTransitService service = new PublicTransitServiceFactory(serviceConfig).create();
+
+        Stop orig = service.getStopById(ORIG_STOP_ID);
+        ConnectionQueryConfig queryConfig = ConnectionQueryConfig.builder().build();
+        List<Connection> connections = service.getConnections(orig, DEST_LOCATION, DEPARTURE_TIME, TimeType.DEPARTURE,
+                queryConfig);
+    }
+}
+```
 
 ## Deployment
 

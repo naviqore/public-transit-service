@@ -16,6 +16,7 @@ import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 import org.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
 import org.naviqore.service.gtfs.raptor.convert.TransferGenerator;
 import org.naviqore.service.gtfs.raptor.convert.WalkTransferGenerator;
+import org.naviqore.service.repo.NoGtfsScheduleRepository;
 import org.naviqore.service.walk.BeeLineWalkCalculator;
 import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.cache.EvictionCache;
@@ -29,7 +30,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
-import static org.naviqore.service.config.ServiceConfig.*;
 
 class RoutingQueryFacadeIT {
 
@@ -40,13 +40,18 @@ class RoutingQueryFacadeIT {
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
     private static final LocalDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0);
-    private static final ConnectionQueryConfig QUERY_CONFIG = new ConnectionQueryConfig(10 * 60, 2 * 60, 4,
-            24 * 60 * 60, false, false, null);
-    private static final ServiceConfig SERVICE_CONFIG = new ServiceConfig("NONE", DEFAULT_GTFS_STATIC_UPDATE_CRON,
-            DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM,
-            DEFAULT_TRANSFER_TIME_ACCESS_EGRESS, DEFAULT_WALKING_SEARCH_RADIUS, DEFAULT_WALKING_CALCULATOR_TYPE,
-            DEFAULT_WALKING_SPEED, WALKING_DURATION_MINIMUM, DEFAULT_MAX_DAYS_TO_SCAN, DEFAULT_RAPTOR_RANGE,
-            DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY);
+    private static final ConnectionQueryConfig QUERY_CONFIG = ConnectionQueryConfig.builder()
+            .maximumWalkingDuration(10 * 60)
+            .minimumTransferDuration(2 * 60)
+            .maximumTransferNumber(4)
+            .maximumTravelTime(24 * 60 * 60)
+            .wheelchairAccessible(false)
+            .bikeAllowed(false)
+            .build();
+    private static final ServiceConfig SERVICE_CONFIG = ServiceConfig.builder()
+            .gtfsScheduleRepository(new NoGtfsScheduleRepository())
+            .walkingDurationMinimum(WALKING_DURATION_MINIMUM)
+            .build();
     private GtfsSchedule schedule;
     private RoutingQueryFacade facade;
 

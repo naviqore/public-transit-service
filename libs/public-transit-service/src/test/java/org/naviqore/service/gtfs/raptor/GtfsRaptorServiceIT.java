@@ -37,7 +37,7 @@ class GtfsRaptorServiceIT {
             // implement repo for gtfs schedule file reader
             GtfsScheduleRepository repo = () -> new GtfsScheduleReader().read(zipFile.toString());
             GtfsRaptorServiceInitializer initializer = new GtfsRaptorServiceInitializer(
-                    new ServiceConfig(zipFile.getAbsolutePath()), repo.get());
+                    ServiceConfig.builder().gtfsScheduleRepository(repo).build());
 
             service = initializer.get();
         }
@@ -192,7 +192,14 @@ class GtfsRaptorServiceIT {
 
             @BeforeEach
             void setUp() {
-                config = new ConnectionQueryConfig(10 * 60, 2 * 60, 4, 24 * 60 * 60, false, false, null);
+                config = ConnectionQueryConfig.builder()
+                        .maximumWalkingDuration(10 * 60)
+                        .minimumTransferDuration(2 * 60)
+                        .maximumTransferNumber(4)
+                        .maximumTravelTime(24 * 60 * 60)
+                        .wheelchairAccessible(false)
+                        .bikeAllowed(false)
+                        .build();
             }
 
             @Nested

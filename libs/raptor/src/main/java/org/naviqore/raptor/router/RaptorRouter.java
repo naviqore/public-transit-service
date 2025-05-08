@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * Raptor algorithm implementation
+ * RAPTOR algorithm implementation
  */
 @Slf4j
 public class RaptorRouter implements RaptorAlgorithm, RaptorData {

@@ -17,7 +17,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for the Raptor class.
+ * Tests for the RaptorRouter class.
  */
 @ExtendWith(RaptorRouterTestExtension.class)
 class RaptorRouterTest {

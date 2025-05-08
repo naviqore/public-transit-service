@@ -189,8 +189,16 @@ public class RoutingController {
             // validate and create config
             RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                     minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
-            return new ConnectionQueryConfig(maxWalkingDuration, minTransferTime, maxTransferNumber, maxTravelTime,
-                    wheelchairAccessible, bikeAllowed, map(travelModes));
+
+            return ConnectionQueryConfig.builder()
+                    .maximumWalkingDuration(maxWalkingDuration)
+                    .minimumTransferDuration(minTransferTime)
+                    .maximumTransferNumber(maxTransferNumber)
+                    .maximumTravelTime(maxTravelTime)
+                    .wheelchairAccessible(wheelchairAccessible)
+                    .bikeAllowed(bikeAllowed)
+                    .travelModes(map(travelModes))
+                    .build();
         }
 
         private static int setToMaxIfNull(Integer value) {

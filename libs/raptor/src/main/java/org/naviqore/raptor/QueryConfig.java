@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.util.EnumSet;
 
 /**
- * Configuration to query connections or iso-lines. Default values are set to infinity or zero, which means that no
+ * Configuration to query connections or isolines. Default values are set to infinity or zero, which means that no
  * restrictions are set.
  */
 @NoArgsConstructor

@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * This object stores the current best labels and times of the raptor routing algorithm for a query instance.
+ * This object stores the current best labels and times of the RAPTOR routing algorithm for a query instance.
  * Additionally, it also stores information about marked stops for the current and last round.
  */
 final class QueryState {

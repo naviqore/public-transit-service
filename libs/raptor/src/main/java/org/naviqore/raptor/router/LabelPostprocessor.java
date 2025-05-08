@@ -15,7 +15,7 @@ import java.util.Map;
 import static org.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
- * Postprocessing of the raptor algorithm results. Reconstructs connections from the labels per round.
+ * Postprocessing of the RAPTOR algorithm results. Reconstructs connections from the labels per round.
  */
 class LabelPostprocessor {
 

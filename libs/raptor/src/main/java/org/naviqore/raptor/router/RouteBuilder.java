@@ -12,7 +12,7 @@ import java.util.*;
  * <ul>
  *     <li>All trips of a route have the same stop sequence.</li>
  *     <li>Each stop time of a trip has a departure time that is temporally after the previous stop time's arrival time.</li>
- *     <li>In the final route container all trips are sorted according to their departure time.</li>
+ *     <li>In the final route container, all trips are sorted according to their departure time.</li>
  * </ul>
  */
 @Slf4j
