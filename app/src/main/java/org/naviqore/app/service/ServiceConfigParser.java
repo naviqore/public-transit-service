@@ -1,7 +1,9 @@
 package org.naviqore.app.service;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.naviqore.app.infrastructure.GtfsScheduleFile;
+import org.naviqore.app.infrastructure.GtfsScheduleS3;
 import org.naviqore.app.infrastructure.GtfsScheduleUrl;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.repo.GtfsScheduleRepository;
@@ -11,14 +13,11 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 @Getter
+@Slf4j
 public class ServiceConfigParser {
-
-    private static final List<String> URL_ALLOWED_SCHEMES = Arrays.asList("http", "https");
 
     private final ServiceConfig serviceConfig;
 
@@ -53,14 +52,17 @@ public class ServiceConfigParser {
                 .build();
     }
 
-    private static GtfsScheduleRepository getRepository(String gtfsStaticUrl) {
-        if (isLocalFile(gtfsStaticUrl)) {
-            return new GtfsScheduleFile(gtfsStaticUrl);
-        } else if (isValidUrl(gtfsStaticUrl)) {
-            return new GtfsScheduleUrl(gtfsStaticUrl);
-        } else {
-            throw new IllegalArgumentException("Invalid GTFS static URI value: " + gtfsStaticUrl);
+    private static GtfsScheduleRepository getRepository(String gtfsStaticUri) {
+        if (isLocalFile(gtfsStaticUri)) {
+            return new GtfsScheduleFile(gtfsStaticUri);
         }
+
+        UriScheme scheme = getUriScheme(gtfsStaticUri);
+
+        return switch (scheme) {
+            case HTTP, HTTPS -> new GtfsScheduleUrl(gtfsStaticUri);
+            case S3 -> new GtfsScheduleS3(gtfsStaticUri);
+        };
     }
 
     private static boolean isLocalFile(String path) {
@@ -68,13 +70,23 @@ public class ServiceConfigParser {
         return file.exists() && file.isFile();
     }
 
-    private static boolean isValidUrl(String urlString) {
+    private static UriScheme getUriScheme(String uri) {
         try {
-            URI uri = new URI(urlString);
-            String scheme = uri.getScheme();
-            return scheme != null && URL_ALLOWED_SCHEMES.contains(scheme);
+            URI parsedUri = new URI(uri);
+            String scheme = parsedUri.getScheme();
+            return UriScheme.valueOf(scheme.toUpperCase());
         } catch (URISyntaxException e) {
-            return false;
+            log.error("Error parsing URI: {}. Exception: {}", uri, e.getMessage(), e);
+            throw new IllegalArgumentException("Invalid URI format: " + uri, e);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid URI scheme: {}. Exception: {}", uri, e.getMessage(), e);
+            throw e;
         }
+    }
+
+    private enum UriScheme {
+        HTTP,
+        HTTPS,
+        S3
     }
 }
