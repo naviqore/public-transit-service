@@ -5,7 +5,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
-import org.naviqore.gtfs.schedule.type.*;
+import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
+import org.naviqore.gtfs.schedule.type.BikeInformation;
+import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.HierarchicalVehicleType;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.TravelMode;
 import org.naviqore.raptor.router.RaptorTripMaskProvider;
@@ -144,8 +147,8 @@ public class GtfsTripMaskProviderTest {
                     String tripId = getTripId(routeId, tripCounter);
 
                     builder.addTrip(tripId, routeId, serviceId, tripId, accessibilityValue, bikeValue);
-                    builder.addStopTime(tripId, "stop1", new ServiceDayTime(0), new ServiceDayTime(0));
-                    builder.addStopTime(tripId, "stop2", new ServiceDayTime(60), new ServiceDayTime(60));
+                    builder.addStopTime(tripId, "stop1", 0, 0);
+                    builder.addStopTime(tripId, "stop2", 60, 60);
                 }
             }
             return builder.build();

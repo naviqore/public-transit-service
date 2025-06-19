@@ -103,7 +103,7 @@ public final class RaptorRouterBenchmark {
         Set<String> uniqueStopIds = new HashSet<>();
         for (Trip trip : schedule.getActiveTrips(SCHEDULE_DATE)) {
             for (StopTime stopTime : trip.getStopTimes()) {
-                uniqueStopIds.add(stopTime.stop().getId());
+                uniqueStopIds.add(stopTime.getStop().getId());
             }
         }
         List<String> stopIds = new ArrayList<>(uniqueStopIds);

@@ -166,8 +166,7 @@ public class GtfsScheduleTestBuilder {
             builder.addTrip(tripId, route.id, weekday ? "weekdays" : "weekends", headSign);
             int departureTime = tripDepartureTime;
             for (String stopId : routeStops) {
-                builder.addStopTime(tripId, stopId, new ServiceDayTime(departureTime - dwellTime),
-                        new ServiceDayTime(departureTime));
+                builder.addStopTime(tripId, stopId, departureTime - dwellTime, departureTime);
                 departureTime += travelTime + dwellTime;
             }
         }

@@ -86,8 +86,8 @@ public class GtfsSchedule {
         Stop stop = getStop(stopId);
         return stop.getStopTimes()
                 .stream()
-                .filter(stopTime -> stopTime.departure().getTotalSeconds() >= dateTime.toLocalTime().toSecondOfDay())
-                .filter(stopTime -> stopTime.trip().getCalendar().isServiceAvailable(dateTime.toLocalDate()))
+                .filter(stopTime -> stopTime.getDeparture().getTotalSeconds() >= dateTime.toLocalTime().toSecondOfDay())
+                .filter(stopTime -> stopTime.getTrip().getCalendar().isServiceAvailable(dateTime.toLocalDate()))
                 .limit(limit)
                 .toList();
     }

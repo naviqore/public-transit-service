@@ -17,9 +17,9 @@ public class Transfer {
     private final Stop toStop;
     private final TransferType transferType;
     @Nullable
-    private final Integer minTransferTime;
+    private final Short minTransferTime;
 
-    public Optional<Integer> getMinTransferTime() {
+    public Optional<Short> getMinTransferTime() {
         return Optional.ofNullable(minTransferTime);
     }
 

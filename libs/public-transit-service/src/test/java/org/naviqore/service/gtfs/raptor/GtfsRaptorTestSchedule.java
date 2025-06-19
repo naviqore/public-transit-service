@@ -4,7 +4,6 @@ import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
 import org.naviqore.gtfs.schedule.type.RouteType;
-import org.naviqore.gtfs.schedule.type.ServiceDayTime;
 import org.naviqore.gtfs.schedule.type.TransferType;
 
 import java.time.DayOfWeek;
@@ -55,18 +54,18 @@ public class GtfsRaptorTestSchedule {
         // Route 1 goes from A, B1, C1, D2
         builder.addRoute("R1", "agency", "R1", "R1", RouteType.parse(1));
         builder.addTrip("T1", "R1", "always", "D1");
-        builder.addStopTime("T1", "A", new ServiceDayTime(60), new ServiceDayTime(120));
-        builder.addStopTime("T1", "B1", new ServiceDayTime(180), new ServiceDayTime(240));
-        builder.addStopTime("T1", "C1", new ServiceDayTime(300), new ServiceDayTime(360));
-        builder.addStopTime("T1", "D1", new ServiceDayTime(420), new ServiceDayTime(480));
+        builder.addStopTime("T1", "A", 60, 120);
+        builder.addStopTime("T1", "B1", 180, 240);
+        builder.addStopTime("T1", "C1", 300, 360);
+        builder.addStopTime("T1", "D1", 420, 480);
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
         builder.addTrip("T2", "R2", "always", "D2");
-        builder.addStopTime("T2", "A", new ServiceDayTime(60), new ServiceDayTime(120));
-        builder.addStopTime("T2", "B2", new ServiceDayTime(180), new ServiceDayTime(240));
-        builder.addStopTime("T2", "C", new ServiceDayTime(300), new ServiceDayTime(360));
-        builder.addStopTime("T2", "D2", new ServiceDayTime(420), new ServiceDayTime(480));
+        builder.addStopTime("T2", "A", 60, 120);
+        builder.addStopTime("T2", "B2", 180, 240);
+        builder.addStopTime("T2", "C", 300, 360);
+        builder.addStopTime("T2", "D2", 420, 480);
     }
 
     public void addTransfer(String fromStopId, String toStopId, TransferType type, int duration) {

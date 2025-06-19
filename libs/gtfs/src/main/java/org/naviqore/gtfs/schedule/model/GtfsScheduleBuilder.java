@@ -143,8 +143,8 @@ public class GtfsScheduleBuilder {
         return this;
     }
 
-    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival,
-                                           ServiceDayTime departure) {
+    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, int arrival,
+                                           int departure) {
         checkNotBuilt();
         Trip trip = trips.get(tripId);
         if (trip == null) {
@@ -155,15 +155,14 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("Stop " + stopId + " does not exist");
         }
         log.debug("Adding stop time at {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
-        StopTime stopTime = new StopTime(stop, trip, serviceDayTimeCache.getOrAdd(arrival),
-                serviceDayTimeCache.getOrAdd(departure));
+        StopTime stopTime = new StopTime(stop, trip, arrival, departure);
         stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
         return this;
     }
 
     public GtfsScheduleBuilder addTransfer(String fromStopId, String toStopId, TransferType transferType,
-                                           @Nullable Integer minTransferTime) {
+                                           @Nullable Short minTransferTime) {
         checkNotBuilt();
         Stop fromStop = stops.get(fromStopId);
         if (fromStop == null) {

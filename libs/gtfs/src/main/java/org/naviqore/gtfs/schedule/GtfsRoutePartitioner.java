@@ -41,13 +41,13 @@ public class GtfsRoutePartitioner {
     }
 
     private String generateStopSequenceKey(Trip trip) {
-        return trip.getStopTimes().stream().map(t -> t.stop().getId()).collect(Collectors.joining("-"));
+        return trip.getStopTimes().stream().map(t -> t.getStop().getId()).collect(Collectors.joining("-"));
     }
 
     private List<Stop> extractStopSequence(Trip trip) {
         List<Stop> sequence = new ArrayList<>();
         for (StopTime stopTime : trip.getStopTimes()) {
-            sequence.add(stopTime.stop());
+            sequence.add(stopTime.getStop());
         }
 
         return sequence;

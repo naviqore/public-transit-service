@@ -77,8 +77,8 @@ public class GtfsToRaptorConverter {
             List<StopTime> stopTimes = trip.getStopTimes();
             for (int i = 0; i < stopTimes.size(); i++) {
                 StopTime stopTime = stopTimes.get(i);
-                builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
-                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
+                builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.getStop().getId(),
+                        stopTime.getArrival().getTotalSeconds(), stopTime.getDeparture().getTotalSeconds());
             }
         }
     }

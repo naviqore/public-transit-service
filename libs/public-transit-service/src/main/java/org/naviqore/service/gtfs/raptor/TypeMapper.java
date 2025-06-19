@@ -41,8 +41,8 @@ public final class TypeMapper {
         // create stop times
         List<GtfsRaptorStopTime> stopTimes = trip.getStopTimes()
                 .stream()
-                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
-                        stopTime.departure().toLocalDateTime(date)))
+                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.getStop()), stopTime.getArrival().toLocalDateTime(date),
+                        stopTime.getDeparture().toLocalDateTime(date)))
                 .toList();
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
@@ -58,8 +58,8 @@ public final class TypeMapper {
     }
 
     public static StopTime map(org.naviqore.gtfs.schedule.model.StopTime stopTime, LocalDate date) {
-        return new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
-                stopTime.departure().toLocalDateTime(date), map(stopTime.trip(), date));
+        return new GtfsRaptorStopTime(map(stopTime.getStop()), stopTime.getArrival().toLocalDateTime(date),
+                stopTime.getDeparture().toLocalDateTime(date), map(stopTime.getTrip(), date));
     }
 
     public static SearchIndex.SearchStrategy map(SearchType searchType) {
@@ -172,7 +172,7 @@ public final class TypeMapper {
         for (int i = 0; i < gtfsTrip.getStopTimes().size(); i++) {
             var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
             // if the fromStop id and the departure time matches, set the departure stop time
-            if (gtfsStopTime.stop().getId().equals(leg.getFromStopId()) && gtfsStopTime.departure()
+            if (gtfsStopTime.getStop().getId().equals(leg.getFromStopId()) && gtfsStopTime.getDeparture()
                     .toLocalTime()
                     .equals(leg.getDepartureTime().toLocalTime())) {
                 departure = trip.getStopTimes().get(i);
@@ -180,7 +180,7 @@ public final class TypeMapper {
             }
 
             // if the toStop id and the arrival time matches, set the arrival stop time
-            if (gtfsStopTime.stop().getId().equals(leg.getToStopId()) && gtfsStopTime.arrival()
+            if (gtfsStopTime.getStop().getId().equals(leg.getToStopId()) && gtfsStopTime.getArrival()
                     .toLocalTime()
                     .equals(leg.getArrivalTime().toLocalTime())) {
                 arrival = trip.getStopTimes().get(i);
@@ -199,8 +199,8 @@ public final class TypeMapper {
         LocalTime departureTime = leg.getDepartureTime().toLocalTime();
 
         for (org.naviqore.gtfs.schedule.model.StopTime stopTime : trip.getStopTimes()) {
-            if (stopTime.stop().getId().equals(StopId) && stopTime.departure().toLocalTime().equals(departureTime)) {
-                int dayShift = stopTime.departure().getTotalSeconds() / SECONDS_IN_DAY;
+            if (stopTime.getStop().getId().equals(StopId) && stopTime.getDeparture().toLocalTime().equals(departureTime)) {
+                int dayShift = stopTime.getDeparture().getTotalSeconds() / SECONDS_IN_DAY;
                 return leg.getDepartureTime().toLocalDate().minusDays(dayShift);
             }
         }

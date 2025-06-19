@@ -182,19 +182,19 @@ class GtfsScheduleTest {
                             ServiceDayTime.parse("08:15:00"), ServiceDayTime.parse("09:15:00"),
                             ServiceDayTime.parse("09:15:00"), ServiceDayTime.parse("10:15:00"));
                     assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
+                            .extracting(StopTime::getDeparture)
                             .containsExactlyElementsOf(expectedDepartures);
 
                     // assert trips are correct
                     List<String> expectedTripIds = List.of("route1_we_f_4", "route1_we_r_4", "route1_we_f_5",
                             "route1_we_r_5", "route1_we_f_6");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
+                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.getTrip().getId()).toList();
                     assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
 
                     // assert routes are correct
                     Set<String> expectedRouteIds = Set.of("route1");
                     List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
+                            .map(stopTime -> stopTime.getTrip().getRoute().getId())
                             .toList();
                     assertThat(routeIds).allMatch(expectedRouteIds::contains);
                 }
@@ -209,19 +209,19 @@ class GtfsScheduleTest {
                             ServiceDayTime.parse("08:03:00"), ServiceDayTime.parse("08:09:00"),
                             ServiceDayTime.parse("08:09:00"), ServiceDayTime.parse("08:15:00"));
                     assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
+                            .extracting(StopTime::getDeparture)
                             .containsExactlyElementsOf(expectedDepartures);
 
                     // assert trips are correct
                     List<String> expectedTripIds = List.of("route3_wd_f_16", "route3_wd_r_17", "route3_wd_f_17",
                             "route3_wd_r_17", "route1_wd_f_7");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
+                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.getTrip().getId()).toList();
                     assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
 
                     // assert routes are correct
                     Set<String> expectedRouteIds = Set.of("route1", "route3");
                     List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
+                            .map(stopTime -> stopTime.getTrip().getRoute().getId())
                             .toList();
                     assertThat(routeIds).allMatch(expectedRouteIds::contains);
                 }
@@ -252,19 +252,19 @@ class GtfsScheduleTest {
                             ServiceDayTime.parse("24:03:00"), ServiceDayTime.parse("24:09:00"),
                             ServiceDayTime.parse("24:09:00"), ServiceDayTime.parse("24:15:00"));
                     assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
+                            .extracting(StopTime::getDeparture)
                             .containsExactlyElementsOf(expectedDepartures);
 
                     // assert trips are correct
                     List<String> expectedTripIds = List.of("route3_wd_f_80", "route3_wd_r_81", "route3_wd_f_81",
                             "route3_wd_r_81", "route1_wd_f_39");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
+                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.getTrip().getId()).toList();
                     assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
 
                     // assert routes are correct
                     Set<String> expectedRouteIds = Set.of("route1", "route3");
                     List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
+                            .map(stopTime -> stopTime.getTrip().getRoute().getId())
                             .toList();
                     assertThat(routeIds).allMatch(expectedRouteIds::contains);
                 }

@@ -101,9 +101,8 @@ class GtfsScheduleParser {
 
     private void parseStopTimes(CSVRecord record) {
         try {
-            builder.addStopTime(record.get("trip_id"), record.get("stop_id"),
-                    ServiceDayTime.parse(record.get("arrival_time")),
-                    ServiceDayTime.parse(record.get("departure_time")));
+            builder.addStopTime(record.get("trip_id"), record.get("stop_id"), Utils.fromHms(record.get("arrival_time")),
+                    Utils.fromHms(record.get("departure_time")));
         } catch (IllegalArgumentException e) {
             log.warn("Skipping invalid stop time {}-{}: {}", record.get("trip_id"), record.get("stop_id"),
                     e.getMessage());
@@ -114,7 +113,7 @@ class GtfsScheduleParser {
         String minTransferTime = record.get("min_transfer_time");
         builder.addTransfer(record.get("from_stop_id"), record.get("to_stop_id"),
                 TransferType.parse(record.get("transfer_type")),
-                minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time")));
+                minTransferTime.isEmpty() ? null : Short.parseShort(record.get("min_transfer_time")));
     }
 
     private static class Utils {
@@ -127,6 +126,13 @@ class GtfsScheduleParser {
             return record.isMapped(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
         }
 
+        private static int fromHms(String timeString) {
+            String[] parts = timeString.split(":");
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            int seconds = Integer.parseInt(parts[2]);
+            return seconds + minutes * 60 + hours * 60 * 60;
+        }
     }
 
 }
