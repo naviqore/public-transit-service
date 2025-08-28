@@ -18,7 +18,9 @@ public enum TransferType {
     RECOMMENDED(0, "Recommended transfer point between two routes."),
     TIMED(1, "Timed transfer between two routes. The departing vehicle is expected to wait for the arriving one."),
     MINIMUM_TIME(2, "Transfer requires a minimum amount of time between arrival and departure to ensure a connection."),
-    NOT_POSSIBLE(3, "Transfer is not possible between routes at this location.");
+    NOT_POSSIBLE(3, "Transfer is not possible between routes at this location."),
+    IN_SEAT(4, "Passengers can transfer from one trip to another by staying onboard the same vehicle."),
+    IN_SEAT_FORBIDDEN(5, "In-seat transfers are not allowed. The passenger must alight from the vehicle and re-board.");
 
     private final int code;
     private final String description;
