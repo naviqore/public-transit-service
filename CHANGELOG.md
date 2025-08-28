@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0](https://github.com/naviqore/public-transit-service/compare/v2.1.1...v2.2.0) (2025-08-28)
+
+
+### Features
+
+* **app:** add support for S3-compatible services ([2ebffeb](https://github.com/naviqore/public-transit-service/commit/2ebffeb70c9c99ada83b6e495d110c1b765f2500))
+* **app:** add support for S3-compatible services ([f8caf65](https://github.com/naviqore/public-transit-service/commit/f8caf6562fea44db752edaf91f00ce6fb6986928))
+* **gtfs:** support for in-seat transfer types ([8e33a09](https://github.com/naviqore/public-transit-service/commit/8e33a096851fa8558c08b3ef7cd6d7faf4305a69))
+* **gtfs:** support for in-seat transfer types ([adc9816](https://github.com/naviqore/public-transit-service/commit/adc98165c20cceb420acda009e72508c8924b520))
+
 ## [2.1.1](https://github.com/naviqore/public-transit-service/compare/v2.1.0...v2.1.1) (2025-05-08)
 
 
