@@ -11,10 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.naviqore.app.dto.Departure;
-import org.naviqore.app.dto.DistanceToStop;
-import org.naviqore.app.dto.SearchType;
-import org.naviqore.app.dto.Stop;
+import org.naviqore.app.dto.*;
 import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.service.Validity;
 import org.naviqore.service.exception.StopNotFoundException;
@@ -92,8 +89,10 @@ public class ScheduleControllerTest {
         @Test
         void shouldSucceedWithValidQuery() {
             String query = "query";
-            when(scheduleInformationService.getStops(query, map(SearchType.STARTS_WITH))).thenReturn(List.of());
-            List<Stop> stops = scheduleController.getAutoCompleteStops(query, 10, SearchType.STARTS_WITH);
+            when(scheduleInformationService.getStops(query, map(SearchType.STARTS_WITH),
+                    map(StopSortStrategy.ALPHABETICAL))).thenReturn(List.of());
+            List<Stop> stops = scheduleController.getAutoCompleteStops(query, 10, SearchType.STARTS_WITH,
+                    StopSortStrategy.ALPHABETICAL);
 
             assertNotNull(stops);
         }
@@ -101,7 +100,8 @@ public class ScheduleControllerTest {
         @Test
         void shouldFailWithNegativeLimit() {
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH));
+                    () -> scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH,
+                            StopSortStrategy.ALPHABETICAL));
 
             assertEquals("Limit must be greater than 0", exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
@@ -110,7 +110,8 @@ public class ScheduleControllerTest {
         @Test
         void shouldFailWithZeroLimit() {
             ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH));
+                    () -> scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH,
+                            StopSortStrategy.ALPHABETICAL));
 
             assertEquals("Limit must be greater than 0", exception.getReason());
             assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
