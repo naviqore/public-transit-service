@@ -47,7 +47,7 @@ public interface ScheduleInformationService {
      *
      * @param like             the search term to match against stop names
      * @param searchType       the type of search to perform (STARTS_WITH, ENDS_WITH, CONTAINS, EXACT)
-     * @param stopSortStrategy the sorting strategy for the results (e.g., RELEVANCE, ALPHABETICAL)
+     * @param stopSortStrategy the sorting strategy for the results (RELEVANCE, ALPHABETICAL)
      * @return a list of stops matching the search criteria
      */
     List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy);
