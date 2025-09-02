@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -102,16 +103,58 @@ class GtfsRaptorServiceIT {
             class SearchStopByName {
 
                 @Test
+                void shouldSortResultsAlphabetically() {
+                    String query = "a";
+                    List<String> expectedOrder = List.of("Amargosa Valley (Demo)", "Doing Ave / D Ave N (Demo)",
+                            "E Main St / S Irving St (Demo)", "Furnace Creek Resort (Demo)",
+                            "North Ave / D Ave N (Demo)", "North Ave / N A Ave (Demo)", "Nye County Airport (Demo)",
+                            "Stagecoach Hotel & Casino (Demo)");
+
+                    List<String> actualOrder = service.getStops(query, SearchType.CONTAINS,
+                            StopSortStrategy.ALPHABETICAL).stream().map(Stop::getName).collect(Collectors.toList());
+
+                    assertFalse(actualOrder.isEmpty());
+                    assertEquals(expectedOrder, actualOrder, "Stops should be sorted alphabetically by name.");
+                }
+
+                @Test
                 void shouldFindStopByName() {
-                    List<Stop> stops = service.getStops("Furnace Creek Resort", SearchType.CONTAINS);
+                    List<Stop> stops = service.getStops("Furnace Creek Resort", SearchType.CONTAINS,
+                            StopSortStrategy.RELEVANCE);
                     assertFalse(stops.isEmpty(), "Expected to find stops matching the name.");
                     assertEquals("Furnace Creek Resort (Demo)", stops.getFirst().getName());
                 }
 
                 @Test
                 void shouldNotFindNonExistingStopByName() {
-                    List<Stop> stops = service.getStops("NonExistingStop", SearchType.CONTAINS);
-                    assertTrue(stops.isEmpty(), "Expected no stops to be found.");
+                    List<Stop> stops = service.getStops("NonExistingStop", SearchType.CONTAINS,
+                            StopSortStrategy.RELEVANCE);
+                    assertTrue(stops.isEmpty(), "Expected no stops to be found for a non-existing name.");
+                }
+
+                @Test
+                void shouldSortResultsByRelevance() {
+                    String query = "North Ave";
+                    List<String> expectedOrder = List.of("North Ave / D Ave N (Demo)", "North Ave / N A Ave (Demo)");
+
+                    List<String> actualOrder = service.getStops(query, SearchType.CONTAINS, StopSortStrategy.RELEVANCE)
+                            .stream()
+                            .map(Stop::getName)
+                            .toList();
+
+                    assertFalse(actualOrder.isEmpty(), "Expected to find stops for the query.");
+                    assertEquals(expectedOrder, actualOrder,
+                            "Stops should be sorted by relevance (starts with, then length).");
+                }
+
+                @Test
+                void shouldPlaceExactMatchFirstWithRelevanceSort() {
+                    String query = "Bullfrog (Demo)";
+                    List<Stop> stops = service.getStops(query, SearchType.CONTAINS, StopSortStrategy.RELEVANCE);
+
+                    assertFalse(stops.isEmpty());
+                    assertEquals("Bullfrog (Demo)", stops.getFirst().getName(),
+                            "The exact match should be the first result.");
                 }
             }
 

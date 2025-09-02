@@ -45,11 +45,12 @@ public interface ScheduleInformationService {
     /**
      * Searches for stops by name.
      *
-     * @param like       the search term to match against stop names
-     * @param searchType the type of search to perform (STARTS_WITH, ENDS_WITH, CONTAINS, EXACT)
+     * @param like             the search term to match against stop names
+     * @param searchType       the type of search to perform (STARTS_WITH, ENDS_WITH, CONTAINS, EXACT)
+     * @param stopSortStrategy the sorting strategy for the results (RELEVANCE, ALPHABETICAL)
      * @return a list of stops matching the search criteria
      */
-    List<Stop> getStops(String like, SearchType searchType);
+    List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy);
 
     /**
      * Retrieves the nearest stop to a given location.

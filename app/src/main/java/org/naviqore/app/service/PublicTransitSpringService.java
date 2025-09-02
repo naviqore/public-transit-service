@@ -73,8 +73,8 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public List<Stop> getStops(String like, SearchType searchType) {
-        return delegate.getStops(like, searchType);
+    public List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy) {
+        return delegate.getStops(like, searchType, stopSortStrategy);
     }
 
     @Override

@@ -167,7 +167,7 @@ class DummyService implements PublicTransitService {
     }
 
     @Override
-    public List<Stop> getStops(String like, SearchType searchType) {
+    public List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy) {
         return STOPS.stream().map(x -> (Stop) x).toList();
     }
 

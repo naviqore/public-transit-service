@@ -59,12 +59,13 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
-    public List<Stop> getStops(String like, SearchType searchType) {
-        log.info("Searching for stops matching '{}', with search type '{}'", like, searchType);
+    public List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy) {
+        log.info("Searching for stops matching '{}', with search type '{}' and sort strategy '{}'", like, searchType,
+                stopSortStrategy);
 
         return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
                 .stream()
-                .sorted(Comparator.comparing(org.naviqore.gtfs.schedule.model.Stop::getName))
+                .sorted(stopSortStrategy.getComparator(like))
                 .map(TypeMapper::map)
                 .toList();
     }

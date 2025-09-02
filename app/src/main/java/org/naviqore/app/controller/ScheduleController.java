@@ -44,9 +44,14 @@ public class ScheduleController {
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
                                            @RequestParam(required = false, defaultValue = "10") int limit,
-                                           @RequestParam(required = false, defaultValue = "STARTS_WITH") SearchType searchType) {
+                                           @RequestParam(required = false, defaultValue = "CONTAINS") SearchType searchType,
+                                           @RequestParam(required = false, defaultValue = "RELEVANCE") StopSortStrategy stopSortStrategy) {
         ScheduleRequestValidator.validateLimit(limit);
-        return service.getStops(query, map(searchType)).stream().map(DtoMapper::map).limit(limit).toList();
+        return service.getStops(query, map(searchType), map(stopSortStrategy))
+                .stream()
+                .map(DtoMapper::map)
+                .limit(limit)
+                .toList();
     }
 
     @Operation(summary = "Get nearest stops", description = "Retrieves a list of stops within a specified distance from a given location.")

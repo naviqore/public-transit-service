@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.naviqore.service.*;
 import org.naviqore.service.SearchType;
+import org.naviqore.service.StopSortStrategy;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -62,6 +63,10 @@ public class DtoMapper {
 
     public static SearchType map(org.naviqore.app.dto.SearchType searchType) {
         return SearchType.valueOf(searchType.name());
+    }
+
+    public static StopSortStrategy map(org.naviqore.app.dto.StopSortStrategy stopSortStrategy) {
+        return StopSortStrategy.valueOf(stopSortStrategy.name());
     }
 
     public static org.naviqore.service.TimeType map(TimeType timeType) {
