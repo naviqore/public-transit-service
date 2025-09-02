@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.3.0](https://github.com/naviqore/public-transit-service/compare/v2.2.0...v2.3.0) (2025-09-02)
+
+
+### Features
+
+* **service:** relevance-based sorting for stop search ([56ac408](https://github.com/naviqore/public-transit-service/commit/56ac40892c6d77d3a760d63f44da5df95c758226))
+* **service:** relevance-based sorting for stop search ([a9126d6](https://github.com/naviqore/public-transit-service/commit/a9126d60dfd206b14670d52e4134bccc543e5505))
+
+
+### Documentation
+
+* **service:** remove "e.g." in Javadoc comment since all options are listed ([e7c403d](https://github.com/naviqore/public-transit-service/commit/e7c403d9a8f9063fda04485f7cb483b737da4798))
+
 ## [2.2.0](https://github.com/naviqore/public-transit-service/compare/v2.1.1...v2.2.0) (2025-08-28)
 
 
