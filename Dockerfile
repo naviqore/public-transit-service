@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-slim AS build
+FROM eclipse-temurin:21-jdk-noble AS build
 WORKDIR /build
 
 COPY . .
@@ -6,10 +6,12 @@ COPY . .
 RUN ./mvnw dependency:go-offline
 RUN ./mvnw clean install -DskipTests -pl app -am
 
-FROM openjdk:21-jdk-slim
+FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
 
-COPY --from=build /build/app/target/*.jar app.jar
+COPY --from=build --chown=nonroot:nonroot /build/app/target/*.jar app.jar
 
+USER nonroot
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+ENTRYPOINT ["/usr/bin/java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=80.0", "-jar", "app.jar"]
