@@ -1,7 +1,7 @@
 package org.naviqore.raptor.router;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -113,7 +113,7 @@ class RouteBuilder {
                           LinkedHashMap<String, StopTime[]> trips) implements Comparable<RouteContainer> {
 
         @Override
-        public int compareTo(@NotNull RouteContainer o) {
+        public int compareTo(@NonNull RouteContainer o) {
             StopTime thisFirstStopTime = this.trips.values().iterator().next()[0];
             StopTime otherFirstStopTime = o.trips.values().iterator().next()[0];
             return Integer.compare(thisFirstStopTime.departure(), otherFirstStopTime.departure());
