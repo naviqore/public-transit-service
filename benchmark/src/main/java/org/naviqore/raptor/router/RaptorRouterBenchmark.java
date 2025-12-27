@@ -64,7 +64,7 @@ public final class RaptorRouterBenchmark {
     private static final int MAX_DAYS_TO_SCAN = 3;
     private static final int RAPTOR_RANGE = -1; // No range raptor
 
-    static void main(String[] args) throws IOException, InterruptedException {
+    static void main() throws IOException, InterruptedException {
         GtfsSchedule schedule = initializeSchedule();
         RaptorAlgorithm raptor = initializeRaptor(schedule);
         RouteRequest[] requests = sampleRouteRequests(schedule);
