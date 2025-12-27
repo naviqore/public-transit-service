@@ -1,6 +1,6 @@
 package org.naviqore.raptor.router;
 
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.Leg;
 import org.naviqore.raptor.TimeType;
@@ -385,7 +385,7 @@ class LabelPostprocessor {
         return new StopTime(stopTimes[stopTimeIndex], stopTimes[stopTimeIndex + 1]);
     }
 
-    private @Nullable QueryState.Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
+    private QueryState.@Nullable Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
         // Loop through the list in reverse order since the first occurrence will be the best target time
         for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
             QueryState.Label label = bestLabelsPerRound.get(i)[stopIdx];

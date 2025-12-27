@@ -3,7 +3,7 @@ package org.naviqore.gtfs.schedule.model;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.TransferType;
 
 import java.util.Objects;

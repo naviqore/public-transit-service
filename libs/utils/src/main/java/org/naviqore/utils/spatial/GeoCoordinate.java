@@ -1,7 +1,7 @@
 package org.naviqore.utils.spatial;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 public record GeoCoordinate(double latitude, double longitude) implements Coordinate, Comparable<GeoCoordinate> {
 
@@ -91,7 +91,7 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
     }
 
     @Override
-    public @NotNull String toString() {
+    public @NonNull String toString() {
         return this.getClass().getSimpleName() + "(lat=" + latitude + "°, lon=" + longitude + "°)";
     }
 }

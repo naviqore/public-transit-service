@@ -4,8 +4,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.Leg;
 
 import java.time.LocalDateTime;
@@ -25,7 +25,7 @@ class RaptorLeg implements Leg {
     private final Type type;
 
     @Override
-    public int compareTo(@NotNull Leg other) {
+    public int compareTo(@NonNull Leg other) {
         // sort legs first by departure time than by arrival time since there some legs that actually have the same
         // departure and arrival time (really short distance local service) and therefore the following leg may
         // have the same departure time but a later arrival time
