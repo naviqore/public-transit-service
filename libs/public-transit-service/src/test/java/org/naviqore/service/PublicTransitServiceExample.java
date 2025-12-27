@@ -23,7 +23,7 @@ public class PublicTransitServiceExample {
     public static final GeoCoordinate DEST_LOCATION = new GeoCoordinate(36.9149, -116.7614);
     public static final LocalDateTime DEPARTURE_TIME = LocalDateTime.of(2007, 1, 1, 0, 0, 0);
 
-    public static void main(
+    static void main(
             String[] args) throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
 
         GtfsScheduleRepository repo = () -> {
