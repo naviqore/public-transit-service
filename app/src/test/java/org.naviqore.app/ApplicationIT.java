@@ -2,9 +2,11 @@ package org.naviqore.app;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.naviqore.app.config.TestRestClientConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -12,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "gtfs.static.uri=../libs/gtfs-sample/src/main/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip"})
+@Import(TestRestClientConfig.class)
 class ApplicationIT {
 
     @Autowired
