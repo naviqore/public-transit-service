@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/naviqore/public-transit-service/compare/v2.3.0...v2.3.1) (2025-12-27)
+
+
+### Bug Fixes
+
+* **docker:** resolve build failure from deprecated base image ([581b8b7](https://github.com/naviqore/public-transit-service/commit/581b8b7199b9e0d59bad055e72c5312a0d975fd4))
+
 ## [2.3.0](https://github.com/naviqore/public-transit-service/compare/v2.2.0...v2.3.0) (2025-09-02)
 
 
