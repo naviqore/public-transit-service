@@ -1,7 +1,7 @@
 package org.naviqore.gtfs.schedule.model;
 
 import lombok.*;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 
 import java.time.DayOfWeek;

@@ -2,21 +2,23 @@ package org.naviqore.app;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 @Slf4j
 public class TestRestRequest {
 
-    private final TestRestTemplate template;
+    private final RestClient restClient;
     private UriComponentsBuilder uriBuilder;
 
     @Autowired
-    public TestRestRequest(TestRestTemplate template) {
-        this.template = template;
+    public TestRestRequest(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder.defaultStatusHandler(statusCode -> true, (request, response) -> {
+            // don't throw exceptions, let tests handle the response
+        }).build();
     }
 
     public TestRestRequest setPort(int port) {
@@ -29,6 +31,7 @@ public class TestRestRequest {
             throw new IllegalStateException("Port must be set before setting the endpoint");
         }
         this.uriBuilder.path(path);
+
         return this;
     }
 
@@ -37,6 +40,7 @@ public class TestRestRequest {
             throw new IllegalStateException("Port must be set before adding parameters");
         }
         this.uriBuilder.queryParam(name, value);
+
         return this;
     }
 
@@ -44,11 +48,13 @@ public class TestRestRequest {
         if (this.uriBuilder == null) {
             throw new IllegalStateException("Port and endpoint must be set before executing the request");
         }
+
         String url = this.uriBuilder.toUriString();
         log.info("Sending GET request to URL: {}", url);
-        ResponseEntity<T> response = template.getForEntity(url, responseType);
+        ResponseEntity<T> response = restClient.get().uri(url).retrieve().toEntity(responseType);
         log.info("Received response with status: {}", response.getStatusCode());
-        return template.getForEntity(url, responseType);
+
+        return response;
     }
 
 }

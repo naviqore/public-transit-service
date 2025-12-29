@@ -1,6 +1,6 @@
 package org.naviqore.service;
 
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.service.exception.RouteNotFoundException;
 import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.service.exception.TripNotActiveException;

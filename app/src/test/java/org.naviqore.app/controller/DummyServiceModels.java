@@ -3,7 +3,7 @@ package org.naviqore.app.controller;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.service.LegType;
 import org.naviqore.service.LegVisitor;
 import org.naviqore.service.TravelMode;

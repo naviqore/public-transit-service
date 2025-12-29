@@ -1,7 +1,6 @@
 package org.naviqore.raptor.router;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -100,7 +99,7 @@ public class RaptorRouterBuilder {
             return this;
         }
 
-        Map<String, Transfer> stopTransfers = transfers.computeIfAbsent(sourceStopId, k -> new HashMap<>());
+        Map<String, Transfer> stopTransfers = transfers.computeIfAbsent(sourceStopId, _ -> new HashMap<>());
         String transferKey = sourceStopId + "-" + targetStopId;
         if (!stopTransfers.containsKey(transferKey)) {
             transferSize++;
@@ -123,7 +122,7 @@ public class RaptorRouterBuilder {
         return new RaptorRouter(lookup, stopContext, routeTraversal, config);
     }
 
-    private @NotNull List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
+    private List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
         return routeBuilders.values().parallelStream().map(RouteBuilder::build).sorted().toList();
     }
 
@@ -237,7 +236,7 @@ public class RaptorRouterBuilder {
         return new RouteTraversal(stopTimeArr, routeArr, routeStopArr);
     }
 
-    private @NotNull RouteBuilder getRouteBuilder(String routeId) {
+    private RouteBuilder getRouteBuilder(String routeId) {
         RouteBuilder routeBuilder = routeBuilders.get(routeId);
         if (routeBuilder == null) {
             throw new IllegalArgumentException("Route " + routeId + " does not exist");

@@ -3,7 +3,7 @@ package org.naviqore.service.gtfs.raptor;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.ToString;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.service.*;
 import org.naviqore.utils.spatial.GeoCoordinate;
 

@@ -2,7 +2,7 @@ package org.naviqore.service.gtfs.raptor;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.raptor.router.RaptorRouter;
 import org.naviqore.service.*;

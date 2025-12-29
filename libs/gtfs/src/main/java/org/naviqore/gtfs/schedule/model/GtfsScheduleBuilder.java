@@ -3,7 +3,7 @@ package org.naviqore.gtfs.schedule.model;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.*;
 import org.naviqore.utils.cache.ValueObjectCache;
 import org.naviqore.utils.spatial.GeoCoordinate;

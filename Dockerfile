@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-noble AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /build
 
 COPY . .
@@ -6,7 +6,7 @@ COPY . .
 RUN ./mvnw dependency:go-offline
 RUN ./mvnw clean install -DskipTests -pl app -am
 
-FROM gcr.io/distroless/java21-debian12
+FROM gcr.io/distroless/java25-debian13
 WORKDIR /app
 
 COPY --from=build --chown=nonroot:nonroot /build/app/target/*.jar app.jar

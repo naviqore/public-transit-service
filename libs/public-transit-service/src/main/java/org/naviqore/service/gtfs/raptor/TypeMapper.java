@@ -2,7 +2,7 @@ package org.naviqore.service.gtfs.raptor;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.type.*;
 import org.naviqore.raptor.QueryConfig;

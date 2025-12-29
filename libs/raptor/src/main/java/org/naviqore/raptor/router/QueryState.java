@@ -1,7 +1,7 @@
 package org.naviqore.raptor.router;
 
 import lombok.Getter;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.TimeType;
 
 import java.util.ArrayList;

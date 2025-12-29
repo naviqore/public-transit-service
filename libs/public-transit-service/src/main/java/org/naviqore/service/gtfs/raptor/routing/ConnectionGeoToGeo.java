@@ -1,6 +1,6 @@
 package org.naviqore.service.gtfs.raptor.routing;
 
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.service.Connection;
 import org.naviqore.service.Leg;

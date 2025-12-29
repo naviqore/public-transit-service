@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.naviqore.utils.spatial.Location;
