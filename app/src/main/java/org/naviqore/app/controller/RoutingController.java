@@ -9,22 +9,18 @@ import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.app.dto.*;
-import org.naviqore.app.service.ValidationService;
 import org.naviqore.service.PublicTransitService;
 import org.naviqore.service.RoutingFeatures;
 import org.naviqore.service.Stop;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
-import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -58,8 +54,9 @@ public class RoutingController {
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema()))
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false) Double sourceLatitude,
@@ -77,38 +74,39 @@ public class RoutingController {
                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                            @RequestParam(required = false) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
         // get coordinates if available
-        GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                "source");
-        GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
-                "target");
+        GeoCoordinate sourceCoordinate = RequestValidator.getCoordinateIfAvailable(sourceStopId, sourceLatitude,
+                sourceLongitude, StopType.SOURCE);
+        GeoCoordinate targetCoordinate = RequestValidator.getCoordinateIfAvailable(targetStopId, targetLatitude,
+                targetLongitude, StopType.TARGET);
 
         // get stops if available
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, "source");
-        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, "target");
+        Stop sourceStop = RequestValidator.getStopIfAvailable(sourceStopId, service, StopType.SOURCE);
+        Stop targetStop = RequestValidator.getStopIfAvailable(targetStopId, service, StopType.TARGET);
 
         // configure routing request
-        dateTime = ValidationService.validateAndSetDefaultDateTime(dateTime, service);
+        dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
-            ValidationService.validateStopsAreDifferent(sourceStopId, targetStopId);
+            RequestValidator.validateStopsAreDifferent(sourceStopId, targetStopId);
             return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
         } else if (sourceStop != null) {
             return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
         } else if (targetStop != null) {
             return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
         } else {
-            assert sourceCoordinate != null; // never happens --> see ValidationService.validateStopParametersMutualExclusivity
-            ValidationService.validateCoordinatesAreDifferent(sourceCoordinate, targetCoordinate);
+            assert sourceCoordinate != null; // never happens
+            RequestValidator.validateCoordinatesAreDifferent(sourceCoordinate, targetCoordinate);
             return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
         }
     }
 
     @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified stop or location at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of stop and fastest connection pairs for each reachable stop.")
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "404", description = "StopID does not exist", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema()))
     @GetMapping("/isolines")
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
                                             @RequestParam(required = false) Double sourceLatitude,
@@ -125,12 +123,12 @@ public class RoutingController {
                                             @RequestParam(required = false, defaultValue = "false") boolean returnConnections) throws ConnectionRoutingException {
 
         // get stops or coordinates if available
-        GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                "source");
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, "source");
+        GeoCoordinate sourceCoordinate = RequestValidator.getCoordinateIfAvailable(sourceStopId, sourceLatitude,
+                sourceLongitude, StopType.SOURCE);
+        Stop sourceStop = RequestValidator.getStopIfAvailable(sourceStopId, service, StopType.SOURCE);
 
         // configure routing request
-        dateTime = ValidationService.validateAndSetDefaultDateTime(dateTime, service);
+        dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
 
@@ -144,26 +142,6 @@ public class RoutingController {
     }
 
     private static class Utils {
-
-        private static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId,
-                                                                        @Nullable Double latitude,
-                                                                        @Nullable Double longitude, String stopType) {
-            ValidationService.validateStopParametersMutualExclusivity(stopId, latitude, longitude, stopType);
-            return stopId == null ? ValidationService.validateAndCreateCoordinate(latitude, longitude) : null;
-        }
-
-        private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, PublicTransitService service,
-                                                         String stopType) {
-            if (stopId == null) {
-                return null;
-            }
-            try {
-                return service.getStopById(stopId);
-            } catch (StopNotFoundException e) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        String.format("The requested %s stop with ID '%s' was not found.", stopType, stopId), e);
-            }
-        }
 
         private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
                                                           @Nullable Integer maxTransferNumber,
@@ -182,7 +160,7 @@ public class RoutingController {
             }
 
             // validate feature support
-            ValidationService.validateRoutingFeatureSupport(maxWalkingDuration, maxTransferNumber, maxTravelTime,
+            RequestValidator.validateRoutingFeatureSupport(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                     minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
 
             return ConnectionQueryConfig.builder()

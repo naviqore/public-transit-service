@@ -13,13 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.naviqore.app.dto.*;
 import org.naviqore.app.exception.InvalidCoordinatesException;
-import org.naviqore.app.exception.InvalidRoutingParametersException;
+import org.naviqore.app.exception.InvalidParametersException;
+import org.naviqore.app.exception.StopNotFoundException;
 import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.service.Validity;
-import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -143,7 +141,7 @@ public class ScheduleControllerTest {
     class GetStop {
 
         @Test
-        void shouldSucceedWithValidQuery() throws StopNotFoundException {
+        void shouldSucceedWithValidQuery() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
@@ -152,12 +150,14 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldFailWithStopNotFoundException() throws StopNotFoundException {
+        void shouldFailWithStopNotFoundException() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
-            when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            when(scheduleInformationService.getStopById(stopId)).thenThrow(
+                    org.naviqore.service.exception.StopNotFoundException.class);
+            StopNotFoundException exception = assertThrows(StopNotFoundException.class,
                     () -> scheduleController.getStop(stopId));
-            assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
+            assertEquals("Stop with ID 'stopId' not found.", exception.getMessage());
+            assertEquals("stopId", exception.getStopId());
         }
 
     }
@@ -178,7 +178,7 @@ public class ScheduleControllerTest {
         // This test would need to be an integration test to verify ConstraintViolationException handling
 
         @Test
-        void shouldSucceedWithNullUntilDateTime() throws StopNotFoundException {
+        void shouldSucceedWithNullUntilDateTime() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             int limit = 10;
             LocalDateTime departureTime = LocalDateTime.now().plusDays(2);
@@ -192,7 +192,7 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldSucceedWithValidQuery() throws StopNotFoundException {
+        void shouldSucceedWithValidQuery() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
@@ -204,7 +204,7 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldSucceedWithNullDepartureDateTime() throws StopNotFoundException {
+        void shouldSucceedWithNullDepartureDateTime() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             int limit = 10;
             LocalDateTime untilTime = LocalDateTime.now().plusMinutes(1);
@@ -218,7 +218,7 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldSucceedWithDepartureDateTime() throws StopNotFoundException {
+        void shouldSucceedWithDepartureDateTime() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             int limit = 10;
             LocalDateTime departureTime = LocalDateTime.now().plusDays(2);
@@ -233,12 +233,14 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldFailWithStopNotFoundException() throws StopNotFoundException {
+        void shouldFailWithStopNotFoundException() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
-            when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            when(scheduleInformationService.getStopById(stopId)).thenThrow(
+                    org.naviqore.service.exception.StopNotFoundException.class);
+            StopNotFoundException exception = assertThrows(StopNotFoundException.class,
                     () -> scheduleController.getDepartures(stopId, null, 10, null));
-            assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
+            assertEquals("Stop with ID 'stopId' not found.", exception.getMessage());
+            assertEquals("stopId", exception.getStopId());
         }
 
         @Test
@@ -247,7 +249,7 @@ public class ScheduleControllerTest {
             LocalDateTime departureTime = LocalDateTime.now();
             LocalDateTime untilTime = departureTime.minusMinutes(1);
 
-            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
+            InvalidParametersException exception = assertThrows(InvalidParametersException.class,
                     () -> scheduleController.getDepartures(stopId, departureTime, 10, untilTime));
             assertEquals("Until date time must be after departure date time.", exception.getMessage());
         }
