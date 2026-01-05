@@ -12,6 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.naviqore.app.dto.*;
+import org.naviqore.app.exception.InvalidCoordinatesException;
+import org.naviqore.app.exception.InvalidRoutingParametersException;
 import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.service.Validity;
 import org.naviqore.service.exception.StopNotFoundException;
@@ -97,25 +99,8 @@ public class ScheduleControllerTest {
             assertNotNull(stops);
         }
 
-        @Test
-        void shouldFailWithNegativeLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH,
-                            StopSortStrategy.ALPHABETICAL));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithZeroLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH,
-                            StopSortStrategy.ALPHABETICAL));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+        // Note: Limit validation is now handled by Bean Validation (@Min(1)) at the framework level
+        // These tests would need to be integration tests to verify ConstraintViolationException handling
 
     }
 
@@ -136,32 +121,8 @@ public class ScheduleControllerTest {
             assertNotNull(stops);
         }
 
-        @Test
-        void shouldFailWithNegativeLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, 1000, -10));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithZeroLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, 1000, 0));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithNegativeMaxDistance() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, -1000, 10));
-
-            assertEquals("Max distance cannot be negative", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+        // Note: Limit and maxDistance validation is now handled by Bean Validation (@Min) at the framework level
+        // These tests would need to be integration tests to verify ConstraintViolationException handling
 
         @ParameterizedTest(name = "Test case {index}: Latitude={0}, Longitude={1}")
         @CsvSource({"91, 0",    // Invalid latitude
@@ -172,9 +133,9 @@ public class ScheduleControllerTest {
                 "-91, -181" // Invalid latitude and longitude
         })
         void shouldFailWithInvalidCoordinates(double latitude, double longitude) {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
                     () -> scheduleController.getNearestStops(latitude, longitude, 1000, 10));
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            assertNotNull(exception.getMessage());
         }
     }
 
@@ -213,14 +174,8 @@ public class ScheduleControllerTest {
             when(validity.isWithin(any(LocalDate.class))).thenReturn(true);
         }
 
-        @Test
-        void shouldFailWithInvalidLimit() {
-            int limit = 0;
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getDepartures("stopId", null, limit, null));
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
+        // Note: Limit validation is now handled by Bean Validation (@Min(1)) at the framework level
+        // This test would need to be an integration test to verify ConstraintViolationException handling
 
         @Test
         void shouldSucceedWithNullUntilDateTime() throws StopNotFoundException {
@@ -292,9 +247,9 @@ public class ScheduleControllerTest {
             LocalDateTime departureTime = LocalDateTime.now();
             LocalDateTime untilTime = departureTime.minusMinutes(1);
 
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> scheduleController.getDepartures(stopId, departureTime, 10, untilTime));
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            assertEquals("Until date time must be after departure date time.", exception.getMessage());
         }
 
     }

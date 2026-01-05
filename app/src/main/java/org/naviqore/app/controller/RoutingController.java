@@ -5,18 +5,21 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.app.dto.*;
+import org.naviqore.app.service.ValidationService;
 import org.naviqore.service.PublicTransitService;
 import org.naviqore.service.RoutingFeatures;
-import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.service.Stop;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
+import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +36,7 @@ import static org.naviqore.app.dto.DtoMapper.map;
 @RestController
 @RequestMapping("/routing")
 @Tag(name = "routing", description = "APIs related to routing and connections")
+@Validated
 public class RoutingController {
 
     private final PublicTransitService service;
@@ -40,11 +44,6 @@ public class RoutingController {
     @Autowired
     public RoutingController(PublicTransitService service) {
         this.service = service;
-    }
-
-    private static void handleConnectionRoutingException(ConnectionRoutingException e) {
-        log.error("Connection routing exception", e);
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
     @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
@@ -70,44 +69,39 @@ public class RoutingController {
                                            @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) LocalDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                           @RequestParam(required = false) Integer maxWalkingDuration,
-                                           @RequestParam(required = false) Integer maxTransferNumber,
-                                           @RequestParam(required = false) Integer maxTravelTime,
-                                           @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                           @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
+                                           @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
+                                           @RequestParam(required = false) @Min(1) Integer maxTravelTime,
+                                           @RequestParam(required = false, defaultValue = "0") @Min(0) int minTransferTime,
                                            @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
-                                           @RequestParam(required = false) EnumSet<TravelMode> travelModes) {
+                                           @RequestParam(required = false) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
         // get coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                GlobalValidator.StopType.SOURCE);
+                "source");
         GeoCoordinate targetCoordinate = Utils.getCoordinateIfAvailable(targetStopId, targetLatitude, targetLongitude,
-                GlobalValidator.StopType.TARGET);
+                "target");
 
         // get stops if available
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
-        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, GlobalValidator.StopType.TARGET);
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, "source");
+        Stop targetStop = Utils.getStopIfAvailable(targetStopId, service, "target");
 
         // configure routing request
-        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
+        dateTime = ValidationService.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
         // determine routing case and get connections
-        try {
-            if (sourceStop != null && targetStop != null) {
-                RoutingRequestValidator.validateStops(sourceStopId, targetStopId);
-                return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
-            } else if (sourceStop != null) {
-                return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
-            } else if (targetStop != null) {
-                return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
-            } else {
-                assert sourceCoordinate != null; // never happens --> see RoutingRequestValidator.validateStopParameters
-                RoutingRequestValidator.validateCoordinates(sourceCoordinate, targetCoordinate);
-                return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
-            }
-        } catch (ConnectionRoutingException e) {
-            handleConnectionRoutingException(e);
-            return null;
+        if (sourceStop != null && targetStop != null) {
+            ValidationService.validateStopsAreDifferent(sourceStopId, targetStopId);
+            return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
+        } else if (sourceStop != null) {
+            return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
+        } else if (targetStop != null) {
+            return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
+        } else {
+            assert sourceCoordinate != null; // never happens --> see ValidationService.validateStopParametersMutualExclusivity
+            ValidationService.validateCoordinatesAreDifferent(sourceCoordinate, targetCoordinate);
+            return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
         }
     }
 
@@ -121,37 +115,31 @@ public class RoutingController {
                                             @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) LocalDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
-                                            @RequestParam(required = false) Integer maxWalkingDuration,
-                                            @RequestParam(required = false) Integer maxTransferNumber,
-                                            @RequestParam(required = false) Integer maxTravelTime,
-                                            @RequestParam(required = false, defaultValue = "0") int minTransferTime,
+                                            @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
+                                            @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
+                                            @RequestParam(required = false) @Min(1) Integer maxTravelTime,
+                                            @RequestParam(required = false, defaultValue = "0") @Min(0) int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                             @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                             @RequestParam(required = false) EnumSet<TravelMode> travelModes,
-                                            @RequestParam(required = false, defaultValue = "false") boolean returnConnections) {
+                                            @RequestParam(required = false, defaultValue = "false") boolean returnConnections) throws ConnectionRoutingException {
 
         // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = Utils.getCoordinateIfAvailable(sourceStopId, sourceLatitude, sourceLongitude,
-                GlobalValidator.StopType.SOURCE);
-        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, GlobalValidator.StopType.SOURCE);
+                "source");
+        Stop sourceStop = Utils.getStopIfAvailable(sourceStopId, service, "source");
 
         // configure routing request
-        dateTime = GlobalValidator.validateAndSetDefaultDateTime(dateTime, service);
+        dateTime = ValidationService.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get isolines
-        try {
-            if (sourceStop != null) {
-                return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType,
-                        returnConnections);
-            } else {
-                return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType,
-                        returnConnections);
-            }
-        } catch (ConnectionRoutingException e) {
-            handleConnectionRoutingException(e);
-            return null;
+        if (sourceStop != null) {
+            return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType, returnConnections);
+        } else {
+            return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType,
+                    returnConnections);
         }
     }
 
@@ -159,15 +147,22 @@ public class RoutingController {
 
         private static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId,
                                                                         @Nullable Double latitude,
-                                                                        @Nullable Double longitude,
-                                                                        GlobalValidator.StopType stopType) {
-            RoutingRequestValidator.validateStopParameters(stopId, latitude, longitude, stopType);
-            return stopId == null ? RoutingRequestValidator.validateCoordinate(latitude, longitude) : null;
+                                                                        @Nullable Double longitude, String stopType) {
+            ValidationService.validateStopParametersMutualExclusivity(stopId, latitude, longitude, stopType);
+            return stopId == null ? ValidationService.validateAndCreateCoordinate(latitude, longitude) : null;
         }
 
-        private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, ScheduleInformationService service,
-                                                         GlobalValidator.StopType stopType) {
-            return stopId != null ? GlobalValidator.validateAndGetStop(stopId, service, stopType) : null;
+        private static @Nullable Stop getStopIfAvailable(@Nullable String stopId, PublicTransitService service,
+                                                         String stopType) {
+            if (stopId == null) {
+                return null;
+            }
+            try {
+                return service.getStopById(stopId);
+            } catch (StopNotFoundException e) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        String.format("The requested %s stop with ID '%s' was not found.", stopType, stopId), e);
+            }
         }
 
         private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
@@ -186,9 +181,9 @@ public class RoutingController {
                 travelModes = EnumSet.allOf(TravelMode.class);
             }
 
-            // validate and create config
-            RoutingRequestValidator.validateQueryParams(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                    minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
+            // validate feature support
+            ValidationService.validateRoutingFeatureSupport(maxWalkingDuration, maxTransferNumber, maxTravelTime,
+                    minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
 
             return ConnectionQueryConfig.builder()
                     .maximumWalkingDuration(maxWalkingDuration)

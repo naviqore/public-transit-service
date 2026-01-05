@@ -6,6 +6,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.naviqore.app.dto.*;
+import org.naviqore.app.exception.InvalidCoordinatesException;
+import org.naviqore.app.exception.InvalidRoutingParametersException;
+import org.naviqore.app.exception.ValidationException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.server.ResponseStatusException;
@@ -38,6 +41,8 @@ public class RoutingControllerTest {
         boolean hasBikeInformation = true;
         boolean hasTravelModeInformation = true;
 
+        // Note: Negative value tests removed - Bean Validation (@Min) handles these at framework level
+        // These should be tested in integration tests, not unit tests
         return Stream.of(
                 Arguments.of("validValues", validMaxWalkingDuration, validMaxTransferDuration, validMaxTravelTime,
                         validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
@@ -45,28 +50,12 @@ public class RoutingControllerTest {
                 Arguments.of("maxWalkingDurationEqualsNull", null, validMaxTransferDuration, validMaxTravelTime,
                         validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("invalidMaxWalkingDuration", -1, validMaxTransferDuration, validMaxTravelTime,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
-                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        "Max walking duration must be greater than or equal to 0."),
                 Arguments.of("maxTransferDurationEqualsNull", validMaxWalkingDuration, null, validMaxTravelTime,
                         validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("invalidMaxTransferDuration", validMaxWalkingDuration, -1, validMaxTravelTime,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
-                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        "Max transfer number must be greater than or equal to 0."),
                 Arguments.of("maxTravelTimeEqualsNull", validMaxWalkingDuration, validMaxTransferDuration, null,
                         validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("invalidMaxTravelTime", validMaxWalkingDuration, validMaxTransferDuration, -1,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
-                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        "Max travel time must be greater than 0."),
-                Arguments.of("invalidMinTransferTime", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, -1, validWheelChairAccessible, validBikeAllowed, validTravelModes,
-                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        "Min transfer time must be greater than or equal to 0."),
                 Arguments.of("wheelchairAccessibleWhenServiceProvidesNoSupport", validMaxWalkingDuration,
                         validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, true, validBikeAllowed,
                         validTravelModes, false, hasBikeInformation, hasTravelModeInformation,
@@ -111,14 +100,15 @@ public class RoutingControllerTest {
 
     List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
                                     String targetStopId, Double targetLatitude, Double targetLongitude,
-                                    LocalDateTime departureDateTime) {
+                                    LocalDateTime departureDateTime) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getConnections(sourceStopId, sourceLatitude, sourceLongitude, targetStopId,
                 targetLatitude, targetLongitude, departureDateTime, TimeType.DEPARTURE, null, null, null, 0, false,
                 false, null);
     }
 
     List<StopConnection> getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
-                                     LocalDateTime departureDateTime, TimeType timeType, boolean returnConnections) {
+                                     LocalDateTime departureDateTime, TimeType timeType,
+                                     boolean returnConnections) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getIsolines(sourceStopId, sourceLatitude, sourceLongitude, departureDateTime, timeType,
                 null, null, null, 0, false, false, null, returnConnections);
     }
@@ -131,7 +121,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testWithValidSourceAndTargetStopIds() {
+        void testWithValidSourceAndTargetStopIds() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             String sourceStopId = "A";
             String targetStopId = "G";
@@ -146,7 +136,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testWithoutSourceStopIdButWithCoordinates() {
+        void testWithoutSourceStopIdButWithCoordinates() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             double sourceLatitude = 46.2044;
             double sourceLongitude = 6.1432;
@@ -181,12 +171,11 @@ public class RoutingControllerTest {
             String targetStopId = "A";
             LocalDateTime departureDateTime = LocalDateTime.now();
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections(sourceStopId, null, null, targetStopId, null, null, departureDateTime));
             assertEquals(
                     "The source stop ID and target stop ID cannot be the same. Please provide different stop IDs for the source and target.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
@@ -196,62 +185,56 @@ public class RoutingControllerTest {
             double longitude = 6.1432;
             LocalDateTime departureDateTime = LocalDateTime.now();
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections(null, latitude, longitude, null, latitude, longitude, departureDateTime));
             assertEquals(
                     "The source and target coordinates cannot be the same. Please provide different coordinates for the source and target.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections(null, null, null, "targetStopId", null, null, LocalDateTime.now()));
             assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testMissingTargetStopAndTargetCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections("sourceStopId", null, null, null, null, null, LocalDateTime.now()));
             assertEquals("Either targetStopId or targetLatitude and targetLongitude must be provided.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testGivenSourceStopAndSourceCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections("sourceStopId", 0., 0., "targetStopId", null, null, LocalDateTime.now()));
             assertEquals("Only sourceStopId or sourceLatitude and sourceLongitude must be provided, but not both.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testGivenTargetStopAndTargetCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getConnections("sourceStopId", null, null, "targetStopId", 0., 0., LocalDateTime.now()));
             assertEquals("Only targetStopId or targetLatitude and targetLongitude must be provided, but not both.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testInvalidCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
                     () -> getConnections(null, 91., 181., null, 32., 32., LocalDateTime.now()));
-            assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            assertEquals("Coordinates must be valid: Latitude between -90 and 90, Longitude between -180 and 180.",
+                    exception.getMessage());
         }
 
         @ParameterizedTest(name = "connectionQueryConfig_{0}")
@@ -260,7 +243,8 @@ public class RoutingControllerTest {
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
-                                   boolean hasTravelModeInformation, String errorMessage) {
+                                   boolean hasTravelModeInformation,
+                                   String errorMessage) throws org.naviqore.service.exception.ConnectionRoutingException {
 
             dummyService.setHasAccessibilityInformation(hasAccessibilityInformation);
             dummyService.setHasBikeInformation(hasBikeInformation);
@@ -271,12 +255,11 @@ public class RoutingControllerTest {
                         maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes);
             } else {
-                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                ValidationException exception = assertThrows(ValidationException.class,
                         () -> routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(),
                                 TimeType.DEPARTURE, maxWalkingDuration, maxTransferDuration, maxTravelTime,
                                 minTransferTime, wheelChairAccessible, bikeAllowed, travelModes));
-                assertEquals(errorMessage, exception.getReason());
-                assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                assertEquals(errorMessage, exception.getMessage());
             }
         }
     }
@@ -289,7 +272,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromStopReturnConnectionsFalse() {
+        void testFromStopReturnConnectionsFalse() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             String sourceStopId = "A";
             LocalDateTime time = LocalDateTime.now();
@@ -312,7 +295,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromStopReturnConnectionsTrue() {
+        void testFromStopReturnConnectionsTrue() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             String sourceStopId = "A";
             // This tests if the time is set to now if null
@@ -355,7 +338,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromCoordinatesReturnConnectionsFalse() {
+        void testFromCoordinatesReturnConnectionsFalse() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             double sourceLatitude = 46.2044;
             double sourceLongitude = 6.1432;
@@ -379,7 +362,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromCoordinateReturnConnectionsTrue() {
+        void testFromCoordinateReturnConnectionsTrue() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
             // This tests if the time is set to now if null
@@ -423,7 +406,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromStopReturnConnectionsTrueTimeTypeArrival() {
+        void testFromStopReturnConnectionsTrueTimeTypeArrival() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             String sourceStopId = "G";
 
@@ -468,7 +451,7 @@ public class RoutingControllerTest {
         }
 
         @Test
-        void testFromCoordinateReturnConnectionsTrueTimeTypeArrival() {
+        void testFromCoordinateReturnConnectionsTrueTimeTypeArrival() throws org.naviqore.service.exception.ConnectionRoutingException {
             // Arrange
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
 
@@ -530,31 +513,28 @@ public class RoutingControllerTest {
         @Test
         void testMissingSourceStopAndSourceCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getIsolines(null, null, null, LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Either sourceStopId or sourceLatitude and sourceLongitude must be provided.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testGivenSourceStopAndSourceCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidRoutingParametersException exception = assertThrows(InvalidRoutingParametersException.class,
                     () -> getIsolines("sourceStopId", 0., 0.1, LocalDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Only sourceStopId or sourceLatitude and sourceLongitude must be provided, but not both.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                    exception.getMessage());
         }
 
         @Test
         void testInvalidCoordinates() {
             // Act & Assert
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
                     () -> getIsolines(null, 91., 181., LocalDateTime.now(), TimeType.DEPARTURE, false));
-            assertEquals("Coordinates must be valid, Latitude between -90 and 90 and Longitude between -180 and 180.",
-                    exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            assertEquals("Coordinates must be valid: Latitude between -90 and 90, Longitude between -180 and 180.",
+                    exception.getMessage());
         }
 
         @ParameterizedTest(name = "isolineQueryConfig_{0}")
@@ -563,7 +543,8 @@ public class RoutingControllerTest {
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
-                                   boolean hasTravelModeInformation, String errorMessage) {
+                                   boolean hasTravelModeInformation,
+                                   String errorMessage) throws org.naviqore.service.exception.ConnectionRoutingException {
 
             dummyService.setHasAccessibilityInformation(hasAccessibilityInformation);
             dummyService.setHasBikeInformation(hasBikeInformation);
@@ -574,12 +555,11 @@ public class RoutingControllerTest {
                         maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes, false);
             } else {
-                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                ValidationException exception = assertThrows(ValidationException.class,
                         () -> routingController.getIsolines("A", null, null, LocalDateTime.now(), TimeType.DEPARTURE,
                                 maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime,
                                 wheelChairAccessible, bikeAllowed, travelModes, false));
-                assertEquals(errorMessage, exception.getReason());
-                assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+                assertEquals(errorMessage, exception.getMessage());
             }
         }
     }
