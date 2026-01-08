@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.Leg;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Objects;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -20,8 +20,8 @@ class RaptorLeg implements Leg {
     private final @Nullable String tripId;
     private final String fromStopId;
     private final String toStopId;
-    private final LocalDateTime departureTime;
-    private final LocalDateTime arrivalTime;
+    private final OffsetDateTime departureTime;
+    private final OffsetDateTime arrivalTime;
     private final Type type;
 
     @Override

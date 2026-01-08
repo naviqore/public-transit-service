@@ -1,6 +1,6 @@
 package org.naviqore.raptor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +18,7 @@ public interface RaptorAlgorithm {
      * @throws InvalidTimeException     if departure or arrival times are invalid
      * @throws IllegalArgumentException for other argument related errors
      */
-    List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops, Map<String, Integer> arrivalStops,
+    List<Connection> routeEarliestArrival(Map<String, OffsetDateTime> departureStops, Map<String, Integer> arrivalStops,
                                           QueryConfig config);
 
     /**
@@ -33,7 +33,7 @@ public interface RaptorAlgorithm {
      * @throws InvalidTimeException     if departure or arrival times are invalid
      * @throws IllegalArgumentException for other argument related errors
      */
-    List<Connection> routeLatestDeparture(Map<String, Integer> departureStops, Map<String, LocalDateTime> arrivalStops,
+    List<Connection> routeLatestDeparture(Map<String, Integer> departureStops, Map<String, OffsetDateTime> arrivalStops,
                                           QueryConfig config);
 
     /**
@@ -48,7 +48,7 @@ public interface RaptorAlgorithm {
      * @throws InvalidTimeException     if source time is invalid
      * @throws IllegalArgumentException for other argument related errors
      */
-    Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
+    Map<String, Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops, TimeType timeType,
                                           QueryConfig config);
 
     class InvalidStopException extends IllegalArgumentException {

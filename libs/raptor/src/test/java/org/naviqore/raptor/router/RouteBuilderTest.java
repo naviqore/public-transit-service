@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -11,6 +12,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RouteBuilderTest {
+
+    private static final ZoneId ZONE_ID = ZoneId.of("UTC");
 
     private static final String ROUTE_1 = "route1";
     private static final String TRIP_1 = "trip1";
@@ -26,7 +29,7 @@ class RouteBuilderTest {
 
         @BeforeEach
         void setUp() {
-            builder = new RouteBuilder(ROUTE_1, STOP_IDS);
+            builder = new RouteBuilder(ROUTE_1, ZONE_ID, STOP_IDS);
             builder.addTrip(TRIP_1);
         }
 
@@ -141,7 +144,7 @@ class RouteBuilderTest {
 
         @BeforeEach
         void setUp() {
-            builder = new RouteBuilder(ROUTE_1, STOP_IDS);
+            builder = new RouteBuilder(ROUTE_1, ZONE_ID, STOP_IDS);
             builder.addTrip(TRIP_1);
         }
 
@@ -200,7 +203,7 @@ class RouteBuilderTest {
 
         @BeforeEach
         void setUp() {
-            builder = new RouteBuilder(ROUTE_1, STOP_IDS_1);
+            builder = new RouteBuilder(ROUTE_1, ZONE_ID, STOP_IDS_1);
             builder.addTrip(TRIP_1);
         }
 
@@ -244,7 +247,7 @@ class RouteBuilderTest {
             @BeforeEach
             void setUp() {
                 builder.addTrip(TRIP_2);
-                builder2 = new RouteBuilder(ROUTE_2, STOP_IDS_2);
+                builder2 = new RouteBuilder(ROUTE_2, ZONE_ID, STOP_IDS_2);
                 builder2.addTrip(TRIP_1);
                 builder2.addTrip(TRIP_2);
             }

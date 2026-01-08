@@ -2,6 +2,7 @@ package org.naviqore.raptor.router;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.ZoneId;
 import java.util.*;
 
 import static org.naviqore.raptor.router.QueryState.NO_INDEX;
@@ -49,7 +50,7 @@ public class RaptorRouterBuilder {
         return this;
     }
 
-    public RaptorRouterBuilder addRoute(String id, List<String> stopIds) {
+    public RaptorRouterBuilder addRoute(String id, ZoneId zoneId, List<String> stopIds) {
         if (routeBuilders.containsKey(id)) {
             throw new IllegalArgumentException("Route " + id + " already exists");
         }
@@ -62,7 +63,7 @@ public class RaptorRouterBuilder {
         }
 
         log.debug("Adding route: id={}, stopSequence={}", id, stopIds);
-        routeBuilders.put(id, new RouteBuilder(id, stopIds));
+        routeBuilders.put(id, new RouteBuilder(id, zoneId, stopIds));
         routeStopSize += stopIds.size();
 
         return this;
@@ -210,8 +211,8 @@ public class RaptorRouterBuilder {
             // add route entry to route array
             final int numberOfStops = routeContainer.stopSequence().size();
             final int numberOfTrips = routeContainer.trips().size();
-            routeArr[routeIdx] = new Route(routeContainer.id(), routeStopCnt, numberOfStops, stopTimeCnt, numberOfTrips,
-                    routeContainer.trips().keySet().toArray(new String[0]));
+            routeArr[routeIdx] = new Route(routeContainer.id(), routeContainer.zoneId(), routeStopCnt, numberOfStops,
+                    stopTimeCnt, numberOfTrips, routeContainer.trips().keySet().toArray(new String[0]));
 
             // will be route day min/max values
             stopTimeArr[stopTimeCnt++] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;

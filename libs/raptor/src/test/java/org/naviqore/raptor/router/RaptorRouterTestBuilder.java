@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import lombok.NoArgsConstructor;
 import org.naviqore.raptor.RaptorAlgorithm;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +43,8 @@ import java.util.Set;
 @NoArgsConstructor
 public class RaptorRouterTestBuilder {
 
+    public static final ZoneId ZONE_ID = ZoneId.of("UTC");
+
     static final int SECONDS_IN_HOUR = 3600;
     static final int DAY_START_HOUR = 5;
     static final int DAY_END_HOUR = 25;
@@ -78,8 +81,8 @@ public class RaptorRouterTestBuilder {
             }
 
             // add routes
-            builder.addRoute(routeIdF, route.stops);
-            builder.addRoute(routeIdR, route.stops.reversed());
+            builder.addRoute(routeIdF, ZONE_ID, route.stops);
+            builder.addRoute(routeIdR, ZONE_ID, route.stops.reversed());
 
             // add trips
             int tripCount = 0;

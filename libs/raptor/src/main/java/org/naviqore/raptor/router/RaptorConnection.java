@@ -8,7 +8,7 @@ import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.Leg;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,12 +51,12 @@ class RaptorConnection implements Connection {
     }
 
     @Override
-    public LocalDateTime getDepartureTime() {
+    public OffsetDateTime getDepartureTime() {
         return legs.getFirst().getDepartureTime();
     }
 
     @Override
-    public LocalDateTime getArrivalTime() {
+    public OffsetDateTime getArrivalTime() {
         return legs.getLast().getArrivalTime();
     }
 

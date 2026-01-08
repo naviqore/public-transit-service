@@ -2,16 +2,14 @@ package org.naviqore.raptor.router;
 
 import org.naviqore.raptor.TimeType;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 class DateTimeUtils {
 
-    static LocalDateTime getReferenceDate(Map<?, LocalDateTime> sourceStops, TimeType timeType) {
+    static OffsetDateTime getReferenceDateTime(Map<?, OffsetDateTime> sourceStops, TimeType timeType) {
         if (timeType == TimeType.DEPARTURE) {
             // get minimum departure time
             return sourceStops.values().stream().min(Comparator.naturalOrder()).orElseThrow();
@@ -21,20 +19,40 @@ class DateTimeUtils {
         }
     }
 
-    static Map<String, Integer> mapLocalDateTimeToTimestamp(Map<String, LocalDateTime> sourceStops,
-                                                            LocalDate referenceDate) {
+    static Map<String, Integer> mapOffsetDateTimeToTimestamp(Map<String, OffsetDateTime> sourceStops,
+                                                             LocalDate referenceDate) {
         return sourceStops.entrySet()
                 .stream()
                 .map(e -> Map.entry(e.getKey(), convertToTimestamp(e.getValue(), referenceDate)))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    static LocalDateTime convertToLocalDateTime(int timestamp, LocalDate referenceDate) {
-        return referenceDate.atStartOfDay().plusSeconds(timestamp);
+    /**
+     * Converts internal integer back to OffsetDateTime (Defaults to UTC).
+     */
+    static OffsetDateTime convertToOffsetDateTime(int timestamp, LocalDate referenceDate) {
+        return referenceDate.atStartOfDay(ZoneOffset.UTC).plusSeconds(timestamp).toOffsetDateTime();
     }
 
-    static int convertToTimestamp(LocalDateTime localDateTime, LocalDate referenceDate) {
-        return (int) Duration.between(referenceDate.atStartOfDay(), localDateTime).getSeconds();
+    /**
+     * Converts OffsetDateTime to absolute seconds from UTC Midnight of the reference date.
+     */
+    static int convertToTimestamp(OffsetDateTime dateTime, LocalDate referenceDate) {
+        return (int) Duration.between(referenceDate.atStartOfDay(ZoneOffset.UTC), dateTime).getSeconds();
+    }
+
+    /**
+     * Calculates the offset in seconds to convert "GTFS Local Seconds" to "UTC Seconds" relative to the Reference
+     * Date's UTC Noon (after potential DST change).
+     * <p>
+     * Example (Zurich Winter UTC+1): Returns -3600.
+     *
+     * @param date   The service date.
+     * @param zoneId The time zone of the route.
+     * @return The offset in seconds (can be negative).
+     */
+    static int calculateUtcOffset(LocalDate date, ZoneId zoneId) {
+        return -zoneId.getRules().getOffset(LocalDateTime.of(date, LocalTime.NOON)).getTotalSeconds();
     }
 
 }

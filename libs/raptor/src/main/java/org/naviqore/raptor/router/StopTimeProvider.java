@@ -4,14 +4,17 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
  * Provider for stop time int arrays for a given date.
  * <p>
- * This provider uses the {@link RaptorTripMaskProvider} to create the stop time arrays for a given date. The stop time
- * arrays are then cached based on the service id of the date, allowing to handle multiple days with same service id
- * efficiently.
+ * This provider uses the {@link RaptorTripMaskProvider} to create stop time arrays for a given date. All stop times are
+ * converted to UTC seconds relative to the service date, and the resulting arrays are cached. Since routes may span
+ * multiple time zones and daylight saving time (DST) can change offsets, the cache key includes a DST fingerprint: a
+ * deterministic string of all unique route zone offsets at local noon. This ensures that UTC-adjusted stop times remain
+ * correct even when DST changes occur or multiple zones are involved.
  */
 class StopTimeProvider {
 
@@ -54,10 +57,24 @@ class StopTimeProvider {
         return stopTimeCache.computeIfAbsent(stopTimesKey, () -> createStopTimesForDate(date, queryConfig));
     }
 
+    /**
+     * Computes a cache key for stop times that is DST-safe for multiple zones.
+     */
     private String getCacheKeyForStopTimes(LocalDate date, QueryConfig queryConfig) {
-        return String.format("%s-%b-%b-%s", tripMaskProvider.getServiceIdForDate(date),
-                queryConfig.isWheelchairAccessible(), queryConfig.isBikeAccessible(),
-                queryConfig.getAllowedTravelModes());
+        String serviceId = tripMaskProvider.getServiceIdForDate(date);
+
+        // offsets of all unique route zones at local noon
+        String dstFingerprint = Arrays.stream(data.getRouteTraversal().routes())
+                .map(Route::zoneId)
+                .map(zoneId -> DateTimeUtils.calculateUtcOffset(date, zoneId))
+                .distinct()
+                .sorted()
+                .map(String::valueOf)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+
+        // compose key
+        return serviceId + "|" + dstFingerprint + "|" + queryConfig.isWheelchairAccessible() + "|" + queryConfig.isBikeAccessible() + "|" + queryConfig.getAllowedTravelModes();
     }
 
     private int[] createStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
@@ -78,6 +95,7 @@ class StopTimeProvider {
             Route route = data.getRouteTraversal().routes()[routeIdx];
             int numStops = route.numberOfStops();
             int stopTimeIndex = route.firstStopTimeIdx();
+            int utcOffset = DateTimeUtils.calculateUtcOffset(date, route.zoneId());
 
             boolean[] booleanMask = tripMask.routeTripMask();
 
@@ -91,12 +109,12 @@ class StopTimeProvider {
                     int departureIndex = arrivalIndex + 1;
                     // arrival and departure
                     if (tripActive) {
-                        newStopTimesArray[arrivalIndex] = originalStopTimesArray[arrivalIndex];
-                        newStopTimesArray[departureIndex] = originalStopTimesArray[departureIndex];
+                        newStopTimesArray[arrivalIndex] = utcOffset + originalStopTimesArray[arrivalIndex];
+                        newStopTimesArray[departureIndex] = utcOffset + originalStopTimesArray[departureIndex];
                         if (earliestRouteStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                            earliestRouteStopTime = originalStopTimesArray[arrivalIndex];
+                            earliestRouteStopTime = utcOffset + originalStopTimesArray[arrivalIndex];
                         }
-                        latestRouteStopTime = originalStopTimesArray[departureIndex];
+                        latestRouteStopTime = utcOffset + originalStopTimesArray[departureIndex];
 
                     } else {
                         newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;

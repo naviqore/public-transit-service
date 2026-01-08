@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.TimeType;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,11 +45,11 @@ class Query {
      * @param walkingDurationsToTarget the walking durations to the target stops.
      * @param timeType                 the time type (arrival or departure) of the query.
      * @param config                   the query configuration.
-     * @param referenceDate            the reference date for the query.
+     * @param referenceDateTime        the reference date time for the query.
      * @param raptorConfig             the raptor configuration.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, LocalDateTime referenceDate,
+          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, OffsetDateTime referenceDateTime,
           RaptorConfig raptorConfig) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
@@ -77,7 +77,7 @@ class Query {
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
                 config.getMaximumWalkingDuration(), timeType, config.isAllowSourceTransfer(),
                 config.isAllowTargetTransfer(), targetStopIndices);
-        routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDate,
+        routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDateTime,
                 raptorConfig.getDaysToScan());
     }
 

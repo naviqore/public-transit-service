@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -19,11 +20,13 @@ import java.util.*;
 class RouteBuilder {
 
     private final String routeId;
+    private final ZoneId zoneId;
     private final Map<Integer, String> stopSequence = new HashMap<>();
     private final Map<String, StopTime[]> trips = new HashMap<>();
 
-    RouteBuilder(String routeId, List<String> stopIds) {
+    RouteBuilder(String routeId, ZoneId zoneId, List<String> stopIds) {
         this.routeId = routeId;
+        this.zoneId = zoneId;
         for (int i = 0; i < stopIds.size(); i++) {
             stopSequence.put(i, stopIds.get(i));
         }
@@ -106,10 +109,10 @@ class RouteBuilder {
             sortedTrips.put(entry.getKey(), entry.getValue());
         }
 
-        return new RouteContainer(routeId, stopSequence, sortedTrips);
+        return new RouteContainer(routeId, zoneId, stopSequence, sortedTrips);
     }
 
-    record RouteContainer(String id, Map<Integer, String> stopSequence,
+    record RouteContainer(String id, ZoneId zoneId, Map<Integer, String> stopSequence,
                           LinkedHashMap<String, StopTime[]> trips) implements Comparable<RouteContainer> {
 
         @Override

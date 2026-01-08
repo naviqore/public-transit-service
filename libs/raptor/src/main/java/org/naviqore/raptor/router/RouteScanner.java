@@ -7,7 +7,8 @@ import org.naviqore.raptor.TimeType;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,11 +44,11 @@ class RouteScanner {
      * @param raptorData        the current raptor data structures.
      * @param queryConfig       the query config.
      * @param timeType          the time type (arrival or departure).
-     * @param referenceDateTime the reference date for the query.
+     * @param referenceDateTime the reference date time for the query.
      * @param maxDaysToScan     the maximum number of days to scan.
      */
     RouteScanner(QueryState queryState, RaptorData raptorData, QueryConfig queryConfig, TimeType timeType,
-                 LocalDateTime referenceDateTime, int maxDaysToScan) {
+                 OffsetDateTime referenceDateTime, int maxDaysToScan) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -78,7 +79,7 @@ class RouteScanner {
                 int[] previousDayStopTimes = raptorData.getStopTimeProvider()
                         .getStopTimesForDate(previousDay, queryConfig);
 
-                int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(),
+                int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(ZoneOffset.UTC),
                         referenceDateTime).getSeconds();
 
                 // if latest stop time of previous day is after / equal the departure time, we need to include the

@@ -10,7 +10,8 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -38,10 +39,11 @@ class RaptorRouterTest {
     private static final String STOP_Q = "Q";
     private static final String STOP_S = "S";
 
-    private static final LocalDateTime START_OF_DAY = LocalDateTime.of(2021, 1, 1, 0, 0);
-    private static final LocalDateTime FIVE_AM = START_OF_DAY.plusHours(5);
-    private static final LocalDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
-    private static final LocalDateTime NINE_AM = START_OF_DAY.plusHours(9);
+    private static final ZoneOffset ZONE = ZoneOffset.UTC;
+    private static final OffsetDateTime START_OF_DAY = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZONE);
+    private static final OffsetDateTime FIVE_AM = START_OF_DAY.plusHours(5);
+    private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
+    private static final OffsetDateTime NINE_AM = START_OF_DAY.plusHours(9);
 
     @Nested
     class EarliestArrival {
@@ -106,7 +108,7 @@ class RaptorRouterTest {
         void routeFromTwoSourceStopsWithSameDepartureTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // fastest and only connection should be B -> H
@@ -121,7 +123,7 @@ class RaptorRouterTest {
         void routeFromTwoSourceStopsWithLaterDepartureTimeOnCloserStop(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, NINE_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, STOP_B, NINE_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             // B -> H has no transfers but later arrival time (due to departure time one hour later)
@@ -141,7 +143,7 @@ class RaptorRouterTest {
         void routeFromStopToTwoTargetStopsNoWalkTimeToTarget(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_F, 0, STOP_S, 0);
 
             // fastest and only connection should be A -> F
@@ -156,7 +158,7 @@ class RaptorRouterTest {
         void routeFromStopToTwoTargetStopsWithWalkTimeToTarget(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM);
             // Add one-hour walk time to target from stop F and no extra walk time from stop S
             Map<String, Integer> targetStops = Map.of(STOP_F, RaptorRouterTestBuilder.SECONDS_IN_HOUR, STOP_S, 0);
 
@@ -297,7 +299,7 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0, STOP_B, 0);
-            Map<String, LocalDateTime> targetStops = Map.of(STOP_H, NINE_AM);
+            Map<String, OffsetDateTime> targetStops = Map.of(STOP_H, NINE_AM);
 
             // fastest and only connection should be B -> H
             List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
@@ -312,7 +314,7 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0, STOP_B, RaptorRouterTestBuilder.SECONDS_IN_HOUR);
-            Map<String, LocalDateTime> targetStops = Map.of(STOP_H, NINE_AM);
+            Map<String, OffsetDateTime> targetStops = Map.of(STOP_H, NINE_AM);
 
             // B -> H has no transfers but (theoretical) worse departure time (due to extra one-hour walk time)
             // A -> H has one transfer but (theoretical) better departure time (no additional walk time
@@ -330,7 +332,7 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
-            Map<String, LocalDateTime> targetStops = Map.of(STOP_F, NINE_AM, STOP_S, NINE_AM);
+            Map<String, OffsetDateTime> targetStops = Map.of(STOP_F, NINE_AM, STOP_S, NINE_AM);
 
             // fastest and only connection should be A -> F
             List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, sourceStops,
@@ -346,7 +348,7 @@ class RaptorRouterTest {
 
             Map<String, Integer> sourceStops = Map.of(STOP_A, 0);
             // Add one-hour walk time to target from stop F and no extra walk time from stop S
-            Map<String, LocalDateTime> targetStops = Map.of(STOP_F, EIGHT_AM, STOP_S, NINE_AM);
+            Map<String, OffsetDateTime> targetStops = Map.of(STOP_F, EIGHT_AM, STOP_S, NINE_AM);
 
             // since F is closer to A than S, the fastest connection should be A -> F, but because of the hour
             // earlier arrival time, the connection A -> S should be faster (no additional walk time)
@@ -379,7 +381,7 @@ class RaptorRouterTest {
 
             // Both Routes arrive at 8:35 at Stop G, but R1 leaves A at 8:00 whereas R1X leaves at A at 8:12
             // R1X should be taken
-            LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
+            OffsetDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
             List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_G,
                     arrivalTime);
 
@@ -406,7 +408,7 @@ class RaptorRouterTest {
 
             // Route R1 leaves at 8:00 at Stop A and arrives at G at 8:35 whereas R1X leaves at 7:45 from Stop A and
             // arrives at G at 8:08. R1 should be used.
-            LocalDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
+            OffsetDateTime arrivalTime = EIGHT_AM.plusMinutes(35);
             assertEquals(1, connections.size());
             RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_A, STOP_G, arrivalTime,
                     0, 0, 1, raptor);
@@ -499,7 +501,7 @@ class RaptorRouterTest {
             // Since the earliest arrival request is set to depart at 08:01 and the walk to B takes 15 minutes, the
             // earliest arrival at B is 8:16. However, in this case the traveller still has to wait until 8:21 to depart
             // from B. The walk transfer should not be added in this case.
-            LocalDateTime requestedDepartureTime = EIGHT_AM.plusMinutes(1);
+            OffsetDateTime requestedDepartureTime = EIGHT_AM.plusMinutes(1);
             List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,
                     requestedDepartureTime);
 
@@ -835,7 +837,7 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = builder.withAddRoute1_AG().withAddRoute3_MQ().build();
 
             List<String> reachableStopsFromStopA = List.of(STOP_B, STOP_C, STOP_D, STOP_E, STOP_F, STOP_G);
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY.plusHours(8), STOP_M,
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY.plusHours(8), STOP_M,
                     START_OF_DAY.plusHours(16));
             List<String> reachableStopsFromStopM = List.of(STOP_K, STOP_N, STOP_O, STOP_P, STOP_Q);
 
@@ -849,7 +851,7 @@ class RaptorRouterTest {
             for (Map.Entry<String, List<String>> entry : sourceTargets.entrySet()) {
                 String sourceStop = entry.getKey();
                 List<String> reachableStops = entry.getValue();
-                LocalDateTime requestedDepartureTime = sourceStops.get(sourceStop);
+                OffsetDateTime requestedDepartureTime = sourceStops.get(sourceStop);
                 for (String stop : reachableStops) {
                     assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable from " + sourceStop);
                     Connection connection = isoLines.get(stop);
@@ -893,7 +895,7 @@ class RaptorRouterTest {
 
         @Test
         void notThrowErrorForValidAndNonExistingSourceStop() {
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, "NonExistentStop", EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, EIGHT_AM, "NonExistentStop", EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertDoesNotThrow(() -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops),
@@ -902,7 +904,7 @@ class RaptorRouterTest {
 
         @Test
         void notThrowErrorForValidAndNonExistingTargetStop() {
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_A, 0, "NonExistentStop", 0);
 
             assertDoesNotThrow(() -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, targetStops),
@@ -911,7 +913,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorForInvalidWalkToTargetTimeFromOneOfManyTargetStops() {
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_H, EIGHT_AM);
             Map<String, Integer> targetStops = Map.of(STOP_A, 0, STOP_B, -1);
 
             assertThrows(IllegalArgumentException.class,
@@ -930,7 +932,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorNullTargetStops() {
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
 
             assertThrows(IllegalArgumentException.class,
                     () -> RaptorRouterTestHelpers.routeEarliestArrival(raptor, sourceStops, null),
@@ -939,7 +941,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorEmptyMapSourceStops() {
-            Map<String, LocalDateTime> sourceStops = Map.of();
+            Map<String, OffsetDateTime> sourceStops = Map.of();
             Map<String, Integer> targetStops = Map.of(STOP_H, 0);
 
             assertThrows(IllegalArgumentException.class,
@@ -949,7 +951,7 @@ class RaptorRouterTest {
 
         @Test
         void throwErrorEmptyMapTargetStops() {
-            Map<String, LocalDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
+            Map<String, OffsetDateTime> sourceStops = Map.of(STOP_A, START_OF_DAY);
             Map<String, Integer> targetStops = Map.of();
 
             assertThrows(IllegalArgumentException.class,

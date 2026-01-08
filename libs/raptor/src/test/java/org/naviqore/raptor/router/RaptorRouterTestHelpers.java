@@ -5,7 +5,7 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.raptor.TimeType;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -13,27 +13,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RaptorRouterTestHelpers {
 
-    static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops) {
+    static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops) {
         return getIsoLines(raptor, sourceStops, new QueryConfig());
     }
 
-    static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
+    static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                QueryConfig config) {
         return raptor.routeIsolines(sourceStops, TimeType.DEPARTURE, config);
     }
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                 LocalDateTime departureTime) {
+                                                 OffsetDateTime departureTime) {
         return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0));
     }
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                 LocalDateTime departureTime, QueryConfig config) {
+                                                 OffsetDateTime departureTime, QueryConfig config) {
         return routeEarliestArrival(raptor, createStopMap(sourceStopId, departureTime), createStopMap(targetStopId, 0),
                 config);
     }
 
-    static Map<String, LocalDateTime> createStopMap(String stopId, LocalDateTime value) {
+    static Map<String, OffsetDateTime> createStopMap(String stopId, OffsetDateTime value) {
         return Map.of(stopId, value);
     }
 
@@ -41,33 +41,33 @@ class RaptorRouterTestHelpers {
         return Map.of(stopId, value);
     }
 
-    static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
+    static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                  Map<String, Integer> targetStopIds) {
         return routeEarliestArrival(raptor, sourceStops, targetStopIds, new QueryConfig());
     }
 
-    static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, LocalDateTime> sourceStops,
+    static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                  Map<String, Integer> targetStopIds, QueryConfig config) {
         return raptor.routeEarliestArrival(sourceStops, targetStopIds, config);
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
-                                                 LocalDateTime arrivalTime) {
+                                                 OffsetDateTime arrivalTime) {
         return routeLatestDeparture(raptor, createStopMap(sourceStopId, 0), createStopMap(targetStopId, arrivalTime));
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
-                                                 Map<String, LocalDateTime> targetStops) {
+                                                 Map<String, OffsetDateTime> targetStops) {
         return routeLatestDeparture(raptor, sourceStops, targetStops, new QueryConfig());
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
-                                                 Map<String, LocalDateTime> targetStops, QueryConfig config) {
+                                                 Map<String, OffsetDateTime> targetStops, QueryConfig config) {
         return raptor.routeLatestDeparture(sourceStops, targetStops, config);
     }
 
     static void assertEarliestArrivalConnection(Connection connection, String sourceStop, String targetStop,
-                                                LocalDateTime requestedDepartureTime, int numSameStopTransfers,
+                                                OffsetDateTime requestedDepartureTime, int numSameStopTransfers,
                                                 int numWalkTransfers, int numTrips, RaptorAlgorithm raptor) {
         assertEquals(sourceStop, connection.getFromStopId());
         assertEquals(targetStop, connection.getToStopId());
@@ -87,7 +87,7 @@ class RaptorRouterTestHelpers {
     }
 
     static void assertLatestDepartureConnection(Connection connection, String sourceStop, String targetStop,
-                                                LocalDateTime requestedArrivalTime, int numSameStopTransfers,
+                                                OffsetDateTime requestedArrivalTime, int numSameStopTransfers,
                                                 int numWalkTransfers, int numTrips, RaptorAlgorithm raptor) {
         assertEquals(sourceStop, connection.getFromStopId());
         assertEquals(targetStop, connection.getToStopId());
@@ -168,7 +168,7 @@ class RaptorRouterTestHelpers {
         }
     }
 
-    static void assertIsoLines(Map<String, Connection> isoLines, String startStop, LocalDateTime departureTime,
+    static void assertIsoLines(Map<String, Connection> isoLines, String startStop, OffsetDateTime departureTime,
                                int expectedIsoLines) {
         assertEquals(expectedIsoLines, isoLines.size());
         assertFalse(isoLines.containsKey(startStop), "Source stop should not be in iso lines");

@@ -6,7 +6,7 @@ import org.naviqore.raptor.Leg;
 import org.naviqore.raptor.TimeType;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,8 +163,8 @@ class LabelPostprocessor {
                 throw new IllegalStateException("Unknown label type");
             }
 
-            LocalDateTime departureTime = DateTimeUtils.convertToLocalDateTime(departureTimestamp, referenceDate);
-            LocalDateTime arrivalTime = DateTimeUtils.convertToLocalDateTime(arrivalTimestamp, referenceDate);
+            OffsetDateTime departureTime = DateTimeUtils.convertToOffsetDateTime(departureTimestamp, referenceDate);
+            OffsetDateTime arrivalTime = DateTimeUtils.convertToOffsetDateTime(arrivalTimestamp, referenceDate);
 
             connection.addLeg(new RaptorLeg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
         }
