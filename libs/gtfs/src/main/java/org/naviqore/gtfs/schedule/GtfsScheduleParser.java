@@ -22,8 +22,6 @@ import java.util.function.Consumer;
 @Slf4j
 class GtfsScheduleParser {
 
-    private static final ZoneId ZURICH = ZoneId.of("Europe/Zurich");
-
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final Map<String, DayOfWeek> DAY_MAPPINGS = Map.of("monday", DayOfWeek.MONDAY, "tuesday",
             DayOfWeek.TUESDAY, "wednesday", DayOfWeek.WEDNESDAY, "thursday", DayOfWeek.THURSDAY, "friday",
@@ -38,7 +36,7 @@ class GtfsScheduleParser {
     }
 
     public void parse(CSVRecord record, GtfsScheduleFile fileType) {
-        parsers.getOrDefault(fileType, r -> {
+        parsers.getOrDefault(fileType, _ -> {
             throw new IllegalArgumentException("Unsupported GTFS file type for parsing: " + fileType);
         }).accept(record);
     }
