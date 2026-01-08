@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 import org.naviqore.gtfs.schedule.type.ServiceDayTime;
+import org.naviqore.gtfs.schedule.type.TimeType;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -171,116 +173,116 @@ class GtfsScheduleTest {
             }
 
             @Nested
-            class NextDepartures {
+            class GetStopTimes {
 
                 private static final String STOP_ID = "s2";
-                private static final int LIMIT = 5;
 
-                private static void assertWeekendAndHoliday(List<StopTime> departures) {
-                    // assert departures times are correct
-                    List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("08:15:00"),
-                            ServiceDayTime.parse("08:15:00"), ServiceDayTime.parse("09:15:00"),
-                            ServiceDayTime.parse("09:15:00"), ServiceDayTime.parse("10:15:00"));
-                    assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
-                            .containsExactlyElementsOf(expectedDepartures);
+                @Test
+                void shouldFilterByPhysicalTimeWindow() {
+                    OffsetDateTime from = GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM;
+                    OffsetDateTime until = from.plusMinutes(10);
 
-                    // assert trips are correct
-                    List<String> expectedTripIds = List.of("route1_we_f_4", "route1_we_r_4", "route1_we_f_5",
-                            "route1_we_r_5", "route1_we_f_6");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
-                    assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
+                    List<StopTime> results = schedule.getStopTimes(STOP_ID, from, until, TimeType.DEPARTURE);
 
-                    // assert routes are correct
-                    Set<String> expectedRouteIds = Set.of("route1");
-                    List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
-                            .toList();
-                    assertThat(routeIds).allMatch(expectedRouteIds::contains);
+                    assertThat(results).hasSize(4);
+                    assertThat(results.get(0).departure().toString()).isEqualTo("08:00:00");
+                    assertThat(results.get(3).departure().toString()).isEqualTo("08:09:00");
                 }
 
                 @Test
-                void shouldReturnNextDeparturesOnWeekday() {
-                    List<StopTime> departures = schedule.getNextDepartures(STOP_ID,
-                            GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM, LIMIT);
+                void shouldRespectExclusiveUpperBoundary() {
+                    OffsetDateTime from = GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM;
+                    OffsetDateTime until = from.plusMinutes(0);
 
-                    // assert departures times are correct
-                    List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("08:00:00"),
-                            ServiceDayTime.parse("08:03:00"), ServiceDayTime.parse("08:09:00"),
-                            ServiceDayTime.parse("08:09:00"), ServiceDayTime.parse("08:15:00"));
-                    assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
-                            .containsExactlyElementsOf(expectedDepartures);
-
-                    // assert trips are correct
-                    List<String> expectedTripIds = List.of("route3_wd_f_16", "route3_wd_r_17", "route3_wd_f_17",
-                            "route3_wd_r_17", "route1_wd_f_7");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
-                    assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
-
-                    // assert routes are correct
-                    Set<String> expectedRouteIds = Set.of("route1", "route3");
-                    List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
-                            .toList();
-                    assertThat(routeIds).allMatch(expectedRouteIds::contains);
+                    assertThat(schedule.getStopTimes(STOP_ID, from, until, TimeType.DEPARTURE)).isEmpty();
                 }
 
                 @Test
-                void shouldReturnNextDeparturesOnWeekend() {
-                    List<StopTime> departures = schedule.getNextDepartures(STOP_ID,
-                            GtfsScheduleTestBuilder.Moments.WEEKEND_8_AM, LIMIT);
+                void shouldHandleLateNightOverlaps() {
+                    // query starts exactly at midnight of the next calendar day
+                    OffsetDateTime midnight = GtfsScheduleTestBuilder.Moments.WEEKDAY_12_PM.plusSeconds(1);
+                    OffsetDateTime until = midnight.plusMinutes(15);
 
-                    assertWeekendAndHoliday(departures);
+                    List<StopTime> results = schedule.getStopTimes(STOP_ID, midnight, until, TimeType.DEPARTURE);
+
+                    // verify that trips scheduled as 24:xx:xx from previous service day are caught
+                    assertThat(results).isNotEmpty();
+                    assertThat(results.getFirst().departure().getTotalSeconds()).isGreaterThanOrEqualTo(24 * 3600);
                 }
 
                 @Test
-                void shouldReturnNextDeparturesOnHoliday() {
-                    List<StopTime> departures = schedule.getNextDepartures(STOP_ID,
-                            GtfsScheduleTestBuilder.Moments.HOLIDAY.atTime(8, 0), LIMIT);
+                void shouldSupportArrivalBoards() {
+                    OffsetDateTime from = GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM;
+                    OffsetDateTime until = from.plusMinutes(10);
 
-                    assertWeekendAndHoliday(departures);
+                    List<StopTime> results = schedule.getStopTimes(STOP_ID, from, until, TimeType.ARRIVAL);
+
+                    assertThat(results).isNotEmpty();
+                    for (int i = 0; i < results.size() - 1; i++) {
+                        Instant current = results.get(i)
+                                .arrival()
+                                .toZonedDateTime(from.toLocalDate(), GtfsScheduleTestBuilder.ZONE_ID)
+                                .toInstant();
+                        Instant next = results.get(i + 1)
+                                .arrival()
+                                .toZonedDateTime(from.toLocalDate(), GtfsScheduleTestBuilder.ZONE_ID)
+                                .toInstant();
+                        assertThat(current).isBeforeOrEqualTo(next);
+                    }
                 }
 
                 @Test
-                void shouldReturnNextDeparturesAfterMidnight() {
-                    List<StopTime> departures = schedule.getNextDepartures(STOP_ID,
-                            GtfsScheduleTestBuilder.Moments.WEEKDAY_12_PM, LIMIT);
+                void shouldHandleEmptyResultsOnNoServiceDays() {
+                    OffsetDateTime from = GtfsScheduleTestBuilder.Moments.NO_SERVICE_8_AM;
+                    OffsetDateTime until = from.plusHours(1);
 
-                    // assert departures times are correct
-                    List<ServiceDayTime> expectedDepartures = List.of(ServiceDayTime.parse("24:00:00"),
-                            ServiceDayTime.parse("24:03:00"), ServiceDayTime.parse("24:09:00"),
-                            ServiceDayTime.parse("24:09:00"), ServiceDayTime.parse("24:15:00"));
-                    assertThat(departures).hasSize(LIMIT)
-                            .extracting(StopTime::departure)
-                            .containsExactlyElementsOf(expectedDepartures);
-
-                    // assert trips are correct
-                    List<String> expectedTripIds = List.of("route3_wd_f_80", "route3_wd_r_81", "route3_wd_f_81",
-                            "route3_wd_r_81", "route1_wd_f_39");
-                    List<String> tripIds = departures.stream().map(stopTime -> stopTime.trip().getId()).toList();
-                    assertThat(tripIds).containsExactlyElementsOf(expectedTripIds);
-
-                    // assert routes are correct
-                    Set<String> expectedRouteIds = Set.of("route1", "route3");
-                    List<String> routeIds = departures.stream()
-                            .map(stopTime -> stopTime.trip().getRoute().getId())
-                            .toList();
-                    assertThat(routeIds).allMatch(expectedRouteIds::contains);
+                    assertThat(schedule.getStopTimes(STOP_ID, from, until, TimeType.DEPARTURE)).isEmpty();
                 }
 
-                @Test
-                void shouldReturnNoNextDeparturesOnNoServiceDay() {
-                    assertThat(
-                            schedule.getNextDepartures(STOP_ID, GtfsScheduleTestBuilder.Moments.NO_SERVICE.atTime(8, 0),
-                                    Integer.MAX_VALUE)).isEmpty();
-                }
+                @Nested
+                class ServiceBoardScenarios {
 
-                @Test
-                void shouldReturnNoDeparturesFromUnknownStop() {
-                    assertThatThrownBy(
-                            () -> schedule.getNextDepartures("unknown", LocalDateTime.now(), 1)).isInstanceOf(
-                            IllegalArgumentException.class).hasMessage("Stop unknown not found");
+                    private void assertWeekendAndHolidayBehavior(List<StopTime> departures) {
+                        List<ServiceDayTime> expectedTimes = List.of(ServiceDayTime.parse("08:15:00"),
+                                ServiceDayTime.parse("08:15:00"), ServiceDayTime.parse("09:15:00"),
+                                ServiceDayTime.parse("09:15:00"));
+                        assertThat(departures).extracting(StopTime::departure).containsExactlyElementsOf(expectedTimes);
+
+                        List<String> expectedTrips = List.of("route1_we_f_4", "route1_we_r_4", "route1_we_f_5",
+                                "route1_we_r_5");
+                        assertThat(departures).extracting(st -> st.trip().getId())
+                                .containsExactlyElementsOf(expectedTrips);
+                    }
+
+                    @Test
+                    void shouldResolveWeekdayStationBoard() {
+                        List<StopTime> results = schedule.getStopTimes(STOP_ID,
+                                GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM,
+                                GtfsScheduleTestBuilder.Moments.WEEKDAY_8_AM.plusMinutes(10), TimeType.DEPARTURE);
+
+                        List<ServiceDayTime> expected = List.of(ServiceDayTime.parse("08:00:00"),
+                                ServiceDayTime.parse("08:03:00"), ServiceDayTime.parse("08:09:00"),
+                                ServiceDayTime.parse("08:09:00"));
+                        assertThat(results).extracting(StopTime::departure).containsExactlyElementsOf(expected);
+                    }
+
+                    @Test
+                    void shouldResolveWeekendStationBoard() {
+                        List<StopTime> results = schedule.getStopTimes(STOP_ID,
+                                GtfsScheduleTestBuilder.Moments.WEEKEND_8_AM,
+                                GtfsScheduleTestBuilder.Moments.WEEKEND_8_AM.plusHours(2), TimeType.DEPARTURE);
+
+                        assertWeekendAndHolidayBehavior(results);
+                    }
+
+                    @Test
+                    void shouldResolveHolidayStationBoard() {
+                        List<StopTime> results = schedule.getStopTimes(STOP_ID,
+                                GtfsScheduleTestBuilder.Moments.HOLIDAY_8_AM,
+                                GtfsScheduleTestBuilder.Moments.HOLIDAY_8_AM.plusHours(2), TimeType.DEPARTURE);
+
+                        assertWeekendAndHolidayBehavior(results);
+                    }
                 }
             }
 
@@ -313,7 +315,8 @@ class GtfsScheduleTest {
 
                 @Test
                 void shouldReturnActiveTripsOnHoliday() {
-                    List<Trip> activeTrips = schedule.getActiveTrips(GtfsScheduleTestBuilder.Moments.HOLIDAY);
+                    List<Trip> activeTrips = schedule.getActiveTrips(
+                            GtfsScheduleTestBuilder.Moments.HOLIDAY_8_AM.toLocalDate());
 
                     assertWeekendAndHoliday(activeTrips);
                 }
@@ -328,7 +331,8 @@ class GtfsScheduleTest {
 
                 @Test
                 void shouldReturnNoActiveTripsForNonServiceDay() {
-                    assertThat(schedule.getActiveTrips(GtfsScheduleTestBuilder.Moments.NO_SERVICE)).isEmpty();
+                    assertThat(schedule.getActiveTrips(
+                            GtfsScheduleTestBuilder.Moments.NO_SERVICE_8_AM.toLocalDate())).isEmpty();
                 }
             }
         }

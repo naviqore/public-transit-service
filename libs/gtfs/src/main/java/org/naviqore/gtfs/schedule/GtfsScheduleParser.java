@@ -7,6 +7,7 @@ import org.naviqore.gtfs.schedule.type.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -20,6 +21,8 @@ import java.util.function.Consumer;
  */
 @Slf4j
 class GtfsScheduleParser {
+
+    private static final ZoneId ZURICH = ZoneId.of("Europe/Zurich");
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final Map<String, DayOfWeek> DAY_MAPPINGS = Map.of("monday", DayOfWeek.MONDAY, "tuesday",
@@ -53,7 +56,7 @@ class GtfsScheduleParser {
 
     private void parseAgency(CSVRecord record) {
         builder.addAgency(record.get("agency_id"), record.get("agency_name"), record.get("agency_url"),
-                record.get("agency_timezone"));
+                ZoneId.of(record.get("agency_timezone")));
     }
 
     private void parseCalendar(CSVRecord record) {
