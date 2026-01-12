@@ -26,17 +26,16 @@ class RouteScanner {
     private final Stop[] stops;
     private final int[] stopRoutes;
     private final Route[] routes;
-    private final int[] rawStopTimes;
     private final RouteStop[] routeStops;
     private final QueryState queryState;
 
     private final int minTransferDuration;
-    private final TimeType timeType;
+    private final boolean forward;
+    private final int timeDirection;
 
     private final int[][] stopTimes;
     private final int actualDaysToScan;
     private final int startDayOffset;
-    private final LocalDate referenceDate;
 
     private final boolean[] routesToScanMask;
 
@@ -54,27 +53,33 @@ class RouteScanner {
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
         this.routes = raptorData.getRouteTraversal().routes();
-        this.rawStopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
+
         // note: will also change outside of scanner, due to footpath relaxation
         this.queryState = queryState;
+
         // constant configuration of scanner
         this.minTransferDuration = queryConfig.getMinimumTransferDuration();
-        this.timeType = timeType;
-        this.referenceDate = referenceDateTime.toLocalDate();
-
         this.routesToScanMask = new boolean[routes.length];
+        this.forward = timeType == TimeType.DEPARTURE;
+        this.timeDirection = forward ? 1 : -1;
 
         if (maxDaysToScan < 1) {
             throw new IllegalArgumentException("maxDaysToScan must be greater than 0.");
-        } else if (maxDaysToScan == 1) {
+        }
+
+        LocalDate referenceDate = referenceDateTime.toLocalDate();
+        if (maxDaysToScan == 1) {
+            // single-day scan
             stopTimes = new int[1][];
             stopTimes[0] = raptorData.getStopTimeProvider().getStopTimesForDate(referenceDate, queryConfig);
             actualDaysToScan = 1;
             startDayOffset = 0;
+
         } else {
-            // there is no need to scan the next day for arrival trips but previous day is maybe needed in departure trips
-            if (timeType == TimeType.DEPARTURE) {
+            // multi-day scan: there is no need to scan the next day for arrival trips but previous day is maybe needed
+            // in departure trips
+            if (forward) {
                 LocalDate previousDay = referenceDate.minusDays(1);
                 int[] previousDayStopTimes = raptorData.getStopTimeProvider()
                         .getStopTimesForDate(previousDay, queryConfig);
@@ -91,6 +96,7 @@ class RouteScanner {
                     startDayOffset = 0;
                     actualDaysToScan = maxDaysToScan - 1;
                 }
+
             } else {
                 actualDaysToScan = maxDaysToScan - 1;
                 startDayOffset = 0;
@@ -99,8 +105,7 @@ class RouteScanner {
             stopTimes = new int[actualDaysToScan][];
             for (int i = 0; i < actualDaysToScan; i++) {
                 int dayOffset = i + startDayOffset;
-                LocalDate date = timeType == TimeType.DEPARTURE ? referenceDate.plusDays(
-                        dayOffset) : referenceDate.minusDays(dayOffset);
+                LocalDate date = forward ? referenceDate.plusDays(dayOffset) : referenceDate.minusDays(dayOffset);
                 stopTimes[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
             }
         }
@@ -120,6 +125,7 @@ class RouteScanner {
             if (!routesToScanMask[currentRouteIdx]) {
                 continue;
             }
+
             scanRoute(currentRouteIdx, round);
         }
     }
@@ -133,9 +139,11 @@ class RouteScanner {
             if (!queryState.isMarkedThisRound(stopIdx)) {
                 continue;
             }
+
             Stop currentStop = stops[stopIdx];
             int stopRouteIdx = currentStop.stopRouteIdx();
             int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
+
             while (stopRouteIdx < stopRouteEndIdx) {
                 routesToScanMask[stopRoutes[stopRouteIdx]] = true;
                 stopRouteIdx++;
@@ -150,31 +158,27 @@ class RouteScanner {
      * @param round           the current round.
      */
     private void scanRoute(int currentRouteIdx, int round) {
-
-        final int lastRound = round - 1;
-
-        boolean forward = timeType == TimeType.DEPARTURE;
         Route currentRoute = routes[currentRouteIdx];
-        log.debug("Scanning route {} {}", currentRoute.id(), forward ? "forward" : "backward");
-        final int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
-        final int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
-        final int numberOfStops = currentRoute.numberOfStops();
-
         if (!isRouteActiveInDaysToScan(currentRoute)) {
             log.debug("Route {} is not active in time range.", currentRoute.id());
             return;
         }
 
+        int lastRound = round - 1;
         ActiveTrip activeTrip = null;
+
+        int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
+        int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
+        int numberOfStops = currentRoute.numberOfStops();
 
         int startOffset = forward ? 0 : numberOfStops - 1;
         int endOffset = forward ? numberOfStops : -1;
-        int step = forward ? 1 : -1;
 
-        for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += step) {
+        for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += timeDirection) {
             int stopIdx = routeStops[firstRouteStopIdx + stopOffset].stopIndex();
             Stop stop = stops[stopIdx];
             int bestStopTime = queryState.getComparableBestTime(stopIdx);
+
             // find first marked stop in route
             if (activeTrip == null) {
                 if (!canEnterAtStop(stop, bestStopTime, stopIdx, stopOffset, currentRoute)) {
@@ -184,16 +188,15 @@ class RouteScanner {
                 // in this case we are on a trip and need to check if time has improved
                 int stopTimeIndex = firstStopTimeIdx + 2 * (activeTrip.tripOffset * numberOfStops + stopOffset) + 2;
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
-                int targetTime = rawStopTimes[(timeType == TimeType.DEPARTURE) ? stopTimeIndex : stopTimeIndex + 1];
-                // apply day time and UTC offset to raw local time
+                int targetTime = activeTrip.stopTimes[forward ? stopTimeIndex : stopTimeIndex + 1];
                 targetTime += activeTrip.dayTimeOffset;
-                targetTime += activeTrip.utcOffset;
 
                 if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, stop, bestStopTime, stopIdx, round,
                         lastRound, currentRouteIdx)) {
                     continue;
                 }
             }
+
             activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
         }
     }
@@ -206,13 +209,14 @@ class RouteScanner {
                 return true;
             }
         }
+
         return false;
     }
 
     /**
      * This method checks if a trip can be entered at the stop in the current round. A trip can be entered if the stop
      * was reached in a previous round, and is not the first (targetTime) / last (sourceTime) stop of a trip or (for
-     * performance reasons) assuming that this check is only run when not travelling with an active trip, the stop was
+     * performance reasons) assuming that this check is only run when not traveling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
      * @param stop         the stop to check if a trip can be entered.
@@ -222,18 +226,17 @@ class RouteScanner {
      * @param currentRoute the current route.
      */
     private boolean canEnterAtStop(Stop stop, int stopTime, int stopIdx, int stopOffset, Route currentRoute) {
-
-        int unreachableValue = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+        int unreachableValue = forward ? INFINITY : -INFINITY;
         if (stopTime == unreachableValue) {
             log.debug("Stop {} cannot be reached, continue", stop.id());
             return false;
         }
 
-        int furthestStopTime = getFurthestTripTimeOfRoute(currentRoute, timeType);
-        if (timeType == TimeType.DEPARTURE && furthestStopTime < stopTime) {
+        int furthestStopTime = getFurthestTripTimeOfRoute(currentRoute);
+        if (forward && furthestStopTime < stopTime) {
             log.debug("No trips departing after best stop time on route {} for stop {}", currentRoute.id(), stop.id());
             return false;
-        } else if (timeType == TimeType.ARRIVAL && furthestStopTime > stopTime) {
+        } else if (!forward && furthestStopTime > stopTime) {
             log.debug("No trips arriving before best stop time on route {} for stop {}", currentRoute.id(), stop.id());
             return false;
         }
@@ -244,11 +247,11 @@ class RouteScanner {
             return false;
         }
 
-        if (timeType == TimeType.DEPARTURE && (stopOffset + 1 == currentRoute.numberOfStops())) {
+        if (forward && (stopOffset + 1 == currentRoute.numberOfStops())) {
             // last stop in route, does not make sense to check for trip to enter
             log.debug("Stop {} is last stop in route, continue", stop.id());
             return false;
-        } else if (timeType == TimeType.ARRIVAL && (stopOffset == 0)) {
+        } else if (!forward && (stopOffset == 0)) {
             // first stop in route, does not make sense to check for trip to enter
             log.debug("Stop {} is first stop in route, continue", stop.id());
             return false;
@@ -266,23 +269,23 @@ class RouteScanner {
      * <p>
      * Returns -INFINITY for DEPARTURE and INFINITY for ARRIVAL if no trip is possible.
      *
-     * @param route    the route to get the furthest trip time from.
-     * @param timeType the time type (arrival or departure).
+     * @param route the route to get the furthest trip time from.
      * @return the furthest trip time of the route.
      */
-    private int getFurthestTripTimeOfRoute(Route route, TimeType timeType) {
+    private int getFurthestTripTimeOfRoute(Route route) {
         // get index of latest trip for departure and earliest trip for arrival
-        int stopTimeIdx = timeType == TimeType.DEPARTURE ? route.firstStopTimeIdx() + 1 : route.firstStopTimeIdx();
+        int stopTimeIdx = forward ? route.firstStopTimeIdx() + 1 : route.firstStopTimeIdx();
         for (int dayIndex = stopTimes.length - 1; dayIndex >= 0; dayIndex--) {
             int dayOffset = dayIndex + startDayOffset;
             int time = stopTimes[dayIndex][stopTimeIdx];
+
             if (time != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                int timeOffset = (timeType == TimeType.DEPARTURE ? 1 : -1) * dayOffset * SECONDS_IN_DAY;
+                int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
                 return time + timeOffset;
             }
         }
 
-        return timeType == TimeType.DEPARTURE ? -INFINITY : INFINITY;
+        return forward ? -INFINITY : INFINITY;
     }
 
     /**
@@ -303,8 +306,7 @@ class RouteScanner {
     private boolean checkIfTripIsPossibleAndUpdateMarks(int targetTime, ActiveTrip activeTrip, Stop stop,
                                                         int bestStopTime, int stopIdx, int thisRound, int lastRound,
                                                         int currentRouteIdx) {
-
-        boolean isImproved = (timeType == TimeType.DEPARTURE) ? targetTime < bestStopTime : targetTime > bestStopTime;
+        boolean isImproved = forward ? targetTime < bestStopTime : targetTime > bestStopTime;
 
         if (isImproved) {
             log.debug("Stop {} was improved", stop.id());
@@ -320,7 +322,7 @@ class RouteScanner {
             log.debug("Stop {} was not improved", stop.id());
             QueryState.Label previous = queryState.getLabel(lastRound, stopIdx);
 
-            boolean isImprovedInSameRound = previous == null || ((timeType == TimeType.DEPARTURE) ? previous.targetTime() >= targetTime : previous.targetTime() <= targetTime);
+            boolean isImprovedInSameRound = previous == null || (forward ? previous.targetTime() >= targetTime : previous.targetTime() <= targetTime);
             if (isImprovedInSameRound) {
                 log.debug("Stop {} has been improved in same round, trip not possible within this round", stop.id());
                 return false;
@@ -343,7 +345,6 @@ class RouteScanner {
      * @param lastRound  the last round.
      */
     private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route, int lastRound) {
-
         int firstStopTimeIdx = route.firstStopTimeIdx();
         int numberOfStops = route.numberOfStops();
         int numberOfTrips = route.numberOfTrips();
@@ -353,41 +354,38 @@ class RouteScanner {
         // this is the reference time, where we can depart after or arrive earlier
         int referenceTime = previousLabel.targetTime();
         if (previousLabel.type() == QueryState.LabelType.ROUTE) {
-            referenceTime += (timeType == TimeType.DEPARTURE) ? Math.max(stop.sameStopTransferTime(),
-                    minTransferDuration) : -Math.max(stop.sameStopTransferTime(), minTransferDuration);
+            referenceTime += forward ? Math.max(stop.sameStopTransferTime(), minTransferDuration) : -Math.max(
+                    stop.sameStopTransferTime(), minTransferDuration);
         }
 
         for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
             int dayOffset = dayIndex + startDayOffset;
-            int timeOffset = (timeType == TimeType.DEPARTURE ? 1 : -1) * dayOffset * SECONDS_IN_DAY;
-            int earliestTripTime = stopTimes[dayIndex][firstStopTimeIdx] + timeOffset;
-            int latestTripTime = stopTimes[dayIndex][firstStopTimeIdx + 1] + timeOffset;
+            int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
+            int[] currentDayStopTimes = stopTimes[dayIndex];
+            int earliestTripTime = currentDayStopTimes[firstStopTimeIdx] + timeOffset;
+            int latestTripTime = currentDayStopTimes[firstStopTimeIdx + 1] + timeOffset;
 
             // check if the day has any trips relevant
-            if ((timeType == TimeType.DEPARTURE ? latestTripTime < referenceTime : referenceTime < earliestTripTime)) {
+            if ((forward ? latestTripTime < referenceTime : referenceTime < earliestTripTime)) {
                 log.debug("No usable trips on route {} for stop {} on day {}", route.id(), stop.id(), dayIndex);
                 continue;
             }
 
             for (int i = 0; i < numberOfTrips; i++) {
-                int tripOffset = (timeType == TimeType.DEPARTURE) ? i : numberOfTrips - 1 - i;
+                int tripOffset = forward ? i : numberOfTrips - 1 - i;
                 int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
-                int relevantStopTime = stopTimes[dayIndex][(timeType == TimeType.DEPARTURE) ? stopTimeIndex + 1 : stopTimeIndex];
-                // Trip is not active
+                int relevantStopTime = currentDayStopTimes[forward ? stopTimeIndex + 1 : stopTimeIndex];
+
+                // trip is not active
                 if (relevantStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                     continue;
                 }
+
                 relevantStopTime += timeOffset;
-                if ((timeType == TimeType.DEPARTURE) ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
+                if (forward ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
                     log.debug("Found active trip ({}) on route {}", i, route.id());
-
-                    // calculate UTC offset for the trip on the current day
-                    LocalDate date = timeType == TimeType.DEPARTURE ? referenceDate.plusDays(
-                            dayOffset) : referenceDate.minusDays(dayOffset);
-                    int utcOffset = DateTimeUtils.calculateUtcOffset(date, route.zoneId());
-
-                    return new ActiveTrip(tripOffset, relevantStopTime, timeOffset, utcOffset, previousLabel);
+                    return new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel, currentDayStopTimes);
                 }
             }
         }
@@ -414,8 +412,6 @@ class RouteScanner {
     List<Integer> getTripOffsetsForStop(int stopIdx, int range) {
         ArrayList<Integer> tripOffsets = new ArrayList<>();
 
-        int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
-
         // get routes passing the stop
         Stop currentStop = stops[stopIdx];
         int stopRouteStartIdx = currentStop.stopRouteIdx();
@@ -430,15 +426,17 @@ class RouteScanner {
         // check all departures of passing routes
         for (int stopRouteIdx = stopRouteStartIdx; stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
             Route route = routes[stopRoutes[stopRouteIdx]];
-            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd, timeType);
+            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd);
             for (int tripOffsetIdx = 0; tripOffsetIdx < tripOffsetsForRoute.size(); tripOffsetIdx++) {
                 int tripOffset;
-                if (timeType == TimeType.DEPARTURE) {
+
+                if (forward) {
                     tripOffset = tripOffsetsForRoute.get(tripOffsetIdx) - refSourceTime;
                 } else {
                     tripOffset = refSourceTime - tripOffsetsForRoute.get(
                             tripOffsetsForRoute.size() - tripOffsetIdx - 1);
                 }
+
                 if (tripOffsets.size() == tripOffsetIdx) {
                     tripOffsets.add(tripOffset);
                 } else {
@@ -464,6 +462,7 @@ class RouteScanner {
                 return i;
             }
         }
+
         throw new IllegalArgumentException("Stop with index " + stopIdx + " not found on route " + route.id());
     }
 
@@ -474,10 +473,9 @@ class RouteScanner {
      * @param stopIdx  index of the stop (in stops array) to get the stop times from
      * @param minValue minimum value timestamp to get stop times from
      * @param maxValue maximum value timestamp to get stop times from
-     * @param timeType type of the time (arrival or departure)
      * @return list of stop times in the given range
      */
-    private List<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue, TimeType timeType) {
+    private List<Integer> getStopTimesInRange(Route route, int stopIdx, int minValue, int maxValue) {
         ArrayList<Integer> stopTimesInRange = new ArrayList<>();
         int stopOffset = getStopOffsetForStopOnRoute(route, stopIdx);
         int firstStopTimeIdx = route.firstStopTimeIdx();
@@ -486,7 +484,7 @@ class RouteScanner {
 
         for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
             int dayOffset = dayIndex + startDayOffset;
-            int timeOffset = (timeType == TimeType.DEPARTURE ? 1 : -1) * dayOffset * SECONDS_IN_DAY;
+            int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
             int earliestTripTime = stopTimes[dayIndex][firstStopTimeIdx] + timeOffset;
             int latestTripTime = stopTimes[dayIndex][firstStopTimeIdx + 1] + timeOffset;
 
@@ -500,11 +498,12 @@ class RouteScanner {
             for (int tripOffset = 0; tripOffset < numberOfTrips; tripOffset++) {
                 int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
-                int stopTime = stopTimes[dayIndex][(timeType == TimeType.DEPARTURE) ? stopTimeIndex + 1 : stopTimeIndex];
-                // Trip is not active
+                int stopTime = stopTimes[dayIndex][forward ? stopTimeIndex + 1 : stopTimeIndex];
+                // trip is not active
                 if (stopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                     continue;
                 }
+
                 stopTime += timeOffset;
                 if (stopTime >= minValue && stopTime <= maxValue) {
                     stopTimesInRange.add(stopTime);
@@ -515,8 +514,8 @@ class RouteScanner {
         return stopTimesInRange;
     }
 
-    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, int utcOffset,
-                              QueryState.Label previousLabel) {
+    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, QueryState.Label previousLabel,
+                              int[] stopTimes) {
     }
 
 }
