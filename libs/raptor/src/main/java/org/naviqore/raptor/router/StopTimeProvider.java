@@ -66,7 +66,7 @@ class StopTimeProvider {
         // offsets of all unique route zones at local noon
         String dstFingerprint = Arrays.stream(data.getRouteTraversal().routes())
                 .map(Route::zoneId)
-                .map(zoneId -> DateTimeUtils.calculateUtcOffset(date, zoneId))
+                .map(zoneId -> DateTimeConverter.getLocalToUtcOffset(date, zoneId))
                 .distinct()
                 .sorted()
                 .map(String::valueOf)
@@ -95,7 +95,7 @@ class StopTimeProvider {
             Route route = data.getRouteTraversal().routes()[routeIdx];
             int numStops = route.numberOfStops();
             int stopTimeIndex = route.firstStopTimeIdx();
-            int utcOffset = DateTimeUtils.calculateUtcOffset(date, route.zoneId());
+            int utcOffset = DateTimeConverter.getLocalToUtcOffset(date, route.zoneId());
 
             boolean[] booleanMask = tripMask.routeTripMask();
 

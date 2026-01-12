@@ -6,7 +6,6 @@ import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -24,7 +23,7 @@ public class RangeRaptorTest {
     private static final String STOP_N = "N";
 
     private static final OffsetDateTime START_OF_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
-            RaptorRouterTestBuilder.ZONE_ID).toInstant().atOffset(ZoneOffset.UTC);
+            RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
 
     @Test
