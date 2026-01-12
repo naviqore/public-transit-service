@@ -11,7 +11,7 @@ import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,10 +27,17 @@ public class RaptorRouterMultiDayTest {
     private static final String STOP_G = "G";
     private static final String STOP_Q = "Q";
 
-    private static final ZoneOffset ZONE = ZoneOffset.UTC;
-    private static final OffsetDateTime REFERENCE_DAY = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZONE);
+    private static final OffsetDateTime REFERENCE_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
+            RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
     private static final OffsetDateTime PREVIOUS_DAY = REFERENCE_DAY.minusDays(1);
     private static final OffsetDateTime NEXT_DAY = REFERENCE_DAY.plusDays(1);
+
+    /**
+     * Convert UTC results from Router back to the Test's Local Zone
+     */
+    private static LocalDate toLocalZoneDate(OffsetDateTime dateTime) {
+        return dateTime.atZoneSameInstant(RaptorRouterTestBuilder.ZONE_ID).toLocalDate();
+    }
 
     @NoArgsConstructor
     static class RoutePerDayMasker implements RaptorTripMaskProvider {
@@ -97,13 +104,12 @@ public class RaptorRouterMultiDayTest {
             Connection connection = multiDayConnections.getFirst();
             RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, REFERENCE_DAY, 0, 0, 1,
                     multiDayRaptor);
-            assertEquals(REFERENCE_DAY, connection.getDepartureTime());
-
+            assertEquals(REFERENCE_DAY.toInstant(), connection.getDepartureTime().toInstant());
             assertEquals(1, singleDayConnections.size());
             Connection singleDayConnection = singleDayConnections.getFirst();
             RaptorRouterTestHelpers.assertEarliestArrivalConnection(singleDayConnection, STOP_A, STOP_G, REFERENCE_DAY,
                     0, 0, 1, multiDayRaptor);
-            assertEquals(REFERENCE_DAY.plusHours(5), singleDayConnection.getDepartureTime());
+            assertEquals(REFERENCE_DAY.plusHours(5).toInstant(), singleDayConnection.getDepartureTime().toInstant());
         }
 
         @Test
@@ -125,8 +131,8 @@ public class RaptorRouterMultiDayTest {
             Connection connection = multiDayConnections.getFirst();
             RaptorRouterTestHelpers.assertLatestDepartureConnection(connection, STOP_A, STOP_G, requestedArrivalTime, 0,
                     0, 1, multiDayRaptor);
-            assertEquals(requestedArrivalTime, connection.getArrivalTime());
-            assertEquals(PREVIOUS_DAY.toLocalDate(), connection.getDepartureTime().toLocalDate());
+            assertEquals(requestedArrivalTime.toInstant(), connection.getArrivalTime().toInstant());
+            assertEquals(PREVIOUS_DAY.toLocalDate(), toLocalZoneDate(connection.getDepartureTime()));
         }
     }
 
@@ -153,7 +159,7 @@ public class RaptorRouterMultiDayTest {
             Connection connection = connections.getFirst();
             RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
                     raptor);
-            assertEquals(NEXT_DAY.plusHours(startOfDay), connection.getDepartureTime());
+            assertEquals(NEXT_DAY.plusHours(startOfDay).toInstant(), connection.getDepartureTime().toInstant());
 
             // confirm that this connection is not possible with 1 service day only
             RaptorAlgorithm raptorWithLessDays = builder.withMaxDaysToScan(1).build(startOfDay, endOfDay);
@@ -234,8 +240,8 @@ public class RaptorRouterMultiDayTest {
             Connection connection = connections.getFirst();
             RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
                     raptor);
-            assertTrue(connection.getDepartureTime()
-                    .isEqual(REFERENCE_DAY.plusDays(numDaysInFuture).plusHours(startOfDay)));
+            assertEquals(REFERENCE_DAY.plusDays(numDaysInFuture).plusHours(startOfDay).toInstant(),
+                    connection.getDepartureTime().toInstant());
             assertTrue(
                     connection.getArrivalTime().isAfter(REFERENCE_DAY.plusDays(numDaysInFuture).plusHours(startOfDay)));
 

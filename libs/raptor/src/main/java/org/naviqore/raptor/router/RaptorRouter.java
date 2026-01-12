@@ -103,7 +103,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{}, refStopTimes,
                 new int[]{}, config, timeType, referenceDateTime, this.config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
+        return new LabelPostprocessor(this, timeType, referenceDate).reconstructIsolines(bestLabelsPerRound,
+                referenceDate);
     }
 
     /**
@@ -140,8 +141,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
                 walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
-                validatedTargetStops, referenceDate);
+        return new LabelPostprocessor(this, timeType, referenceDate).reconstructParetoOptimalSolutions(
+                bestLabelsPerRound, validatedTargetStops, referenceDate);
     }
 
     /**

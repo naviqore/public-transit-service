@@ -43,7 +43,7 @@ import java.util.Set;
 @NoArgsConstructor
 public class RaptorRouterTestBuilder {
 
-    public static final ZoneId ZONE_ID = ZoneId.of("UTC");
+    public static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
 
     static final int SECONDS_IN_HOUR = 3600;
     static final int DAY_START_HOUR = 5;

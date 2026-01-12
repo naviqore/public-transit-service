@@ -25,19 +25,22 @@ class LabelPostprocessor {
     private final RouteStop[] routeStops;
 
     private final TimeType timeType;
+    private final LocalDate referenceDate;
 
     /**
      * Postprocessor to convert labels into connections
      *
-     * @param raptorData the current raptor instance for access to the data structures.
-     * @param timeType   the time type (arrival or departure).
+     * @param raptorData    the current raptor instance for access to the data structures.
+     * @param timeType      the time type (arrival or departure).
+     * @param referenceDate the reference date used for timezone calculations.
      */
-    LabelPostprocessor(RaptorData raptorData, TimeType timeType) {
+    LabelPostprocessor(RaptorData raptorData, TimeType timeType, LocalDate referenceDate) {
         this.stops = raptorData.getStopContext().stops();
         this.stopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
         this.timeType = timeType;
+        this.referenceDate = referenceDate;
     }
 
     /**
@@ -210,7 +213,7 @@ class LabelPostprocessor {
      * <p>
      * Example: if the departure time is set to 5 am at Stop A and a connection to stop C is queried, the algorithm will
      * relax footpaths from Stop A at 5 am and reach Stop B at 5:05 am. However, the earliest trip on the route
-     * travelling from Stop A - B - C leaves at 9:00 am and arrives at C at 9:07. As a consequence, the arrival time for
+     * traveling from Stop A - B - C leaves at 9:00 am and arrives at C at 9:07. As a consequence, the arrival time for
      * the connection Transfer A (5:00 am) - B (5:05 am) - Route B (9:03 am) - C (9:07 am) is 9:07 am and the connection
      * Route A (9:00 am) - B (9:03 am) - C (9:07 am) is 9:07 am will be identical. However, the latter connection will
      * have travel time of 7 minutes, whereas the former connection will have a travel time of 3 hours and 7 minutes and
@@ -365,6 +368,9 @@ class LabelPostprocessor {
         }
     }
 
+    /**
+     * Retrieve the stop time adjusted to UTC for a specific stop on a specific trip.
+     */
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
         int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
         int numberOfStops = routes[routeIdx].numberOfStops();
@@ -382,11 +388,16 @@ class LabelPostprocessor {
         }
 
         int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
-        return new StopTime(stopTimes[stopTimeIndex], stopTimes[stopTimeIndex + 1]);
+
+        // apply UTC offset to the raw local time from the array
+        Route route = routes[routeIdx];
+        int utcOffset = DateTimeUtils.calculateUtcOffset(referenceDate, route.zoneId());
+
+        return new StopTime(stopTimes[stopTimeIndex] + utcOffset, stopTimes[stopTimeIndex + 1] + utcOffset);
     }
 
     private QueryState.@Nullable Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
-        // Loop through the list in reverse order since the first occurrence will be the best target time
+        // loop through the list in reverse order since the first occurrence will be the best target time
         for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
             QueryState.Label label = bestLabelsPerRound.get(i)[stopIdx];
             if (label != null) {

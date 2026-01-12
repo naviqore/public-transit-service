@@ -12,6 +12,7 @@ import org.naviqore.raptor.RaptorAlgorithm;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +40,8 @@ class RaptorRouterTest {
     private static final String STOP_Q = "Q";
     private static final String STOP_S = "S";
 
-    private static final ZoneOffset ZONE = ZoneOffset.UTC;
-    private static final OffsetDateTime START_OF_DAY = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZONE);
+    private static final OffsetDateTime START_OF_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
+            RaptorRouterTestBuilder.ZONE_ID).toInstant().atOffset(ZoneOffset.UTC);
     private static final OffsetDateTime FIVE_AM = START_OF_DAY.plusHours(5);
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
     private static final OffsetDateTime NINE_AM = START_OF_DAY.plusHours(9);

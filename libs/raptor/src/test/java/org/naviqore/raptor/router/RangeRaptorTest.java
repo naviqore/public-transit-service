@@ -7,6 +7,7 @@ import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,8 +23,8 @@ public class RangeRaptorTest {
     private static final String STOP_K = "K";
     private static final String STOP_N = "N";
 
-    private static final ZoneOffset ZONE = ZoneOffset.UTC;
-    private static final OffsetDateTime START_OF_DAY = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZONE);
+    private static final OffsetDateTime START_OF_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
+            RaptorRouterTestBuilder.ZONE_ID).toInstant().atOffset(ZoneOffset.UTC);
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
 
     @Test

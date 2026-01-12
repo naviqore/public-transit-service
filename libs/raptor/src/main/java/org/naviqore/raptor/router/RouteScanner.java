@@ -36,6 +36,7 @@ class RouteScanner {
     private final int[][] stopTimes;
     private final int actualDaysToScan;
     private final int startDayOffset;
+    private final LocalDate referenceDate;
 
     private final boolean[] routesToScanMask;
 
@@ -60,10 +61,9 @@ class RouteScanner {
         // constant configuration of scanner
         this.minTransferDuration = queryConfig.getMinimumTransferDuration();
         this.timeType = timeType;
+        this.referenceDate = referenceDateTime.toLocalDate();
 
         this.routesToScanMask = new boolean[routes.length];
-
-        LocalDate referenceDate = referenceDateTime.toLocalDate();
 
         if (maxDaysToScan < 1) {
             throw new IllegalArgumentException("maxDaysToScan must be greater than 0.");
@@ -185,7 +185,10 @@ class RouteScanner {
                 int stopTimeIndex = firstStopTimeIdx + 2 * (activeTrip.tripOffset * numberOfStops + stopOffset) + 2;
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
                 int targetTime = rawStopTimes[(timeType == TimeType.DEPARTURE) ? stopTimeIndex : stopTimeIndex + 1];
+                // apply day time and UTC offset to raw local time
                 targetTime += activeTrip.dayTimeOffset;
+                targetTime += activeTrip.utcOffset;
+
                 if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, stop, bestStopTime, stopIdx, round,
                         lastRound, currentRouteIdx)) {
                     continue;
@@ -198,7 +201,7 @@ class RouteScanner {
     private boolean isRouteActiveInDaysToScan(Route route) {
         for (int i = 0; i < actualDaysToScan; i++) {
             int stopTimeStartIndex = route.firstStopTimeIdx();
-            // This means the earliest and latest trip time are set for the route (route is active on given day)
+            // this means the earliest and latest trip time are set for the route (route is active on given day)
             if (stopTimes[i][stopTimeStartIndex] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && stopTimes[i][stopTimeStartIndex + 1] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                 return true;
             }
@@ -378,7 +381,13 @@ class RouteScanner {
                 relevantStopTime += timeOffset;
                 if ((timeType == TimeType.DEPARTURE) ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
                     log.debug("Found active trip ({}) on route {}", i, route.id());
-                    return new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel);
+
+                    // calculate UTC offset for the trip on the current day
+                    LocalDate date = timeType == TimeType.DEPARTURE ? referenceDate.plusDays(
+                            dayOffset) : referenceDate.minusDays(dayOffset);
+                    int utcOffset = DateTimeUtils.calculateUtcOffset(date, route.zoneId());
+
+                    return new ActiveTrip(tripOffset, relevantStopTime, timeOffset, utcOffset, previousLabel);
                 }
             }
         }
@@ -506,7 +515,8 @@ class RouteScanner {
         return stopTimesInRange;
     }
 
-    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, QueryState.Label previousLabel) {
+    private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, int utcOffset,
+                              QueryState.Label previousLabel) {
     }
 
 }
