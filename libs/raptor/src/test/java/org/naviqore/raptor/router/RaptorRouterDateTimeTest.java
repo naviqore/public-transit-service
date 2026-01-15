@@ -11,7 +11,8 @@ import org.naviqore.raptor.RaptorAlgorithm;
 import java.time.*;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @ExtendWith(RaptorRouterTestExtension.class)
 class RaptorRouterDateTimeTest {
@@ -327,7 +328,7 @@ class RaptorRouterDateTimeTest {
 
             assertFalse(results.isEmpty(), "Should find connection during first 02:xx hour (CEST)");
             OffsetDateTime departure = results.getFirst().getDepartureTime();
-            assertTrue(departure.getOffset().equals(ZoneOffset.ofHours(2)),
+            assertEquals(departure.getOffset(), ZoneOffset.ofHours(2),
                     "Departure should have valid offset (either CEST +2)");
         }
     }
