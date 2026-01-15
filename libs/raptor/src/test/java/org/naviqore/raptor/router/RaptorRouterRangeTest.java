@@ -6,7 +6,6 @@ import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,15 +14,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Test class for the raptor algorithm in range RAPTOR mode.
  */
 @ExtendWith(RaptorRouterTestExtension.class)
-public class RangeRaptorTest {
+public class RaptorRouterRangeTest {
 
     private static final String STOP_A = "A";
     private static final String STOP_I = "I";
     private static final String STOP_K = "K";
     private static final String STOP_N = "N";
 
-    private static final OffsetDateTime START_OF_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
-            RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
+    private static final OffsetDateTime START_OF_DAY = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atStartOfDay(
+            RaptorRouterTestBuilder.DEFAULT_ZONE_ID).toOffsetDateTime();
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
 
     @Test

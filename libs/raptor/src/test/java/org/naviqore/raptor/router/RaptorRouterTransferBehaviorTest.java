@@ -9,7 +9,6 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,8 +45,9 @@ public class RaptorRouterTransferBehaviorTest {
 
         static List<Connection> routeBetweenStops(RaptorAlgorithm router, String stop1, String stop2,
                                                   QueryConfig config) {
-            OffsetDateTime startTime = ZonedDateTime.of(2000, 1, 1, DAY_START_HOUR, 0, 0, 0,
-                    RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
+            OffsetDateTime startTime = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atTime(DAY_START_HOUR, 0)
+                    .atZone(RaptorRouterTestBuilder.DEFAULT_ZONE_ID)
+                    .toOffsetDateTime();
             return routeBetweenStops(router, stop1, stop2, startTime, config);
         }
 
@@ -72,8 +72,9 @@ public class RaptorRouterTransferBehaviorTest {
             // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM). if start
             // time is set to 08:01 AM and the transfer time to B is 5 minutes B can be reached at 8:06 AM, allowing to
             // embark the route for the remaining trip
-            OffsetDateTime startTime = ZonedDateTime.of(2000, 1, 1, DAY_START_HOUR, 1, 0, 0,
-                    RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
+            OffsetDateTime startTime = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atTime(DAY_START_HOUR, 1)
+                    .atZone(RaptorRouterTestBuilder.DEFAULT_ZONE_ID)
+                    .toOffsetDateTime();
             List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", startTime,
                     config);
 
@@ -97,8 +98,9 @@ public class RaptorRouterTransferBehaviorTest {
             // first trip leaves "A" at start time (8:00 AM), second trip leaves "A" at 08:15 AM. Since no transfers
             // from the source stop are allowed, the solution must start with the 8:15 AM trip when the start time is
             // set to 08:01 AM.
-            OffsetDateTime startTime = ZonedDateTime.of(2000, 1, 1, DAY_START_HOUR, 1, 0, 0,
-                    RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
+            OffsetDateTime startTime = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atTime(DAY_START_HOUR, 1)
+                    .atZone(RaptorRouterTestBuilder.DEFAULT_ZONE_ID)
+                    .toOffsetDateTime();
             List<Connection> connections = TransferBehaviorHelpers.routeBetweenStops(router, "A", "C", startTime,
                     config);
 
@@ -136,7 +138,7 @@ public class RaptorRouterTransferBehaviorTest {
 
             // convert Result to Test Zone before checking the Hour
             assertEquals(DAY_START_HOUR,
-                    connection.getArrivalTime().atZoneSameInstant(RaptorRouterTestBuilder.ZONE_ID).getHour());
+                    connection.getArrivalTime().atZoneSameInstant(RaptorRouterTestBuilder.DEFAULT_ZONE_ID).getHour());
             assertEquals(15, connection.getArrivalTime().getMinute());
         }
 
@@ -161,7 +163,7 @@ public class RaptorRouterTransferBehaviorTest {
 
             // Convert Result to Test Zone before checking the Hour
             assertEquals(DAY_START_HOUR,
-                    connection.getArrivalTime().atZoneSameInstant(RaptorRouterTestBuilder.ZONE_ID).getHour());
+                    connection.getArrivalTime().atZoneSameInstant(RaptorRouterTestBuilder.DEFAULT_ZONE_ID).getHour());
             assertEquals(20, connection.getArrivalTime().getMinute());
         }
 

@@ -11,7 +11,6 @@ import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,8 +26,8 @@ public class RaptorRouterMultiDayTest {
     private static final String STOP_G = "G";
     private static final String STOP_Q = "Q";
 
-    private static final OffsetDateTime REFERENCE_DAY = ZonedDateTime.of(2021, 1, 1, 0, 0, 0, 0,
-            RaptorRouterTestBuilder.ZONE_ID).toOffsetDateTime();
+    private static final OffsetDateTime REFERENCE_DAY = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atStartOfDay(
+            RaptorRouterTestBuilder.DEFAULT_ZONE_ID).toOffsetDateTime();
     private static final OffsetDateTime PREVIOUS_DAY = REFERENCE_DAY.minusDays(1);
     private static final OffsetDateTime NEXT_DAY = REFERENCE_DAY.plusDays(1);
 
@@ -36,7 +35,7 @@ public class RaptorRouterMultiDayTest {
      * Convert UTC results from Router back to the Test's Local Zone
      */
     private static LocalDate toLocalZoneDate(OffsetDateTime dateTime) {
-        return dateTime.atZoneSameInstant(RaptorRouterTestBuilder.ZONE_ID).toLocalDate();
+        return dateTime.atZoneSameInstant(RaptorRouterTestBuilder.DEFAULT_ZONE_ID).toLocalDate();
     }
 
     @NoArgsConstructor

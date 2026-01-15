@@ -3,7 +3,10 @@ package org.naviqore.raptor.router;
 import lombok.NoArgsConstructor;
 import org.naviqore.raptor.RaptorAlgorithm;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +46,8 @@ import java.util.Set;
 @NoArgsConstructor
 public class RaptorRouterTestBuilder {
 
-    public static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
+    public static final ZoneId DEFAULT_ZONE_ID = ZoneId.of("Europe/Zurich");
+    public static final LocalDate DEFAULT_REFERENCE_DATE = LocalDate.of(2021, 1, 1);
 
     static final int SECONDS_IN_HOUR = 3600;
     static final int DEFAULT_TIME_BETWEEN_STOPS = 5;
@@ -59,7 +63,14 @@ public class RaptorRouterTestBuilder {
     private int daysToScan = 1;
     private int raptorRange = -1;
     private int defaultSameStopTransferTime = 120;
+    private LocalDate referenceDate = DEFAULT_REFERENCE_DATE;
+
     private RaptorTripMaskProvider tripMaskProvider = new RaptorConfig.NoMaskProvider();
+
+    public RaptorRouterTestBuilder withReferenceDate(LocalDate date) {
+        this.referenceDate = date;
+        return this;
+    }
 
     public RaptorRouterTestBuilder withDayRange(int start, int end) {
         this.dayStartHour = start;
@@ -77,8 +88,8 @@ public class RaptorRouterTestBuilder {
 
     public RaptorRouterTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime,
                                                     int dwellTime) {
-        routes.add(new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), ZONE_ID, offset, headway, travelTime,
-                dwellTime));
+        routes.add(new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), DEFAULT_ZONE_ID, offset, headway,
+                travelTime, dwellTime));
         return this;
     }
 
@@ -87,7 +98,7 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute2_HL(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L"), ZONE_ID, offset, headway, travelTime,
+        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L"), DEFAULT_ZONE_ID, offset, headway, travelTime,
                 dwellTime));
         return this;
     }
@@ -98,7 +109,7 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute3_MQ(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), ZONE_ID, offset, headway, travelTime,
+        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), DEFAULT_ZONE_ID, offset, headway, travelTime,
                 dwellTime));
         return this;
     }
@@ -109,7 +120,8 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute4_RS(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R4", List.of("R", "P", "F", "S"), ZONE_ID, offset, headway, travelTime, dwellTime));
+        routes.add(
+                new Route("R4", List.of("R", "P", "F", "S"), DEFAULT_ZONE_ID, offset, headway, travelTime, dwellTime));
         return this;
     }
 
@@ -191,10 +203,13 @@ public class RaptorRouterTestBuilder {
             builder.addRoute(routeIdF, route.zoneId, route.stops);
             builder.addRoute(routeIdR, route.zoneId, route.stops.reversed());
 
-            // add trips
+            // add trips with service day anchor 'noon minus 12 hours'
+            ZonedDateTime serviceDayAnchor = referenceDate.atTime(12, 0).atZone(route.zoneId).minusHours(12);
+            ZonedDateTime currentTime = serviceDayAnchor.plusHours(dayStartHour)
+                    .plusMinutes(route.firstDepartureOffset);
+            ZonedDateTime dayEnd = serviceDayAnchor.plusHours(dayEndHour);
             int tripCount = 0;
-            int timestamp = dayStartHour * SECONDS_IN_HOUR + route.firstDepartureOffset * 60;
-            while (timestamp < dayEndHour * SECONDS_IN_HOUR) {
+            while (currentTime.isBefore(dayEnd)) {
 
                 // add trips
                 String tripIdF = String.format("%s-F-%s", route.id, tripCount);
@@ -203,7 +218,7 @@ public class RaptorRouterTestBuilder {
                 tripCount++;
 
                 // add stop times
-                int departureTimestamp = timestamp;
+                int departureTimestamp = (int) Duration.between(serviceDayAnchor, currentTime).toSeconds();
                 // first stop of trip has no arrival time
                 int arrivalTimestamp = departureTimestamp;
                 for (int i = 0; i < route.stops.size(); i++) {
@@ -218,7 +233,7 @@ public class RaptorRouterTestBuilder {
                     arrivalTimestamp = departureTimestamp + route.travelTimeBetweenStops * 60;
                     departureTimestamp = arrivalTimestamp + route.dwellTimeAtSTop * 60;
                 }
-                timestamp += route.headWayTime * 60;
+                currentTime = currentTime.plusMinutes(route.headWayTime);
             }
         }
 
@@ -253,7 +268,7 @@ public class RaptorRouterTestBuilder {
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
         public Route(String id, List<String> stops) {
-            this(id, stops, ZONE_ID, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS,
+            this(id, stops, DEFAULT_ZONE_ID, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS,
                     DEFAULT_DWELL_TIME);
         }
 

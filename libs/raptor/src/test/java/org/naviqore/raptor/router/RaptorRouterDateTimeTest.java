@@ -31,7 +31,8 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 6, 1);
             OffsetDateTime departureTime = date.atTime(12, 0).atZone(UTC).toOffsetDateTime();
 
-            RaptorAlgorithm router = builder.withDayRange(0, 24)
+            RaptorAlgorithm router = builder.withReferenceDate(date)
+                    .withDayRange(0, 24)
                     .withAddRoute("R_UTC", UTC, List.of("A", "B"), 12 * 60, 60, 30, 0)
                     .build();
 
@@ -49,7 +50,8 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 6, 1);
             OffsetDateTime departureTime = date.atTime(17, 0).atZone(TOKYO).toOffsetDateTime();
 
-            RaptorAlgorithm router = builder.withDayRange(0, 24)
+            RaptorAlgorithm router = builder.withReferenceDate(date)
+                    .withDayRange(0, 24)
                     .withAddRoute("R_TKO", TOKYO, List.of("A", "B"), 17 * 60, 60, 45, 0)
                     .build();
 
@@ -66,7 +68,8 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 6, 1);
             OffsetDateTime departureTime = date.atTime(8, 0).atZone(NEW_YORK).toOffsetDateTime();
 
-            RaptorAlgorithm router = builder.withDayRange(0, 24)
+            RaptorAlgorithm router = builder.withReferenceDate(date)
+                    .withDayRange(0, 24)
                     .withAddRoute("R_NY", NEW_YORK, List.of("A", "B"), 8 * 60, 60, 30, 0)
                     .build();
 
@@ -91,7 +94,7 @@ class RaptorRouterDateTimeTest {
             OffsetDateTime queryDep = date.atTime(0, 0).atZone(UTC).toOffsetDateTime();
 
             // route in tokyo (+09:00)
-            builder.withAddRoute("R_TKO", TOKYO, List.of("B", "C"), 10 * 60, 60, 30, 0);
+            builder.withReferenceDate(date).withAddRoute("R_TKO", TOKYO, List.of("B", "C"), 10 * 60, 60, 30, 0);
             builder.withAddTransfer("A", "B", 30);
 
             RaptorAlgorithm router = builder.withDayRange(0, 24).build();
@@ -112,7 +115,7 @@ class RaptorRouterDateTimeTest {
             OffsetDateTime queryDep = date.atTime(12, 0).atZone(UTC).toOffsetDateTime();
 
             // route in ny (-04:00 in summer)
-            builder.withAddRoute("R_NY", NEW_YORK, List.of("A", "B"), 12 * 60, 60, 30, 0);
+            builder.withReferenceDate(date).withAddRoute("R_NY", NEW_YORK, List.of("A", "B"), 12 * 60, 60, 30, 0);
             builder.withAddTransfer("B", "C", 15);
 
             RaptorAlgorithm router = builder.withDayRange(0, 24).build();
@@ -133,7 +136,7 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 1, 10);
 
             // route 1 tokyo (+09:00)
-            builder.withAddRoute("R_TKO", TOKYO, List.of("A", "B"), 9 * 60, 60, 30, 0);
+            builder.withReferenceDate(date).withAddRoute("R_TKO", TOKYO, List.of("A", "B"), 9 * 60, 60, 30, 0);
             // route 2 zurich (+01:00)
             builder.withAddRoute("R_ZRH", ZURICH, List.of("C", "D"), 13 * 60, 60, 30, 0);
             builder.withAddTransfer("B", "C", 60);
@@ -161,7 +164,7 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 1, 10);
 
             // route london (utc): a -> b. dep 10:00, arr 11:00 utc.
-            builder.withAddRoute("R_LDN", UTC, List.of("A", "B"), 10 * 60, 60, 60, 0);
+            builder.withReferenceDate(date).withAddRoute("R_LDN", UTC, List.of("A", "B"), 10 * 60, 60, 60, 0);
             // route zurich (utc+1): c -> d. dep 13:30 local (12:30 utc).
             builder.withAddRoute("R_ZRH", ZURICH, List.of("C", "D"), 13 * 60 + 30, 60, 60, 0);
             // walk b -> c (60 mins).
@@ -188,8 +191,9 @@ class RaptorRouterDateTimeTest {
             LocalDate date = LocalDate.of(2024, 6, 1);
 
             // tokyo (utc+9) dep 09:00 (00:00 utc)
-            builder.withAddRoute("R_TKO", TOKYO, List.of("A", "B"), 9 * 60, 60, 30, 0);
-            builder.withAddTransfer("B", "C", 30);
+            builder.withReferenceDate(date)
+                    .withAddRoute("R_TKO", TOKYO, List.of("A", "B"), 9 * 60, 60, 30, 0)
+                    .withAddTransfer("B", "C", 30);
             // london (utc) dep 01:30 utc
             builder.withAddRoute("R_LDN", UTC, List.of("C", "D"), 60 + 30, 60, 30, 0);
 
@@ -217,7 +221,8 @@ class RaptorRouterDateTimeTest {
         void shouldHandleSpringForward(RaptorRouterTestBuilder builder) {
             LocalDate dstDate = LocalDate.of(2024, 3, 31); // 02:00 -> 03:00
 
-            RaptorAlgorithm router = builder.withDayRange(0, 24)
+            RaptorAlgorithm router = builder.withReferenceDate(dstDate)
+                    .withDayRange(0, 24)
                     .withAddRoute("R1", ZURICH, List.of("A", "B"), 0, 15, 30, 0)
                     .build();
 
@@ -225,7 +230,27 @@ class RaptorRouterDateTimeTest {
             List<Connection> c = RaptorRouterTestHelpers.routeEarliestArrival(router, "A", "B", queryDep);
 
             assertFalse(c.isEmpty());
-            assertTrue(c.getFirst().getDepartureTime().toLocalTime().getHour() >= 3);
+            assertEquals(LocalTime.of(3, 0), c.getFirst().getDepartureTime().toLocalTime(),
+                    "First trip after jump is 03:00");
+        }
+
+        @Test
+        @DisplayName("Spring Forward: Connection is impossible if absolute UTC gap is smaller than walk")
+        void unreachableAcrossDstJump(RaptorRouterTestBuilder builder) {
+            LocalDate date = LocalDate.of(2024, 3, 31);
+            // Bus 1 arrives B at 01:55 local (UTC 00:55).
+            builder.withReferenceDate(date).withAddRoute("R1", ZURICH, List.of("A", "B"), 115, 60, 0, 0);
+            // Bus 2 departs C at 03:15 local (UTC 01:15).
+            // Linear absolute gap is 20 mins.
+            builder.withDayRange(3, 4).withAddRoute("R2", ZURICH, List.of("C", "D"), 15, 60, 0, 0);
+            // Walk is 30 mins.
+            builder.withAddTransfer("B", "C", 30);
+
+            RaptorAlgorithm router = builder.withDayRange(0, 24).build();
+            OffsetDateTime dep = date.atTime(1, 30).atZone(ZURICH).toOffsetDateTime();
+
+            List<Connection> results = RaptorRouterTestHelpers.routeEarliestArrival(router, "A", "D", dep);
+            assertTrue(results.isEmpty(), "Walk (30m) > UTC Gap (20m)");
         }
 
         @Test
@@ -233,7 +258,8 @@ class RaptorRouterDateTimeTest {
         void shouldHandleFallBack(RaptorRouterTestBuilder builder) {
             LocalDate dstDate = LocalDate.of(2024, 10, 27);
 
-            RaptorAlgorithm router = builder.withDayRange(0, 24)
+            RaptorAlgorithm router = builder.withReferenceDate(dstDate)
+                    .withDayRange(0, 24)
                     .withAddRoute("R1", ZURICH, List.of("A", "B"), 0, 30, 10, 0)
                     .build();
 
@@ -251,7 +277,7 @@ class RaptorRouterDateTimeTest {
         @DisplayName("Midnight Crossing: Correct arrival date")
         void shouldHandleMidnight(RaptorRouterTestBuilder builder) {
             LocalDate date = LocalDate.of(2024, 6, 1);
-            builder.withAddRoute("Night", UTC, List.of("A", "B"), 23 * 60 + 50, 60, 20, 0);
+            builder.withReferenceDate(date).withAddRoute("Night", UTC, List.of("A", "B"), 23 * 60 + 50, 60, 20, 0);
             RaptorAlgorithm router = builder.withMaxDaysToScan(2).withDayRange(0, 30).build();
 
             OffsetDateTime queryDep = date.atTime(23, 45).atZone(UTC).toOffsetDateTime();
