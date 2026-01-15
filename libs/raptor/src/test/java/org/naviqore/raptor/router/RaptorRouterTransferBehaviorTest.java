@@ -34,7 +34,7 @@ public class RaptorRouterTransferBehaviorTest {
             builder.withAddTransfer("A", "B", abTransferTime);
             builder.withAddTransfer("B", "C", bcTransferTime);
             builder.withMaxDaysToScan(1);
-            builder.withDayRange(DAY_START_HOUR, DAY_END_HOUR);
+            builder.withServiceDayRange(DAY_START_HOUR, DAY_END_HOUR);
             return builder.build();
         }
 

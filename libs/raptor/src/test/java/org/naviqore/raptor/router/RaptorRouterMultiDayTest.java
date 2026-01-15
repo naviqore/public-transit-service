@@ -91,9 +91,9 @@ public class RaptorRouterMultiDayTest {
 
             RaptorAlgorithm multiDayRaptor = builder.withAddRoute1_AG()
                     .withMaxDaysToScan(3)
-                    .withDayRange(5, 26)
+                    .withServiceDayRange(5, 26)
                     .build();
-            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).withDayRange(5, 26).build();
+            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).withServiceDayRange(5, 26).build();
 
             // connection from A to G should leave at 00:00 am. (this trip is part of the previous day service)
             List<Connection> multiDayConnections = RaptorRouterTestHelpers.routeEarliestArrival(multiDayRaptor, STOP_A,
@@ -118,9 +118,9 @@ public class RaptorRouterMultiDayTest {
         void findArrivalConnectionFromPreviousDayService(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm multiDayRaptor = builder.withAddRoute1_AG()
                     .withMaxDaysToScan(3)
-                    .withDayRange(5, 26)
+                    .withServiceDayRange(5, 26)
                     .build();
-            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).withDayRange(5, 26).build();
+            RaptorAlgorithm singleDayRaptor = builder.withMaxDaysToScan(1).withServiceDayRange(5, 26).build();
 
             OffsetDateTime requestedArrivalTime = REFERENCE_DAY.plusMinutes(5);
 
@@ -152,7 +152,7 @@ public class RaptorRouterMultiDayTest {
             // service runs only until 20:00!
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
                     .withMaxDaysToScan(3)
-                    .withDayRange(startOfDay, endOfDay)
+                    .withServiceDayRange(startOfDay, endOfDay)
                     .build();
 
             // departure time is 22:00 hence the connection from A to G should leave at the start of the next service
@@ -171,7 +171,7 @@ public class RaptorRouterMultiDayTest {
 
             // confirm that this connection is not possible with 1 service day only
             RaptorAlgorithm raptorWithLessDays = builder.withMaxDaysToScan(1)
-                    .withDayRange(startOfDay, endOfDay)
+                    .withServiceDayRange(startOfDay, endOfDay)
                     .build();
             List<Connection> connectionsWithLessDays = RaptorRouterTestHelpers.routeEarliestArrival(raptorWithLessDays,
                     STOP_A, STOP_G, departureTime);
@@ -202,7 +202,7 @@ public class RaptorRouterMultiDayTest {
                     .withAddTransfer1_ND()
                     .withMaxDaysToScan(3)
                     .withTripMaskProvider(tripMaskProvider)
-                    .withDayRange(startOfDay, endOfDay)
+                    .withServiceDayRange(startOfDay, endOfDay)
                     .build();
 
             // connection from A to D should leave at 16:00 pm of reference day. Walk transfer to N should happen right
@@ -240,7 +240,7 @@ public class RaptorRouterMultiDayTest {
             RaptorAlgorithm raptor = builder.withAddRoute1_AG()
                     .withMaxDaysToScan(numDaysInFuture + 2) // +2 for reference day and previous day
                     .withTripMaskProvider(tripMaskProvider)
-                    .withDayRange(startOfDay, endOfDay)
+                    .withServiceDayRange(startOfDay, endOfDay)
                     .build();
 
             // connection from A to G should leave at start of day of 5th day in the future, since that will be the
@@ -259,7 +259,7 @@ public class RaptorRouterMultiDayTest {
 
             // confirm that no connection is found if the raptor is built with fewer days to scan
             RaptorAlgorithm raptorWithLessDays = builder.withMaxDaysToScan(numDaysInFuture + 1) // one day less
-                    .withDayRange(startOfDay, endOfDay).build();
+                    .withServiceDayRange(startOfDay, endOfDay).build();
             List<Connection> connectionsWithLessDays = RaptorRouterTestHelpers.routeEarliestArrival(raptorWithLessDays,
                     STOP_A, STOP_G, departureTime);
             assertEquals(0, connectionsWithLessDays.size());

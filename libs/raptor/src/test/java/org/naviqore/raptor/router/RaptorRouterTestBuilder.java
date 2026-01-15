@@ -58,8 +58,8 @@ public class RaptorRouterTestBuilder {
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
 
-    private int dayStartHour = 5;
-    private int dayEndHour = 25;
+    private int serviceDayStartHour = 5;
+    private int serviceDayEndHour = 25;
     private int daysToScan = 1;
     private int raptorRange = -1;
     private int defaultSameStopTransferTime = 120;
@@ -72,9 +72,9 @@ public class RaptorRouterTestBuilder {
         return this;
     }
 
-    public RaptorRouterTestBuilder withDayRange(int start, int end) {
-        this.dayStartHour = start;
-        this.dayEndHour = end;
+    public RaptorRouterTestBuilder withServiceDayRange(int startHour, int endHour) {
+        this.serviceDayStartHour = startHour;
+        this.serviceDayEndHour = endHour;
         return this;
     }
 
@@ -205,9 +205,9 @@ public class RaptorRouterTestBuilder {
 
             // add trips with service day anchor 'noon minus 12 hours'
             ZonedDateTime serviceDayAnchor = referenceDate.atTime(12, 0).atZone(route.zoneId).minusHours(12);
-            ZonedDateTime currentTime = serviceDayAnchor.plusHours(dayStartHour)
+            ZonedDateTime currentTime = serviceDayAnchor.plusHours(serviceDayStartHour)
                     .plusMinutes(route.firstDepartureOffset);
-            ZonedDateTime dayEnd = serviceDayAnchor.plusHours(dayEndHour);
+            ZonedDateTime dayEnd = serviceDayAnchor.plusHours(serviceDayEndHour);
             int tripCount = 0;
             while (currentTime.isBefore(dayEnd)) {
 
