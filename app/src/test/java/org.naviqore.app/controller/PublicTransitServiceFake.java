@@ -14,12 +14,15 @@ import org.naviqore.service.exception.TripNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Setter
 @NoArgsConstructor
 class PublicTransitServiceFake implements PublicTransitService {
+
+    public static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
 
     static final Models.Stop STOP_A = new Models.Stop("A", "Stop A", new GeoCoordinate(0, 0));
     static final Models.Stop STOP_B = new Models.Stop("B", "Stop B", new GeoCoordinate(1, 1));
@@ -97,13 +100,13 @@ class PublicTransitServiceFake implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
+    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, OffsetDateTime time,
                                            TimeType timeType, ConnectionQueryConfig config) {
         return List.of(ConnectionGenerators.getSimpleConnection(source, target, time, timeType));
     }
 
     @Override
-    public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(Stop source, Stop target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) {
         List<Connection> connections = new ArrayList<>();
         connections.add(ConnectionGenerators.getSimpleConnection(source, target, time, timeType));
@@ -116,19 +119,19 @@ class PublicTransitServiceFake implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(GeoCoordinate source, Stop target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) {
         return List.of(ConnectionGenerators.getSimpleConnection(source, target, time, timeType));
     }
 
     @Override
-    public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(Stop source, GeoCoordinate target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) {
         return List.of(ConnectionGenerators.getSimpleConnection(source, target, time, timeType));
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, OffsetDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
@@ -146,7 +149,7 @@ class PublicTransitServiceFake implements PublicTransitService {
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(Stop source, OffsetDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
@@ -177,7 +180,7 @@ class PublicTransitServiceFake implements PublicTransitService {
     }
 
     @Override
-    public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
+    public List<Stop> getNearestStops(GeoCoordinate location, int radius) {
         if (radius > 100) {
             return List.of(STOP_A, STOP_B, STOP_C);
         } else {
@@ -186,7 +189,7 @@ class PublicTransitServiceFake implements PublicTransitService {
     }
 
     @Override
-    public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType) {
         return List.of();
     }
 
@@ -205,8 +208,8 @@ class PublicTransitServiceFake implements PublicTransitService {
         } else if (date.isEqual(LocalDate.of(2021, 1, 1))) {
             throw new TripNotActiveException(tripId, date);
         } else {
-            PublicTransitLeg leg = ConnectionGenerators.getPublicTransitLeg(ROUTE_1, STOP_A, STOP_G, date.atTime(8, 0),
-                    TimeType.DEPARTURE);
+            PublicTransitLeg leg = ConnectionGenerators.getPublicTransitLeg(ROUTE_1, STOP_A, STOP_G,
+                    date.atTime(8, 0).atZone(ZONE_ID).toOffsetDateTime(), TimeType.DEPARTURE);
             return leg.getTrip();
         }
     }
@@ -227,7 +230,7 @@ class PublicTransitServiceFake implements PublicTransitService {
         private static final int SECONDS_BETWEEN_STOPS = 300;
         private static final int DISTANCE_BETWEEN_STOPS = 100;
 
-        static Models.Connection getSimpleConnection(Stop startStop, Stop endStop, LocalDateTime date,
+        static Models.Connection getSimpleConnection(Stop startStop, Stop endStop, OffsetDateTime date,
                                                      TimeType timeType) {
             if (startStop == endStop) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
@@ -240,7 +243,7 @@ class PublicTransitServiceFake implements PublicTransitService {
             return new Models.Connection(List.of(leg));
         }
 
-        static Models.Connection getConnectionWithSameStopTransfer(Stop startStop, Stop endStop, LocalDateTime date,
+        static Models.Connection getConnectionWithSameStopTransfer(Stop startStop, Stop endStop, OffsetDateTime date,
                                                                    TimeType timeType) {
             if (startStop == endStop) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
@@ -255,11 +258,11 @@ class PublicTransitServiceFake implements PublicTransitService {
             Models.PublicTransitLeg secondLeg;
             if (timeType == TimeType.DEPARTURE) {
                 firstLeg = getPublicTransitLeg(ROUTE_2, startStop, STOP_D, date, timeType);
-                LocalDateTime departureSecondLeg = firstLeg.getArrival().getArrivalTime().plusMinutes(5);
+                OffsetDateTime departureSecondLeg = firstLeg.getArrival().getArrivalTime().plusMinutes(5);
                 secondLeg = getPublicTransitLeg(ROUTE_3, STOP_D, endStop, departureSecondLeg, timeType);
             } else {
                 secondLeg = getPublicTransitLeg(ROUTE_3, STOP_D, endStop, date, timeType);
-                LocalDateTime departureFirstLeg = secondLeg.getDeparture().getDepartureTime().minusMinutes(5);
+                OffsetDateTime departureFirstLeg = secondLeg.getDeparture().getDepartureTime().minusMinutes(5);
                 firstLeg = getPublicTransitLeg(ROUTE_2, startStop, STOP_D, departureFirstLeg, timeType);
             }
 
@@ -267,7 +270,7 @@ class PublicTransitServiceFake implements PublicTransitService {
         }
 
         static Models.Connection getConnectionWithFinalWalkTransfer(Models.Stop startStop, Models.Stop endStop,
-                                                                    LocalDateTime date, TimeType timeType) {
+                                                                    OffsetDateTime date, TimeType timeType) {
             if (startStop == endStop) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
             }
@@ -287,7 +290,7 @@ class PublicTransitServiceFake implements PublicTransitService {
             Models.Transfer transfer;
             if (timeType == TimeType.DEPARTURE) {
                 leg = getPublicTransitLeg(ROUTE_1, startStop, routeEndStop, date, timeType);
-                LocalDateTime departureWalk = leg.getArrival().getArrivalTime();
+                OffsetDateTime departureWalk = leg.getArrival().getArrivalTime();
                 int duration = 2 * SECONDS_BETWEEN_STOPS;
                 transfer = new Models.Transfer(DISTANCE_BETWEEN_STOPS, duration, departureWalk,
                         departureWalk.plusSeconds(duration), routeEndStop, endStop);
@@ -301,7 +304,7 @@ class PublicTransitServiceFake implements PublicTransitService {
             return new Models.Connection(List.of(leg, transfer));
         }
 
-        static Models.Connection getSimpleConnection(GeoCoordinate startCoordinate, Stop endStop, LocalDateTime date,
+        static Models.Connection getSimpleConnection(GeoCoordinate startCoordinate, Stop endStop, OffsetDateTime date,
                                                      TimeType timeType) {
             if (!ROUTE_1.stops().contains((Models.Stop) endStop)) {
                 throw new IllegalArgumentException("End stop must be part of Route 1.");
@@ -319,7 +322,7 @@ class PublicTransitServiceFake implements PublicTransitService {
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, endStop, date.plusSeconds(walkDuration), timeType);
             } else {
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, endStop, date, timeType);
-                LocalDateTime legArrival = leg.getArrival().getArrivalTime();
+                OffsetDateTime legArrival = leg.getArrival().getArrivalTime();
                 walk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE,
                         legArrival.minusSeconds(walkDuration), legArrival, routeStartStop.getCoordinate(),
                         endStop.getCoordinate(), routeStartStop);
@@ -328,7 +331,7 @@ class PublicTransitServiceFake implements PublicTransitService {
 
         }
 
-        static Models.Connection getSimpleConnection(Stop startStop, GeoCoordinate endCoordinate, LocalDateTime date,
+        static Models.Connection getSimpleConnection(Stop startStop, GeoCoordinate endCoordinate, OffsetDateTime date,
                                                      TimeType timeType) {
             if (!ROUTE_1.stops().contains((Models.Stop) startStop)) {
                 throw new IllegalArgumentException("End stop must be part of Route 1.");
@@ -341,12 +344,12 @@ class PublicTransitServiceFake implements PublicTransitService {
             int walkDuration = 2 * SECONDS_BETWEEN_STOPS;
             if (timeType == TimeType.DEPARTURE) {
                 leg = getPublicTransitLeg(ROUTE_1, startStop, routeEndStop, date, timeType);
-                LocalDateTime legArrival = leg.getArrival().getArrivalTime();
+                OffsetDateTime legArrival = leg.getArrival().getArrivalTime();
                 walk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE, legArrival,
                         legArrival.plusSeconds(walkDuration), routeEndStop.getCoordinate(), endCoordinate,
                         routeEndStop);
             } else {
-                LocalDateTime walkDeparture = date.minusSeconds(walkDuration);
+                OffsetDateTime walkDeparture = date.minusSeconds(walkDuration);
                 walk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE, walkDeparture, date,
                         routeEndStop.getCoordinate(), endCoordinate, routeEndStop);
                 leg = getPublicTransitLeg(ROUTE_1, startStop, routeEndStop, walkDeparture, timeType);
@@ -355,7 +358,7 @@ class PublicTransitServiceFake implements PublicTransitService {
         }
 
         static Models.Connection getSimpleConnection(GeoCoordinate startCoordinate, GeoCoordinate endCoordinate,
-                                                     LocalDateTime date, TimeType timeType) {
+                                                     OffsetDateTime date, TimeType timeType) {
             Models.Stop routeStartStop = STOP_A;
             Models.Stop routeEndStop = STOP_G;
             Models.Walk firstWalk;
@@ -368,16 +371,16 @@ class PublicTransitServiceFake implements PublicTransitService {
                         routeStartStop);
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, routeEndStop, date.plusSeconds(walkDuration),
                         timeType);
-                LocalDateTime legArrival = leg.getArrival().getArrivalTime();
+                OffsetDateTime legArrival = leg.getArrival().getArrivalTime();
                 lastWalk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE, legArrival,
                         legArrival.plusSeconds(walkDuration), routeEndStop.getCoordinate(), endCoordinate,
                         routeEndStop);
             } else {
-                LocalDateTime walkDeparture = date.minusSeconds(walkDuration);
+                OffsetDateTime walkDeparture = date.minusSeconds(walkDuration);
                 lastWalk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.LAST_MILE, walkDeparture,
                         date, routeEndStop.getCoordinate(), endCoordinate, routeEndStop);
                 leg = getPublicTransitLeg(ROUTE_1, routeStartStop, routeEndStop, walkDeparture, timeType);
-                LocalDateTime legDeparture = leg.getDeparture().getDepartureTime();
+                OffsetDateTime legDeparture = leg.getDeparture().getDepartureTime();
                 firstWalk = new Models.Walk(DISTANCE_BETWEEN_STOPS, walkDuration, WalkType.FIRST_MILE,
                         legDeparture.minusSeconds(walkDuration), legDeparture, startCoordinate,
                         routeStartStop.getCoordinate(), routeStartStop);
@@ -386,7 +389,7 @@ class PublicTransitServiceFake implements PublicTransitService {
         }
 
         private static Models.PublicTransitLeg getPublicTransitLeg(RouteData route, Stop startStop, Stop endStop,
-                                                                   LocalDateTime startTime, TimeType timeType) {
+                                                                   OffsetDateTime startTime, TimeType timeType) {
             // get index of reference stop in route.stops
             int startStopIndex = route.stops().indexOf((Models.Stop) startStop);
             if (startStopIndex == -1) {
@@ -406,7 +409,7 @@ class PublicTransitServiceFake implements PublicTransitService {
             List<org.naviqore.service.StopTime> stopTimes = new ArrayList<>();
             for (int i = 0; i < route.stops().size(); i++) {
                 Models.Stop stop = route.stops().get(i);
-                LocalDateTime arrivalTime = startTime.plusSeconds((long) SECONDS_BETWEEN_STOPS * (i - refIndex));
+                OffsetDateTime arrivalTime = startTime.plusSeconds((long) SECONDS_BETWEEN_STOPS * (i - refIndex));
                 stopTimes.add(new Models.StopTime(stop, arrivalTime, arrivalTime, trip));
             }
             trip.setStopTimes(stopTimes);
@@ -457,12 +460,12 @@ class PublicTransitServiceFake implements PublicTransitService {
 
         @Getter
         static class Transfer extends Leg implements org.naviqore.service.Transfer {
-            private final LocalDateTime departureTime;
-            private final LocalDateTime arrivalTime;
+            private final OffsetDateTime departureTime;
+            private final OffsetDateTime arrivalTime;
             private final Stop sourceStop;
             private final Stop targetStop;
 
-            Transfer(int distance, int duration, LocalDateTime departureTime, LocalDateTime arrivalTime,
+            Transfer(int distance, int duration, OffsetDateTime departureTime, OffsetDateTime arrivalTime,
                      Stop sourceStop, Stop targetStop) {
                 super(LegType.WALK, distance, duration);
                 this.departureTime = departureTime;
@@ -480,14 +483,15 @@ class PublicTransitServiceFake implements PublicTransitService {
         @Getter
         static class Walk extends Leg implements org.naviqore.service.Walk {
             private final WalkType walkType;
-            private final LocalDateTime departureTime;
-            private final LocalDateTime arrivalTime;
+            private final OffsetDateTime departureTime;
+            private final OffsetDateTime arrivalTime;
             private final GeoCoordinate sourceLocation;
             private final GeoCoordinate targetLocation;
             private final Stop stop;
 
-            Walk(int distance, int duration, WalkType walkType, LocalDateTime departureTime, LocalDateTime arrivalTime,
-                 GeoCoordinate sourceLocation, GeoCoordinate targetLocation, Models.@Nullable Stop stop) {
+            Walk(int distance, int duration, WalkType walkType, OffsetDateTime departureTime,
+                 OffsetDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
+                 Models.@Nullable Stop stop) {
                 super(LegType.WALK, distance, duration);
                 this.walkType = walkType;
                 this.departureTime = departureTime;
@@ -545,8 +549,8 @@ class PublicTransitServiceFake implements PublicTransitService {
         @Getter
         static class StopTime implements org.naviqore.service.StopTime {
             private final Stop stop;
-            private final LocalDateTime arrivalTime;
-            private final LocalDateTime departureTime;
+            private final OffsetDateTime arrivalTime;
+            private final OffsetDateTime departureTime;
             private final transient Trip trip;
         }
 
@@ -561,40 +565,40 @@ class PublicTransitServiceFake implements PublicTransitService {
             }
 
             @Override
-            public LocalDateTime getDepartureTime() {
+            public OffsetDateTime getDepartureTime() {
                 return legs.getFirst().accept(new LegVisitor<>() {
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.PublicTransitLeg publicTransitLeg) {
+                    public OffsetDateTime visit(org.naviqore.service.PublicTransitLeg publicTransitLeg) {
                         return publicTransitLeg.getDeparture().getDepartureTime();
                     }
 
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.Transfer transfer) {
+                    public OffsetDateTime visit(org.naviqore.service.Transfer transfer) {
                         return transfer.getDepartureTime();
                     }
 
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.Walk walk) {
+                    public OffsetDateTime visit(org.naviqore.service.Walk walk) {
                         return walk.getDepartureTime();
                     }
                 });
             }
 
             @Override
-            public LocalDateTime getArrivalTime() {
+            public OffsetDateTime getArrivalTime() {
                 return legs.getLast().accept(new LegVisitor<>() {
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.PublicTransitLeg publicTransitLeg) {
+                    public OffsetDateTime visit(org.naviqore.service.PublicTransitLeg publicTransitLeg) {
                         return publicTransitLeg.getArrival().getArrivalTime();
                     }
 
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.Transfer transfer) {
+                    public OffsetDateTime visit(org.naviqore.service.Transfer transfer) {
                         return transfer.getArrivalTime();
                     }
 
                     @Override
-                    public LocalDateTime visit(org.naviqore.service.Walk walk) {
+                    public OffsetDateTime visit(org.naviqore.service.Walk walk) {
                         return walk.getArrivalTime();
                     }
                 });

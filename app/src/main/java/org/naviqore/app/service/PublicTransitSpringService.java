@@ -1,7 +1,6 @@
 package org.naviqore.app.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
@@ -13,7 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -83,13 +82,13 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit) {
-        return delegate.getNearestStops(location, radius, limit);
+    public List<Stop> getNearestStops(GeoCoordinate location, int radius) {
+        return delegate.getNearestStops(location, radius);
     }
 
     @Override
-    public List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit) {
-        return delegate.getNextDepartures(stop, from, until, limit);
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType) {
+        return delegate.getStopTimes(stop, from, until, timeType);
     }
 
     @Override
@@ -98,38 +97,38 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time,
+    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, OffsetDateTime time,
                                            TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
-    public List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(Stop source, Stop target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
-    public List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(Stop source, GeoCoordinate target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
-    public List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
+    public List<Connection> getConnections(GeoCoordinate source, Stop target, OffsetDateTime time, TimeType timeType,
                                            ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getConnections(source, target, time, timeType, config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, OffsetDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getIsolines(source, time, timeType, config);
     }
 
     @Override
-    public Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
+    public Map<Stop, Connection> getIsolines(Stop source, OffsetDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getIsolines(source, time, timeType, config);
     }

@@ -12,7 +12,7 @@ import org.naviqore.app.exception.StopNotFoundException;
 import org.naviqore.app.exception.ValidationException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -40,8 +40,6 @@ public class RoutingControllerTest {
         boolean hasBikeInformation = true;
         boolean hasTravelModeInformation = true;
 
-        // Note: Negative value tests removed - Bean Validation (@Min) handles these at framework level
-        // These should be tested in integration tests, not unit tests
         return Stream.of(
                 Arguments.of("validValues", validMaxWalkingDuration, validMaxTransferDuration, validMaxTravelTime,
                         validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
@@ -99,14 +97,14 @@ public class RoutingControllerTest {
 
     List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
                                     String targetStopId, Double targetLatitude, Double targetLongitude,
-                                    LocalDateTime departureDateTime) throws org.naviqore.service.exception.ConnectionRoutingException {
+                                    OffsetDateTime departureDateTime) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getConnections(sourceStopId, sourceLatitude, sourceLongitude, targetStopId,
                 targetLatitude, targetLongitude, departureDateTime, TimeType.DEPARTURE, null, null, null, 0, false,
                 false, null);
     }
 
     List<StopConnection> getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
-                                     LocalDateTime departureDateTime, TimeType timeType,
+                                     OffsetDateTime departureDateTime, TimeType timeType,
                                      boolean returnConnections) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getIsolines(sourceStopId, sourceLatitude, sourceLongitude, departureDateTime, timeType,
                 null, null, null, 0, false, false, null, returnConnections);
@@ -121,44 +119,36 @@ public class RoutingControllerTest {
 
         @Test
         void testWithValidSourceAndTargetStopIds() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             String sourceStopId = "A";
             String targetStopId = "G";
-            LocalDateTime departureDateTime = LocalDateTime.now();
+            OffsetDateTime departureDateTime = OffsetDateTime.now();
 
-            // Act
             List<Connection> connections = getConnections(sourceStopId, null, null, targetStopId, null, null,
                     departureDateTime);
 
-            // Assert
             assertNotNull(connections);
         }
 
         @Test
         void testWithoutSourceStopIdButWithCoordinates() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             double sourceLatitude = 46.2044;
             double sourceLongitude = 6.1432;
             String targetStopId = "G";
-            LocalDateTime departureDateTime = LocalDateTime.now();
+            OffsetDateTime departureDateTime = OffsetDateTime.now();
 
-            // Act
             List<Connection> connections = getConnections(null, sourceLatitude, sourceLongitude, targetStopId, null,
                     null, departureDateTime);
 
-            // Assert
             assertNotNull(connections);
         }
 
         @Test
         void testInvalidStopId() {
-            // Arrange
             String invalidStopId = "invalidStopId";
             String targetStopId = "G";
 
-            // Act & Assert
             StopNotFoundException exception = assertThrows(StopNotFoundException.class,
-                    () -> getConnections(invalidStopId, null, null, targetStopId, null, null, LocalDateTime.now()));
+                    () -> getConnections(invalidStopId, null, null, targetStopId, null, null, OffsetDateTime.now()));
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getMessage());
             assertEquals("invalidStopId", exception.getStopId());
             assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase());
@@ -166,11 +156,10 @@ public class RoutingControllerTest {
 
         @Test
         void testRoutingBetweenSameStops() {
-            // Arrange
             String sourceStopId = "A";
             String targetStopId = "A";
-            LocalDateTime departureDateTime = LocalDateTime.now();
-            // Act & Assert
+            OffsetDateTime departureDateTime = OffsetDateTime.now();
+
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
                     () -> getConnections(sourceStopId, null, null, targetStopId, null, null, departureDateTime));
             assertEquals("Source and target stop cannot be the same. Please provide different stops.",
@@ -179,11 +168,10 @@ public class RoutingControllerTest {
 
         @Test
         void testRoutingBetweenSameCoordinates() {
-            // Arrange
             double latitude = 46.2044;
             double longitude = 6.1432;
-            LocalDateTime departureDateTime = LocalDateTime.now();
-            // Act & Assert
+            OffsetDateTime departureDateTime = OffsetDateTime.now();
+
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
                     () -> getConnections(null, latitude, longitude, null, latitude, longitude, departureDateTime));
             assertEquals("Source and target coordinates cannot be the same. Please provide different coordinates.",
@@ -192,27 +180,24 @@ public class RoutingControllerTest {
 
         @Test
         void testMissingSourceStopAndSourceCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getConnections(null, null, null, "targetStopId", null, null, LocalDateTime.now()));
+                    () -> getConnections(null, null, null, "targetStopId", null, null, OffsetDateTime.now()));
             assertEquals("Either sourceStopId or both sourceLatitude and sourceLongitude must be provided.",
                     exception.getMessage());
         }
 
         @Test
         void testMissingTargetStopAndTargetCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getConnections("sourceStopId", null, null, null, null, null, LocalDateTime.now()));
+                    () -> getConnections("sourceStopId", null, null, null, null, null, OffsetDateTime.now()));
             assertEquals("Either targetStopId or both targetLatitude and targetLongitude must be provided.",
                     exception.getMessage());
         }
 
         @Test
         void testGivenSourceStopAndSourceCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getConnections("sourceStopId", 0., 0., "targetStopId", null, null, LocalDateTime.now()));
+                    () -> getConnections("sourceStopId", 0., 0., "targetStopId", null, null, OffsetDateTime.now()));
             assertEquals(
                     "Provide either sourceStopId or coordinates (sourceLatitude and sourceLongitude), but not both.",
                     exception.getMessage());
@@ -220,9 +205,8 @@ public class RoutingControllerTest {
 
         @Test
         void testGivenTargetStopAndTargetCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getConnections("sourceStopId", null, null, "targetStopId", 0., 0., LocalDateTime.now()));
+                    () -> getConnections("sourceStopId", null, null, "targetStopId", 0., 0., OffsetDateTime.now()));
             assertEquals(
                     "Provide either targetStopId or coordinates (targetLatitude and targetLongitude), but not both.",
                     exception.getMessage());
@@ -230,9 +214,8 @@ public class RoutingControllerTest {
 
         @Test
         void testInvalidCoordinates() {
-            // Act & Assert
             InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
-                    () -> getConnections(null, 91., 181., null, 32., 32., LocalDateTime.now()));
+                    () -> getConnections(null, 91., 181., null, 32., 32., OffsetDateTime.now()));
             assertEquals(
                     "Invalid coordinates. Latitude must be between -90 and 90, longitude must be between -180 and 180.",
                     exception.getMessage());
@@ -252,12 +235,12 @@ public class RoutingControllerTest {
             serviceFake.setHasTravelModeInformation(hasTravelModeInformation);
 
             if (errorMessage == null) {
-                routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(), TimeType.DEPARTURE,
+                routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(), TimeType.DEPARTURE,
                         maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes);
             } else {
                 ValidationException exception = assertThrows(ValidationException.class,
-                        () -> routingController.getConnections(null, 0., 0., null, 1., 1., LocalDateTime.now(),
+                        () -> routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(),
                                 TimeType.DEPARTURE, maxWalkingDuration, maxTransferDuration, maxTravelTime,
                                 minTransferTime, wheelChairAccessible, bikeAllowed, travelModes));
                 assertEquals(errorMessage, exception.getMessage());
@@ -274,11 +257,9 @@ public class RoutingControllerTest {
 
         @Test
         void testFromStopReturnConnectionsFalse() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             String sourceStopId = "A";
-            LocalDateTime time = LocalDateTime.now();
+            OffsetDateTime time = OffsetDateTime.now();
 
-            // Act
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, time,
                     TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, false);
 
@@ -297,10 +278,8 @@ public class RoutingControllerTest {
 
         @Test
         void testFromStopReturnConnectionsTrue() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             String sourceStopId = "A";
-            // This tests if the time is set to now if null
-            LocalDateTime expectedStartTime = LocalDateTime.now();
+            OffsetDateTime expectedStartTime = OffsetDateTime.now();
 
             List<StopConnection> stopConnections = routingController.getIsolines(sourceStopId, null, null, null,
                     TimeType.DEPARTURE, 30, 2, 120, 5, false, false, null, true);
@@ -309,10 +288,12 @@ public class RoutingControllerTest {
 
             for (StopConnection stopConnection : stopConnections) {
                 assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+
                 // because returnConnections == true
                 assertNotNull(stopConnection.getConnection());
                 assertEquals(stopConnection.getStop(), stopConnection.getConnection().getLegs().getLast().getToStop());
                 Connection connection = stopConnection.getConnection();
+
                 // make sure each connection has a departure time after/equal the expected start time
                 assertFalse(connection.getLegs().getFirst().getDepartureTime().isBefore(expectedStartTime));
                 assertEquals(sourceStopId, connection.getLegs().getFirst().getFromStop().getId());
@@ -321,6 +302,7 @@ public class RoutingControllerTest {
                 if (trip != null) {
                     List<StopTime> stopTimes = trip.getStopTimes();
                     assertNotNull(stopTimes);
+
                     // find index of the stopConnection.getStop() in the stopTimes
                     int index = -1;
                     for (int i = 0; i < stopTimes.size(); i++) {
@@ -329,9 +311,11 @@ public class RoutingControllerTest {
                             break;
                         }
                     }
+
                     if (index == -1) {
                         fail("Stop not found in trip stop times");
                     }
+
                     // check if the previous stop in the connecting leg is the same as the previous stop in the trip
                     assertEquals(stopTimes.get(index - 1).getStop(), stopConnection.getConnectingLeg().getFromStop());
                 }
@@ -340,12 +324,10 @@ public class RoutingControllerTest {
 
         @Test
         void testFromCoordinatesReturnConnectionsFalse() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             double sourceLatitude = 46.2044;
             double sourceLongitude = 6.1432;
-            LocalDateTime time = LocalDateTime.now();
+            OffsetDateTime time = OffsetDateTime.now();
 
-            // Act
             List<StopConnection> stopConnections = getIsolines(null, sourceLatitude, sourceLongitude, time,
                     TimeType.DEPARTURE, false);
 
@@ -353,9 +335,11 @@ public class RoutingControllerTest {
 
             for (StopConnection stopConnection : stopConnections) {
                 assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+
                 // because returnConnections == false
                 assertNull(stopConnection.getConnection());
                 Trip trip = stopConnection.getConnectingLeg().getTrip();
+
                 if (trip != null) {
                     assertNull(trip.getStopTimes());
                 }
@@ -364,10 +348,8 @@ public class RoutingControllerTest {
 
         @Test
         void testFromCoordinateReturnConnectionsTrue() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
-            // This tests if the time is set to now if null
-            LocalDateTime expectedStartTime = LocalDateTime.now();
+            OffsetDateTime expectedStartTime = OffsetDateTime.now();
 
             List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
                     sourceCoordinate.longitude(), null, TimeType.DEPARTURE, true);
@@ -376,10 +358,12 @@ public class RoutingControllerTest {
 
             for (StopConnection stopConnection : stopConnections) {
                 assertEquals(stopConnection.getStop(), stopConnection.getConnectingLeg().getToStop());
+
                 // because returnConnections == true
                 assertNotNull(stopConnection.getConnection());
                 assertEquals(stopConnection.getStop(), stopConnection.getConnection().getLegs().getLast().getToStop());
                 Connection connection = stopConnection.getConnection();
+
                 // make sure each connection has a departure time after/equal the expected start time
                 assertFalse(connection.getLegs().getFirst().getDepartureTime().isBefore(expectedStartTime));
                 assertNull(connection.getLegs().getFirst().getFromStop());
@@ -389,6 +373,7 @@ public class RoutingControllerTest {
                 if (trip != null) {
                     List<StopTime> stopTimes = trip.getStopTimes();
                     assertNotNull(stopTimes);
+
                     // find index of the stopConnection.getStop() in the stopTimes
                     int index = -1;
                     for (int i = 0; i < stopTimes.size(); i++) {
@@ -397,9 +382,11 @@ public class RoutingControllerTest {
                             break;
                         }
                     }
+
                     if (index == -1) {
                         fail("Stop not found in trip stop times");
                     }
+
                     // check if the previous stop in the connecting leg is the same as the previous stop in the trip
                     assertEquals(stopTimes.get(index - 1).getStop(), stopConnection.getConnectingLeg().getFromStop());
                 }
@@ -408,13 +395,11 @@ public class RoutingControllerTest {
 
         @Test
         void testFromStopReturnConnectionsTrueTimeTypeArrival() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             String sourceStopId = "G";
 
             List<StopConnection> stopConnections = getIsolines(sourceStopId, null, null, null, TimeType.ARRIVAL, true);
 
-            // This tests if the time is set to now if null
-            LocalDateTime expectedArrivalTime = LocalDateTime.now();
+            OffsetDateTime expectedArrivalTime = OffsetDateTime.now();
             assertNotNull(stopConnections);
 
             for (StopConnection stopConnection : stopConnections) {
@@ -422,6 +407,7 @@ public class RoutingControllerTest {
                 Connection connection = stopConnection.getConnection();
 
                 assertEquals(stopConnection.getStop(), connectingLeg.getFromStop());
+
                 // because returnConnections == true
                 assertNotNull(connection);
                 assertEquals(stopConnection.getStop(), connection.getLegs().getFirst().getFromStop());
@@ -434,6 +420,7 @@ public class RoutingControllerTest {
                 if (trip != null) {
                     List<StopTime> stopTimes = trip.getStopTimes();
                     assertNotNull(stopTimes);
+
                     // find index of the stopConnection.getStop() in the stopTimes
                     int index = -1;
                     for (int i = 0; i < stopTimes.size(); i++) {
@@ -442,9 +429,11 @@ public class RoutingControllerTest {
                             break;
                         }
                     }
+
                     if (index == -1) {
                         fail("Stop not found in trip stop times");
                     }
+
                     // check if the target stop in the connecting leg is the same as the next stop in the trip
                     assertEquals(stopTimes.get(index + 1).getStop(), connectingLeg.getToStop());
                 }
@@ -453,25 +442,24 @@ public class RoutingControllerTest {
 
         @Test
         void testFromCoordinateReturnConnectionsTrueTimeTypeArrival() throws org.naviqore.service.exception.ConnectionRoutingException {
-            // Arrange
             GeoCoordinate sourceCoordinate = new GeoCoordinate(46.2044, 6.1432);
 
             List<StopConnection> stopConnections = getIsolines(null, sourceCoordinate.latitude(),
                     sourceCoordinate.longitude(), null, TimeType.ARRIVAL, true);
 
-            // This tests if the time is set to now if null
-            LocalDateTime expectedArrivalTime = LocalDateTime.now();
+            OffsetDateTime expectedArrivalTime = OffsetDateTime.now();
             assertNotNull(stopConnections);
 
             for (StopConnection stopConnection : stopConnections) {
                 Leg connectingLeg = stopConnection.getConnectingLeg();
                 Connection connection = stopConnection.getConnection();
-
                 assertEquals(stopConnection.getStop(), connectingLeg.getFromStop());
+
                 // because returnConnections == true
                 assertNotNull(connection);
                 assertEquals(stopConnection.getStop(), connection.getLegs().getFirst().getFromStop());
                 assertEquals(sourceCoordinate, connection.getLegs().getLast().getTo());
+
                 // should be walk transfer from location without stop object
                 assertNull(connection.getLegs().getLast().getToStop());
 
@@ -482,6 +470,7 @@ public class RoutingControllerTest {
                 if (trip != null) {
                     List<StopTime> stopTimes = trip.getStopTimes();
                     assertNotNull(stopTimes);
+
                     // find index of the stopConnection.getStop() in the stopTimes
                     int index = -1;
                     for (int i = 0; i < stopTimes.size(); i++) {
@@ -490,9 +479,11 @@ public class RoutingControllerTest {
                             break;
                         }
                     }
+
                     if (index == -1) {
                         fail("Stop not found in trip stop times");
                     }
+
                     // check if the target stop in the connecting leg is the same as the next stop in the trip
                     assertEquals(stopTimes.get(index + 1).getStop(), connectingLeg.getToStop());
                 }
@@ -501,12 +492,11 @@ public class RoutingControllerTest {
 
         @Test
         void testInvalidSourceStopId() {
-            // Arrange
             String invalidStopId = "invalidStopId";
 
-            // Act & Assert
             StopNotFoundException exception = assertThrows(StopNotFoundException.class,
-                    () -> getIsolines(invalidStopId, null, null, LocalDateTime.now(), TimeType.DEPARTURE, false));
+                    () -> getIsolines(invalidStopId, null, null, OffsetDateTime.now(), TimeType.DEPARTURE, false));
+
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getMessage());
             assertEquals("invalidStopId", exception.getStopId());
             assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase());
@@ -514,18 +504,16 @@ public class RoutingControllerTest {
 
         @Test
         void testMissingSourceStopAndSourceCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getIsolines(null, null, null, LocalDateTime.now(), TimeType.DEPARTURE, false));
+                    () -> getIsolines(null, null, null, OffsetDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals("Either sourceStopId or both sourceLatitude and sourceLongitude must be provided.",
                     exception.getMessage());
         }
 
         @Test
         void testGivenSourceStopAndSourceCoordinates() {
-            // Act & Assert
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> getIsolines("sourceStopId", 0., 0.1, LocalDateTime.now(), TimeType.DEPARTURE, false));
+                    () -> getIsolines("sourceStopId", 0., 0.1, OffsetDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals(
                     "Provide either sourceStopId or coordinates (sourceLatitude and sourceLongitude), but not both.",
                     exception.getMessage());
@@ -533,9 +521,8 @@ public class RoutingControllerTest {
 
         @Test
         void testInvalidCoordinates() {
-            // Act & Assert
             InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
-                    () -> getIsolines(null, 91., 181., LocalDateTime.now(), TimeType.DEPARTURE, false));
+                    () -> getIsolines(null, 91., 181., OffsetDateTime.now(), TimeType.DEPARTURE, false));
             assertEquals(
                     "Invalid coordinates. Latitude must be between -90 and 90, longitude must be between -180 and 180.",
                     exception.getMessage());
@@ -555,12 +542,12 @@ public class RoutingControllerTest {
             serviceFake.setHasTravelModeInformation(hasTravelModeInformation);
 
             if (errorMessage == null) {
-                routingController.getIsolines("A", null, null, LocalDateTime.now(), TimeType.DEPARTURE,
+                routingController.getIsolines("A", null, null, OffsetDateTime.now(), TimeType.DEPARTURE,
                         maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes, false);
             } else {
                 ValidationException exception = assertThrows(ValidationException.class,
-                        () -> routingController.getIsolines("A", null, null, LocalDateTime.now(), TimeType.DEPARTURE,
+                        () -> routingController.getIsolines("A", null, null, OffsetDateTime.now(), TimeType.DEPARTURE,
                                 maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime,
                                 wheelChairAccessible, bikeAllowed, travelModes, false));
                 assertEquals(errorMessage, exception.getMessage());

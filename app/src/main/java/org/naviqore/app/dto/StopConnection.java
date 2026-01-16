@@ -3,7 +3,7 @@ package org.naviqore.app.dto;
 import lombok.*;
 import org.naviqore.service.TimeType;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -33,11 +33,13 @@ public class StopConnection {
 
         this.stop = DtoMapper.map(serviceStop);
         this.connection = DtoMapper.map(serviceConnection);
+
         if (timeType == TimeType.DEPARTURE) {
             prepareDepartureConnectingLeg();
         } else {
             prepareArrivalConnectingLeg();
         }
+
         if (!returnConnections) {
             reduceData();
         }
@@ -52,7 +54,7 @@ public class StopConnection {
      * @param timeType The type of time to match (DEPARTURE or ARRIVAL).
      * @return The index of the stop time in the trip.
      */
-    private static int findStopTimeIndexInTrip(Trip trip, Stop stop, LocalDateTime time, TimeType timeType) {
+    private static int findStopTimeIndexInTrip(Trip trip, Stop stop, OffsetDateTime time, TimeType timeType) {
         List<StopTime> stopTimes = trip.getStopTimes();
         for (int i = 0; i < stopTimes.size(); i++) {
             StopTime stopTime = stopTimes.get(i);
@@ -64,6 +66,7 @@ public class StopConnection {
                 }
             }
         }
+
         throw new IllegalStateException("Stop time not found in trip.");
     }
 
@@ -76,6 +79,7 @@ public class StopConnection {
         if (connectingLeg.getTrip() == null) {
             return;
         }
+
         int stopTimeIndex = findStopTimeIndexInTrip(connectingLeg.getTrip(), connectingLeg.getToStop(),
                 connectingLeg.getArrivalTime(), TimeType.ARRIVAL);
         StopTime sourceStopTime = connectingLeg.getTrip().getStopTimes().get(stopTimeIndex - 1);
@@ -93,6 +97,7 @@ public class StopConnection {
         if (connectingLeg.getTrip() == null) {
             return;
         }
+
         int stopTimeIndex = findStopTimeIndexInTrip(connectingLeg.getTrip(), connectingLeg.getFromStop(),
                 connectingLeg.getDepartureTime(), TimeType.DEPARTURE);
         StopTime targetStopTime = connectingLeg.getTrip().getStopTimes().get(stopTimeIndex + 1);
@@ -110,6 +115,7 @@ public class StopConnection {
         if (connectingLeg.getTrip() == null) {
             return;
         }
+
         Trip reducedTrip = new Trip(connectingLeg.getTrip().getHeadSign(), connectingLeg.getTrip().getRoute(), null,
                 connectingLeg.getTrip().isBikesAllowed(), connectingLeg.getTrip().isWheelchairAccessible());
         connectingLeg = new Leg(connectingLeg.getType(), connectingLeg.getFrom(), connectingLeg.getTo(),

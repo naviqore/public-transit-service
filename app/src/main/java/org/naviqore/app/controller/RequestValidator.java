@@ -12,6 +12,7 @@ import org.naviqore.service.Stop;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
@@ -68,9 +69,9 @@ final class RequestValidator {
      * @return validated datetime (or current datetime if null)
      * @throws InvalidDateTimeException if datetime is outside validity period
      */
-    static LocalDateTime validateAndSetDefaultDateTime(@Nullable LocalDateTime dateTime,
-                                                       ScheduleInformationService service) {
-        dateTime = (dateTime == null) ? LocalDateTime.now() : dateTime;
+    static OffsetDateTime validateAndSetDefaultDateTime(@Nullable OffsetDateTime dateTime,
+                                                        ScheduleInformationService service) {
+        dateTime = (dateTime == null) ? OffsetDateTime.now() : dateTime;
 
         if (service.getValidity().isWithin(dateTime.toLocalDate())) {
             return dateTime;
@@ -91,7 +92,7 @@ final class RequestValidator {
      *
      * @throws InvalidParametersException if until datetime is before departure datetime
      */
-    static void validateUntilDateTime(LocalDateTime departureDateTime, @Nullable LocalDateTime untilDateTime) {
+    static void validateUntilDateTime(OffsetDateTime departureDateTime, @Nullable OffsetDateTime untilDateTime) {
         if (untilDateTime != null && untilDateTime.isBefore(departureDateTime)) {
             throw new InvalidParametersException("Until date time must be after departure date time.");
         }

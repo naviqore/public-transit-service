@@ -6,16 +6,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.naviqore.app.dto.*;
 import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.naviqore.app.dto.DtoMapper.map;
 
@@ -24,14 +26,17 @@ import static org.naviqore.app.dto.DtoMapper.map;
 @Tag(name = "schedule", description = "APIs related to scheduling and stops")
 @Slf4j
 @Validated
+@RequiredArgsConstructor
 public class ScheduleController {
 
-    private final ScheduleInformationService service;
+    private static final Duration DEFAULT_WINDOW = Duration.ofHours(6);
+    private static final String DEFAULT_LIMIT = "10";
+    private static final String DEFAULT_MAX_DIST_METERS = "1000";
+    private static final String DEFAULT_SEARCH_TYPE = "CONTAINS";
+    private static final String DEFAULT_SORT_STRATEGY = "RELEVANCE";
+    private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
 
-    @Autowired
-    public ScheduleController(ScheduleInformationService service) {
-        this.service = service;
-    }
+    private final ScheduleInformationService service;
 
     @Operation(summary = "Get information about the schedule", description = "Get all relevant information about the schedule, such as supported features and validity.")
     @ApiResponse(responseCode = "200", description = "A list of details supported or not supported by the schedule and it's validity.")
@@ -43,12 +48,13 @@ public class ScheduleController {
 
     @Operation(summary = "Autocomplete stop names", description = "Provides stop names and their corresponding stop IDs based on a partial input query.")
     @ApiResponse(responseCode = "200", description = "A list of stop names and IDs that match the query", content = @Content(schema = @Schema(implementation = Stop.class, type = "array")))
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters (constraint-violation, type-mismatch, missing-request-parameter)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
-                                           @RequestParam(required = false, defaultValue = "10") @Min(1) int limit,
-                                           @RequestParam(required = false, defaultValue = "CONTAINS") SearchType searchType,
-                                           @RequestParam(required = false, defaultValue = "RELEVANCE") StopSortStrategy stopSortStrategy) {
+                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit,
+                                           @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) SearchType searchType,
+                                           @RequestParam(defaultValue = DEFAULT_SORT_STRATEGY) StopSortStrategy stopSortStrategy) {
+
         return service.getStops(query, map(searchType), map(stopSortStrategy))
                 .stream()
                 .map(DtoMapper::map)
@@ -58,38 +64,44 @@ public class ScheduleController {
 
     @Operation(summary = "Get nearest stops", description = "Retrieves a list of stops within a specified distance from a given location.")
     @ApiResponse(responseCode = "200", description = "A list of nearest stops", content = @Content(schema = @Schema(implementation = DistanceToStop.class, type = "array")))
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-coordinates, constraint-violation, type-mismatch, missing-request-parameter)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/nearest")
     public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
-                                                @RequestParam(required = false, defaultValue = "1000") @Min(0) int maxDistance,
-                                                @RequestParam(required = false, defaultValue = "10") @Min(1) int limit) {
+                                                @RequestParam(defaultValue = DEFAULT_MAX_DIST_METERS) @Min(0) int maxDistance,
+                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
+
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);
-        return service.getNearestStops(location, maxDistance, limit)
+
+        return service.getNearestStops(location, maxDistance)
                 .stream()
+                .limit(limit)
                 .map(stop -> map(stop, latitude, longitude))
                 .toList();
     }
 
     @Operation(summary = "Get information about a stop", description = "Provides detailed information about a specific stop, including coordinates and the name.")
     @ApiResponse(responseCode = "200", description = "Information about the specified stop.", content = @Content(schema = @Schema(implementation = Stop.class)))
-    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "404", description = "Stop not found")
     @GetMapping("/stops/{stopId}")
     public Stop getStop(@PathVariable String stopId) {
         return map(RequestValidator.getStopById(stopId, service));
     }
 
-    @Operation(summary = "Get next departures from a stop", description = "Retrieves the next departures from a specified stop at a given datetime.")
-    @ApiResponse(responseCode = "200", description = "A list of the next departures from the specified stop.", content = @Content(schema = @Schema(implementation = Departure.class, type = "array")))
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-datetime, constraint-violation, type-mismatch, missing-request-parameter)", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
-    @GetMapping("/stops/{stopId}/departures")
-    public List<Departure> getDepartures(@PathVariable String stopId,
-                                         @RequestParam(required = false) LocalDateTime departureDateTime,
-                                         @RequestParam(required = false, defaultValue = "10") @Min(1) int limit,
-                                         @RequestParam(required = false) LocalDateTime untilDateTime) {
-        departureDateTime = RequestValidator.validateAndSetDefaultDateTime(departureDateTime, service);
-        RequestValidator.validateUntilDateTime(departureDateTime, untilDateTime);
-        return service.getNextDepartures(RequestValidator.getStopById(stopId, service), departureDateTime,
-                untilDateTime, limit).stream().map(DtoMapper::map).toList();
+    @Operation(summary = "Get stop times (departures or arrivals) for a stop", description = "Retrieves the next stop times from a specified stop at a given datetime.")
+    @ApiResponse(responseCode = "200", description = "A list of the next stop times from the specified stop.", content = @Content(schema = @Schema(implementation = Departure.class, type = "array")))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters")
+    @ApiResponse(responseCode = "404", description = "Stop not found")
+    @GetMapping("/stops/{stopId}/times")
+    public List<Departure> getStopTimes(@PathVariable String stopId,
+                                        @RequestParam(required = false) OffsetDateTime from,
+                                        @RequestParam(required = false) OffsetDateTime until,
+                                        @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit,
+                                        @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType) {
+        OffsetDateTime effectiveFrom = RequestValidator.validateAndSetDefaultDateTime(from, service);
+        OffsetDateTime effectiveUntil = Optional.ofNullable(until).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
+        RequestValidator.validateUntilDateTime(effectiveFrom, effectiveUntil);
+
+        return service.getStopTimes(RequestValidator.getStopById(stopId, service), effectiveFrom, effectiveUntil,
+                map(timeType)).stream().limit(limit).map(DtoMapper::map).toList();
     }
 }

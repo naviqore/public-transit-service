@@ -70,8 +70,8 @@ class ApplicationIT {
         @Test
         void departureAtStop_shouldReturn200() {
             ResponseEntity<String> response = request.setPort(port)
-                    .setEndpoint("/schedule/stops/STAGECOACH/departures")
-                    .addQueryParameter("departureDateTime", "2010-01-01T01:10:01")
+                    .setEndpoint("/schedule/stops/STAGECOACH/times")
+                    .addQueryParameter("from", "2010-01-01T01:10:01Z")
                     .addQueryParameter("limit", "3")
                     .get(String.class);
 
@@ -82,7 +82,7 @@ class ApplicationIT {
         void departureAtStop_invalidStopId_shouldReturn404() {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/schedule/stops/NOT_EXISTING/departures")
-                    .addQueryParameter("departureDateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("departureDateTime", "2010-01-01T01:10:01Z")
                     .addQueryParameter("limit", "3")
                     .get(String.class);
 
@@ -92,8 +92,8 @@ class ApplicationIT {
         @Test
         void departureAtStop_outsideScheduleValidity_shouldReturn400() {
             ResponseEntity<String> response = request.setPort(port)
-                    .setEndpoint("/schedule/stops/STAGECOACH/departures")
-                    .addQueryParameter("departureDateTime", "2000-01-01T01:10:01")
+                    .setEndpoint("/schedule/stops/STAGECOACH/times")
+                    .addQueryParameter("from", "2000-01-01T01:10:01Z")
                     .addQueryParameter("limit", "3")
                     .get(String.class);
 
@@ -110,7 +110,7 @@ class ApplicationIT {
                     .setEndpoint("/routing/connections")
                     .addQueryParameter("sourceStopId", "STAGECOACH")
                     .addQueryParameter("targetStopId", "NANAA")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -122,7 +122,7 @@ class ApplicationIT {
                     .setEndpoint("/routing/connections")
                     .addQueryParameter("sourceStopId", "STAGECOACH")
                     .addQueryParameter("targetStopId", "NANAA")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .addQueryParameter("minTransferTime", "-1")
                     .get(String.class);
 
@@ -135,7 +135,7 @@ class ApplicationIT {
                     .setEndpoint("/routing/connections")
                     .addQueryParameter("sourceStopId", "NOT_EXISTING")
                     .addQueryParameter("targetStopId", "NANAA")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -147,7 +147,7 @@ class ApplicationIT {
                     .setEndpoint("/routing/connections")
                     .addQueryParameter("sourceStopId", "STAGECOACH")
                     .addQueryParameter("targetStopId", "NOT_EXISTING")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -160,7 +160,7 @@ class ApplicationIT {
                     .addQueryParameter("sourceStopId", "STAGECOACH")
                     .addQueryParameter("maxTransferNumber", "3")
                     .addQueryParameter("maxTravelTime", "7200")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -173,7 +173,7 @@ class ApplicationIT {
                     .addQueryParameter("sourceStopId", "NOT_EXISTING")
                     .addQueryParameter("maxTransferNumber", "3")
                     .addQueryParameter("maxTravelTime", "7200")
-                    .addQueryParameter("dateTime", "2010-01-01T01:10:01")
+                    .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

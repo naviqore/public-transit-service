@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.app.dto.*;
@@ -15,32 +16,33 @@ import org.naviqore.service.Stop;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.List;
 
 import static org.naviqore.app.dto.DtoMapper.map;
+
+// TODO: debug: Parent8591056 --> Parent8507000 at 2025-03-30T15:00:00Z, gives the same as 2025-03-31T15:00:00Z
+//  suspect its coming from caching.
 
 @Slf4j
 @RestController
 @RequestMapping("/routing")
 @Tag(name = "routing", description = "APIs related to routing and connections")
 @Validated
+@RequiredArgsConstructor
 public class RoutingController {
 
-    private final PublicTransitService service;
+    private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
+    private static final String DEFAULT_MIN_TRANSFER_TIME = "0";
 
-    @Autowired
-    public RoutingController(PublicTransitService service) {
-        this.service = service;
-    }
+    private final PublicTransitService service;
 
     @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
     @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
@@ -64,12 +66,12 @@ public class RoutingController {
                                            @RequestParam(required = false) String targetStopId,
                                            @RequestParam(required = false) Double targetLatitude,
                                            @RequestParam(required = false) Double targetLongitude,
-                                           @RequestParam(required = false) LocalDateTime dateTime,
-                                           @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
+                                           @RequestParam(required = false) OffsetDateTime dateTime,
+                                           @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
                                            @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
                                            @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
                                            @RequestParam(required = false) @Min(1) Integer maxTravelTime,
-                                           @RequestParam(required = false, defaultValue = "0") @Min(0) int minTransferTime,
+                                           @RequestParam(required = false, defaultValue = DEFAULT_MIN_TRANSFER_TIME) @Min(0) int minTransferTime,
                                            @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                            @RequestParam(required = false) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
@@ -87,6 +89,7 @@ public class RoutingController {
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
                 minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
+
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
             RequestValidator.validateStopsAreDifferent(sourceStopId, targetStopId);
@@ -111,12 +114,12 @@ public class RoutingController {
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
                                             @RequestParam(required = false) Double sourceLatitude,
                                             @RequestParam(required = false) Double sourceLongitude,
-                                            @RequestParam(required = false) LocalDateTime dateTime,
-                                            @RequestParam(required = false, defaultValue = "DEPARTURE") TimeType timeType,
+                                            @RequestParam(required = false) OffsetDateTime dateTime,
+                                            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
                                             @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
                                             @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
                                             @RequestParam(required = false) @Min(1) Integer maxTravelTime,
-                                            @RequestParam(required = false, defaultValue = "0") @Min(0) int minTransferTime,
+                                            @RequestParam(required = false, defaultValue = DEFAULT_MIN_TRANSFER_TIME) @Min(0) int minTransferTime,
                                             @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                             @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                             @RequestParam(required = false) EnumSet<TravelMode> travelModes,
@@ -177,10 +180,5 @@ public class RoutingController {
         private static int setToMaxIfNull(Integer value) {
             return (value == null) ? Integer.MAX_VALUE : value;
         }
-
     }
-
 }
-
-
-
