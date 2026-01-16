@@ -25,6 +25,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -32,9 +34,6 @@ import java.util.*;
  * org.naviqore.raptor.Benchmark for Raptor routing algorithm.
  * <p>
  * Measures the time it takes to route a number of requests using Raptor algorithm on large GTFS datasets.
- * <p>
- * Note: To run this benchmark, ensure that the log level is set to INFO in the
- * {@code src/test/resources/logback-test.xml} file.
  *
  * @author munterfi
  */
@@ -45,6 +44,7 @@ public final class RaptorRouterBenchmark {
     // dataset
     private static final Path INPUT_DATA_DIRECTORY = Path.of("benchmark/input");
     private static final GtfsScheduleDataset DATASET = GtfsScheduleDataset.SWITZERLAND;
+    private static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
     private static final LocalDate SCHEDULE_DATE = LocalDate.of(2025, 4, 26);
 
     // sampling
@@ -115,8 +115,10 @@ public final class RaptorRouterBenchmark {
             int sourceIndex = random.nextInt(stopIds.size());
             int destinationIndex = getRandomDestinationIndex(stopIds.size(), sourceIndex, random);
 
-            LocalDateTime departureTime = SCHEDULE_DATE.atStartOfDay()
-                    .plusSeconds(random.nextInt(DEPARTURE_TIME_LIMIT));
+            OffsetDateTime departureTime = SCHEDULE_DATE.atStartOfDay()
+                    .atZone(ZONE_ID)
+                    .plusSeconds(random.nextInt(DEPARTURE_TIME_LIMIT))
+                    .toOffsetDateTime();
             requests[i] = new RouteRequest(schedule.getStops().get(stopIds.get(sourceIndex)),
                     schedule.getStops().get(stopIds.get(destinationIndex)), departureTime);
         }
@@ -134,7 +136,7 @@ public final class RaptorRouterBenchmark {
         for (int i = 0; i < requests.length; i++) {
             long startTime = System.nanoTime();
             try {
-                Map<String, LocalDateTime> sourceStops = Map.of(requests[i].sourceStop().getId(),
+                Map<String, OffsetDateTime> sourceStops = Map.of(requests[i].sourceStop().getId(),
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
@@ -151,10 +153,10 @@ public final class RaptorRouterBenchmark {
 
     private static RoutingResult toResult(int id, RouteRequest request, List<Connection> connections, long startTime,
                                           long endTime) {
-        Optional<LocalDateTime> earliestDepartureTime = connections.stream()
+        Optional<OffsetDateTime> earliestDepartureTime = connections.stream()
                 .map(Connection::getDepartureTime)
                 .min(Comparator.naturalOrder());
-        Optional<LocalDateTime> earliestArrivalTime = connections.stream()
+        Optional<OffsetDateTime> earliestArrivalTime = connections.stream()
                 .map(Connection::getArrivalTime)
                 .min(Comparator.naturalOrder());
         int minDuration = connections.stream().mapToInt(Connection::getDurationInSeconds).min().orElse(NOT_AVAILABLE);
@@ -208,12 +210,12 @@ public final class RaptorRouterBenchmark {
         }
     }
 
-    record RouteRequest(Stop sourceStop, Stop targetStop, LocalDateTime departureTime) {
+    record RouteRequest(Stop sourceStop, Stop targetStop, OffsetDateTime departureTime) {
     }
 
     record RoutingResult(int id, String sourceStopId, String targetStopId, String sourceStopName, String targetStopName,
-                         LocalDateTime requestedDepartureTime, int connections,
-                         Optional<LocalDateTime> earliestDepartureTime, Optional<LocalDateTime> earliestArrivalTime,
+                         OffsetDateTime requestedDepartureTime, int connections,
+                         Optional<OffsetDateTime> earliestDepartureTime, Optional<OffsetDateTime> earliestArrivalTime,
                          int minDuration, int maxDuration, int minTransfers, int maxTransfers, long beelineDistance,
                          long processingTime) {
     }
