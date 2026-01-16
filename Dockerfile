@@ -11,6 +11,11 @@ WORKDIR /app
 
 COPY --from=build --chown=nonroot:nonroot /build/app/target/*.jar app.jar
 
+ENV APP_HOME_PAGE_ENABLED=false
+ENV SPRINGDOC_API_DOCS_ENABLED=false
+ENV SPRINGDOC_SWAGGER_UI_ENABLED=false
+ENV MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,metrics
+
 USER nonroot
 EXPOSE 8080
 
