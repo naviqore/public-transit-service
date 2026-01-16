@@ -9,7 +9,7 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,7 +23,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 abstract class IsolineQueryTemplate<T> {
 
-    protected final LocalDateTime time;
+    protected final OffsetDateTime time;
     protected final TimeType timeType;
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
@@ -32,7 +32,7 @@ abstract class IsolineQueryTemplate<T> {
 
     private final boolean allowSourceTransfers;
 
-    protected abstract Map<String, LocalDateTime> prepareSourceStops(T source);
+    protected abstract Map<String, OffsetDateTime> prepareSourceStops(T source);
 
     protected abstract Map<Stop, Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
                                                                         T source) throws ConnectionRoutingException;
@@ -42,7 +42,7 @@ abstract class IsolineQueryTemplate<T> {
     protected abstract Connection postprocessArrivalConnection(T source, org.naviqore.raptor.Connection connection);
 
     Map<Stop, Connection> run() throws ConnectionRoutingException {
-        Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
+        Map<String, OffsetDateTime> sourceStops = prepareSourceStops(source);
 
         // no source stop is within walkable distance, and therefore no isolines are available
         if (sourceStops.isEmpty()) {

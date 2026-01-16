@@ -8,7 +8,7 @@ import org.naviqore.service.Walk;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 /**
@@ -16,13 +16,13 @@ import java.util.Map;
  */
 class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
 
-    IsolineGeoSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
+    IsolineGeoSource(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
                      GeoCoordinate source) {
         super(time, timeType, queryConfig, utils, source, false);
     }
 
     @Override
-    protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+    protected Map<String, OffsetDateTime> prepareSourceStops(GeoCoordinate source) {
         return utils.getStopsWithWalkTimeFromLocation(source, time, timeType, queryConfig);
     }
 

@@ -9,6 +9,7 @@ import org.naviqore.gtfs.schedule.type.TransferType;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.EnumSet;
 
 /**
@@ -29,6 +30,8 @@ import java.util.EnumSet;
  */
 public class GtfsRaptorTestSchedule {
 
+    public static final ZoneId ZONE_ID = ZoneId.of("America/New_York");
+
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
     public GtfsRaptorTestSchedule() {
@@ -37,7 +40,7 @@ public class GtfsRaptorTestSchedule {
 
     private void setup() {
         builder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
-        builder.addAgency("agency", "Some Agency", "", "America/New_York");
+        builder.addAgency("agency", "Some Agency", "", ZONE_ID);
 
         builder.addStop("A", "A", 0.0, 0.0);
         builder.addStop("B", "B", 0.0, 1.0);

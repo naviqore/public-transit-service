@@ -12,7 +12,7 @@ import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.naviqore.utils.spatial.index.KDTree;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -31,33 +31,35 @@ public class RoutingQueryFacade {
         this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptor);
     }
 
-    public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public List<Connection> queryConnections(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                              Stop source, Stop target) throws ConnectionRoutingException {
         return new ConnectionStopToStop(time, timeType, queryConfig, utils, source, target).run();
     }
 
-    public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public List<Connection> queryConnections(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                              Stop source, GeoCoordinate target) throws ConnectionRoutingException {
         return new ConnectionStopToGeo(time, timeType, queryConfig, utils, source, target).run();
     }
 
-    public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public List<Connection> queryConnections(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                              GeoCoordinate source, Stop target) throws ConnectionRoutingException {
         return new ConnectionGeoToStop(time, timeType, queryConfig, utils, source, target).run();
     }
 
-    public List<Connection> queryConnections(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public List<Connection> queryConnections(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                                              GeoCoordinate source,
                                              GeoCoordinate target) throws ConnectionRoutingException {
         return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source, target).run();
     }
 
-    public Map<Stop, Connection> queryIsolines(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public Map<Stop, Connection> queryIsolines(OffsetDateTime time, TimeType timeType,
+                                               ConnectionQueryConfig queryConfig,
                                                Stop source) throws ConnectionRoutingException {
         return new IsolineStopSource(time, timeType, queryConfig, utils, source).run();
     }
 
-    public Map<Stop, Connection> queryIsolines(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    public Map<Stop, Connection> queryIsolines(OffsetDateTime time, TimeType timeType,
+                                               ConnectionQueryConfig queryConfig,
                                                GeoCoordinate source) throws ConnectionRoutingException {
         return new IsolineGeoSource(time, timeType, queryConfig, utils, source).run();
     }

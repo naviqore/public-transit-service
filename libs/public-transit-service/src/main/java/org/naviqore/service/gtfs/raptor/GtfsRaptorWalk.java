@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 import org.naviqore.service.*;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Getter
@@ -15,8 +15,8 @@ import java.util.Optional;
 public class GtfsRaptorWalk extends GtfsRaptorLeg implements Walk {
 
     private final WalkType walkType;
-    private final LocalDateTime departureTime;
-    private final LocalDateTime arrivalTime;
+    private final OffsetDateTime departureTime;
+    private final OffsetDateTime arrivalTime;
     private final GeoCoordinate sourceLocation;
     private final GeoCoordinate targetLocation;
     @Getter(AccessLevel.NONE)
@@ -26,8 +26,8 @@ public class GtfsRaptorWalk extends GtfsRaptorLeg implements Walk {
     /**
      * Create a first or last mile walk between a stop and a location.
      */
-    GtfsRaptorWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
-                   LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
+    GtfsRaptorWalk(int distance, int duration, WalkType walkType, OffsetDateTime departureTime,
+                   OffsetDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
                    @Nullable Stop stop) {
         super(LegType.WALK, distance, duration);
         this.walkType = walkType;
@@ -41,7 +41,7 @@ public class GtfsRaptorWalk extends GtfsRaptorLeg implements Walk {
     /**
      * Create a direct walk between two locations.
      */
-    GtfsRaptorWalk(int distance, int duration, LocalDateTime departureTime, LocalDateTime arrivalTime,
+    GtfsRaptorWalk(int distance, int duration, OffsetDateTime departureTime, OffsetDateTime arrivalTime,
                    GeoCoordinate sourceLocation, GeoCoordinate targetLocation) {
         this(distance, duration, WalkType.DIRECT, departureTime, arrivalTime, sourceLocation, targetLocation, null);
     }

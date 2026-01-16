@@ -7,18 +7,18 @@ import org.naviqore.service.LegVisitor;
 import org.naviqore.service.Stop;
 import org.naviqore.service.Transfer;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Getter
 @ToString(callSuper = true)
 public class GtfsRaptorTransfer extends GtfsRaptorLeg implements Transfer {
 
-    private final LocalDateTime departureTime;
-    private final LocalDateTime arrivalTime;
+    private final OffsetDateTime departureTime;
+    private final OffsetDateTime arrivalTime;
     private final Stop sourceStop;
     private final Stop targetStop;
 
-    GtfsRaptorTransfer(int distance, int duration, LocalDateTime departureTime, LocalDateTime arrivalTime,
+    GtfsRaptorTransfer(int distance, int duration, OffsetDateTime departureTime, OffsetDateTime arrivalTime,
                        Stop sourceStop, Stop targetStop) {
         super(LegType.WALK, distance, duration);
         this.departureTime = departureTime;

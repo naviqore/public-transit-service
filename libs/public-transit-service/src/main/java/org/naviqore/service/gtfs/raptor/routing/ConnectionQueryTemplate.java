@@ -8,7 +8,7 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ import java.util.Map;
 @Slf4j
 abstract class ConnectionQueryTemplate<S, T> {
 
-    protected final LocalDateTime time;
+    protected final OffsetDateTime time;
     protected final TimeType timeType;
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
@@ -35,7 +35,7 @@ abstract class ConnectionQueryTemplate<S, T> {
     private final boolean allowSourceTransfers;
     private final boolean allowTargetTransfers;
 
-    protected abstract Map<String, LocalDateTime> prepareSourceStops(S source);
+    protected abstract Map<String, OffsetDateTime> prepareSourceStops(S source);
 
     protected abstract Map<String, Integer> prepareTargetStops(T target);
 
@@ -70,7 +70,7 @@ abstract class ConnectionQueryTemplate<S, T> {
     }
 
     List<Connection> process() throws ConnectionRoutingException {
-        Map<String, LocalDateTime> sourceStops = prepareSourceStops(source);
+        Map<String, OffsetDateTime> sourceStops = prepareSourceStops(source);
         Map<String, Integer> targetStops = prepareTargetStops(target);
 
         // no source stop or target stop is within walkable distance, and therefore no connections are available

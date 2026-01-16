@@ -9,7 +9,7 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +27,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     /**
      * A connection between two locations. Needs a first mile and last mile walk.
      */
-    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionGeoToGeo(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, GeoCoordinate target) {
         super(time, timeType, queryConfig, utils, source, target, false, false);
         sourceStop = null;
@@ -37,7 +37,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     /**
      * No departures on the source stop, try to walk to another stop.
      */
-    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionGeoToGeo(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, GeoCoordinate target) {
         super(time, timeType, queryConfig, utils, source.getCoordinate(), target, false, false);
         sourceStop = source;
@@ -47,7 +47,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     /**
      * No departures on the target stop, try to walk to another stop.
      */
-    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionGeoToGeo(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
         super(time, timeType, queryConfig, utils, source, target.getCoordinate(), false, false);
         sourceStop = null;
@@ -57,7 +57,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     /**
      * No departures on either the source or the target stop. Try to walk on both ends to another stop.
      */
-    ConnectionGeoToGeo(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionGeoToGeo(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                        RoutingQueryUtils utils, Stop source, Stop target) {
         super(time, timeType, queryConfig, utils, source.getCoordinate(), target.getCoordinate(), false, false);
         sourceStop = source;
@@ -65,7 +65,7 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     }
 
     @Override
-    protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+    protected Map<String, OffsetDateTime> prepareSourceStops(GeoCoordinate source) {
         return utils.getStopsWithWalkTimeFromLocation(source, time, timeType, queryConfig);
     }
 
@@ -98,11 +98,11 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
 
     private Connection getConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
                                      GeoCoordinate target, Stop targetStop, Stop sourceStop) {
-        LocalDateTime departureTime = connection.getDepartureTime();
+        OffsetDateTime departureTime = connection.getDepartureTime();
         Leg firstMile = targetStop == null ? utils.createFirstWalk(target, connection.getFromStopId(),
                 departureTime) : utils.createFirstWalkTransfer(targetStop, connection.getFromStopId(), departureTime);
 
-        LocalDateTime arrivalTime = connection.getArrivalTime();
+        OffsetDateTime arrivalTime = connection.getArrivalTime();
         Leg lastMile = sourceStop == null ? utils.createLastWalk(source, connection.getToStopId(),
                 arrivalTime) : utils.createLastWalkTransfer(sourceStop, connection.getToStopId(), arrivalTime);
 

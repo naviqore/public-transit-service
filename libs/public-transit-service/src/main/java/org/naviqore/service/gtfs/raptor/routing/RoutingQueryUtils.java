@@ -15,7 +15,7 @@ import org.naviqore.utils.spatial.GeoCoordinate;
 import org.naviqore.utils.spatial.index.KDTree;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +47,7 @@ class RoutingQueryUtils {
         return config;
     }
 
-    List<org.naviqore.raptor.Connection> routeConnections(Map<String, LocalDateTime> sourceStops,
+    List<org.naviqore.raptor.Connection> routeConnections(Map<String, OffsetDateTime> sourceStops,
                                                           Map<String, Integer> targetStops, TimeType timeType,
                                                           ConnectionQueryConfig queryConfig,
                                                           boolean allowSourceTransfer, boolean allowTargetTransfer) {
@@ -60,16 +60,16 @@ class RoutingQueryUtils {
         }
     }
 
-    Map<String, org.naviqore.raptor.Connection> createIsolines(Map<String, LocalDateTime> sourceStops,
+    Map<String, org.naviqore.raptor.Connection> createIsolines(Map<String, OffsetDateTime> sourceStops,
                                                                TimeType timeType, ConnectionQueryConfig queryConfig,
                                                                boolean allowSourceTransfer) {
         // allow target transfers does not work for isolines since no targets are defined
-        return raptor.routeIsolines(sourceStops, TypeMapper.map(timeType),
+        return raptor.routeIsolines(sourceStops, TypeMapper.mapToRaptor(timeType),
                 prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
     }
 
-    Map<String, LocalDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, LocalDateTime startTime,
-                                                                TimeType timeType, ConnectionQueryConfig queryConfig) {
+    Map<String, OffsetDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, OffsetDateTime startTime,
+                                                                 TimeType timeType, ConnectionQueryConfig queryConfig) {
         Map<String, Integer> stopsWithWalkTime = getStopsWithWalkTimeFromLocation(location, queryConfig);
         return stopsWithWalkTime.entrySet()
                 .stream()
@@ -101,9 +101,9 @@ class RoutingQueryUtils {
         return TypeMapper.map(schedule.getStops().get(stopId));
     }
 
-    Map<String, LocalDateTime> getAllChildStopsFromStop(Stop stop, LocalDateTime time) {
+    Map<String, OffsetDateTime> getAllChildStopsFromStop(Stop stop, OffsetDateTime time) {
         List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
-        Map<String, LocalDateTime> stopWithDateTime = new HashMap<>();
+        Map<String, OffsetDateTime> stopWithDateTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
             stopWithDateTime.put(scheduleStop.getId(), time);
         }
@@ -121,7 +121,7 @@ class RoutingQueryUtils {
         return stopsWithWalkTime;
     }
 
-    @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, LocalDateTime departureTime) {
+    @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
         int duration = firstWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
@@ -136,7 +136,7 @@ class RoutingQueryUtils {
     }
 
     @Nullable
-    public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, LocalDateTime departureTime) {
+    public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalkTransfer = walkCalculator.calculateWalk(sourceStop.getCoordinate(),
                 firstStop.getCoordinate());
@@ -150,7 +150,7 @@ class RoutingQueryUtils {
         return null;
     }
 
-    @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, LocalDateTime arrivalTime) {
+    @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, OffsetDateTime arrivalTime) {
         org.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
         WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastStop.getCoordinate());
         int duration = lastWalk.duration() + serviceConfig.getTransferTimeAccessEgress();
@@ -164,7 +164,7 @@ class RoutingQueryUtils {
     }
 
     @Nullable
-    public Transfer createLastWalkTransfer(Stop target, String lastStopId, LocalDateTime arrivalTime) {
+    public Transfer createLastWalkTransfer(Stop target, String lastStopId, OffsetDateTime arrivalTime) {
         org.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
         WalkCalculator.Walk lastWalkTransfer = walkCalculator.calculateWalk(target.getCoordinate(),
                 lastStop.getCoordinate());

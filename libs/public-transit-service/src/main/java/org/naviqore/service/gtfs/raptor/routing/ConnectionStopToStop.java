@@ -7,7 +7,7 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -16,13 +16,13 @@ import java.util.Map;
  */
 class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
 
-    ConnectionStopToStop(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionStopToStop(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                          RoutingQueryUtils utils, Stop source, Stop target) {
         super(time, timeType, queryConfig, utils, source, target, true, true);
     }
 
     @Override
-    protected Map<String, LocalDateTime> prepareSourceStops(Stop source) {
+    protected Map<String, OffsetDateTime> prepareSourceStops(Stop source) {
         return utils.getAllChildStopsFromStop(source, time);
     }
 

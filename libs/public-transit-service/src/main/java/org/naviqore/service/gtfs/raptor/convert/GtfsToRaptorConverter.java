@@ -69,7 +69,8 @@ public class GtfsToRaptorConverter {
         }
 
         // add sub route as raptor route
-        builder.addRoute(subRoute.getId(), subRoute.getStopsSequence().stream().map(Stop::getId).toList());
+        builder.addRoute(subRoute.getId(), subRoute.getRoute().getAgency().timezone(),
+                subRoute.getStopsSequence().stream().map(Stop::getId).toList());
 
         // add trips of sub route
         for (Trip trip : subRoute.getTrips()) {

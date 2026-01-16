@@ -12,6 +12,7 @@ import org.naviqore.raptor.router.RaptorTripMaskProvider;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -120,7 +121,7 @@ public class GtfsTripMaskProviderTest {
         private static GtfsSchedule prepareSchedule() {
             GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
-            builder.addAgency("agency1", "Agency 1", "abc", "Europe/Zurich");
+            builder.addAgency("agency1", "Agency 1", "abc", ZoneId.of("Europe/Zurich"));
             builder.addStop("stop1", "Stop 1", 47.0, 8.0);
             builder.addStop("stop2", "Stop 2", 47.1, 8.1);
 

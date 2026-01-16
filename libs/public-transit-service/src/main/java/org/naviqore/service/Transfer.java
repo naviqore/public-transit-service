@@ -1,6 +1,6 @@
 package org.naviqore.service;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * A transfer is a walk between two stops.
@@ -10,9 +10,9 @@ import java.time.LocalDateTime;
  */
 public interface Transfer extends Leg {
 
-    LocalDateTime getArrivalTime();
+    OffsetDateTime getArrivalTime();
 
-    LocalDateTime getDepartureTime();
+    OffsetDateTime getDepartureTime();
 
     Stop getSourceStop();
 
