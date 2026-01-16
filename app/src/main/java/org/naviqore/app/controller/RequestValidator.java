@@ -88,13 +88,13 @@ final class RequestValidator {
     }
 
     /**
-     * Validates that until datetime is after departure datetime.
+     * Validates that until datetime is after from datetime.
      *
-     * @throws InvalidParametersException if until datetime is before departure datetime
+     * @throws InvalidParametersException if until datetime is before from datetime
      */
-    static void validateUntilDateTime(OffsetDateTime departureDateTime, @Nullable OffsetDateTime untilDateTime) {
-        if (untilDateTime != null && untilDateTime.isBefore(departureDateTime)) {
-            throw new InvalidParametersException("Until date time must be after departure date time.");
+    static void validateTimeWindow(OffsetDateTime from, OffsetDateTime until) {
+        if (until.isBefore(from)) {
+            throw new InvalidParametersException("Until date time must be after from date time.");
         }
     }
 
@@ -145,22 +145,23 @@ final class RequestValidator {
      *
      * @throws UnsupportedRoutingFeatureException if a requested feature is not supported
      */
-    static void validateRoutingFeatureSupport(int maxWalkingDuration, int maxTransferNumber, int maxTravelTime,
-                                              int minTransferTime, boolean wheelchairAccessible, boolean bikeAllowed,
-                                              EnumSet<TravelMode> travelModes, RoutingFeatures features) {
-        if (maxWalkingDuration != Integer.MAX_VALUE && !features.supportsMaxWalkingDuration()) {
+    static void validateRoutingFeatureSupport(int maxWalkDuration, int maxTransfers, int maxTravelDuration,
+                                              int minTransferDuration, boolean wheelchairAccessible,
+                                              boolean bikeAllowed, EnumSet<TravelMode> travelModes,
+                                              RoutingFeatures features) {
+        if (maxWalkDuration != Integer.MAX_VALUE && !features.supportsMaxWalkDuration()) {
             throw new UnsupportedRoutingFeatureException(
-                    "Maximum walking duration parameter is not supported by this service.");
+                    "Maximum walk duration parameter is not supported by this service.");
         }
-        if (maxTransferNumber != Integer.MAX_VALUE && !features.supportsMaxNumTransfers()) {
+        if (maxTransfers != Integer.MAX_VALUE && !features.supportsMaxTransfers()) {
             throw new UnsupportedRoutingFeatureException(
-                    "Maximum transfer number parameter is not supported by this service.");
+                    "Maximum transfers parameter is not supported by this service.");
         }
-        if (maxTravelTime != Integer.MAX_VALUE && !features.supportsMaxTravelTime()) {
+        if (maxTravelDuration != Integer.MAX_VALUE && !features.supportsMaxTravelDuration()) {
             throw new UnsupportedRoutingFeatureException(
-                    "Maximum travel time parameter is not supported by this service.");
+                    "Maximum travel duration parameter is not supported by this service.");
         }
-        if (minTransferTime != 0 && !features.supportsMinTransferDuration()) {
+        if (minTransferDuration != 0 && !features.supportsMinTransferDuration()) {
             throw new UnsupportedRoutingFeatureException(
                     "Minimum transfer duration parameter is not supported by this service.");
         }

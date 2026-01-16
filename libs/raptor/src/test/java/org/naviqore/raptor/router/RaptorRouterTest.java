@@ -646,10 +646,10 @@ class RaptorRouterTest {
     class QueryConfiguration {
 
         @Test
-        void findWalkableTransferWithMaxWalkingTime(RaptorRouterTestBuilder builder) {
+        void findWalkableTransferWithMaxWalkTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
             QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumWalkingDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
+            queryConfig.setMaximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
 
             // Should return two pareto optimal connections:
             // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
@@ -674,10 +674,10 @@ class RaptorRouterTest {
         }
 
         @Test
-        void notFindWalkableTransferWithMaxWalkingTime(RaptorRouterTestBuilder builder) {
+        void notFindWalkableTransferWithMaxWalkTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
             QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumWalkingDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR / 4); // 15 minutes
+            queryConfig.setMaximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR / 4); // 15 minutes
 
             // Should only find three route leg connections, since direct transfer between D and N is longer than
             // allowed maximum walking distance (60 minutes):
@@ -692,7 +692,7 @@ class RaptorRouterTest {
         void findConnectionWithMaxTransferNumber(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
             QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumTransferNumber(1);
+            queryConfig.setMaximumTransfers(1);
 
             // Should only find the connection with the fewest transfers:
             // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
@@ -711,7 +711,7 @@ class RaptorRouterTest {
         void findConnectionWithMaxTravelTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
             QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumTravelTime(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
+            queryConfig.setMaximumTravelDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
 
             // Should only find the quicker connection (more transfers):
             //  - Route R1-F from A to F

@@ -35,7 +35,7 @@ Accept: application/json
 
 ### 4.1 Connection between two stops; invalid Min transfer time - 400 BAD REQUEST
 GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStopId=NANAA&
-    dateTime=2010-01-01T01:10:01&minTransferTime=-1
+    dateTime=2010-01-01T01:10:01&minTransferDuration=-1
 Accept: application/json
 
 ### 4.2 Connection between two stops; invalid source stop id - 404 NOT FOUND
@@ -49,11 +49,11 @@ GET http://localhost:8080/routing/connections?sourceStopId=STAGECOACH&targetStop
 Accept: application/json
 
 ### 5.0 Isoline from stop - OK 200
-GET http://localhost:8080/routing/isolines?sourceStopId=STAGECOACH&maxTransferNumber=3&maxTravelTime=7200&
+GET http://localhost:8080/routing/isolines?sourceStopId=STAGECOACH&maxTransfers=3&maxTravelDuration=7200&
     dateTime=2010-01-01T01:10:01
 Accept: application/json
 
 ### 5.1 Isoline from stop; invalid source stop id - 404 NOT FOUND
-GET http://localhost:8080/routing/isolines?sourceStopId=NOT_EXISTING&maxTransferNumber=3&maxTravelTime=7200&
+GET http://localhost:8080/routing/isolines?sourceStopId=NOT_EXISTING&maxTransfers=3&maxTravelDuration=7200&
     dateTime=2010-01-01T01:10:01
 Accept: application/json

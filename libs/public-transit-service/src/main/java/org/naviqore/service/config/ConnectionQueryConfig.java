@@ -11,16 +11,16 @@ import java.util.EnumSet;
 public class ConnectionQueryConfig {
 
     @Builder.Default
-    int maximumWalkingDuration = Integer.MAX_VALUE;
+    int maximumWalkDuration = Integer.MAX_VALUE;
 
     @Builder.Default
     int minimumTransferDuration = 0;
 
     @Builder.Default
-    int maximumTransferNumber = Integer.MAX_VALUE;
+    int maximumTransfers = Integer.MAX_VALUE;
 
     @Builder.Default
-    int maximumTravelTime = Integer.MAX_VALUE;
+    int maximumTravelDuration = Integer.MAX_VALUE;
 
     @Builder.Default
     boolean wheelchairAccessible = false;

@@ -40,7 +40,6 @@ import static org.naviqore.app.dto.DtoMapper.map;
 public class RoutingController {
 
     private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
-    private static final String DEFAULT_MIN_TRANSFER_TIME = "0";
 
     private final PublicTransitService service;
 
@@ -49,8 +48,8 @@ public class RoutingController {
     @GetMapping("")
     public RoutingInfo getRoutingInfo() {
         RoutingFeatures features = service.getRoutingFeatures();
-        return new RoutingInfo(features.supportsMaxNumTransfers(), features.supportsMaxTravelTime(),
-                features.supportsMaxWalkingDuration(), features.supportsMinTransferDuration(),
+        return new RoutingInfo(features.supportsMaxTransfers(), features.supportsMaxTravelDuration(),
+                features.supportsMaxWalkDuration(), features.supportsMinTransferDuration(),
                 features.supportsAccessibility(), features.supportsBikes(), features.supportsTravelModes());
     }
 
@@ -68,10 +67,10 @@ public class RoutingController {
                                            @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) OffsetDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
-                                           @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
-                                           @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
-                                           @RequestParam(required = false) @Min(1) Integer maxTravelTime,
-                                           @RequestParam(required = false, defaultValue = DEFAULT_MIN_TRANSFER_TIME) @Min(0) int minTransferTime,
+                                           @RequestParam(required = false) @Min(0) Integer maxWalkDuration,
+                                           @RequestParam(required = false) @Min(0) Integer maxTransfers,
+                                           @RequestParam(required = false) @Min(1) Integer maxTravelDuration,
+                                           @RequestParam(required = false) @Min(0) Integer minTransferDuration,
                                            @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                            @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                            @RequestParam(required = false) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
@@ -87,8 +86,8 @@ public class RoutingController {
 
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
-        ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
+        ConnectionQueryConfig config = Utils.createConfig(maxWalkDuration, maxTransfers, maxTravelDuration,
+                minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
@@ -116,10 +115,10 @@ public class RoutingController {
                                             @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) OffsetDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
-                                            @RequestParam(required = false) @Min(0) Integer maxWalkingDuration,
-                                            @RequestParam(required = false) @Min(0) Integer maxTransferNumber,
-                                            @RequestParam(required = false) @Min(1) Integer maxTravelTime,
-                                            @RequestParam(required = false, defaultValue = DEFAULT_MIN_TRANSFER_TIME) @Min(0) int minTransferTime,
+                                            @RequestParam(required = false) @Min(0) Integer maxWalkDuration,
+                                            @RequestParam(required = false) @Min(0) Integer maxTransfers,
+                                            @RequestParam(required = false) @Min(1) Integer maxTravelDuration,
+                                            @RequestParam(required = false) @Min(0) Integer minTransferDuration,
                                             @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                             @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                             @RequestParam(required = false) EnumSet<TravelMode> travelModes,
@@ -132,8 +131,8 @@ public class RoutingController {
 
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
-        ConnectionQueryConfig config = Utils.createConfig(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service);
+        ConnectionQueryConfig config = Utils.createConfig(maxWalkDuration, maxTransfers, maxTravelDuration,
+                minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get isolines
         if (sourceStop != null) {
@@ -146,31 +145,33 @@ public class RoutingController {
 
     private static class Utils {
 
-        private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkingDuration,
-                                                          @Nullable Integer maxTransferNumber,
-                                                          @Nullable Integer maxTravelTime, int minTransferTime,
+        private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkDuration,
+                                                          @Nullable Integer maxTransfers,
+                                                          @Nullable Integer maxTravelDuration,
+                                                          @Nullable Integer minTransferDuration,
                                                           boolean wheelchairAccessible, boolean bikeAllowed,
                                                           @Nullable EnumSet<TravelMode> travelModes,
                                                           PublicTransitService service) {
 
-            // replace null values with integer max value
-            maxWalkingDuration = setToMaxIfNull(maxWalkingDuration);
-            maxTransferNumber = setToMaxIfNull(maxTransferNumber);
-            maxTravelTime = setToMaxIfNull(maxTravelTime);
+            // replace null values with default value
+            maxWalkDuration = setToMaxIfNull(maxWalkDuration);
+            maxTransfers = setToMaxIfNull(maxTransfers);
+            maxTravelDuration = setToMaxIfNull(maxTravelDuration);
+            minTransferDuration = setToZeroIfNull(minTransferDuration);
 
             if (travelModes == null || travelModes.isEmpty()) {
                 travelModes = EnumSet.allOf(TravelMode.class);
             }
 
             // validate feature support
-            RequestValidator.validateRoutingFeatureSupport(maxWalkingDuration, maxTransferNumber, maxTravelTime,
-                    minTransferTime, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
+            RequestValidator.validateRoutingFeatureSupport(maxWalkDuration, maxTransfers, maxTravelDuration,
+                    minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
 
             return ConnectionQueryConfig.builder()
-                    .maximumWalkingDuration(maxWalkingDuration)
-                    .minimumTransferDuration(minTransferTime)
-                    .maximumTransferNumber(maxTransferNumber)
-                    .maximumTravelTime(maxTravelTime)
+                    .maximumWalkDuration(maxWalkDuration)
+                    .minimumTransferDuration(minTransferDuration)
+                    .maximumTransfers(maxTransfers)
+                    .maximumTravelDuration(maxTravelDuration)
                     .wheelchairAccessible(wheelchairAccessible)
                     .bikeAllowed(bikeAllowed)
                     .travelModes(map(travelModes))
@@ -179,6 +180,10 @@ public class RoutingController {
 
         private static int setToMaxIfNull(Integer value) {
             return (value == null) ? Integer.MAX_VALUE : value;
+        }
+
+        private static int setToZeroIfNull(Integer value) {
+            return (value == null) ? 0 : value;
         }
     }
 }

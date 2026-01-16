@@ -178,7 +178,7 @@ public class RaptorRouterTestBuilder {
     public RaptorAlgorithm build() {
         RaptorConfig config = new RaptorConfig();
         config.setDaysToScan(daysToScan);
-        config.setDefaultSameStopTransferTime(defaultSameStopTransferTime);
+        config.setDefaultSameStopTransferDuration(defaultSameStopTransferTime);
         config.setMaskProvider(tripMaskProvider);
         config.setStopTimeCacheSize(daysToScan);
         config.setRaptorRange(raptorRange);

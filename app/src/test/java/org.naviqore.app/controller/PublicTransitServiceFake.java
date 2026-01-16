@@ -44,10 +44,10 @@ class PublicTransitServiceFake implements PublicTransitService {
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
-    private boolean supportsMaxWalkingDuration = true;
+    private boolean supportsMaxWalkDuration = true;
     private boolean supportsMinTransferDuration = true;
-    private boolean supportsMaxTransferNumber = true;
-    private boolean supportsMaxTravelTime = true;
+    private boolean supportsMaxTransfers = true;
+    private boolean supportsMaxTravelDuration = true;
 
     private boolean hasAccessibilityInformation = false;
     private boolean hasBikeInformation = false;
@@ -80,7 +80,7 @@ class PublicTransitServiceFake implements PublicTransitService {
 
     @Override
     public RoutingFeatures getRoutingFeatures() {
-        return new RoutingFeatures(supportsMaxTransferNumber, supportsMaxTravelTime, supportsMaxWalkingDuration,
+        return new RoutingFeatures(supportsMaxTransfers, supportsMaxTravelDuration, supportsMaxWalkDuration,
                 supportsMinTransferDuration, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation);
     }
 

@@ -67,7 +67,7 @@ class LabelPostprocessor {
      * Reconstructs pareto-optimal connections from the best labels per round.
      *
      * @param bestLabelsPerRound the best labels per round.
-     * @param targetStops        map of target stop indices and walking durations to destination.
+     * @param targetStops        map of target stop indices and walk durations to destination.
      * @return a list of pareto-optimal connections.
      */
     List<Connection> reconstructParetoOptimalSolutions(List<QueryState.Label[]> bestLabelsPerRound,
@@ -98,7 +98,7 @@ class LabelPostprocessor {
      * Identifies the best label for a set of target stops within a single round.
      *
      * @param labels          array of labels for the current round.
-     * @param targetStops     map of target stops and their walking durations.
+     * @param targetStops     map of target stops and their walk durations.
      * @param currentBestTime the current best time across all previous rounds.
      * @return the best label for this round, or null if no improvement was found.
      */

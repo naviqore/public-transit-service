@@ -28,10 +28,10 @@ public class RoutingControllerTest {
     private final RoutingController routingController = new RoutingController(serviceFake);
 
     static Stream<Arguments> provideQueryConfigTestCombinations() {
-        int validMaxWalkingDuration = 30;
+        int validMaxWalkDuration = 30;
         int validMaxTransferDuration = 2;
-        int validMaxTravelTime = 120;
-        int validMinTransferTime = 5;
+        int validMaxTravelDuration = 120;
+        int validMinTransferDuration = 5;
         boolean validWheelChairAccessible = false;
         boolean validBikeAllowed = false;
         EnumSet<TravelMode> validTravelModes = EnumSet.allOf(TravelMode.class);
@@ -41,58 +41,58 @@ public class RoutingControllerTest {
         boolean hasTravelModeInformation = true;
 
         return Stream.of(
-                Arguments.of("validValues", validMaxWalkingDuration, validMaxTransferDuration, validMaxTravelTime,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                Arguments.of("validValues", validMaxWalkDuration, validMaxTransferDuration, validMaxTravelDuration,
+                        validMinTransferDuration, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("maxWalkingDurationEqualsNull", null, validMaxTransferDuration, validMaxTravelTime,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                Arguments.of("maxWalkDurationEqualsNull", null, validMaxTransferDuration, validMaxTravelDuration,
+                        validMinTransferDuration, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("maxTransferDurationEqualsNull", validMaxWalkingDuration, null, validMaxTravelTime,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                Arguments.of("maxTransferDurationEqualsNull", validMaxWalkDuration, null, validMaxTravelDuration,
+                        validMinTransferDuration, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("maxTravelTimeEqualsNull", validMaxWalkingDuration, validMaxTransferDuration, null,
-                        validMinTransferTime, validWheelChairAccessible, validBikeAllowed, validTravelModes,
+                Arguments.of("maxTravelTimeEqualsNull", validMaxWalkDuration, validMaxTransferDuration, null,
+                        validMinTransferDuration, validWheelChairAccessible, validBikeAllowed, validTravelModes,
                         hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("wheelchairAccessibleWhenServiceProvidesNoSupport", validMaxWalkingDuration,
-                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, true, validBikeAllowed,
-                        validTravelModes, false, hasBikeInformation, hasTravelModeInformation,
+                Arguments.of("wheelchairAccessibleWhenServiceProvidesNoSupport", validMaxWalkDuration,
+                        validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration, true,
+                        validBikeAllowed, validTravelModes, false, hasBikeInformation, hasTravelModeInformation,
                         "Wheelchair accessibility parameter is not supported by this service."),
-                Arguments.of("bikeAllowedWhenServiceProvidesNoSupport", validMaxWalkingDuration,
-                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, validWheelChairAccessible,
-                        true, validTravelModes, hasAccessibilityInformation, false, hasTravelModeInformation,
+                Arguments.of("bikeAllowedWhenServiceProvidesNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, true,
+                        validTravelModes, hasAccessibilityInformation, false, hasTravelModeInformation,
                         "Bike-friendly routing parameter is not supported by this service."),
-                Arguments.of("travelModesWhenServiceProvidesNoSupport", validMaxWalkingDuration,
-                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, validWheelChairAccessible,
-                        validBikeAllowed, EnumSet.of(TravelMode.BUS), hasAccessibilityInformation, hasBikeInformation,
-                        false, "Travel mode filtering parameter is not supported by this service."),
-                Arguments.of("wheelchairAccessibleWhenServiceProvidesSupport", validMaxWalkingDuration,
-                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, true, validBikeAllowed,
-                        validTravelModes, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        null),
-                Arguments.of("bikeAllowedWhenServiceProvidesSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, hasTravelModeInformation,
-                        validTravelModes, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation,
-                        null),
-                Arguments.of("travelModesWhenServiceProvidesSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                Arguments.of("travelModesWhenServiceProvidesNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, validBikeAllowed,
+                        EnumSet.of(TravelMode.BUS), hasAccessibilityInformation, hasBikeInformation, false,
+                        "Travel mode filtering parameter is not supported by this service."),
+                Arguments.of("wheelchairAccessibleWhenServiceProvidesSupport", validMaxWalkDuration,
+                        validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration, true,
+                        validBikeAllowed, validTravelModes, hasAccessibilityInformation, hasBikeInformation,
+                        hasTravelModeInformation, null),
+                Arguments.of("bikeAllowedWhenServiceProvidesSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible,
+                        hasTravelModeInformation, validTravelModes, hasAccessibilityInformation, hasBikeInformation,
+                        hasTravelModeInformation, null),
+                Arguments.of("travelModesWhenServiceProvidesSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, validBikeAllowed,
                         EnumSet.of(TravelMode.BUS), hasAccessibilityInformation, hasBikeInformation,
                         hasTravelModeInformation, null),
-                Arguments.of("defaultWheelchairAccessibleWhenNoSupport", validMaxWalkingDuration,
-                        validMaxTransferDuration, validMaxTravelTime, validMinTransferTime, false, validBikeAllowed,
-                        validTravelModes, false, hasBikeInformation, hasTravelModeInformation, null),
-                Arguments.of("defaultBikeAllowedWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, false, validTravelModes,
-                        hasAccessibilityInformation, false, hasTravelModeInformation, null),
-                Arguments.of("defaultTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                Arguments.of("defaultWheelchairAccessibleWhenNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, false, validBikeAllowed, validTravelModes,
+                        false, hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("defaultBikeAllowedWhenNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, false,
+                        validTravelModes, hasAccessibilityInformation, false, hasTravelModeInformation, null),
+                Arguments.of("defaultTravelModesWhenNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, validBikeAllowed,
                         EnumSet.allOf(TravelMode.class), hasAccessibilityInformation, hasBikeInformation, false, null),
-                Arguments.of("emptyTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed,
+                Arguments.of("emptyTravelModesWhenNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, validBikeAllowed,
                         EnumSet.noneOf(TravelMode.class), hasAccessibilityInformation, hasBikeInformation,
                         hasTravelModeInformation, null),
-                Arguments.of("nullTravelModesWhenNoSupport", validMaxWalkingDuration, validMaxTransferDuration,
-                        validMaxTravelTime, validMinTransferTime, validWheelChairAccessible, validBikeAllowed, null,
-                        hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null));
+                Arguments.of("nullTravelModesWhenNoSupport", validMaxWalkDuration, validMaxTransferDuration,
+                        validMaxTravelDuration, validMinTransferDuration, validWheelChairAccessible, validBikeAllowed,
+                        null, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation, null));
     }
 
     List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
@@ -223,7 +223,7 @@ public class RoutingControllerTest {
 
         @ParameterizedTest(name = "connectionQueryConfig_{0}")
         @MethodSource("provideQueryConfigTestCombinations")
-        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+        void testQueryConfigValues(String name, Integer maxWalkDuration, Integer maxTransferDuration,
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
@@ -236,12 +236,12 @@ public class RoutingControllerTest {
 
             if (errorMessage == null) {
                 routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(), TimeType.DEPARTURE,
-                        maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
+                        maxWalkDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes);
             } else {
                 ValidationException exception = assertThrows(ValidationException.class,
                         () -> routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(),
-                                TimeType.DEPARTURE, maxWalkingDuration, maxTransferDuration, maxTravelTime,
+                                TimeType.DEPARTURE, maxWalkDuration, maxTransferDuration, maxTravelTime,
                                 minTransferTime, wheelChairAccessible, bikeAllowed, travelModes));
                 assertEquals(errorMessage, exception.getMessage());
             }
@@ -530,7 +530,7 @@ public class RoutingControllerTest {
 
         @ParameterizedTest(name = "isolineQueryConfig_{0}")
         @MethodSource("provideQueryConfigTestCombinations")
-        void testQueryConfigValues(String name, Integer maxWalkingDuration, Integer maxTransferDuration,
+        void testQueryConfigValues(String name, Integer maxWalkDuration, Integer maxTransferDuration,
                                    Integer maxTravelTime, int minTransferTime, boolean wheelChairAccessible,
                                    boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                    boolean hasAccessibilityInformation, boolean hasBikeInformation,
@@ -543,12 +543,12 @@ public class RoutingControllerTest {
 
             if (errorMessage == null) {
                 routingController.getIsolines("A", null, null, OffsetDateTime.now(), TimeType.DEPARTURE,
-                        maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
+                        maxWalkDuration, maxTransferDuration, maxTravelTime, minTransferTime, wheelChairAccessible,
                         bikeAllowed, travelModes, false);
             } else {
                 ValidationException exception = assertThrows(ValidationException.class,
                         () -> routingController.getIsolines("A", null, null, OffsetDateTime.now(), TimeType.DEPARTURE,
-                                maxWalkingDuration, maxTransferDuration, maxTravelTime, minTransferTime,
+                                maxWalkDuration, maxTransferDuration, maxTravelTime, minTransferTime,
                                 wheelChairAccessible, bikeAllowed, travelModes, false));
                 assertEquals(errorMessage, exception.getMessage());
             }
@@ -574,21 +574,22 @@ public class RoutingControllerTest {
                         break;
                     }
                 }
+
                 return next;
             }).limit((long) Math.pow(2, length)).collect(Collectors.toList());
         }
 
-        @ParameterizedTest(name = "maxNumTransfers_{0}_maxTravelTime_{1}_maxWalkingTime_{2}_minTransferTime_{3}_accessibility_{4}_bikes_{5}_travelModes_{6}")
+        @ParameterizedTest(name = "maxTransfers_{0}_maxTravelDuration_{1}_maxWalkDuration_{2}_minTransferDuration_{3}_accessibility_{4}_bikes_{5}_travelModes_{6}")
         @MethodSource("provideRoutingInfoTestCombinations")
         void testQueryConfigValues(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
-                                   boolean supportsMaxWalkingDuration, boolean supportsMinTransferDuration,
+                                   boolean supportsMaxWalkDuration, boolean supportsMinTransferDuration,
                                    boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
             serviceFake.setHasAccessibilityInformation(supportsAccessibility);
             serviceFake.setHasBikeInformation(supportsBikes);
             serviceFake.setHasTravelModeInformation(supportsTravelModes);
-            serviceFake.setSupportsMaxTransferNumber(supportsMaxNumTransfers);
-            serviceFake.setSupportsMaxTravelTime(supportsMaxTravelTime);
-            serviceFake.setSupportsMaxWalkingDuration(supportsMaxWalkingDuration);
+            serviceFake.setSupportsMaxTransfers(supportsMaxNumTransfers);
+            serviceFake.setSupportsMaxTravelDuration(supportsMaxTravelTime);
+            serviceFake.setSupportsMaxWalkDuration(supportsMaxWalkDuration);
             serviceFake.setSupportsMinTransferDuration(supportsMinTransferDuration);
 
             org.naviqore.app.dto.RoutingInfo routingInfo = routingController.getRoutingInfo();
@@ -596,9 +597,9 @@ public class RoutingControllerTest {
             assertEquals(supportsAccessibility, routingInfo.isSupportsAccessibility());
             assertEquals(supportsBikes, routingInfo.isSupportsBikes());
             assertEquals(supportsTravelModes, routingInfo.isSupportsTravelModes());
-            assertEquals(supportsMaxNumTransfers, routingInfo.isSupportsMaxNumTransfers());
-            assertEquals(supportsMaxTravelTime, routingInfo.isSupportsMaxTravelTime());
-            assertEquals(supportsMaxWalkingDuration, routingInfo.isSupportsMaxWalkingDuration());
+            assertEquals(supportsMaxNumTransfers, routingInfo.isSupportsMaxTransfers());
+            assertEquals(supportsMaxTravelTime, routingInfo.isSupportsMaxTravelDuration());
+            assertEquals(supportsMaxWalkDuration, routingInfo.isSupportsMaxWalkDuration());
             assertEquals(supportsMinTransferDuration, routingInfo.isSupportsMinTransferDuration());
         }
     }

@@ -106,8 +106,8 @@ public final class TypeMapper {
     }
 
     public static QueryConfig map(ConnectionQueryConfig config) {
-        return new QueryConfig(config.getMaximumWalkingDuration(), config.getMinimumTransferDuration(),
-                config.getMaximumTransferNumber(), config.getMaximumTravelTime(), config.isWheelchairAccessible(),
+        return new QueryConfig(config.getMaximumWalkDuration(), config.getMinimumTransferDuration(),
+                config.getMaximumTransfers(), config.getMaximumTravelDuration(), config.isWheelchairAccessible(),
                 config.isBikeAllowed(), map(config.getTravelModes()));
     }
 

@@ -20,7 +20,7 @@ public class RaptorConfig {
     private RaptorTripMaskProvider maskProvider = new NoMaskProvider();
 
     private int daysToScan = 1;
-    private int defaultSameStopTransferTime = 120;
+    private int defaultSameStopTransferDuration = 120;
 
     @Setter
     private int raptorRange = 1800; // 30 minutes
@@ -29,11 +29,11 @@ public class RaptorConfig {
     @Setter
     private EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
 
-    public RaptorConfig(int daysToScan, int raptorRange, int defaultSameStopTransferTime, int stopTimeCacheSize,
+    public RaptorConfig(int daysToScan, int raptorRange, int defaultSameStopTransferDuration, int stopTimeCacheSize,
                         EvictionCache.Strategy stopTimeCacheStrategy, RaptorTripMaskProvider maskProvider) {
         setRaptorRange(raptorRange);
         setDaysToScan(daysToScan);
-        setDefaultSameStopTransferTime(defaultSameStopTransferTime);
+        setDefaultSameStopTransferDuration(defaultSameStopTransferDuration);
         setStopTimeCacheSize(stopTimeCacheSize);
         setStopTimeCacheStrategy(stopTimeCacheStrategy);
         setMaskProvider(maskProvider);
@@ -46,11 +46,12 @@ public class RaptorConfig {
         this.daysToScan = daysToScan;
     }
 
-    public void setDefaultSameStopTransferTime(int defaultSameStopTransferTime) {
-        if (defaultSameStopTransferTime < 0) {
-            throw new IllegalArgumentException("Default same stop transfer time must be greater than or equal to 0.");
+    public void setDefaultSameStopTransferDuration(int defaultSameStopTransferDuration) {
+        if (defaultSameStopTransferDuration < 0) {
+            throw new IllegalArgumentException(
+                    "Default same stop transfer duration must be greater than or equal to 0.");
         }
-        this.defaultSameStopTransferTime = defaultSameStopTransferTime;
+        this.defaultSameStopTransferDuration = defaultSameStopTransferDuration;
     }
 
     public void setStopTimeCacheSize(int stopTimeCacheSize) {
@@ -61,7 +62,7 @@ public class RaptorConfig {
     }
 
     public RaptorConfig copy() {
-        return new RaptorConfig(daysToScan, raptorRange, defaultSameStopTransferTime, stopTimeCacheSize,
+        return new RaptorConfig(daysToScan, raptorRange, defaultSameStopTransferDuration, stopTimeCacheSize,
                 stopTimeCacheStrategy, maskProvider);
     }
 

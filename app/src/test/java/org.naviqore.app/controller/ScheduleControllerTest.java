@@ -91,8 +91,8 @@ public class ScheduleControllerTest {
             String query = "query";
             when(scheduleInformationService.getStops(query, map(SearchType.STARTS_WITH),
                     map(StopSortStrategy.ALPHABETICAL))).thenReturn(List.of());
-            List<Stop> stops = scheduleController.getAutoCompleteStops(query, 10, SearchType.STARTS_WITH,
-                    StopSortStrategy.ALPHABETICAL);
+            List<Stop> stops = scheduleController.getAutoCompleteStops(query, SearchType.STARTS_WITH,
+                    StopSortStrategy.ALPHABETICAL, 10);
 
             assertNotNull(stops);
         }
@@ -173,7 +173,7 @@ public class ScheduleControllerTest {
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of());
 
-            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, null, limit, TimeType.DEPARTURE);
+            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, null, TimeType.DEPARTURE, limit);
 
             assertNotNull(result);
             verify(scheduleInformationService).getStopTimes(eq(serviceStop), eq(fromTime), eq(expectedUntil),
@@ -197,8 +197,8 @@ public class ScheduleControllerTest {
             when(st1.getTrip()).thenReturn(trip1);
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of(st1, st2));
 
-            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, untilTime, limit,
-                    TimeType.ARRIVAL);
+            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, untilTime, TimeType.ARRIVAL,
+                    limit);
 
             assertEquals(1, result.size());
             verify(scheduleInformationService).getStopTimes(eq(serviceStop), eq(fromTime), eq(untilTime),
@@ -214,7 +214,7 @@ public class ScheduleControllerTest {
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(
                     Collections.emptyList());
 
-            scheduleController.getStopTimes(stopId, null, null, 10, TimeType.DEPARTURE);
+            scheduleController.getStopTimes(stopId, null, null, TimeType.DEPARTURE, 10);
 
             verify(scheduleInformationService).getStopTimes(eq(serviceStop), any(OffsetDateTime.class),
                     any(OffsetDateTime.class), eq(org.naviqore.service.TimeType.DEPARTURE));
@@ -227,7 +227,7 @@ public class ScheduleControllerTest {
                     org.naviqore.service.exception.StopNotFoundException.class);
 
             StopNotFoundException exception = assertThrows(StopNotFoundException.class,
-                    () -> scheduleController.getStopTimes(stopId, null, null, 10, TimeType.DEPARTURE));
+                    () -> scheduleController.getStopTimes(stopId, null, null, TimeType.DEPARTURE, 10));
 
             assertEquals("Stop with ID 'stopId' not found.", exception.getMessage());
         }
@@ -239,8 +239,8 @@ public class ScheduleControllerTest {
             OffsetDateTime until = from.minusMinutes(1);
 
             InvalidParametersException exception = assertThrows(InvalidParametersException.class,
-                    () -> scheduleController.getStopTimes(stopId, from, until, 10, TimeType.DEPARTURE));
-            assertEquals("Until date time must be after departure date time.", exception.getMessage());
+                    () -> scheduleController.getStopTimes(stopId, from, until, TimeType.DEPARTURE, 10));
+            assertEquals("Until date time must be after from date time.", exception.getMessage());
         }
     }
 }

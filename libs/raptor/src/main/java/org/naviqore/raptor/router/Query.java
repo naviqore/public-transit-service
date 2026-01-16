@@ -22,7 +22,7 @@ class Query {
     private final int[] sourceStopIndices;
     private final int[] targetStopIndices;
     private final int[] sourceTimes;
-    private final int[] walkingDurationsToTarget;
+    private final int[] walkDurationsToTarget;
 
     private final QueryConfig config;
     private final TimeType timeType;
@@ -38,32 +38,32 @@ class Query {
     private final int raptorRange;
 
     /**
-     * @param raptorData               the current raptor data structures.
-     * @param sourceStopIndices        the indices of the source stops.
-     * @param targetStopIndices        the indices of the target stops.
-     * @param sourceTimes              the start times at the source stops.
-     * @param walkingDurationsToTarget the walking durations to the target stops.
-     * @param timeType                 the time type (arrival or departure) of the query.
-     * @param config                   the query configuration.
-     * @param referenceDateTime        the reference date time for the query.
-     * @param raptorConfig             the raptor configuration.
+     * @param raptorData            the current raptor data structures.
+     * @param sourceStopIndices     the indices of the source stops.
+     * @param targetStopIndices     the indices of the target stops.
+     * @param sourceTimes           the start times at the source stops.
+     * @param walkDurationsToTarget the walking durations to the target stops.
+     * @param timeType              the time type (arrival or departure) of the query.
+     * @param config                the query configuration.
+     * @param referenceDateTime     the reference date time for the query.
+     * @param raptorConfig          the raptor configuration.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkingDurationsToTarget, QueryConfig config, TimeType timeType, OffsetDateTime referenceDateTime,
+          int[] walkDurationsToTarget, QueryConfig config, TimeType timeType, OffsetDateTime referenceDateTime,
           RaptorConfig raptorConfig) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
         }
 
-        if (targetStopIndices.length != walkingDurationsToTarget.length) {
-            throw new IllegalArgumentException("Target stops and walking durations to target must have the same size.");
+        if (targetStopIndices.length != walkDurationsToTarget.length) {
+            throw new IllegalArgumentException("Target stops and walk durations to target must have the same size.");
         }
 
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
-        this.walkingDurationsToTarget = walkingDurationsToTarget;
+        this.walkDurationsToTarget = walkDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
         this.raptorRange = raptorConfig.getRaptorRange();
@@ -75,7 +75,7 @@ class Query {
 
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
-                config.getMaximumWalkingDuration(), timeType, config.isAllowSourceTransfer(),
+                config.getMaximumWalkDuration(), timeType, config.isAllowSourceTransfer(),
                 config.isAllowTargetTransfer(), targetStopIndices);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDateTime,
                 raptorConfig.getDaysToScan());
@@ -165,7 +165,7 @@ class Query {
     private void doRounds() {
 
         // check if marked stops has any true values
-        while (queryState.hasMarkedStops() && (queryState.getRound()) <= config.getMaximumTransferNumber()) {
+        while (queryState.hasMarkedStops() && (queryState.getRound()) <= config.getMaximumTransfers()) {
             // add label layer for new round
             queryState.addNewRound();
 
@@ -229,7 +229,7 @@ class Query {
         for (int i = 0; i < targetStops.length; i += 2) {
             int index = (int) Math.ceil(i / 2.0);
             targetStops[i] = targetStopIndices[index];
-            targetStops[i + 1] = walkingDurationsToTarget[index];
+            targetStops[i + 1] = walkDurationsToTarget[index];
         }
 
         // set initial labels, best time and mark source stops
@@ -308,14 +308,14 @@ class Query {
     private int determineCutoffTime() {
         int cutoffTime;
 
-        if (config.getMaximumTravelTime() == INFINITY) {
+        if (config.getMaximumTravelDuration() == INFINITY) {
             cutoffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
         } else if (timeType == TimeType.DEPARTURE) {
             int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
-            cutoffTime = earliestDeparture + config.getMaximumTravelTime();
+            cutoffTime = earliestDeparture + config.getMaximumTravelDuration();
         } else {
             int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
-            cutoffTime = latestArrival - config.getMaximumTravelTime();
+            cutoffTime = latestArrival - config.getMaximumTravelDuration();
         }
 
         return cutoffTime;

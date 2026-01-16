@@ -123,7 +123,7 @@ class ApplicationIT {
                     .addQueryParameter("sourceStopId", "STAGECOACH")
                     .addQueryParameter("targetStopId", "NANAA")
                     .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
-                    .addQueryParameter("minTransferTime", "-1")
+                    .addQueryParameter("minTransferDuration", "-1")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

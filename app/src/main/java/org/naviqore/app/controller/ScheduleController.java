@@ -31,9 +31,9 @@ public class ScheduleController {
 
     private static final Duration DEFAULT_WINDOW = Duration.ofHours(6);
     private static final String DEFAULT_LIMIT = "10";
-    private static final String DEFAULT_MAX_DIST_METERS = "1000";
+    private static final String DEFAULT_MAX_DISTANCE = "1000";
     private static final String DEFAULT_SEARCH_TYPE = "CONTAINS";
-    private static final String DEFAULT_SORT_STRATEGY = "RELEVANCE";
+    private static final String DEFAULT_SORT_BY = "RELEVANCE";
     private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
 
     private final ScheduleInformationService service;
@@ -51,15 +51,11 @@ public class ScheduleController {
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/autocomplete")
     public List<Stop> getAutoCompleteStops(@RequestParam String query,
-                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit,
                                            @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) SearchType searchType,
-                                           @RequestParam(defaultValue = DEFAULT_SORT_STRATEGY) StopSortStrategy stopSortStrategy) {
+                                           @RequestParam(defaultValue = DEFAULT_SORT_BY) StopSortStrategy sortBy,
+                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
 
-        return service.getStops(query, map(searchType), map(stopSortStrategy))
-                .stream()
-                .map(DtoMapper::map)
-                .limit(limit)
-                .toList();
+        return service.getStops(query, map(searchType), map(sortBy)).stream().map(DtoMapper::map).limit(limit).toList();
     }
 
     @Operation(summary = "Get nearest stops", description = "Retrieves a list of stops within a specified distance from a given location.")
@@ -67,7 +63,7 @@ public class ScheduleController {
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/nearest")
     public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
-                                                @RequestParam(defaultValue = DEFAULT_MAX_DIST_METERS) @Min(0) int maxDistance,
+                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Min(0) int maxDistance,
                                                 @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
 
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);
@@ -95,11 +91,11 @@ public class ScheduleController {
     public List<Departure> getStopTimes(@PathVariable String stopId,
                                         @RequestParam(required = false) OffsetDateTime from,
                                         @RequestParam(required = false) OffsetDateTime until,
-                                        @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit,
-                                        @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType) {
+                                        @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
+                                        @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
         OffsetDateTime effectiveFrom = RequestValidator.validateAndSetDefaultDateTime(from, service);
         OffsetDateTime effectiveUntil = Optional.ofNullable(until).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
-        RequestValidator.validateUntilDateTime(effectiveFrom, effectiveUntil);
+        RequestValidator.validateTimeWindow(effectiveFrom, effectiveUntil);
 
         return service.getStopTimes(RequestValidator.getStopById(stopId, service), effectiveFrom, effectiveUntil,
                 map(timeType)).stream().limit(limit).map(DtoMapper::map).toList();

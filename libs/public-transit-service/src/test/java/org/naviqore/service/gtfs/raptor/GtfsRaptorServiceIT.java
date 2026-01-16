@@ -243,10 +243,10 @@ class GtfsRaptorServiceIT {
             @BeforeEach
             void setUp() {
                 config = ConnectionQueryConfig.builder()
-                        .maximumWalkingDuration(10 * 60)
+                        .maximumWalkDuration(10 * 60)
                         .minimumTransferDuration(2 * 60)
-                        .maximumTransferNumber(4)
-                        .maximumTravelTime(24 * 60 * 60)
+                        .maximumTransfers(4)
+                        .maximumTravelDuration(24 * 60 * 60)
                         .wheelchairAccessible(false)
                         .bikeAllowed(false)
                         .build();

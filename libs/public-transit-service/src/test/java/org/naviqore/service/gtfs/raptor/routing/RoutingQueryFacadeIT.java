@@ -37,23 +37,23 @@ class RoutingQueryFacadeIT {
     public static final double EPSILON = 1e-6;
     // Walking legs below the default threshold (120 seconds) would be excluded from the results.
     // Set this to 0 to ensure that no walking legs are filtered out based on duration.
-    private static final int WALKING_DURATION_MINIMUM = 0;
+    private static final int WALK_DURATION_MINIMUM = 0;
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
     private static final OffsetDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0)
             .atZone(GtfsRaptorTestSchedule.ZONE_ID)
             .toOffsetDateTime();
     private static final ConnectionQueryConfig QUERY_CONFIG = ConnectionQueryConfig.builder()
-            .maximumWalkingDuration(10 * 60)
+            .maximumWalkDuration(10 * 60)
             .minimumTransferDuration(2 * 60)
-            .maximumTransferNumber(4)
-            .maximumTravelTime(24 * 60 * 60)
+            .maximumTransfers(4)
+            .maximumTravelDuration(24 * 60 * 60)
             .wheelchairAccessible(false)
             .bikeAllowed(false)
             .build();
     private static final ServiceConfig SERVICE_CONFIG = ServiceConfig.builder()
             .gtfsScheduleRepository(new NoGtfsScheduleRepository())
-            .walkingDurationMinimum(WALKING_DURATION_MINIMUM)
+            .walkDurationMinimum(WALK_DURATION_MINIMUM)
             .build();
     private GtfsSchedule schedule;
     private RoutingQueryFacade facade;
@@ -72,10 +72,10 @@ class RoutingQueryFacadeIT {
         // setup walk transfer generator
         KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex = new KDTreeBuilder<org.naviqore.gtfs.schedule.model.Stop>().addLocations(
                 schedule.getStops().values()).build();
-        WalkCalculator walkCalculator = new BeeLineWalkCalculator(SERVICE_CONFIG.getWalkingSpeed());
+        WalkCalculator walkCalculator = new BeeLineWalkCalculator(SERVICE_CONFIG.getWalkSpeed());
         List<TransferGenerator> transferGenerators = List.of(
-                new WalkTransferGenerator(walkCalculator, SERVICE_CONFIG.getTransferTimeBetweenStopsMinimum(),
-                        SERVICE_CONFIG.getTransferTimeAccessEgress(), SERVICE_CONFIG.getWalkingSearchRadius(),
+                new WalkTransferGenerator(walkCalculator, SERVICE_CONFIG.getTransferDurationBetweenStopsMinimum(),
+                        SERVICE_CONFIG.getTransferDurationAccessEgress(), SERVICE_CONFIG.getWalkSearchRadius(),
                         spatialStopIndex));
 
         // setup cache and trip mask provider
@@ -86,7 +86,7 @@ class RoutingQueryFacadeIT {
 
         // configure and setup raptor
         RaptorConfig raptorConfig = new RaptorConfig(SERVICE_CONFIG.getRaptorDaysToScan(),
-                SERVICE_CONFIG.getRaptorRange(), SERVICE_CONFIG.getTransferTimeSameStopDefault(),
+                SERVICE_CONFIG.getRaptorRange(), SERVICE_CONFIG.getTransferDurationSameStopDefault(),
                 SERVICE_CONFIG.getCacheServiceDaySize(), cacheStrategy, tripMaskProvider);
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(raptorConfig, schedule, transferGenerators).run();
 

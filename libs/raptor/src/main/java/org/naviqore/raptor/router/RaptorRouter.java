@@ -116,7 +116,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
      * stops).
      *
      * @param sourceStops is a map of stop ids and departure/arrival times depending on the time type
-     * @param targetStops is a map of stop ids and walking durations to target stops
+     * @param targetStops is a map of stop ids and walk durations to target stops
      * @param timeType    is the type of time to route for (arrival or departure)
      * @param config      is the query configuration
      * @return a list of pareto-optimal connections
@@ -134,10 +134,10 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] sourceStopIndices = validatedSourceStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] sourceTimes = validatedSourceStops.values().stream().mapToInt(Integer::intValue).toArray();
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] walkDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
+                walkDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
         return new LabelPostprocessor(this, timeType, referenceDateTime).reconstructParetoOptimalSolutions(
                 bestLabelsPerRound, validatedTargetStops);
@@ -148,7 +148,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
      */
     @RequiredArgsConstructor
     private static class InputValidator {
-        private static final int MIN_WALKING_TIME_TO_TARGET = 0;
+        private static final int MIN_WALK_DURATION_TO_TARGET = 0;
         private static final int MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES = 24 * 60 * 60;
 
         private final Map<String, Integer> stopsToIdx;
@@ -178,7 +178,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
-            targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
+            targetStops.values().forEach(InputValidator::validateWalkDurationToTarget);
 
             // ensure departure and arrival stops are not the same
             if (!Collections.disjoint(sourceStops.keySet(), targetStops.keySet())) {
@@ -186,10 +186,10 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             }
         }
 
-        private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
-            if (walkingDurationToTarget < MIN_WALKING_TIME_TO_TARGET) {
+        private static void validateWalkDurationToTarget(int duration) {
+            if (duration < MIN_WALK_DURATION_TO_TARGET) {
                 throw new IllegalArgumentException(
-                        "Walking duration to target must be greater or equal to " + MIN_WALKING_TIME_TO_TARGET + "seconds.");
+                        "Walk duration to target must be greater or equal to " + MIN_WALK_DURATION_TO_TARGET + "seconds.");
             }
         }
 

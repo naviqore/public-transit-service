@@ -33,7 +33,7 @@ public class WalkTransferGeneratorTest {
             new StopData("stop2", "Zürich, Opernhaus", 47.365030, 8.547976), "stop3",
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
     private static final WalkCalculator DEFAULT_CALCULATOR = new BeeLineWalkCalculator(
-            ServiceConfig.DEFAULT_WALKING_SPEED);
+            ServiceConfig.DEFAULT_WALK_SPEED);
     private static final int DEFAULT_MINIMUM_TRANSFER_TIME = 120;
     private static final int DEFAULT_ACCESS_EGRESS_TIME = 15;
     private static final int DEFAULT_SEARCH_RADIUS = 500;

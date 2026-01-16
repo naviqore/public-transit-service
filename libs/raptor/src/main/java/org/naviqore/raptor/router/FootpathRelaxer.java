@@ -16,7 +16,7 @@ class FootpathRelaxer {
     private final Stop[] stops;
 
     private final int minTransferDuration;
-    private final int maxWalkingDuration;
+    private final int maxWalkDuration;
     private final TimeType timeType;
     private final boolean allowSourceTransfers;
     private final boolean allowTargetTransfers;
@@ -29,23 +29,23 @@ class FootpathRelaxer {
      * @param raptorData              the current raptor data structures.
      * @param minimumTransferDuration The minimum transfer duration time, since this is intended as rest period (e.g.
      *                                coffee break) it is added to the walk time.
-     * @param maximumWalkingDuration  The maximum walking duration to reach the target stop. If the walking duration
-     *                                exceeds this value, the target stop is not reached.
+     * @param maximumWalkDuration     The maximum walk duration to reach the target stop. If the walk duration exceeds
+     *                                this value, the target stop is not reached.
      * @param timeType                the time type (arrival or departure).
      * @param allowSourceTransfers    defines if transfers from source stops are possible
      * @param allowTargetTransfers    defines if transfers to target stops are possible
      * @param targetStopIndices       array holding all indices of target stops, used to check if transfer target is
      *                                target stop in case allowTargetTransfers is false
      */
-    FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration,
-                    int maximumWalkingDuration, TimeType timeType, boolean allowSourceTransfers,
-                    boolean allowTargetTransfers, int[] targetStopIndices) {
+    FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration, int maximumWalkDuration,
+                    TimeType timeType, boolean allowSourceTransfers, boolean allowTargetTransfers,
+                    int[] targetStopIndices) {
         // constant data structures
         this.transfers = raptorData.getStopContext().transfers();
         this.stops = raptorData.getStopContext().stops();
         // constant configuration of relaxer
         this.minTransferDuration = minimumTransferDuration;
-        this.maxWalkingDuration = maximumWalkingDuration;
+        this.maxWalkDuration = maximumWalkDuration;
         this.timeType = timeType;
         // note: will also change outside of relaxer, due to route scanning
         this.queryState = queryState;
@@ -130,7 +130,7 @@ class FootpathRelaxer {
             }
             Stop targetStop = stops[transfer.targetStopIdx()];
             int duration = transfer.duration();
-            if (maxWalkingDuration < duration) {
+            if (maxWalkDuration < duration) {
                 continue;
             }
 
