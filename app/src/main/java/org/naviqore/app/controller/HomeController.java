@@ -1,12 +1,14 @@
 package org.naviqore.app.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
+@ConditionalOnProperty("app.home-page.enabled")
 public class HomeController {
 
     private final String name;
@@ -25,6 +27,6 @@ public class HomeController {
         model.addAttribute("appName", name);
         model.addAttribute("appVersion", version);
         model.addAttribute("appDescription", description.substring(0, description.length() - 1));
-        return "index";
+        return "home";
     }
 }
