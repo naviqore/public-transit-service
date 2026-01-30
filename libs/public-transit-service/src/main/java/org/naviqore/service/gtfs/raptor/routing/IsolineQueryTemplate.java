@@ -10,8 +10,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
 import java.time.OffsetDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Template for executing an isoline query from a source location, encapsulating common logic and providing entry points
@@ -60,23 +59,39 @@ abstract class IsolineQueryTemplate<T> {
             throw new ConnectionRoutingException(e);
         }
 
-        // assemble isoline results
-        Map<Stop, Connection> result = new HashMap<>();
+        // convert to service connections and collect results in a list to avoid intermediate hashing overhead
+        List<Map.Entry<Stop, Connection>> results = new ArrayList<>(isolines.size());
         for (Map.Entry<String, org.naviqore.raptor.Connection> entry : isolines.entrySet()) {
-            org.naviqore.raptor.Connection connection = entry.getValue();
+            org.naviqore.raptor.Connection raptorConnection = entry.getValue();
             Stop stop = utils.getStopById(entry.getKey());
 
             Connection serviceConnection = switch (timeType) {
-                case ARRIVAL -> postprocessArrivalConnection(source, connection);
-                case DEPARTURE -> postprocessDepartureConnection(source, connection);
+                case ARRIVAL -> postprocessArrivalConnection(source, raptorConnection);
+                case DEPARTURE -> postprocessDepartureConnection(source, raptorConnection);
             };
 
             if (utils.isBelowMaximumTravelTime(serviceConnection, queryConfig)) {
-                result.put(stop, serviceConnection);
+                results.add(Map.entry(stop, serviceConnection));
             }
         }
 
-        return result;
+        // sort connections based on time type
+        Comparator<Map.Entry<Stop, Connection>> comparator = switch (timeType) {
+            // by arrival time ASC; earlier arrival at destination = closer
+            case DEPARTURE -> Comparator.comparing(e -> e.getValue().getArrivalTime());
+            // by departure time DESC; later departure from origin = closer
+            case ARRIVAL -> Comparator.comparing(e -> e.getValue().getDepartureTime(), Comparator.reverseOrder());
+        };
+        // use stop name as tie-breaker for deterministic results
+        results.sort(comparator.thenComparing(e -> e.getKey().getName()));
+
+        // assemble isoline result
+        Map<Stop, Connection> sortedResult = LinkedHashMap.newLinkedHashMap(results.size());
+        for (Map.Entry<Stop, Connection> entry : results) {
+            sortedResult.put(entry.getKey(), entry.getValue());
+        }
+
+        return sortedResult;
     }
 
 }

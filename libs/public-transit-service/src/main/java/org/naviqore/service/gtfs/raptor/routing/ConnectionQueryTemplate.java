@@ -10,6 +10,7 @@ import org.naviqore.service.exception.ConnectionRoutingException;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +92,7 @@ abstract class ConnectionQueryTemplate<S, T> {
         }
 
         // assemble connection results
-        List<Connection> result = new ArrayList<>();
+        List<Connection> result = new ArrayList<>(connections.size());
         for (org.naviqore.raptor.Connection raptorConnection : connections) {
 
             Connection serviceConnection = switch (timeType) {
@@ -103,6 +104,12 @@ abstract class ConnectionQueryTemplate<S, T> {
                 result.add(serviceConnection);
             }
         }
+
+        // sort connections based on time type
+        result.sort(switch (timeType) {
+            case DEPARTURE -> Comparator.comparing(Connection::getDepartureTime);
+            case ARRIVAL -> Comparator.comparing(Connection::getArrivalTime).reversed();
+        });
 
         return result;
     }
