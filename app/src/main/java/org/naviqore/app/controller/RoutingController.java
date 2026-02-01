@@ -28,9 +28,6 @@ import java.util.List;
 
 import static org.naviqore.app.dto.DtoMapper.map;
 
-// TODO: debug: Parent8591056 --> Parent8507000 at 2025-03-30T15:00:00Z, gives the same as 2025-03-31T15:00:00Z
-//  suspect its coming from caching.
-
 @Slf4j
 @RestController
 @RequestMapping("/routing")
