@@ -84,11 +84,11 @@ public class ScheduleController {
     }
 
     @Operation(summary = "Get stop times (departures or arrivals) for a stop", description = "Retrieves the next stop times from a specified stop at a given datetime.")
-    @ApiResponse(responseCode = "200", description = "A list of the next stop times from the specified stop.", content = @Content(schema = @Schema(implementation = Departure.class, type = "array")))
+    @ApiResponse(responseCode = "200", description = "A list of the next stop times from the specified stop.", content = @Content(schema = @Schema(implementation = StopEvent.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @ApiResponse(responseCode = "404", description = "Stop not found")
     @GetMapping("/stops/{stopId}/times")
-    public List<Departure> getStopTimes(@PathVariable String stopId,
+    public List<StopEvent> getStopTimes(@PathVariable String stopId,
                                         @RequestParam(required = false) OffsetDateTime from,
                                         @RequestParam(required = false) OffsetDateTime until,
                                         @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,

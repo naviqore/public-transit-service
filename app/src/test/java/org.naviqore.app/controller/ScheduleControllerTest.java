@@ -173,7 +173,7 @@ public class ScheduleControllerTest {
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of());
 
-            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, null, TimeType.DEPARTURE, limit);
+            List<StopEvent> result = scheduleController.getStopTimes(stopId, fromTime, null, TimeType.DEPARTURE, limit);
 
             assertNotNull(result);
             verify(scheduleInformationService).getStopTimes(eq(serviceStop), eq(fromTime), eq(expectedUntil),
@@ -197,7 +197,7 @@ public class ScheduleControllerTest {
             when(st1.getTrip()).thenReturn(trip1);
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of(st1, st2));
 
-            List<Departure> result = scheduleController.getStopTimes(stopId, fromTime, untilTime, TimeType.ARRIVAL,
+            List<StopEvent> result = scheduleController.getStopTimes(stopId, fromTime, untilTime, TimeType.ARRIVAL,
                     limit);
 
             assertEquals(1, result.size());

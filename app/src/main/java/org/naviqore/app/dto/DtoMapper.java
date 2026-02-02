@@ -22,8 +22,8 @@ public class DtoMapper {
         return new DistanceToStop(map(stop), stop.getCoordinate().distanceTo(latitude, longitude));
     }
 
-    public static Departure map(org.naviqore.service.StopTime stopTime) {
-        return new Departure(
+    public static StopEvent map(org.naviqore.service.StopTime stopTime) {
+        return new StopEvent(
                 new StopTime(map(stopTime.getStop()), stopTime.getArrivalTime(), stopTime.getDepartureTime()),
                 map(stopTime.getTrip()));
     }

@@ -6,7 +6,7 @@ import lombok.*;
 @EqualsAndHashCode
 @ToString
 @Getter
-public class Departure {
+public class StopEvent {
 
     private final StopTime stopTime;
     private final Trip trip;
