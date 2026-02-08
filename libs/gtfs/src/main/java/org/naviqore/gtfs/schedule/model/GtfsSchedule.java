@@ -101,7 +101,7 @@ public class GtfsSchedule {
         final Instant toInstant = to.toInstant();
 
         for (StopTime st : stop.getStopTimes()) {
-            ServiceDayTime gtfsTime = switch (timeType) {
+            ServiceDayTime serviceDayTime = switch (timeType) {
                 case DEPARTURE -> st.departure();
                 case ARRIVAL -> st.arrival();
             };
@@ -111,12 +111,12 @@ public class GtfsSchedule {
             // - look back from the 'from' instant by the trip's internal offset (total seconds)
             // - an extra day is subtracted to account for the "noon minus 12h" anchor and dst shifts
             // - latest possible service day (maxServiceDate) is simply the calendar date of 'to'
-            LocalDate minServiceDate = from.minusSeconds(gtfsTime.getTotalSeconds()).toLocalDate().minusDays(1);
+            LocalDate minServiceDate = from.minusSeconds(serviceDayTime.getTotalSeconds()).toLocalDate().minusDays(1);
             LocalDate maxServiceDate = to.toLocalDate();
 
             for (LocalDate date = minServiceDate; !date.isAfter(maxServiceDate); date = date.plusDays(1)) {
                 if (st.trip().getCalendar().isServiceAvailable(date)) {
-                    Instant physicalInstant = gtfsTime.toZonedDateTime(date, zone).toInstant();
+                    Instant physicalInstant = serviceDayTime.toZonedDateTime(date, zone).toInstant();
 
                     // logical interval: [from, to)
                     if (!physicalInstant.isBefore(fromInstant) && physicalInstant.isBefore(toInstant)) {
