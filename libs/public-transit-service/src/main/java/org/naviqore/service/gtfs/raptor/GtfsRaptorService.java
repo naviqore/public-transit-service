@@ -107,13 +107,13 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
-    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType) {
-        log.info("Getting {} for stop '{}', from '{}', until '{}'",
-                timeType == TimeType.DEPARTURE ? "departures" : "arrivals", stop.getId(), from, until);
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
+        log.info("Getting {} for stop '{}', from '{}', to '{}'",
+                timeType == TimeType.DEPARTURE ? "departures" : "arrivals", stop.getId(), from, to);
 
         return schedule.getRelatedStops(stop.getId())
                 .stream()
-                .flatMap(scheduleStop -> schedule.getStopTimes(scheduleStop.getId(), from, until,
+                .flatMap(scheduleStop -> schedule.getStopTimes(scheduleStop.getId(), from, to,
                         TypeMapper.mapToGtfs(timeType)).stream())
                 .map(stopTime -> TypeMapper.map(stopTime, from.toLocalDate()))
                 .sorted(switch (timeType) {

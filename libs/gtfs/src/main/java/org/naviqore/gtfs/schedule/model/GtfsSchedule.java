@@ -80,25 +80,25 @@ public class GtfsSchedule {
     }
 
     /**
-     * Retrieves all stop times for a specific stop within a physical time window [from, until).
+     * Retrieves all stop times for a specific stop within a physical time window [from, to).
      * <p>
      * Handles arbitrary Trip durations (>24h) and varying agency timezones.
      *
      * @param stopId   unique identifier of the stop
      * @param from     inclusive start of the physical window
-     * @param until    exclusive end of the physical window
+     * @param to       exclusive end of the physical window
      * @param timeType whether to evaluate departure or arrival times
      * @return chronologically sorted list of matching stop times
      */
-    public List<StopTime> getStopTimes(String stopId, OffsetDateTime from, OffsetDateTime until, TimeType timeType) {
-        if (until.isBefore(from)) {
-            throw new IllegalArgumentException("until must be after from");
+    public List<StopTime> getStopTimes(String stopId, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
+        if (to.isBefore(from)) {
+            throw new IllegalArgumentException("to must be after from");
         }
 
         Stop stop = getStop(stopId);
         List<ScheduledEvent> events = new ArrayList<>();
         final Instant fromInstant = from.toInstant();
-        final Instant untilInstant = until.toInstant();
+        final Instant toInstant = to.toInstant();
 
         for (StopTime st : stop.getStopTimes()) {
             ServiceDayTime gtfsTime = switch (timeType) {
@@ -110,16 +110,16 @@ public class GtfsSchedule {
             // calculate the range of service dates that could possibly contain this stop time:
             // - look back from the 'from' instant by the trip's internal offset (total seconds)
             // - an extra day is subtracted to account for the "noon minus 12h" anchor and dst shifts
-            // - latest possible service day (maxServiceDate) is simply the calendar date of 'until'
+            // - latest possible service day (maxServiceDate) is simply the calendar date of 'to'
             LocalDate minServiceDate = from.minusSeconds(gtfsTime.getTotalSeconds()).toLocalDate().minusDays(1);
-            LocalDate maxServiceDate = until.toLocalDate();
+            LocalDate maxServiceDate = to.toLocalDate();
 
             for (LocalDate date = minServiceDate; !date.isAfter(maxServiceDate); date = date.plusDays(1)) {
                 if (st.trip().getCalendar().isServiceAvailable(date)) {
                     Instant physicalInstant = gtfsTime.toZonedDateTime(date, zone).toInstant();
 
-                    // logical interval: [from, until)
-                    if (!physicalInstant.isBefore(fromInstant) && physicalInstant.isBefore(untilInstant)) {
+                    // logical interval: [from, to)
+                    if (!physicalInstant.isBefore(fromInstant) && physicalInstant.isBefore(toInstant)) {
                         events.add(new ScheduledEvent(st, physicalInstant));
                     }
                 }

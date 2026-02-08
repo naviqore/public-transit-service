@@ -73,11 +73,11 @@ public interface ScheduleInformationService {
      *
      * @param stop     the stop for which to retrieve stop times
      * @param from     the inclusive start datetime
-     * @param until    the exclusive end datetime
+     * @param to       the exclusive end datetime
      * @param timeType whether to retrieve arrivals or departures
      * @return a list of stop times for the specified stop
      */
-    List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType);
+    List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType);
 
     /**
      * Retrieves a stop by its ID.

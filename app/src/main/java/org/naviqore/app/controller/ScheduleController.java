@@ -90,14 +90,14 @@ public class ScheduleController {
     @GetMapping("/stops/{stopId}/times")
     public List<StopEvent> getStopTimes(@PathVariable String stopId,
                                         @RequestParam(required = false) OffsetDateTime from,
-                                        @RequestParam(required = false) OffsetDateTime until,
+                                        @RequestParam(required = false) OffsetDateTime to,
                                         @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
                                         @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
         OffsetDateTime effectiveFrom = RequestValidator.validateAndSetDefaultDateTime(from, service);
-        OffsetDateTime effectiveUntil = Optional.ofNullable(until).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
-        RequestValidator.validateTimeWindow(effectiveFrom, effectiveUntil);
+        OffsetDateTime effectiveTo = Optional.ofNullable(to).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
+        RequestValidator.validateTimeWindow(effectiveFrom, effectiveTo);
 
-        return service.getStopTimes(RequestValidator.getStopById(stopId, service), effectiveFrom, effectiveUntil,
+        return service.getStopTimes(RequestValidator.getStopById(stopId, service), effectiveFrom, effectiveTo,
                 map(timeType)).stream().limit(limit).map(DtoMapper::map).toList();
     }
 }
