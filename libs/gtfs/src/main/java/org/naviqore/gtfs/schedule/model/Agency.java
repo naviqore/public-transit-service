@@ -1,4 +1,6 @@
 package org.naviqore.gtfs.schedule.model;
 
-public record Agency(String agency, String name, String url, String timezone) {
+import java.time.ZoneId;
+
+public record Agency(String agency, String name, String url, ZoneId timezone) {
 }

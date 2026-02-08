@@ -25,6 +25,7 @@ import org.naviqore.utils.spatial.index.KDTree;
 import org.naviqore.utils.spatial.index.KDTreeBuilder;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -36,21 +37,23 @@ class RoutingQueryFacadeIT {
     public static final double EPSILON = 1e-6;
     // Walking legs below the default threshold (120 seconds) would be excluded from the results.
     // Set this to 0 to ensure that no walking legs are filtered out based on duration.
-    private static final int WALKING_DURATION_MINIMUM = 0;
+    private static final int WALK_DURATION_MINIMUM = 0;
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
-    private static final LocalDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0);
+    private static final OffsetDateTime DATE_TIME = LocalDateTime.of(2008, 5, 15, 0, 0)
+            .atZone(GtfsRaptorTestSchedule.ZONE_ID)
+            .toOffsetDateTime();
     private static final ConnectionQueryConfig QUERY_CONFIG = ConnectionQueryConfig.builder()
-            .maximumWalkingDuration(10 * 60)
+            .maximumWalkDuration(10 * 60)
             .minimumTransferDuration(2 * 60)
-            .maximumTransferNumber(4)
-            .maximumTravelTime(24 * 60 * 60)
+            .maximumTransfers(4)
+            .maximumTravelDuration(24 * 60 * 60)
             .wheelchairAccessible(false)
             .bikeAllowed(false)
             .build();
     private static final ServiceConfig SERVICE_CONFIG = ServiceConfig.builder()
             .gtfsScheduleRepository(new NoGtfsScheduleRepository())
-            .walkingDurationMinimum(WALKING_DURATION_MINIMUM)
+            .walkDurationMinimum(WALK_DURATION_MINIMUM)
             .build();
     private GtfsSchedule schedule;
     private RoutingQueryFacade facade;
@@ -69,10 +72,10 @@ class RoutingQueryFacadeIT {
         // setup walk transfer generator
         KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex = new KDTreeBuilder<org.naviqore.gtfs.schedule.model.Stop>().addLocations(
                 schedule.getStops().values()).build();
-        WalkCalculator walkCalculator = new BeeLineWalkCalculator(SERVICE_CONFIG.getWalkingSpeed());
+        WalkCalculator walkCalculator = new BeeLineWalkCalculator(SERVICE_CONFIG.getWalkSpeed());
         List<TransferGenerator> transferGenerators = List.of(
-                new WalkTransferGenerator(walkCalculator, SERVICE_CONFIG.getTransferTimeBetweenStopsMinimum(),
-                        SERVICE_CONFIG.getTransferTimeAccessEgress(), SERVICE_CONFIG.getWalkingSearchRadius(),
+                new WalkTransferGenerator(walkCalculator, SERVICE_CONFIG.getTransferDurationBetweenStopsMinimum(),
+                        SERVICE_CONFIG.getTransferDurationAccessEgress(), SERVICE_CONFIG.getWalkSearchRadius(),
                         spatialStopIndex));
 
         // setup cache and trip mask provider
@@ -83,7 +86,7 @@ class RoutingQueryFacadeIT {
 
         // configure and setup raptor
         RaptorConfig raptorConfig = new RaptorConfig(SERVICE_CONFIG.getRaptorDaysToScan(),
-                SERVICE_CONFIG.getRaptorRange(), SERVICE_CONFIG.getTransferTimeSameStopDefault(),
+                SERVICE_CONFIG.getRaptorRange(), SERVICE_CONFIG.getTransferDurationSameStopDefault(),
                 SERVICE_CONFIG.getCacheServiceDaySize(), cacheStrategy, tripMaskProvider);
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(raptorConfig, schedule, transferGenerators).run();
 
@@ -164,8 +167,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:05:00");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:02:00-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:05:00-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(1);
@@ -182,8 +185,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:02:00");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:05:00");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:02:00-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:05:00-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(1);
@@ -205,8 +208,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:02:00-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(2);
@@ -224,8 +227,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:02:00");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:02:00-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(2);
@@ -270,8 +273,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:05:00");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:05:00-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(2);
@@ -289,8 +292,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:05:00");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:05:00-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(2);
@@ -307,7 +310,7 @@ class RoutingQueryFacadeIT {
 
                 // since walking to stop B1 will take ~5 minutes and this will miss the only trip of the day the default
                 // start time is set back by 5 minutes.
-                LocalDateTime startTime = DATE_TIME.minusMinutes(5);
+                OffsetDateTime startTime = DATE_TIME.minusMinutes(5);
 
                 // from source coordinate only departures from stop B1 (i.e. Route 1 going to D1) should be usable,
                 // routes departing from same stop complex at B2 (i.e. Route 2 going to D2) should be unusable.
@@ -341,8 +344,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(3);
@@ -361,8 +364,8 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
 
                 // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58");
+                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02-04:00");
+                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58-04:00");
 
                 List<Leg> legs = connection.getLegs();
                 assertThat(legs).hasSize(3);
@@ -431,8 +434,8 @@ class RoutingQueryFacadeIT {
                     Connection connection = connections.getFirst();
 
                     // assert departure and arrival time of complete connection, has to be the same day
-                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
-                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58");
+                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02-04:00");
+                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58-04:00");
 
                     List<Leg> legs = connection.getLegs();
                     assertThat(legs).hasSize(3);
@@ -451,8 +454,8 @@ class RoutingQueryFacadeIT {
                     Connection connection = connections.getFirst();
 
                     // assert departure and arrival time of complete connection, has to be the previous day
-                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02");
-                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58");
+                    assertThat(connection.getDepartureTime()).isEqualTo("2008-05-14T00:00:02-04:00");
+                    assertThat(connection.getArrivalTime()).isEqualTo("2008-05-14T00:06:58-04:00");
 
                     List<Leg> legs = connection.getLegs();
                     assertThat(legs).hasSize(3);
@@ -482,7 +485,7 @@ class RoutingQueryFacadeIT {
                     assertThat(isoline.getLegs()).hasSize(1);
 
                     // assert departure time of complete connection, has to be the same day
-                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:02:00");
+                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:02:00-04:00");
                 }
             }
 
@@ -517,7 +520,7 @@ class RoutingQueryFacadeIT {
                     assertThat(isoline.getLegs()).hasSize(2);
 
                     // assert departure time of complete connection, has to be the same day
-                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:00:02");
+                    assertThat(isoline.getDepartureTime()).isEqualTo("2008-05-15T00:00:02-04:00");
 
                     assertFirstMileWalk(isoline.getLegs().getFirst());
                 }

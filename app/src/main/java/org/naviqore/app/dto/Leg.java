@@ -4,7 +4,7 @@ import lombok.*;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @EqualsAndHashCode
@@ -18,9 +18,9 @@ public class Leg {
     private final Stop fromStop;
     private final Stop toStop;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private final LocalDateTime departureTime;
+    private final OffsetDateTime departureTime;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private final LocalDateTime arrivalTime;
+    private final OffsetDateTime arrivalTime;
     private final Trip trip;
 
 }

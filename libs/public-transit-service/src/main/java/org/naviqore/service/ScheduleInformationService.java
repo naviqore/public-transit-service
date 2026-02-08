@@ -1,6 +1,5 @@
 package org.naviqore.service;
 
-import org.jspecify.annotations.Nullable;
 import org.naviqore.service.exception.RouteNotFoundException;
 import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.service.exception.TripNotActiveException;
@@ -8,7 +7,7 @@ import org.naviqore.service.exception.TripNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,21 +64,20 @@ public interface ScheduleInformationService {
      *
      * @param location the location to search around
      * @param radius   the radius to search within, in meters
-     * @param limit    the maximum number of stops to retrieve
      * @return a list of the nearest stops to the specified location within the given radius
      */
-    List<Stop> getNearestStops(GeoCoordinate location, int radius, int limit);
+    List<Stop> getNearestStops(GeoCoordinate location, int radius);
 
     /**
-     * Retrieves the next departures from a specific stop within a given date range.
+     * Retrieves the stop times (departures or arrivals) for a specific stop within a given time window.
      *
-     * @param stop  the stop for which to retrieve departures
-     * @param from  the start datetime for the departures
-     * @param until the end datetime for the departures (nullable)
-     * @param limit the maximum number of departures to retrieve
-     * @return a list of upcoming departures from the specified stop
+     * @param stop     the stop for which to retrieve stop times
+     * @param from     the inclusive start datetime
+     * @param to       the exclusive end datetime
+     * @param timeType whether to retrieve arrivals or departures
+     * @return a list of stop times for the specified stop
      */
-    List<StopTime> getNextDepartures(Stop stop, LocalDateTime from, @Nullable LocalDateTime until, int limit);
+    List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType);
 
     /**
      * Retrieves a stop by its ID.

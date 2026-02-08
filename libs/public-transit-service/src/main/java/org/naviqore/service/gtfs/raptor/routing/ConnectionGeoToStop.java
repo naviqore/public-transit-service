@@ -9,7 +9,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -18,13 +18,13 @@ import java.util.Map;
  */
 class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
 
-    ConnectionGeoToStop(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+    ConnectionGeoToStop(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
                         RoutingQueryUtils utils, GeoCoordinate source, Stop target) {
         super(time, timeType, queryConfig, utils, source, target, false, true);
     }
 
     @Override
-    protected Map<String, LocalDateTime> prepareSourceStops(GeoCoordinate source) {
+    protected Map<String, OffsetDateTime> prepareSourceStops(GeoCoordinate source) {
         return utils.getStopsWithWalkTimeFromLocation(source, time, timeType, queryConfig);
     }
 
@@ -43,7 +43,7 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     @Override
     protected Connection postprocessDepartureConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
                                                         Stop target) {
-        LocalDateTime departureTime = connection.getDepartureTime();
+        OffsetDateTime departureTime = connection.getDepartureTime();
         Leg firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
         return utils.composeConnection(firstMile, connection);
     }
@@ -51,7 +51,7 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     @Override
     protected Connection postprocessArrivalConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
                                                       Stop target) {
-        LocalDateTime arrivalTime = connection.getArrivalTime();
+        OffsetDateTime arrivalTime = connection.getArrivalTime();
         Leg lastMile = utils.createLastWalk(source, connection.getToStopId(), arrivalTime);
         return utils.composeConnection(connection, lastMile);
     }

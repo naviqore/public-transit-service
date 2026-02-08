@@ -6,11 +6,9 @@ import org.naviqore.raptor.Leg;
 import org.naviqore.raptor.TimeType;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
 
 import static org.naviqore.raptor.router.QueryState.INFINITY;
 
@@ -25,19 +23,24 @@ class LabelPostprocessor {
     private final RouteStop[] routeStops;
 
     private final TimeType timeType;
+    private final LocalDate referenceDate;
+    private final ZoneId defaultZoneId;
 
     /**
      * Postprocessor to convert labels into connections
      *
-     * @param raptorData the current raptor instance for access to the data structures.
-     * @param timeType   the time type (arrival or departure).
+     * @param raptorData        the current raptor instance for access to the data structures.
+     * @param timeType          the time type (arrival or departure).
+     * @param referenceDateTime the reference datetime used for timezone calculations.
      */
-    LabelPostprocessor(RaptorData raptorData, TimeType timeType) {
+    LabelPostprocessor(RaptorData raptorData, TimeType timeType, OffsetDateTime referenceDateTime) {
         this.stops = raptorData.getStopContext().stops();
         this.stopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
         this.timeType = timeType;
+        this.referenceDate = referenceDateTime.toLocalDate();
+        this.defaultZoneId = referenceDateTime.getOffset();
     }
 
     /**
@@ -46,13 +49,13 @@ class LabelPostprocessor {
      * @param bestLabelsPerRound the best labels per round.
      * @return a map containing the best connection to reach all stops.
      */
-    Map<String, Connection> reconstructIsolines(List<QueryState.Label[]> bestLabelsPerRound, LocalDate referenceDate) {
+    Map<String, Connection> reconstructIsolines(List<QueryState.Label[]> bestLabelsPerRound) {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
             Stop stop = stops[i];
             QueryState.Label bestLabelForStop = getBestLabelForStop(bestLabelsPerRound, i);
             if (bestLabelForStop != null && bestLabelForStop.type() != QueryState.LabelType.INITIAL) {
-                Connection connection = reconstructConnectionFromLabel(bestLabelForStop, referenceDate);
+                Connection connection = reconstructConnectionFromLabel(bestLabelForStop);
                 isolines.put(stop.id(), connection);
             }
         }
@@ -64,59 +67,114 @@ class LabelPostprocessor {
      * Reconstructs pareto-optimal connections from the best labels per round.
      *
      * @param bestLabelsPerRound the best labels per round.
+     * @param targetStops        map of target stop indices and walk durations to destination.
      * @return a list of pareto-optimal connections.
      */
     List<Connection> reconstructParetoOptimalSolutions(List<QueryState.Label[]> bestLabelsPerRound,
-                                                       Map<Integer, Integer> targetStops, LocalDate referenceDate) {
-        final List<Connection> connections = new ArrayList<>();
-
+                                                       Map<Integer, Integer> targetStops) {
+        List<Connection> connections = new ArrayList<>();
         int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
 
         // iterate over all rounds
         for (QueryState.Label[] labels : bestLabelsPerRound) {
+            QueryState.Label label = findBestLabelInRound(labels, targetStops, bestTime);
 
-            QueryState.Label label = null;
+            if (label != null) {
+                // update best time for Pareto filtering
+                int walkTime = targetStops.get(label.stopIdx());
+                bestTime = (timeType == TimeType.DEPARTURE) ? label.targetTime() + walkTime : label.targetTime() - walkTime;
 
-            for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
-                int targetStopIdx = entry.getKey();
-                int targetStopWalkingTime = entry.getValue();
-                if (labels[targetStopIdx] == null) {
-                    continue;
+                Connection connection = reconstructConnectionFromLabel(label);
+                if (connection != null) {
+                    connections.add(connection);
                 }
-                QueryState.Label currentLabel = labels[targetStopIdx];
-
-                if (timeType == TimeType.DEPARTURE) {
-                    int actualArrivalTime = currentLabel.targetTime() + targetStopWalkingTime;
-                    if (actualArrivalTime < bestTime) {
-                        label = currentLabel;
-                        bestTime = actualArrivalTime;
-                    }
-                } else {
-                    int actualDepartureTime = currentLabel.targetTime() - targetStopWalkingTime;
-                    if (actualDepartureTime > bestTime) {
-                        label = currentLabel;
-                        bestTime = actualDepartureTime;
-                    }
-                }
-            }
-
-            // target stop not reached in this round
-            if (label == null) {
-                continue;
-            }
-
-            Connection connection = reconstructConnectionFromLabel(label, referenceDate);
-            if (connection != null) {
-                connections.add(connection);
             }
         }
 
         return connections;
     }
 
-    private @Nullable Connection reconstructConnectionFromLabel(QueryState.Label label, LocalDate referenceDate) {
-        RaptorConnection connection = new RaptorConnection();
+    /**
+     * Identifies the best label for a set of target stops within a single round.
+     *
+     * @param labels          array of labels for the current round.
+     * @param targetStops     map of target stops and their walk durations.
+     * @param currentBestTime the current best time across all previous rounds.
+     * @return the best label for this round, or null if no improvement was found.
+     */
+    private QueryState.@Nullable Label findBestLabelInRound(QueryState.Label[] labels,
+                                                            Map<Integer, Integer> targetStops, int currentBestTime) {
+        QueryState.Label bestLabel = null;
+        int bestRoundTime = currentBestTime;
 
+        for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
+            int stopIdx = entry.getKey();
+            int walkTime = entry.getValue();
+            QueryState.Label label = labels[stopIdx];
+
+            if (label == null) {
+                continue;
+            }
+
+            if (timeType == TimeType.DEPARTURE) {
+                int arrivalTime = label.targetTime() + walkTime;
+                if (arrivalTime < bestRoundTime) {
+                    bestLabel = label;
+                    bestRoundTime = arrivalTime;
+                }
+            } else {
+                int departureTime = label.targetTime() - walkTime;
+                if (departureTime > bestRoundTime) {
+                    bestLabel = label;
+                    bestRoundTime = departureTime;
+                }
+            }
+        }
+
+        return bestLabel;
+    }
+
+    /**
+     * Reconstruct a connection by backtracking through labels and applying optimizations.
+     *
+     * @param finalLabel the label at the target stop.
+     * @return the reconstructed connection, or null if no legs were found.
+     */
+    private @Nullable Connection reconstructConnectionFromLabel(QueryState.Label finalLabel) {
+        // collect labels by backtracking via linked labels from target to source
+        ArrayList<QueryState.Label> labels = collectLabels(finalLabel);
+
+        // combine labels where possible to merge adjacent transfers and routes into optimized route legs
+        maybeCombineFirstTwoLabels(labels);
+        maybeCombineLastTwoLabels(labels);
+
+        // reverse to chronological order (source to target) for leg construction and timezone propagation
+        Collections.reverse(labels);
+
+        // build the connection
+        RaptorConnection connection = new RaptorConnection();
+        for (int i = 0; i < labels.size(); i++) {
+            RaptorLeg leg = createLeg(labels, i);
+            connection.addLeg(leg);
+        }
+
+        // if the journey contains legs, finalize and initialize the connection
+        if (!connection.getLegs().isEmpty()) {
+            connection.initialize();
+            return connection;
+        }
+
+        // no legs were found
+        return null;
+    }
+
+    /**
+     * Backtracks from a given label to the initial label to collect the sequence of labels.
+     *
+     * @param label the starting label, the target stop.
+     * @return an ordered list of labels from target to source.
+     */
+    private ArrayList<QueryState.Label> collectLabels(QueryState.Label label) {
         ArrayList<QueryState.Label> labels = new ArrayList<>();
         while (label.type() != QueryState.LabelType.INITIAL) {
             assert label.previous() != null;
@@ -124,58 +182,112 @@ class LabelPostprocessor {
             label = label.previous();
         }
 
-        // check if first two labels can be combined (transfer + route) due to the same stop transfer penalty for route
-        // to target stop
-        maybeCombineFirstTwoLabels(labels);
-        maybeCombineLastTwoLabels(labels);
+        return labels;
+    }
 
-        for (QueryState.Label currentLabel : labels) {
-            String routeId;
-            String tripId = null;
-            assert currentLabel.previous() != null;
-            String fromStopId;
-            String toStopId;
-            int departureTimestamp;
-            int arrivalTimestamp;
-            Leg.Type type;
-            if (timeType == TimeType.DEPARTURE) {
-                fromStopId = stops[currentLabel.previous().stopIdx()].id();
-                toStopId = stops[currentLabel.stopIdx()].id();
-                departureTimestamp = currentLabel.sourceTime();
-                arrivalTimestamp = currentLabel.targetTime();
-            } else {
-                fromStopId = stops[currentLabel.stopIdx()].id();
-                toStopId = stops[currentLabel.previous().stopIdx()].id();
-                departureTimestamp = currentLabel.targetTime();
-                arrivalTimestamp = currentLabel.sourceTime();
-            }
+    /**
+     * Creates a single leg from the list of chronological labels at the given index. Handles timezone resolution logic
+     * by looking at adjacent route legs.
+     *
+     * @param chronologicalLabels the list of labels in chronological order.
+     * @param index               the index of the current label to convert.
+     * @return the constructed RaptorLeg.
+     */
+    private RaptorLeg createLeg(List<QueryState.Label> chronologicalLabels, int index) {
+        QueryState.Label currentLabel = chronologicalLabels.get(index);
+        LegContext context = extractLegContext(currentLabel);
 
-            if (currentLabel.type() == QueryState.LabelType.ROUTE) {
-                Route route = routes[currentLabel.routeOrTransferIdx()];
-                routeId = route.id();
-                tripId = route.tripIds()[currentLabel.tripOffset()];
-                type = Leg.Type.ROUTE;
+        ZoneId departureZone;
+        ZoneId arrivalZone;
 
-            } else if (currentLabel.type() == QueryState.LabelType.TRANSFER) {
-                routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
-                type = Leg.Type.WALK_TRANSFER;
-            } else {
-                throw new IllegalStateException("Unknown label type");
-            }
-
-            LocalDateTime departureTime = DateTimeUtils.convertToLocalDateTime(departureTimestamp, referenceDate);
-            LocalDateTime arrivalTime = DateTimeUtils.convertToLocalDateTime(arrivalTimestamp, referenceDate);
-
-            connection.addLeg(new RaptorLeg(routeId, tripId, fromStopId, toStopId, departureTime, arrivalTime, type));
-        }
-
-        // initialize connection: Reverse order of legs and add connection
-        if (!connection.getLegs().isEmpty()) {
-            connection.initialize();
-            return connection;
+        if (context.type == Leg.Type.ROUTE) {
+            Route route = routes[currentLabel.routeOrTransferIdx()];
+            // for routes, the agency timezone applies to both ends
+            departureZone = route.zoneId();
+            arrivalZone = route.zoneId();
         } else {
-            return null;
+            // for walks, infer timezone from adjacent route legs
+            departureZone = resolveTransferTimezone(chronologicalLabels, index, true);
+            arrivalZone = resolveTransferTimezone(chronologicalLabels, index, false);
+
+            // sync zones: if one end is specific and the other is default, adopt the specific one
+            if (!departureZone.equals(defaultZoneId) && arrivalZone.equals(defaultZoneId)) {
+                arrivalZone = departureZone;
+            } else if (!arrivalZone.equals(defaultZoneId) && departureZone.equals(defaultZoneId)) {
+                departureZone = arrivalZone;
+            }
         }
+
+        OffsetDateTime departureTime = DateTimeConverter.toOffsetDateTime(context.departureTimestamp, referenceDate,
+                departureZone);
+        OffsetDateTime arrivalTime = DateTimeConverter.toOffsetDateTime(context.arrivalTimestamp, referenceDate,
+                arrivalZone);
+
+        return new RaptorLeg(context.routeId, context.tripId, context.fromStopId, context.toStopId, departureTime,
+                arrivalTime, context.type);
+    }
+
+    /**
+     * Resolves the timezone for a transfer end by looking at adjacent legs.
+     *
+     * @param labels      the list of chronological labels.
+     * @param index       the index of the current transfer label.
+     * @param isDeparture true if resolving departure zone (look behind), false if arrival zone (look ahead).
+     * @return the resolved ZoneId or the defaultZoneId.
+     */
+    private ZoneId resolveTransferTimezone(List<QueryState.Label> labels, int index, boolean isDeparture) {
+        int adjacentIndex = isDeparture ? index - 1 : index + 1;
+
+        if (adjacentIndex >= 0 && adjacentIndex < labels.size()) {
+            QueryState.Label adjacentLabel = labels.get(adjacentIndex);
+            if (adjacentLabel.type() == QueryState.LabelType.ROUTE) {
+                return routes[adjacentLabel.routeOrTransferIdx()].zoneId();
+            }
+        }
+
+        return defaultZoneId;
+    }
+
+    /**
+     * Extracts raw data (IDs, timestamps, types) from a label based on the query TimeType.
+     *
+     * @param label the label to extract data from.
+     * @return a LegContext containing the raw leg data.
+     */
+    private LegContext extractLegContext(QueryState.Label label) {
+        assert label.previous() != null;
+        String fromStopId;
+        String toStopId;
+        int departureTimestamp;
+        int arrivalTimestamp;
+
+        if (timeType == TimeType.DEPARTURE) {
+            fromStopId = stops[label.previous().stopIdx()].id();
+            toStopId = stops[label.stopIdx()].id();
+            departureTimestamp = label.sourceTime();
+            arrivalTimestamp = label.targetTime();
+        } else {
+            fromStopId = stops[label.stopIdx()].id();
+            toStopId = stops[label.previous().stopIdx()].id();
+            departureTimestamp = label.targetTime();
+            arrivalTimestamp = label.sourceTime();
+        }
+
+        String routeId;
+        String tripId = null;
+        Leg.Type type;
+
+        if (label.type() == QueryState.LabelType.ROUTE) {
+            Route route = routes[label.routeOrTransferIdx()];
+            routeId = route.id();
+            tripId = route.tripIds()[label.tripOffset()];
+            type = Leg.Type.ROUTE;
+        } else {
+            routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
+            type = Leg.Type.WALK_TRANSFER;
+        }
+
+        return new LegContext(routeId, tripId, fromStopId, toStopId, departureTimestamp, arrivalTimestamp, type);
     }
 
     /**
@@ -210,7 +322,7 @@ class LabelPostprocessor {
      * <p>
      * Example: if the departure time is set to 5 am at Stop A and a connection to stop C is queried, the algorithm will
      * relax footpaths from Stop A at 5 am and reach Stop B at 5:05 am. However, the earliest trip on the route
-     * travelling from Stop A - B - C leaves at 9:00 am and arrives at C at 9:07. As a consequence, the arrival time for
+     * traveling from Stop A - B - C leaves at 9:00 am and arrives at C at 9:07. As a consequence, the arrival time for
      * the connection Transfer A (5:00 am) - B (5:05 am) - Route B (9:03 am) - C (9:07 am) is 9:07 am and the connection
      * Route A (9:00 am) - B (9:03 am) - C (9:07 am) is 9:07 am will be identical. However, the latter connection will
      * have travel time of 7 minutes, whereas the former connection will have a travel time of 3 hours and 7 minutes and
@@ -322,7 +434,6 @@ class LabelPostprocessor {
                             QueryState.LabelType.TRANSFER, transferLabel.routeOrTransferIdx(),
                             transferLabel.tripOffset(), transferLabel.stopIdx(), transferLabel.previous()));
         }
-
     }
 
     /**
@@ -365,6 +476,14 @@ class LabelPostprocessor {
         }
     }
 
+    /**
+     * Retrieve the stop time adjusted to UTC for a specific stop on a specific trip.
+     *
+     * @param stopIdx    the index of the stop.
+     * @param routeIdx   the index of the route.
+     * @param tripOffset the offset of the trip on the route.
+     * @return the stop time adjusted to UTC, or null if stop not on trip.
+     */
     private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
         int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
         int numberOfStops = routes[routeIdx].numberOfStops();
@@ -382,18 +501,37 @@ class LabelPostprocessor {
         }
 
         int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
-        return new StopTime(stopTimes[stopTimeIndex], stopTimes[stopTimeIndex + 1]);
+
+        // apply UTC offset to the raw local time from the array
+        Route route = routes[routeIdx];
+        int utcOffset = DateTimeConverter.getLocalToUtcOffset(referenceDate, route.zoneId());
+
+        return new StopTime(stopTimes[stopTimeIndex] + utcOffset, stopTimes[stopTimeIndex + 1] + utcOffset);
     }
 
+    /**
+     * Loops through labels in reverse order to find the earliest/latest occurrence for a stop.
+     *
+     * @param bestLabelsPerRound the list of labels per round.
+     * @param stopIdx            the stop index.
+     * @return the best label for the stop, or null if never reached.
+     */
     private QueryState.@Nullable Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
-        // Loop through the list in reverse order since the first occurrence will be the best target time
+        // loop through the list in reverse order since the first occurrence will be the best target time
         for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
             QueryState.Label label = bestLabelsPerRound.get(i)[stopIdx];
             if (label != null) {
                 return label;
             }
         }
+
         return null;
     }
 
+    /**
+     * Internal record to transport intermediate leg data before final construction.
+     */
+    private record LegContext(String routeId, @Nullable String tripId, String fromStopId, String toStopId,
+                              int departureTimestamp, int arrivalTimestamp, Leg.Type type) {
+    }
 }

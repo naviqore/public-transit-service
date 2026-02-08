@@ -1,6 +1,6 @@
 package org.naviqore.raptor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * A leg is a part of a connection that is traveled on the same route and transport mode, without a transfer.
@@ -15,9 +15,9 @@ public interface Leg extends Comparable<Leg> {
 
     String getToStopId();
 
-    LocalDateTime getDepartureTime();
+    OffsetDateTime getDepartureTime();
 
-    LocalDateTime getArrivalTime();
+    OffsetDateTime getArrivalTime();
 
     Type getType();
 

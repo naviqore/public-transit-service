@@ -7,7 +7,7 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 /**
@@ -15,13 +15,13 @@ import java.util.Map;
  */
 class IsolineStopSource extends IsolineQueryTemplate<Stop> {
 
-    IsolineStopSource(LocalDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig, RoutingQueryUtils utils,
-                      Stop source) {
+    IsolineStopSource(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,
+                      RoutingQueryUtils utils, Stop source) {
         super(time, timeType, queryConfig, utils, source, true);
     }
 
     @Override
-    protected Map<String, LocalDateTime> prepareSourceStops(Stop source) {
+    protected Map<String, OffsetDateTime> prepareSourceStops(Stop source) {
         return utils.getAllChildStopsFromStop(source, time);
     }
 

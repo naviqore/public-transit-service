@@ -4,10 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.naviqore.gtfs.schedule.type.*;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Month;
+import java.time.*;
 import java.util.*;
 
 /**
@@ -59,6 +56,8 @@ import java.util.*;
 @NoArgsConstructor
 public class GtfsScheduleTestBuilder {
 
+    public static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
+    private static final int YEAR = 2024;
     private static final int NO_HEADWAY = -1;
     private static final Map<String, Stop> STOPS = Map.of("s1", new Stop("s1", "Other City", 47.5, 7.5), "s2",
             new Stop("s2", "Main Station", 47.5, 8.5), "s3", new Stop("s3", "Different City", 47.5, 9.5), "u1",
@@ -77,8 +76,8 @@ public class GtfsScheduleTestBuilder {
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
     public GtfsScheduleTestBuilder withAddAgency() {
-        builder.addAgency("agency1", "National Transit", "https://nationaltransit.example.com", "Europe/Zurich");
-        builder.addAgency("agency2", "City Transit", "https://citytransit.example.com", "Europe/Zurich");
+        builder.addAgency("agency1", "National Transit", "https://nationaltransit.example.com", ZONE_ID);
+        builder.addAgency("agency2", "City Transit", "https://citytransit.example.com", ZONE_ID);
         return this;
     }
 
@@ -92,10 +91,10 @@ public class GtfsScheduleTestBuilder {
 
     public GtfsScheduleTestBuilder withAddCalendarDates() {
         // change service to sunday
-        builder.addCalendarDate("weekdays", Moments.HOLIDAY, ExceptionType.REMOVED);
-        builder.addCalendarDate("weekends", Moments.HOLIDAY, ExceptionType.ADDED);
+        builder.addCalendarDate("weekdays", Moments.HOLIDAY_8_AM.toLocalDate(), ExceptionType.REMOVED);
+        builder.addCalendarDate("weekends", Moments.HOLIDAY_8_AM.toLocalDate(), ExceptionType.ADDED);
         // no service
-        builder.addCalendarDate("weekdays", Moments.NO_SERVICE, ExceptionType.REMOVED);
+        builder.addCalendarDate("weekdays", Moments.NO_SERVICE_8_AM.toLocalDate(), ExceptionType.REMOVED);
         return this;
     }
 
@@ -198,10 +197,14 @@ public class GtfsScheduleTestBuilder {
     }
 
     public static final class Moments {
-        public static final LocalDateTime WEEKDAY_8_AM = LocalDateTime.of(2024, Month.APRIL, 26, 8, 0);
-        public static final LocalDateTime WEEKDAY_12_PM = LocalDateTime.of(2024, Month.APRIL, 26, 23, 59);
-        public static final LocalDateTime WEEKEND_8_AM = LocalDateTime.of(2024, Month.APRIL, 27, 8, 0);
-        public static final LocalDate NO_SERVICE = LocalDate.of(2024, Month.MAY, 1);
-        public static final LocalDate HOLIDAY = LocalDate.of(2024, Month.DECEMBER, 25);
+        public static final OffsetDateTime WEEKDAY_8_AM = of(Month.APRIL, 26, 8, 0);
+        public static final OffsetDateTime WEEKDAY_12_PM = of(Month.APRIL, 26, 23, 59);
+        public static final OffsetDateTime WEEKEND_8_AM = of(Month.APRIL, 27, 8, 0);
+        public static final OffsetDateTime NO_SERVICE_8_AM = of(Month.MAY, 1, 8, 0);
+        public static final OffsetDateTime HOLIDAY_8_AM = of(Month.DECEMBER, 25, 8, 0);
+
+        private static OffsetDateTime of(Month month, int day, int hour, int minute) {
+            return LocalDateTime.of(YEAR, month, day, hour, minute).atZone(ZONE_ID).toOffsetDateTime();
+        }
     }
 }

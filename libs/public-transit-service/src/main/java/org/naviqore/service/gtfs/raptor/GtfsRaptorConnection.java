@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.naviqore.service.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -17,40 +17,40 @@ public class GtfsRaptorConnection implements Connection {
     private final List<Leg> legs;
 
     @Override
-    public LocalDateTime getDepartureTime() {
+    public OffsetDateTime getDepartureTime() {
         return legs.getFirst().accept(new LegVisitor<>() {
             @Override
-            public LocalDateTime visit(PublicTransitLeg publicTransitLeg) {
+            public OffsetDateTime visit(PublicTransitLeg publicTransitLeg) {
                 return publicTransitLeg.getDeparture().getDepartureTime();
             }
 
             @Override
-            public LocalDateTime visit(Transfer transfer) {
+            public OffsetDateTime visit(Transfer transfer) {
                 return transfer.getDepartureTime();
             }
 
             @Override
-            public LocalDateTime visit(Walk walk) {
+            public OffsetDateTime visit(Walk walk) {
                 return walk.getDepartureTime();
             }
         });
     }
 
     @Override
-    public LocalDateTime getArrivalTime() {
+    public OffsetDateTime getArrivalTime() {
         return legs.getLast().accept(new LegVisitor<>() {
             @Override
-            public LocalDateTime visit(PublicTransitLeg publicTransitLeg) {
+            public OffsetDateTime visit(PublicTransitLeg publicTransitLeg) {
                 return publicTransitLeg.getArrival().getArrivalTime();
             }
 
             @Override
-            public LocalDateTime visit(Transfer transfer) {
+            public OffsetDateTime visit(Transfer transfer) {
                 return transfer.getArrivalTime();
             }
 
             @Override
-            public LocalDateTime visit(Walk walk) {
+            public OffsetDateTime visit(Walk walk) {
                 return walk.getArrivalTime();
             }
         });

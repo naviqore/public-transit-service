@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +28,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GtfsRaptorServiceIT {
 
+    private static final ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
     private GtfsRaptorService service;
+
+    private static OffsetDateTime at(int year, int month, int day, int hour, int minute) {
+        return LocalDateTime.of(year, month, day, hour, minute).atZone(ZONE_ID).toOffsetDateTime();
+    }
 
     @Nested
     class FromZip {
@@ -169,7 +176,7 @@ class GtfsRaptorServiceIT {
                 @Test
                 void shouldFindNearestStops() {
                     List<Stop> stops = service.getNearestStops(new GeoCoordinate(36.425288, -117.133162),
-                            Integer.MAX_VALUE, Integer.MAX_VALUE);
+                            Integer.MAX_VALUE);
                     assertFalse(stops.isEmpty(), "Expected to find nearest stops.");
                     assertTrue(stops.size() > 1, "Expected to find more than one stop.");
                 }
@@ -236,10 +243,10 @@ class GtfsRaptorServiceIT {
             @BeforeEach
             void setUp() {
                 config = ConnectionQueryConfig.builder()
-                        .maximumWalkingDuration(10 * 60)
+                        .maximumWalkDuration(10 * 60)
                         .minimumTransferDuration(2 * 60)
-                        .maximumTransferNumber(4)
-                        .maximumTravelTime(24 * 60 * 60)
+                        .maximumTransfers(4)
+                        .maximumTravelDuration(24 * 60 * 60)
                         .wheelchairAccessible(false)
                         .bikeAllowed(false)
                         .build();
@@ -254,16 +261,16 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldGetConnections() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
-                                new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.88108, -116.81797), at(2008, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertFalse(connections.isEmpty(), "Expected to find connections.");
                     }
 
                     @Test
                     void shouldHandleNoNearestTargetStop() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(new GeoCoordinate(0.0, 0.0),
-                                new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.88108, -116.81797), at(2008, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no connections to be found when no nearest stop exists.");
                     }
@@ -271,8 +278,8 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldHandleInactiveDate() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(new GeoCoordinate(36.425288, -117.133162),
-                                new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2023, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.88108, -116.81797), at(2023, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no connections to be found when source stop has no active trip on the date.");
                     }
@@ -291,15 +298,15 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldGetConnections() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(source,
-                                new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2008, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.88108, -116.81797), at(2008, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertFalse(connections.isEmpty(), "Expected to find connections.");
                     }
 
                     @Test
                     void shouldHandleNoNearestTargetStop() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(source, new GeoCoordinate(-89, 0),
-                                LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                                at(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no connections to be found when no nearest stop exists.");
                     }
@@ -307,8 +314,8 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldHandleInactiveDate() throws ConnectionRoutingException {
                         List<Connection> connections = service.getConnections(source,
-                                new GeoCoordinate(36.88108, -116.81797), LocalDateTime.of(2023, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.88108, -116.81797), at(2023, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no connections to be found when source stop has no active trip on the date.");
                     }
@@ -324,15 +331,15 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldGetIsolines() throws ConnectionRoutingException {
                         Map<Stop, Connection> connections = service.getIsolines(
-                                new GeoCoordinate(36.425288, -117.133162), LocalDateTime.of(2008, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.425288, -117.133162), at(2008, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertFalse(connections.isEmpty(), "Expected to find connections.");
                     }
 
                     @Test
                     void shouldHandleNoIsolinesFound() throws ConnectionRoutingException {
                         Map<Stop, Connection> connections = service.getIsolines(new GeoCoordinate(0.0, 0.0),
-                                LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                                at(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no isolines to be found when no nearest stop exists.");
                     }
@@ -340,8 +347,8 @@ class GtfsRaptorServiceIT {
                     @Test
                     void shouldHandleInactiveDate() throws ConnectionRoutingException {
                         Map<Stop, Connection> connections = service.getIsolines(
-                                new GeoCoordinate(36.425288, -117.133162), LocalDateTime.of(2023, 5, 15, 8, 0),
-                                TimeType.DEPARTURE, config);
+                                new GeoCoordinate(36.425288, -117.133162), at(2023, 5, 15, 8, 0), TimeType.DEPARTURE,
+                                config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no isolines to be found when no active trips exist on the date.");
                     }
@@ -359,15 +366,15 @@ class GtfsRaptorServiceIT {
 
                     @Test
                     void shouldGetIsolines() throws ConnectionRoutingException {
-                        Map<Stop, Connection> connections = service.getIsolines(source,
-                                LocalDateTime.of(2008, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                        Map<Stop, Connection> connections = service.getIsolines(source, at(2008, 5, 15, 8, 0),
+                                TimeType.DEPARTURE, config);
                         assertFalse(connections.isEmpty(), "Expected to find connections.");
                     }
 
                     @Test
                     void shouldHandleInactiveDate() throws ConnectionRoutingException {
-                        Map<Stop, Connection> connections = service.getIsolines(source,
-                                LocalDateTime.of(2023, 5, 15, 8, 0), TimeType.DEPARTURE, config);
+                        Map<Stop, Connection> connections = service.getIsolines(source, at(2023, 5, 15, 8, 0),
+                                TimeType.DEPARTURE, config);
                         assertTrue(connections.isEmpty(),
                                 "Expected no isolines to be found when no active trips exist on the date.");
                     }

@@ -4,7 +4,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +27,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a list of possible connections between the source and target locations
      */
-    List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+    List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, OffsetDateTime time, TimeType timeType,
                                     ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -40,7 +40,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a list of possible connections between the source and target stop
      */
-    List<Connection> getConnections(Stop source, Stop target, LocalDateTime time, TimeType timeType,
+    List<Connection> getConnections(Stop source, Stop target, OffsetDateTime time, TimeType timeType,
                                     ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -53,7 +53,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a list of possible connections between the source and target stop
      */
-    List<Connection> getConnections(GeoCoordinate source, Stop target, LocalDateTime time, TimeType timeType,
+    List<Connection> getConnections(GeoCoordinate source, Stop target, OffsetDateTime time, TimeType timeType,
                                     ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -66,7 +66,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a list of possible connections between the source and target stop
      */
-    List<Connection> getConnections(Stop source, GeoCoordinate target, LocalDateTime time, TimeType timeType,
+    List<Connection> getConnections(Stop source, GeoCoordinate target, OffsetDateTime time, TimeType timeType,
                                     ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -79,7 +79,7 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> getIsolines(GeoCoordinate source, LocalDateTime time, TimeType timeType,
+    Map<Stop, Connection> getIsolines(GeoCoordinate source, OffsetDateTime time, TimeType timeType,
                                       ConnectionQueryConfig config) throws ConnectionRoutingException;
 
     /**
@@ -92,6 +92,6 @@ public interface ConnectionRoutingService {
      * @param config   additional configuration for the query
      * @return a map of stops to the shortest possible connection to each stop from the departure location
      */
-    Map<Stop, Connection> getIsolines(Stop source, LocalDateTime time, TimeType timeType,
+    Map<Stop, Connection> getIsolines(Stop source, OffsetDateTime time, TimeType timeType,
                                       ConnectionQueryConfig config) throws ConnectionRoutingException;
 }

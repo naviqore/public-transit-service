@@ -12,23 +12,23 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.naviqore.app.dto.*;
+import org.naviqore.app.exception.InvalidCoordinatesException;
+import org.naviqore.app.exception.InvalidParametersException;
+import org.naviqore.app.exception.StopNotFoundException;
 import org.naviqore.service.ScheduleInformationService;
 import org.naviqore.service.Validity;
-import org.naviqore.service.exception.StopNotFoundException;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.naviqore.app.dto.DtoMapper.map;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,15 +64,15 @@ public class ScheduleControllerTest {
         @ParameterizedTest(name = "scheduleInfo_{index}")
         @MethodSource("provideScheduleInfoTestCombinations")
         void testQueryConfigValues(boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
-            DummyService dummyService = new DummyService();
-            dummyService.setHasAccessibilityInformation(supportsAccessibility);
-            dummyService.setHasBikeInformation(supportsBikes);
-            dummyService.setHasTravelModeInformation(supportsTravelModes);
+            FakePublicTransitService fakeService = new FakePublicTransitService();
+            fakeService.setHasAccessibilityInformation(supportsAccessibility);
+            fakeService.setHasBikeInformation(supportsBikes);
+            fakeService.setHasTravelModeInformation(supportsTravelModes);
 
-            LocalDate expStartDate = dummyService.getValidity().getStartDate();
-            LocalDate expEndDate = dummyService.getValidity().getEndDate();
+            LocalDate expStartDate = fakeService.getValidity().getStartDate();
+            LocalDate expEndDate = fakeService.getValidity().getEndDate();
 
-            ScheduleController scheduleController = new ScheduleController(dummyService);
+            ScheduleController scheduleController = new ScheduleController(fakeService);
 
             org.naviqore.app.dto.ScheduleInfo routerInfo = scheduleController.getScheduleInfo();
             assertEquals(supportsAccessibility, routerInfo.isHasAccessibility());
@@ -91,30 +91,10 @@ public class ScheduleControllerTest {
             String query = "query";
             when(scheduleInformationService.getStops(query, map(SearchType.STARTS_WITH),
                     map(StopSortStrategy.ALPHABETICAL))).thenReturn(List.of());
-            List<Stop> stops = scheduleController.getAutoCompleteStops(query, 10, SearchType.STARTS_WITH,
-                    StopSortStrategy.ALPHABETICAL);
+            List<Stop> stops = scheduleController.getAutoCompleteStops(query, SearchType.STARTS_WITH,
+                    StopSortStrategy.ALPHABETICAL, 10);
 
             assertNotNull(stops);
-        }
-
-        @Test
-        void shouldFailWithNegativeLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", -10, SearchType.STARTS_WITH,
-                            StopSortStrategy.ALPHABETICAL));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithZeroLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getAutoCompleteStops("query", 0, SearchType.STARTS_WITH,
-                            StopSortStrategy.ALPHABETICAL));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
         }
 
     }
@@ -128,7 +108,7 @@ public class ScheduleControllerTest {
             int radius = 1000;
             int limit = 10;
 
-            when(scheduleInformationService.getNearestStops(location, radius, limit)).thenReturn(List.of());
+            when(scheduleInformationService.getNearestStops(location, radius)).thenReturn(List.of());
 
             List<DistanceToStop> stops = scheduleController.getNearestStops(location.latitude(), location.longitude(),
                     radius, limit);
@@ -136,45 +116,12 @@ public class ScheduleControllerTest {
             assertNotNull(stops);
         }
 
-        @Test
-        void shouldFailWithNegativeLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, 1000, -10));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithZeroLimit() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, 1000, 0));
-
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldFailWithNegativeMaxDistance() {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getNearestStops(0, 0, -1000, 10));
-
-            assertEquals("Max distance cannot be negative", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
         @ParameterizedTest(name = "Test case {index}: Latitude={0}, Longitude={1}")
-        @CsvSource({"91, 0",    // Invalid latitude
-                "-91, 0",   // Invalid latitude
-                "0, 181",   // Invalid longitude
-                "0, -181",  // Invalid longitude
-                "91, 181",  // Invalid latitude and longitude
-                "-91, -181" // Invalid latitude and longitude
-        })
+        @CsvSource({"91, 0", "-91, 0", "0, 181", "0, -181", "91, 181", "-91, -181"})
         void shouldFailWithInvalidCoordinates(double latitude, double longitude) {
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            InvalidCoordinatesException exception = assertThrows(InvalidCoordinatesException.class,
                     () -> scheduleController.getNearestStops(latitude, longitude, 1000, 10));
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
+            assertNotNull(exception.getMessage());
         }
     }
 
@@ -182,7 +129,7 @@ public class ScheduleControllerTest {
     class GetStop {
 
         @Test
-        void shouldSucceedWithValidQuery() throws StopNotFoundException {
+        void shouldSucceedWithValidQuery() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
@@ -191,18 +138,20 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldFailWithStopNotFoundException() throws StopNotFoundException {
+        void shouldFailWithStopNotFoundException() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
-            when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            when(scheduleInformationService.getStopById(stopId)).thenThrow(
+                    org.naviqore.service.exception.StopNotFoundException.class);
+            StopNotFoundException exception = assertThrows(StopNotFoundException.class,
                     () -> scheduleController.getStop(stopId));
-            assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
+            assertEquals("Stop with ID 'stopId' not found.", exception.getMessage());
+            assertEquals("stopId", exception.getStopId());
         }
 
     }
 
     @Nested
-    class GetDepartures {
+    class GetStopTimes {
 
         @Mock
         private Validity validity;
@@ -214,89 +163,84 @@ public class ScheduleControllerTest {
         }
 
         @Test
-        void shouldFailWithInvalidLimit() {
-            int limit = 0;
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getDepartures("stopId", null, limit, null));
-            assertEquals("Limit must be greater than 0", exception.getReason());
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
-        @Test
-        void shouldSucceedWithNullUntilDateTime() throws StopNotFoundException {
+        void shouldSucceedWithNullUntilDateTime() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
             int limit = 10;
-            LocalDateTime departureTime = LocalDateTime.now().plusDays(2);
+            OffsetDateTime fromTime = OffsetDateTime.now();
+            OffsetDateTime expectedUntil = fromTime.plusHours(6);
+
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
-            List<org.naviqore.service.StopTime> stopTimes = List.of();
-            when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), any(),
-                    eq(limit))).thenReturn(stopTimes);
-            List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, departureTime, limit, null);
-            assertNotNull(stopTimeDtos);
+            when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of());
+
+            List<StopEvent> result = scheduleController.getStopTimes(stopId, fromTime, null, TimeType.DEPARTURE, limit);
+
+            assertNotNull(result);
+            verify(scheduleInformationService).getStopTimes(eq(serviceStop), eq(fromTime), eq(expectedUntil),
+                    eq(org.naviqore.service.TimeType.DEPARTURE));
         }
 
         @Test
-        void shouldSucceedWithValidQuery() throws StopNotFoundException {
+        void shouldSucceedWithExplicitTimesAndLimit() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
+            int limit = 1;
+            OffsetDateTime fromTime = OffsetDateTime.now();
+            OffsetDateTime untilTime = fromTime.plusMinutes(30);
+
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
-            List<org.naviqore.service.StopTime> stopTimes = List.of();
-            when(scheduleInformationService.getNextDepartures(eq(serviceStop), any(LocalDateTime.class), eq(null),
-                    eq(10))).thenReturn(stopTimes);
-            List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, null, 10, null);
-            assertNotNull(stopTimeDtos);
+            org.naviqore.service.StopTime st1 = mock(org.naviqore.service.StopTime.class);
+            org.naviqore.service.StopTime st2 = mock(org.naviqore.service.StopTime.class);
+            org.naviqore.service.Trip trip1 = mock(org.naviqore.service.Trip.class, RETURNS_DEEP_STUBS);
+            when(trip1.getRoute().getRouteType()).thenReturn(org.naviqore.service.TravelMode.BUS);
+            when(st1.getStop()).thenReturn(serviceStop);
+            when(st1.getTrip()).thenReturn(trip1);
+            when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(List.of(st1, st2));
+
+            List<StopEvent> result = scheduleController.getStopTimes(stopId, fromTime, untilTime, TimeType.ARRIVAL,
+                    limit);
+
+            assertEquals(1, result.size());
+            verify(scheduleInformationService).getStopTimes(eq(serviceStop), eq(fromTime), eq(untilTime),
+                    eq(org.naviqore.service.TimeType.ARRIVAL));
         }
 
         @Test
-        void shouldSucceedWithNullDepartureDateTime() throws StopNotFoundException {
+        void shouldSucceedWithNullFromDateTime() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
-            int limit = 10;
-            LocalDateTime untilTime = LocalDateTime.now().plusMinutes(1);
+
             org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
             when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
-            List<org.naviqore.service.StopTime> stopTimes = List.of();
-            when(scheduleInformationService.getNextDepartures(eq(serviceStop), any(), eq(untilTime),
-                    eq(limit))).thenReturn(stopTimes);
-            List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, null, limit, untilTime);
-            assertNotNull(stopTimeDtos);
+            when(scheduleInformationService.getStopTimes(any(), any(), any(), any())).thenReturn(
+                    Collections.emptyList());
+
+            scheduleController.getStopTimes(stopId, null, null, TimeType.DEPARTURE, 10);
+
+            verify(scheduleInformationService).getStopTimes(eq(serviceStop), any(OffsetDateTime.class),
+                    any(OffsetDateTime.class), eq(org.naviqore.service.TimeType.DEPARTURE));
         }
 
         @Test
-        void shouldSucceedWithDepartureDateTime() throws StopNotFoundException {
+        void shouldFailWithStopNotFoundException() throws org.naviqore.service.exception.StopNotFoundException {
             String stopId = "stopId";
-            int limit = 10;
-            LocalDateTime departureTime = LocalDateTime.now().plusDays(2);
-            LocalDateTime untilTime = departureTime.plusMinutes(1);
-            org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
-            when(scheduleInformationService.getStopById(stopId)).thenReturn(serviceStop);
-            List<org.naviqore.service.StopTime> stopTimes = List.of();
-            when(scheduleInformationService.getNextDepartures(eq(serviceStop), eq(departureTime), eq(untilTime),
-                    eq(limit))).thenReturn(stopTimes);
-            List<Departure> stopTimeDtos = scheduleController.getDepartures(stopId, departureTime, limit, untilTime);
-            assertNotNull(stopTimeDtos);
+            when(scheduleInformationService.getStopById(stopId)).thenThrow(
+                    org.naviqore.service.exception.StopNotFoundException.class);
+
+            StopNotFoundException exception = assertThrows(StopNotFoundException.class,
+                    () -> scheduleController.getStopTimes(stopId, null, null, TimeType.DEPARTURE, 10));
+
+            assertEquals("Stop with ID 'stopId' not found.", exception.getMessage());
         }
 
         @Test
-        void shouldFailWithStopNotFoundException() throws StopNotFoundException {
+        void shouldFailWithUntilDateTimeBeforeFromDateTime() {
             String stopId = "stopId";
-            when(scheduleInformationService.getStopById(stopId)).thenThrow(StopNotFoundException.class);
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getDepartures(stopId, null, 10, null));
-            assertEquals(HttpStatusCode.valueOf(404), exception.getStatusCode());
+            OffsetDateTime from = OffsetDateTime.now();
+            OffsetDateTime until = from.minusMinutes(1);
+
+            InvalidParametersException exception = assertThrows(InvalidParametersException.class,
+                    () -> scheduleController.getStopTimes(stopId, from, until, TimeType.DEPARTURE, 10));
+            assertEquals("Until date time must be after from date time.", exception.getMessage());
         }
-
-        @Test
-        void shouldFailWithUntilDateTimeBeforeDepartureDateTime() {
-            String stopId = "stopId";
-            LocalDateTime departureTime = LocalDateTime.now();
-            LocalDateTime untilTime = departureTime.minusMinutes(1);
-
-            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                    () -> scheduleController.getDepartures(stopId, departureTime, 10, untilTime));
-            assertEquals(HttpStatusCode.valueOf(400), exception.getStatusCode());
-        }
-
     }
-
 }

@@ -3,7 +3,7 @@ package org.naviqore.app.dto;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @EqualsAndHashCode
@@ -13,9 +13,9 @@ public class StopTime {
 
     private final Stop stop;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private final LocalDateTime arrivalTime;
+    private final OffsetDateTime arrivalTime;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private final LocalDateTime departureTime;
+    private final OffsetDateTime departureTime;
 
 }
 

@@ -1,6 +1,6 @@
 package org.naviqore.raptor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -8,9 +8,9 @@ import java.util.List;
  */
 public interface Connection {
 
-    LocalDateTime getDepartureTime();
+    OffsetDateTime getDepartureTime();
 
-    LocalDateTime getArrivalTime();
+    OffsetDateTime getArrivalTime();
 
     String getFromStopId();
 

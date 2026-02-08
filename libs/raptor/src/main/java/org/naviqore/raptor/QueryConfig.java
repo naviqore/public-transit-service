@@ -16,10 +16,10 @@ public class QueryConfig {
 
     private static final int INFINITY = Integer.MAX_VALUE;
 
-    private int maximumWalkingDuration = INFINITY;
+    private int maximumWalkDuration = INFINITY;
     private int minimumTransferDuration = 0;
-    private int maximumTransferNumber = INFINITY;
-    private int maximumTravelTime = INFINITY;
+    private int maximumTransfers = INFINITY;
+    private int maximumTravelDuration = INFINITY;
 
     @Setter
     private boolean wheelchairAccessible = false;
@@ -33,23 +33,23 @@ public class QueryConfig {
     @Setter
     private boolean allowTargetTransfer = true;
 
-    public QueryConfig(int maximumWalkingDuration, int minimumTransferDuration, int maximumTransferNumber,
-                       int maximumTravelTime, boolean wheelchairAccessible, boolean bikeAccessible,
+    public QueryConfig(int maximumWalkDuration, int minimumTransferDuration, int maximumTransfers,
+                       int maximumTravelDuration, boolean wheelchairAccessible, boolean bikeAccessible,
                        EnumSet<TravelMode> allowedTravelModes) {
-        this.setMaximumWalkingDuration(maximumWalkingDuration);
+        this.setMaximumWalkDuration(maximumWalkDuration);
         this.setMinimumTransferDuration(minimumTransferDuration);
-        this.setMaximumTransferNumber(maximumTransferNumber);
-        this.setMaximumTravelTime(maximumTravelTime);
+        this.setMaximumTransfers(maximumTransfers);
+        this.setMaximumTravelDuration(maximumTravelDuration);
         this.setWheelchairAccessible(wheelchairAccessible);
         this.setBikeAccessible(bikeAccessible);
         this.setAllowedTravelModes(allowedTravelModes);
     }
 
-    public void setMaximumWalkingDuration(int maximumWalkingDuration) {
-        if (maximumWalkingDuration < 0) {
-            throw new IllegalArgumentException("Maximum walking duration must be greater than or equal to 0.");
+    public void setMaximumWalkDuration(int maximumWalkDuration) {
+        if (maximumWalkDuration < 0) {
+            throw new IllegalArgumentException("Maximum walk duration must be greater than or equal to 0.");
         }
-        this.maximumWalkingDuration = maximumWalkingDuration;
+        this.maximumWalkDuration = maximumWalkDuration;
     }
 
     public void setMinimumTransferDuration(int minimumTransferDuration) {
@@ -59,18 +59,18 @@ public class QueryConfig {
         this.minimumTransferDuration = minimumTransferDuration;
     }
 
-    public void setMaximumTransferNumber(int maximumTransferNumber) {
-        if (maximumTransferNumber < 0) {
-            throw new IllegalArgumentException("Maximum transfer number must be greater than or equal to 0.");
+    public void setMaximumTransfers(int maximumTransfers) {
+        if (maximumTransfers < 0) {
+            throw new IllegalArgumentException("Maximum transfers must be greater than or equal to 0.");
         }
-        this.maximumTransferNumber = maximumTransferNumber;
+        this.maximumTransfers = maximumTransfers;
     }
 
-    public void setMaximumTravelTime(int maximumTravelTime) {
-        if (maximumTravelTime <= 0) {
-            throw new IllegalArgumentException("Maximum transfer number must be greater than 0.");
+    public void setMaximumTravelDuration(int maximumTravelDuration) {
+        if (maximumTravelDuration <= 0) {
+            throw new IllegalArgumentException("Maximum transfer must be greater than 0.");
         }
-        this.maximumTravelTime = maximumTravelTime;
+        this.maximumTravelDuration = maximumTravelDuration;
     }
 
     /**

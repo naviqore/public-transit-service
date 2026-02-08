@@ -1,0 +1,13 @@
+${AnsiColor.BRIGHT_BLUE}
+    _/      _/    _/_/    _/      _/  _/_/_/    _/_/        _/_/    _/_/_/    _/_/_/_/
+   _/_/    _/  _/    _/  _/      _/    _/    _/    _/    _/    _/  _/    _/  _/
+  _/  _/  _/  _/_/_/_/  _/      _/    _/    _/  _/_/    _/    _/  _/_/_/    _/_/_/
+ _/    _/_/  _/    _/    _/  _/      _/    _/    _/    _/    _/  _/    _/  _/
+_/      _/  _/    _/      _/      _/_/_/    _/_/  _/    _/_/    _/    _/  _/_/_/_/
+${AnsiColor.BRIGHT_CYAN}
+P   U   B   L   I   C     T   R   A   N   S   I   T     S   E   R   V   I   C   E
+${AnsiColor.DEFAULT}
+ ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT} Naviqore    ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT}                @project.version@ ${AnsiColor.BRIGHT_BLACK}(@build.time@)${AnsiColor.DEFAULT}
+ ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT} Spring Boot ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT}                ${spring-boot.version}
+ ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT} Java        ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT}                ${java.version} ${AnsiColor.BRIGHT_BLACK}(${java.vendor})${AnsiColor.DEFAULT}
+ ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT} Platform    ${AnsiColor.BRIGHT_BLACK}::${AnsiColor.DEFAULT}                ${os.name} ${os.version} ${AnsiColor.BRIGHT_BLACK}(${os.arch})${AnsiColor.DEFAULT}

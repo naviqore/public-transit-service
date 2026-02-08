@@ -7,6 +7,7 @@ import org.naviqore.gtfs.schedule.type.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -35,7 +36,7 @@ class GtfsScheduleParser {
     }
 
     public void parse(CSVRecord record, GtfsScheduleFile fileType) {
-        parsers.getOrDefault(fileType, r -> {
+        parsers.getOrDefault(fileType, _ -> {
             throw new IllegalArgumentException("Unsupported GTFS file type for parsing: " + fileType);
         }).accept(record);
     }
@@ -53,7 +54,7 @@ class GtfsScheduleParser {
 
     private void parseAgency(CSVRecord record) {
         builder.addAgency(record.get("agency_id"), record.get("agency_name"), record.get("agency_url"),
-                record.get("agency_timezone"));
+                ZoneId.of(record.get("agency_timezone")));
     }
 
     private void parseCalendar(CSVRecord record) {

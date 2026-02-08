@@ -1,6 +1,6 @@
 package org.naviqore.service;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public interface StopTime {
 
@@ -8,8 +8,8 @@ public interface StopTime {
 
     Stop getStop();
 
-    LocalDateTime getArrivalTime();
+    OffsetDateTime getArrivalTime();
 
-    LocalDateTime getDepartureTime();
+    OffsetDateTime getDepartureTime();
 
 }

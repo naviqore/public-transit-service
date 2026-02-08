@@ -4,10 +4,15 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
 import org.naviqore.gtfs.schedule.type.BikeInformation;
+import org.naviqore.gtfs.schedule.type.ServiceDayTime;
+import org.naviqore.gtfs.schedule.type.TimeType;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -75,20 +80,55 @@ public class GtfsSchedule {
     }
 
     /**
-     * Retrieves a list of the next departures from a specific stop.
+     * Retrieves all stop times for a specific stop within a physical time window [from, to).
+     * <p>
+     * Handles arbitrary Trip durations (>24h) and varying agency timezones.
      *
-     * @param stopId   the identifier of the stop.
-     * @param dateTime the date and time for which the next departures are requested.
-     * @param limit    the maximum number of departures to return.
-     * @return A list of the next departures from the specified stop.
+     * @param stopId   unique identifier of the stop
+     * @param from     inclusive start of the physical window
+     * @param to       exclusive end of the physical window
+     * @param timeType whether to evaluate departure or arrival times
+     * @return chronologically sorted list of matching stop times
      */
-    public List<StopTime> getNextDepartures(String stopId, LocalDateTime dateTime, int limit) {
+    public List<StopTime> getStopTimes(String stopId, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
+        if (to.isBefore(from)) {
+            throw new IllegalArgumentException("to must be after from");
+        }
+
         Stop stop = getStop(stopId);
-        return stop.getStopTimes()
-                .stream()
-                .filter(stopTime -> stopTime.departure().getTotalSeconds() >= dateTime.toLocalTime().toSecondOfDay())
-                .filter(stopTime -> stopTime.trip().getCalendar().isServiceAvailable(dateTime.toLocalDate()))
-                .limit(limit)
+        List<ScheduledEvent> events = new ArrayList<>();
+        final Instant fromInstant = from.toInstant();
+        final Instant toInstant = to.toInstant();
+
+        for (StopTime st : stop.getStopTimes()) {
+            ServiceDayTime serviceDayTime = switch (timeType) {
+                case DEPARTURE -> st.departure();
+                case ARRIVAL -> st.arrival();
+            };
+            ZoneId zone = st.trip().getRoute().getAgency().timezone();
+
+            // calculate the range of service dates that could possibly contain this stop time:
+            // - look back from the 'from' instant by the trip's internal offset (total seconds)
+            // - an extra day is subtracted to account for the "noon minus 12h" anchor and dst shifts
+            // - latest possible service day (maxServiceDate) is simply the calendar date of 'to'
+            LocalDate minServiceDate = from.minusSeconds(serviceDayTime.getTotalSeconds()).toLocalDate().minusDays(1);
+            LocalDate maxServiceDate = to.toLocalDate();
+
+            for (LocalDate date = minServiceDate; !date.isAfter(maxServiceDate); date = date.plusDays(1)) {
+                if (st.trip().getCalendar().isServiceAvailable(date)) {
+                    Instant physicalInstant = serviceDayTime.toZonedDateTime(date, zone).toInstant();
+
+                    // logical interval: [from, to)
+                    if (!physicalInstant.isBefore(fromInstant) && physicalInstant.isBefore(toInstant)) {
+                        events.add(new ScheduledEvent(st, physicalInstant));
+                    }
+                }
+            }
+        }
+
+        return events.stream()
+                .sorted(Comparator.comparing(ScheduledEvent::physicalInstant))
+                .map(ScheduledEvent::stopTime)
                 .toList();
     }
 
@@ -135,6 +175,12 @@ public class GtfsSchedule {
         }
 
         return stop;
+    }
+
+    /**
+     * Bind a stop time to its physical instant to avoid redundant re-calculations during sorting
+     */
+    private record ScheduledEvent(StopTime stopTime, Instant physicalInstant) {
     }
 
 }

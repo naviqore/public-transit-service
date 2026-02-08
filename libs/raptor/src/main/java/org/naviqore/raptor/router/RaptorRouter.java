@@ -10,7 +10,7 @@ import org.naviqore.raptor.TimeType;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.*;
 
 /**
@@ -56,7 +56,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     }
 
     @Override
-    public List<Connection> routeEarliestArrival(Map<String, LocalDateTime> departureStops,
+    public List<Connection> routeEarliestArrival(Map<String, OffsetDateTime> departureStops,
                                                  Map<String, Integer> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
         InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
@@ -69,7 +69,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
     @Override
     public List<Connection> routeLatestDeparture(Map<String, Integer> departureStops,
-                                                 Map<String, LocalDateTime> arrivalStops, QueryConfig config) {
+                                                 Map<String, OffsetDateTime> arrivalStops, QueryConfig config) {
         InputValidator.checkNonNullOrEmptyStops(departureStops, "Departure");
         InputValidator.checkNonNullOrEmptyStops(arrivalStops, "Arrival");
 
@@ -80,7 +80,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     }
 
     @Override
-    public Map<String, Connection> routeIsolines(Map<String, LocalDateTime> sourceStops, TimeType timeType,
+    public Map<String, Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops, TimeType timeType,
                                                  QueryConfig config) {
         InputValidator.checkNonNullOrEmptyStops(sourceStops, "Source");
         InputValidator.validateSourceStopTimes(sourceStops);
@@ -93,17 +93,17 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
                     sourceStops.values().stream().toList());
         }
 
-        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        OffsetDateTime referenceDateTime = DateTimeConverter.getReference(sourceStops, timeType);
         LocalDate referenceDate = referenceDateTime.toLocalDate();
         Map<Integer, Integer> validatedSourceStopIdx = validator.validateStopsAndGetIndices(
-                DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops, referenceDate));
+                DateTimeConverter.mapToUtcSeconds(sourceStops, referenceDate));
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
         List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, new int[]{}, refStopTimes,
                 new int[]{}, config, timeType, referenceDateTime, this.config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructIsolines(bestLabelsPerRound, referenceDate);
+        return new LabelPostprocessor(this, timeType, referenceDateTime).reconstructIsolines(bestLabelsPerRound);
     }
 
     /**
@@ -116,18 +116,17 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
      * stops).
      *
      * @param sourceStops is a map of stop ids and departure/arrival times depending on the time type
-     * @param targetStops is a map of stop ids and walking durations to target stops
+     * @param targetStops is a map of stop ids and walk durations to target stops
      * @param timeType    is the type of time to route for (arrival or departure)
      * @param config      is the query configuration
      * @return a list of pareto-optimal connections
      */
-    private List<Connection> getConnections(Map<String, LocalDateTime> sourceStops, Map<String, Integer> targetStops,
+    private List<Connection> getConnections(Map<String, OffsetDateTime> sourceStops, Map<String, Integer> targetStops,
                                             TimeType timeType, QueryConfig config) {
         InputValidator.validateSourceStopTimes(sourceStops);
-        LocalDateTime referenceDateTime = DateTimeUtils.getReferenceDate(sourceStops, timeType);
+        OffsetDateTime referenceDateTime = DateTimeConverter.getReference(sourceStops, timeType);
         LocalDate referenceDate = referenceDateTime.toLocalDate();
-        Map<String, Integer> sourceStopsSecondsOfDay = DateTimeUtils.mapLocalDateTimeToTimestamp(sourceStops,
-                referenceDate);
+        Map<String, Integer> sourceStopsSecondsOfDay = DateTimeConverter.mapToUtcSeconds(sourceStops, referenceDate);
         Map<Integer, Integer> validatedSourceStops = validator.validateStopsAndGetIndices(sourceStopsSecondsOfDay);
         Map<Integer, Integer> validatedTargetStops = validator.validateStopsAndGetIndices(targetStops);
         InputValidator.validateStopPermutations(sourceStopsSecondsOfDay, targetStops);
@@ -135,13 +134,13 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         int[] sourceStopIndices = validatedSourceStops.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] sourceTimes = validatedSourceStops.values().stream().mapToInt(Integer::intValue).toArray();
         int[] targetStopIndices = validatedTargetStops.keySet().stream().mapToInt(Integer::intValue).toArray();
-        int[] walkingDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
+        int[] walkDurationsToTarget = validatedTargetStops.values().stream().mapToInt(Integer::intValue).toArray();
 
         List<QueryState.Label[]> bestLabelsPerRound = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
-                walkingDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
+                walkDurationsToTarget, config, timeType, referenceDateTime, this.config).run();
 
-        return new LabelPostprocessor(this, timeType).reconstructParetoOptimalSolutions(bestLabelsPerRound,
-                validatedTargetStops, referenceDate);
+        return new LabelPostprocessor(this, timeType, referenceDateTime).reconstructParetoOptimalSolutions(
+                bestLabelsPerRound, validatedTargetStops);
     }
 
     /**
@@ -149,7 +148,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
      */
     @RequiredArgsConstructor
     private static class InputValidator {
-        private static final int MIN_WALKING_TIME_TO_TARGET = 0;
+        private static final int MIN_WALK_DURATION_TO_TARGET = 0;
         private static final int MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES = 24 * 60 * 60;
 
         private final Map<String, Integer> stopsToIdx;
@@ -163,15 +162,15 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             }
         }
 
-        private static void validateSourceStopTimes(Map<String, LocalDateTime> sourceStops) {
+        private static void validateSourceStopTimes(Map<String, OffsetDateTime> sourceStops) {
             // check that no null values are present
             if (sourceStops.values().stream().anyMatch(Objects::isNull)) {
                 throw new InvalidTimeException("Source stop times must not be null.");
             }
 
             // get min and max values
-            LocalDateTime min = sourceStops.values().stream().min(LocalDateTime::compareTo).orElseThrow();
-            LocalDateTime max = sourceStops.values().stream().max(LocalDateTime::compareTo).orElseThrow();
+            OffsetDateTime min = sourceStops.values().stream().min(OffsetDateTime::compareTo).orElseThrow();
+            OffsetDateTime max = sourceStops.values().stream().max(OffsetDateTime::compareTo).orElseThrow();
             if (Duration.between(min, max).getSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
                 throw new InvalidTimeException("Difference between source stop times must be less than 24 hours.");
             }
@@ -179,7 +178,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         private static void validateStopPermutations(Map<String, Integer> sourceStops,
                                                      Map<String, Integer> targetStops) {
-            targetStops.values().forEach(InputValidator::validateWalkingTimeToTarget);
+            targetStops.values().forEach(InputValidator::validateWalkDurationToTarget);
 
             // ensure departure and arrival stops are not the same
             if (!Collections.disjoint(sourceStops.keySet(), targetStops.keySet())) {
@@ -187,10 +186,10 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             }
         }
 
-        private static void validateWalkingTimeToTarget(int walkingDurationToTarget) {
-            if (walkingDurationToTarget < MIN_WALKING_TIME_TO_TARGET) {
+        private static void validateWalkDurationToTarget(int duration) {
+            if (duration < MIN_WALK_DURATION_TO_TARGET) {
                 throw new IllegalArgumentException(
-                        "Walking duration to target must be greater or equal to " + MIN_WALKING_TIME_TO_TARGET + "seconds.");
+                        "Walk duration to target must be greater or equal to " + MIN_WALK_DURATION_TO_TARGET + "seconds.");
             }
         }
 

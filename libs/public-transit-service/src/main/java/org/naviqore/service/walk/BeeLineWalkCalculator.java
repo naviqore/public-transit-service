@@ -22,18 +22,18 @@ public class BeeLineWalkCalculator implements WalkCalculator {
      */
     public static final double BEELINE_DISTANCE_FACTOR = 1.3;
 
-    private final double walkingSpeed;
+    private final double walkSpeed;
 
     /**
      * Creates a new BeeLineWalkCalculator with the given walking speed.
      *
-     * @param walkingSpeed Walking speed in meters per second (m/s).
+     * @param walkSpeed Walking speed in meters per second (m/s).
      */
-    public BeeLineWalkCalculator(double walkingSpeed) {
-        if (walkingSpeed <= 0) {
+    public BeeLineWalkCalculator(double walkSpeed) {
+        if (walkSpeed <= 0) {
             throw new IllegalArgumentException("Walking speed needs to be greater than 0.");
         }
-        this.walkingSpeed = walkingSpeed;
+        this.walkSpeed = walkSpeed;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class BeeLineWalkCalculator implements WalkCalculator {
 
         double beelineDistance = from.distanceTo(to);
         double adjustedDistance = beelineDistance * BEELINE_DISTANCE_FACTOR;
-        int duration = (int) Math.round(adjustedDistance / walkingSpeed);
+        int duration = (int) Math.round(adjustedDistance / walkSpeed);
 
         return new Walk(duration, (int) Math.round(adjustedDistance));
     }

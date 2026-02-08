@@ -12,17 +12,17 @@ public class BeeLineWalkCalculatorTest {
     class Constructor {
 
         @Test
-        void withValidWalkingSpeed() {
+        void withValidWalkSpeed() {
             assertDoesNotThrow(() -> new BeeLineWalkCalculator(1000));
         }
 
         @Test
-        void shouldCreateExceptionForNegativeWalkingSpeed() {
+        void shouldCreateExceptionForNegativeWalkSpeed() {
             assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(-1));
         }
 
         @Test
-        void shouldCreateExceptionForZeroWalkingSpeed() {
+        void shouldCreateExceptionForZeroWalkSpeed() {
             assertThrows(IllegalArgumentException.class, () -> new BeeLineWalkCalculator(0));
         }
 
@@ -31,18 +31,18 @@ public class BeeLineWalkCalculatorTest {
     @Nested
     class CalculateWalk {
 
-        private static final double WALKING_SPEED = 1.4;
+        private static final double WALK_SPEED = 1.4;
 
         @Test
         void expectedBehavior() {
-            BeeLineWalkCalculator calculator = new BeeLineWalkCalculator(WALKING_SPEED);
+            BeeLineWalkCalculator calculator = new BeeLineWalkCalculator(WALK_SPEED);
 
             GeoCoordinate coordinate1 = getCoordinate1();
             GeoCoordinate coordinate2 = getCoordinate2();
 
             double distanceInMeters = coordinate1.distanceTo(
                     coordinate2) * BeeLineWalkCalculator.BEELINE_DISTANCE_FACTOR;
-            double durationInSeconds = distanceInMeters / WALKING_SPEED;
+            double durationInSeconds = distanceInMeters / WALK_SPEED;
 
             WalkCalculator.Walk walk = calculator.calculateWalk(coordinate1, coordinate2);
 
@@ -51,7 +51,7 @@ public class BeeLineWalkCalculatorTest {
         }
 
         @Test
-        void withDifferentWalkingSpeeds() {
+        void withDifferentWalkSpeeds() {
             BeeLineWalkCalculator calculator1 = new BeeLineWalkCalculator(4000);
             BeeLineWalkCalculator calculator2 = new BeeLineWalkCalculator(2000);
 

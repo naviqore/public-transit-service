@@ -7,14 +7,12 @@ import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.type.*;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.service.*;
+import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.utils.search.SearchIndex;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -39,10 +37,12 @@ public final class TypeMapper {
 
     public static Trip map(org.naviqore.gtfs.schedule.model.Trip trip, LocalDate date) {
         // create stop times
+        ZoneId zoneId = trip.getRoute().getAgency().timezone();
         List<GtfsRaptorStopTime> stopTimes = trip.getStopTimes()
                 .stream()
-                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
-                        stopTime.departure().toLocalDateTime(date)))
+                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.stop()),
+                        stopTime.arrival().toOffsetDateTime(date, zoneId),
+                        stopTime.departure().toOffsetDateTime(date, zoneId)))
                 .toList();
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
@@ -58,8 +58,9 @@ public final class TypeMapper {
     }
 
     public static StopTime map(org.naviqore.gtfs.schedule.model.StopTime stopTime, LocalDate date) {
-        return new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toLocalDateTime(date),
-                stopTime.departure().toLocalDateTime(date), map(stopTime.trip(), date));
+        ZoneId zoneId = stopTime.trip().getRoute().getAgency().timezone();
+        return new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toOffsetDateTime(date, zoneId),
+                stopTime.departure().toOffsetDateTime(date, zoneId), map(stopTime.trip(), date));
     }
 
     public static SearchIndex.SearchStrategy map(SearchType searchType) {
@@ -105,15 +106,22 @@ public final class TypeMapper {
     }
 
     public static QueryConfig map(ConnectionQueryConfig config) {
-        return new QueryConfig(config.getMaximumWalkingDuration(), config.getMinimumTransferDuration(),
-                config.getMaximumTransferNumber(), config.getMaximumTravelTime(), config.isWheelchairAccessible(),
+        return new QueryConfig(config.getMaximumWalkDuration(), config.getMinimumTransferDuration(),
+                config.getMaximumTransfers(), config.getMaximumTravelDuration(), config.isWheelchairAccessible(),
                 config.isBikeAllowed(), map(config.getTravelModes()));
     }
 
-    public static org.naviqore.raptor.TimeType map(TimeType timeType) {
+    public static org.naviqore.raptor.TimeType mapToRaptor(TimeType timeType) {
         return switch (timeType) {
             case DEPARTURE -> org.naviqore.raptor.TimeType.DEPARTURE;
             case ARRIVAL -> org.naviqore.raptor.TimeType.ARRIVAL;
+        };
+    }
+
+    public static org.naviqore.gtfs.schedule.type.TimeType mapToGtfs(TimeType timeType) {
+        return switch (timeType) {
+            case DEPARTURE -> org.naviqore.gtfs.schedule.type.TimeType.DEPARTURE;
+            case ARRIVAL -> org.naviqore.gtfs.schedule.type.TimeType.ARRIVAL;
         };
     }
 
@@ -144,15 +152,15 @@ public final class TypeMapper {
         };
     }
 
-    public static Walk createWalk(int distance, int duration, WalkType walkType, LocalDateTime departureTime,
-                                  LocalDateTime arrivalTime, GeoCoordinate sourceLocation, GeoCoordinate targetLocation,
-                                  @Nullable Stop stop) {
+    public static Walk createWalk(int distance, int duration, WalkType walkType, OffsetDateTime departureTime,
+                                  OffsetDateTime arrivalTime, GeoCoordinate sourceLocation,
+                                  GeoCoordinate targetLocation, @Nullable Stop stop) {
         return new GtfsRaptorWalk(distance, duration, walkType, departureTime, arrivalTime, sourceLocation,
                 targetLocation, stop);
     }
 
-    public static Transfer createTransfer(int distance, int duration, LocalDateTime departureTime,
-                                          LocalDateTime arrivalTime, Stop sourceStop, Stop targetStop) {
+    public static Transfer createTransfer(int distance, int duration, OffsetDateTime departureTime,
+                                          OffsetDateTime arrivalTime, Stop sourceStop, Stop targetStop) {
         return new GtfsRaptorTransfer(distance, duration, departureTime, arrivalTime, sourceStop, targetStop);
     }
 

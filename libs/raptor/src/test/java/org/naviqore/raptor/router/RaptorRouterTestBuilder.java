@@ -3,6 +3,10 @@ package org.naviqore.raptor.router;
 import lombok.NoArgsConstructor;
 import org.naviqore.raptor.RaptorAlgorithm;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,10 +46,10 @@ import java.util.Set;
 @NoArgsConstructor
 public class RaptorRouterTestBuilder {
 
-    static final int SECONDS_IN_HOUR = 3600;
-    static final int DAY_START_HOUR = 5;
-    static final int DAY_END_HOUR = 25;
+    public static final ZoneId DEFAULT_ZONE_ID = ZoneId.of("Europe/Zurich");
+    public static final LocalDate DEFAULT_REFERENCE_DATE = LocalDate.of(2021, 1, 1);
 
+    static final int SECONDS_IN_HOUR = 3600;
     static final int DEFAULT_TIME_BETWEEN_STOPS = 5;
     static final int DEFAULT_DWELL_TIME = 1;
     static final int DEFAULT_HEADWAY_TIME = 15;
@@ -54,71 +58,24 @@ public class RaptorRouterTestBuilder {
     private final List<Route> routes = new ArrayList<>();
     private final List<Transfer> transfers = new ArrayList<>();
 
+    private int serviceDayStartHour = 5;
+    private int serviceDayEndHour = 25;
     private int daysToScan = 1;
     private int raptorRange = -1;
     private int defaultSameStopTransferTime = 120;
+    private LocalDate referenceDate = DEFAULT_REFERENCE_DATE;
+
     private RaptorTripMaskProvider tripMaskProvider = new RaptorConfig.NoMaskProvider();
 
-    private static RaptorAlgorithm build(List<Route> routes, List<Transfer> transfers, int dayStart, int dayEnd,
-                                         RaptorConfig config) {
-        RaptorRouterBuilder builder = new RaptorRouterBuilder(config);
-        Set<String> addedStops = new HashSet<>();
+    public RaptorRouterTestBuilder withReferenceDate(LocalDate date) {
+        this.referenceDate = date;
+        return this;
+    }
 
-        for (Route route : routes) {
-            // define route ids
-            String routeIdF = route.id + "-F";
-            String routeIdR = route.id + "-R";
-
-            // add stops
-            for (String stop : route.stops) {
-                if (!addedStops.contains(stop)) {
-                    builder.addStop(stop);
-                    addedStops.add(stop);
-                }
-            }
-
-            // add routes
-            builder.addRoute(routeIdF, route.stops);
-            builder.addRoute(routeIdR, route.stops.reversed());
-
-            // add trips
-            int tripCount = 0;
-            int timestamp = dayStart * SECONDS_IN_HOUR + route.firstDepartureOffset * 60;
-            while (timestamp < dayEnd * SECONDS_IN_HOUR) {
-
-                // add trips
-                String tripIdF = String.format("%s-F-%s", route.id, tripCount);
-                String tripIdR = String.format("%s-R-%s", route.id, tripCount);
-                builder.addTrip(tripIdF, routeIdF).addTrip(tripIdR, routeIdR);
-                tripCount++;
-
-                // add stop times
-                int departureTimestamp = timestamp;
-                // first stop of trip has no arrival time
-                int arrivalTimestamp = departureTimestamp;
-                for (int i = 0; i < route.stops.size(); i++) {
-                    if (i + 1 == route.stops.size()) {
-                        // last stop of trip has no departure time
-                        departureTimestamp = arrivalTimestamp;
-                    }
-                    builder.addStopTime(routeIdF, tripIdF, i, route.stops.get(i), arrivalTimestamp, departureTimestamp);
-                    builder.addStopTime(routeIdR, tripIdR, i, route.stops.get(route.stops.size() - 1 - i),
-                            arrivalTimestamp, departureTimestamp);
-
-                    arrivalTimestamp = departureTimestamp + route.travelTimeBetweenStops * 60;
-                    departureTimestamp = arrivalTimestamp + route.dwellTimeAtSTop * 60;
-                }
-
-                timestamp += route.headWayTime * 60;
-            }
-        }
-
-        for (Transfer transfer : transfers) {
-            builder.addTransfer(transfer.sourceStop, transfer.targetStop, transfer.duration * 60);
-            builder.addTransfer(transfer.targetStop, transfer.sourceStop, transfer.duration * 60);
-        }
-
-        return builder.build();
+    public RaptorRouterTestBuilder withServiceDayRange(int startHour, int endHour) {
+        this.serviceDayStartHour = startHour;
+        this.serviceDayEndHour = endHour;
+        return this;
     }
 
     public RaptorRouterTestBuilder withAddRoute1_AG() {
@@ -131,8 +88,8 @@ public class RaptorRouterTestBuilder {
 
     public RaptorRouterTestBuilder withAddRoute1_AG(String routeId, int offset, int headway, int travelTime,
                                                     int dwellTime) {
-        routes.add(
-                new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), offset, headway, travelTime, dwellTime));
+        routes.add(new Route(routeId, List.of("A", "B", "C", "D", "E", "F", "G"), DEFAULT_ZONE_ID, offset, headway,
+                travelTime, dwellTime));
         return this;
     }
 
@@ -141,7 +98,8 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute2_HL(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L"), offset, headway, travelTime, dwellTime));
+        routes.add(new Route("R2", List.of("H", "B", "I", "J", "K", "L"), DEFAULT_ZONE_ID, offset, headway, travelTime,
+                dwellTime));
         return this;
     }
 
@@ -151,7 +109,8 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute3_MQ(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), offset, headway, travelTime, dwellTime));
+        routes.add(new Route("R3", List.of("M", "K", "N", "O", "P", "Q"), DEFAULT_ZONE_ID, offset, headway, travelTime,
+                dwellTime));
         return this;
     }
 
@@ -161,12 +120,19 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorRouterTestBuilder withAddRoute4_RS(int offset, int headway, int travelTime, int dwellTime) {
-        routes.add(new Route("R4", List.of("R", "P", "F", "S"), offset, headway, travelTime, dwellTime));
+        routes.add(
+                new Route("R4", List.of("R", "P", "F", "S"), DEFAULT_ZONE_ID, offset, headway, travelTime, dwellTime));
         return this;
     }
 
     public RaptorRouterTestBuilder withAddRoute5_AH_selfIntersecting() {
         routes.add(new Route("R5", List.of("A", "B", "C", "D", "E", "F", "P", "O", "N", "K", "J", "I", "B", "H")));
+        return this;
+    }
+
+    public RaptorRouterTestBuilder withAddRoute(String id, ZoneId zoneId, List<String> stops, int offset, int headway,
+                                                int travelTime, int dwellTime) {
+        routes.add(new Route(id, stops, zoneId, offset, headway, travelTime, dwellTime));
         return this;
     }
 
@@ -210,17 +176,82 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorAlgorithm build() {
-        return build(DAY_START_HOUR, DAY_END_HOUR);
-    }
-
-    RaptorAlgorithm build(int startOfDay, int endOfDay) {
         RaptorConfig config = new RaptorConfig();
         config.setDaysToScan(daysToScan);
-        config.setDefaultSameStopTransferTime(defaultSameStopTransferTime);
+        config.setDefaultSameStopTransferDuration(defaultSameStopTransferTime);
         config.setMaskProvider(tripMaskProvider);
         config.setStopTimeCacheSize(daysToScan);
         config.setRaptorRange(raptorRange);
-        return build(routes, transfers, startOfDay, endOfDay, config);
+
+        RaptorRouterBuilder builder = new RaptorRouterBuilder(config);
+        Set<String> addedStops = new HashSet<>();
+
+        for (Route route : routes) {
+            // define route ids
+            String routeIdF = route.id + "-F";
+            String routeIdR = route.id + "-R";
+
+            // add stops
+            for (String stop : route.stops) {
+                if (!addedStops.contains(stop)) {
+                    builder.addStop(stop);
+                    addedStops.add(stop);
+                }
+            }
+
+            // add routes
+            builder.addRoute(routeIdF, route.zoneId, route.stops);
+            builder.addRoute(routeIdR, route.zoneId, route.stops.reversed());
+
+            // add trips with service day anchor 'noon minus 12 hours'
+            ZonedDateTime serviceDayAnchor = referenceDate.atTime(12, 0).atZone(route.zoneId).minusHours(12);
+            ZonedDateTime currentTime = serviceDayAnchor.plusHours(serviceDayStartHour)
+                    .plusMinutes(route.firstDepartureOffset);
+            ZonedDateTime dayEnd = serviceDayAnchor.plusHours(serviceDayEndHour);
+            int tripCount = 0;
+            while (currentTime.isBefore(dayEnd)) {
+
+                // add trips
+                String tripIdF = String.format("%s-F-%s", route.id, tripCount);
+                String tripIdR = String.format("%s-R-%s", route.id, tripCount);
+                builder.addTrip(tripIdF, routeIdF).addTrip(tripIdR, routeIdR);
+                tripCount++;
+
+                // add stop times
+                int departureTimestamp = (int) Duration.between(serviceDayAnchor, currentTime).toSeconds();
+                // first stop of trip has no arrival time
+                int arrivalTimestamp = departureTimestamp;
+                for (int i = 0; i < route.stops.size(); i++) {
+                    if (i + 1 == route.stops.size()) {
+                        // last stop of trip has no departure time
+                        departureTimestamp = arrivalTimestamp;
+                    }
+                    builder.addStopTime(routeIdF, tripIdF, i, route.stops.get(i), arrivalTimestamp, departureTimestamp);
+                    builder.addStopTime(routeIdR, tripIdR, i, route.stops.get(route.stops.size() - 1 - i),
+                            arrivalTimestamp, departureTimestamp);
+
+                    arrivalTimestamp = departureTimestamp + route.travelTimeBetweenStops * 60;
+                    departureTimestamp = arrivalTimestamp + route.dwellTimeAtSTop * 60;
+                }
+                currentTime = currentTime.plusMinutes(route.headWayTime);
+            }
+        }
+
+        for (Transfer transfer : transfers) {
+            // discovery of stops that are only part of a transfer and not a route
+            if (!addedStops.contains(transfer.sourceStop)) {
+                builder.addStop(transfer.sourceStop);
+                addedStops.add(transfer.sourceStop);
+            }
+            if (!addedStops.contains(transfer.targetStop)) {
+                builder.addStop(transfer.targetStop);
+                addedStops.add(transfer.targetStop);
+            }
+            builder.addTransfer(transfer.sourceStop, transfer.targetStop, transfer.duration * 60);
+            builder.addTransfer(transfer.targetStop, transfer.sourceStop, transfer.duration * 60);
+        }
+
+        return builder.build();
     }
 
     public RaptorAlgorithm buildWithDefaults() {
@@ -233,33 +264,16 @@ public class RaptorRouterTestBuilder {
                 .build();
     }
 
-    /**
-     * Route.
-     *
-     * @param id                     the route id.
-     * @param stops                  the stops of the route.
-     * @param firstDepartureOffset   the time of the first departure in minutes after the start of the day.
-     * @param headWayTime            the time between the trip departures in minutes.
-     * @param travelTimeBetweenStops the travel time between stops in minutes.
-     * @param dwellTimeAtSTop        the dwell time at a stop in minutes (time between arrival and departure).
-     */
-    private record Route(String id, List<String> stops, int firstDepartureOffset, int headWayTime,
+    private record Route(String id, List<String> stops, ZoneId zoneId, int firstDepartureOffset, int headWayTime,
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
         public Route(String id, List<String> stops) {
-            this(id, stops, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS, DEFAULT_DWELL_TIME);
+            this(id, stops, DEFAULT_ZONE_ID, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS,
+                    DEFAULT_DWELL_TIME);
         }
 
     }
 
-    /**
-     * Transfer.
-     *
-     * @param sourceStop the id of the source stop.
-     * @param targetStop the id of the target stop.
-     * @param duration   the (walking) duration of the transfer between stops in minutes.
-     */
     private record Transfer(String sourceStop, String targetStop, int duration) {
     }
-
 }

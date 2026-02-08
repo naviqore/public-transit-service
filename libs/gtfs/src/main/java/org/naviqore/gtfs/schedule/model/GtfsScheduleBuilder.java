@@ -10,6 +10,7 @@ import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -37,7 +38,7 @@ public class GtfsScheduleBuilder {
 
     private boolean built = false;
 
-    public GtfsScheduleBuilder addAgency(String id, String name, String url, String timezone) {
+    public GtfsScheduleBuilder addAgency(String id, String name, String url, ZoneId timezone) {
         checkNotBuilt();
         if (agencies.containsKey(id)) {
             throw new IllegalArgumentException("Agency " + id + " already exists");

@@ -13,7 +13,7 @@ import java.nio.file.Path;
 public enum GtfsScheduleDataset {
 
     SAMPLE_FEED_1(new LocalProvider("org/naviqore/gtfs/schedule/sample-feed-1.zip")),
-    SWITZERLAND(new RemoteProvider("https://data.opentransportdata.swiss/dataset/timetable-2025-gtfs2020/permalink")),
+    SWITZERLAND(new RemoteProvider("https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020/permalink")),
     GERMANY(new RemoteProvider("https://download.gtfs.de/germany/free/latest.zip")),
     ZURICH_TRAMS(new RemoteProvider("https://connolly.ch/zuerich-trams.zip")),
     ZURICH(new RemoteProvider("https://connolly.ch/zvv.zip"));

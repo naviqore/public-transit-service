@@ -43,15 +43,14 @@ public class GtfsRaptorServiceInitializer {
         this.spatialStopIndex = createSpatialStopIndex(schedule);
 
         // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
-        List<TransferGenerator> transferGenerators = config.getTransferTimeBetweenStopsMinimum() >= 0 ? createTransferGenerators(
+        List<TransferGenerator> transferGenerators = config.getTransferDurationBetweenStopsMinimum() >= 0 ? createTransferGenerators(
                 config, walkCalculator, spatialStopIndex) : Collections.emptyList();
         this.raptorRouter = createRaptorRouter(config, schedule, transferGenerators);
     }
 
     private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
-        return switch (config.getWalkingCalculatorType()) {
-            case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE ->
-                    new BeeLineWalkCalculator(config.getWalkingSpeed());
+        return switch (config.getWalkCalculatorType()) {
+            case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE -> new BeeLineWalkCalculator(config.getWalkSpeed());
         };
     }
 
@@ -74,8 +73,8 @@ public class GtfsRaptorServiceInitializer {
 
     private static List<TransferGenerator> createTransferGenerators(ServiceConfig config, WalkCalculator walkCalculator,
                                                                     KDTree<Stop> spatialStopIndex) {
-        return List.of(new WalkTransferGenerator(walkCalculator, config.getTransferTimeBetweenStopsMinimum(),
-                config.getTransferTimeAccessEgress(), config.getWalkingSearchRadius(), spatialStopIndex));
+        return List.of(new WalkTransferGenerator(walkCalculator, config.getTransferDurationBetweenStopsMinimum(),
+                config.getTransferDurationAccessEgress(), config.getWalkSearchRadius(), spatialStopIndex));
     }
 
     private static RaptorRouter createRaptorRouter(ServiceConfig config, GtfsSchedule schedule,
@@ -87,7 +86,7 @@ public class GtfsRaptorServiceInitializer {
 
         // configure raptor
         RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
-                config.getTransferTimeSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
+                config.getTransferDurationSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
                 tripMaskProvider);
 
         return new GtfsToRaptorConverter(raptorConfig, schedule, transferGenerators).run();

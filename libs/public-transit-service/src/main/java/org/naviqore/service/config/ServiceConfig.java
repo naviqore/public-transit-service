@@ -14,14 +14,14 @@ public class ServiceConfig {
     // note: The defaults should match the default values in the application.properties file.
     public static final String DEFAULT_GTFS_STATIC_UPDATE_CRON = "0 0 4 * * *";
 
-    public static final int DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT = 120;
-    public static final int DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM = 180;
-    public static final int DEFAULT_TRANSFER_TIME_ACCESS_EGRESS = 15;
+    public static final int DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT = 120;
+    public static final int DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM = 180;
+    public static final int DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS = 15;
 
-    public static final int DEFAULT_WALKING_SEARCH_RADIUS = 500;
-    public static final WalkCalculatorType DEFAULT_WALKING_CALCULATOR_TYPE = WalkCalculatorType.BEE_LINE_DISTANCE;
-    public static final double DEFAULT_WALKING_SPEED = 1.4;
-    public static final int DEFAULT_WALKING_DURATION_MINIMUM = 120;
+    public static final int DEFAULT_WALK_SEARCH_RADIUS = 500;
+    public static final WalkCalculatorType DEFAULT_WALK_CALCULATOR_TYPE = WalkCalculatorType.BEE_LINE_DISTANCE;
+    public static final double DEFAULT_WALK_SPEED = 1.4;
+    public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
 
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
     public static final int DEFAULT_RAPTOR_RANGE = -1; // -1 means no range raptor
@@ -35,25 +35,25 @@ public class ServiceConfig {
     String gtfsStaticUpdateCron = DEFAULT_GTFS_STATIC_UPDATE_CRON;
 
     @Builder.Default
-    int transferTimeSameStopDefault = DEFAULT_TRANSFER_TIME_SAME_STOP_DEFAULT;
+    int transferDurationSameStopDefault = DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT;
 
     @Builder.Default
-    int transferTimeBetweenStopsMinimum = DEFAULT_TRANSFER_TIME_BETWEEN_STOPS_MINIMUM;
+    int transferDurationBetweenStopsMinimum = DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM;
 
     @Builder.Default
-    int transferTimeAccessEgress = DEFAULT_TRANSFER_TIME_ACCESS_EGRESS;
+    int transferDurationAccessEgress = DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS;
 
     @Builder.Default
-    int walkingSearchRadius = DEFAULT_WALKING_SEARCH_RADIUS;
+    int walkSearchRadius = DEFAULT_WALK_SEARCH_RADIUS;
 
     @Builder.Default
-    WalkCalculatorType walkingCalculatorType = DEFAULT_WALKING_CALCULATOR_TYPE;
+    WalkCalculatorType walkCalculatorType = DEFAULT_WALK_CALCULATOR_TYPE;
 
     @Builder.Default
-    double walkingSpeed = DEFAULT_WALKING_SPEED;
+    double walkSpeed = DEFAULT_WALK_SPEED;
 
     @Builder.Default
-    int walkingDurationMinimum = DEFAULT_WALKING_DURATION_MINIMUM;
+    int walkDurationMinimum = DEFAULT_WALK_DURATION_MINIMUM;
 
     @Builder.Default
     int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
@@ -68,22 +68,22 @@ public class ServiceConfig {
     CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
 
     public ServiceConfig(GtfsScheduleRepository gtfsScheduleRepository, String gtfsStaticUpdateCron,
-                         int transferTimeSameStopDefault, int transferTimeBetweenStopsMinimum,
-                         int transferTimeAccessEgress, int walkingSearchRadius,
-                         WalkCalculatorType walkingCalculatorType, double walkingSpeed, int walkingDurationMinimum,
-                         int raptorDaysToScan, int raptorRange, int cacheServiceDaySize,
-                         CacheEvictionStrategy cacheEvictionStrategy) {
+                         int transferDurationSameStopDefault, int transferDurationBetweenStopsMinimum,
+                         int transferDurationAccessEgress, int walkSearchRadius, WalkCalculatorType walkCalculatorType,
+                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, int raptorRange,
+                         int cacheServiceDaySize, CacheEvictionStrategy cacheEvictionStrategy) {
         this.gtfsScheduleRepository = validateNonNull(gtfsScheduleRepository, "gtfsScheduleRepository");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
-        this.transferTimeSameStopDefault = validateNonNegative(transferTimeSameStopDefault,
-                "transferTimeSameStopDefault");
+        this.transferDurationSameStopDefault = validateNonNegative(transferDurationSameStopDefault,
+                "transferDurationSameStopDefault");
         // negative values imply that transfers should not be generated
-        this.transferTimeBetweenStopsMinimum = transferTimeBetweenStopsMinimum;
-        this.transferTimeAccessEgress = validateNonNegative(transferTimeAccessEgress, "transferTimeAccessEgress");
-        this.walkingSearchRadius = validateNonNegative(walkingSearchRadius, "walkingSearchRadius");
-        this.walkingCalculatorType = validateNonNull(walkingCalculatorType, "walkingCalculatorType");
-        this.walkingSpeed = validatePositive(walkingSpeed, "walkingSpeed");
-        this.walkingDurationMinimum = validateNonNegative(walkingDurationMinimum, "walkingDurationMinimum");
+        this.transferDurationBetweenStopsMinimum = transferDurationBetweenStopsMinimum;
+        this.transferDurationAccessEgress = validateNonNegative(transferDurationAccessEgress,
+                "transferDurationAccessEgress");
+        this.walkSearchRadius = validateNonNegative(walkSearchRadius, "walkSearchRadius");
+        this.walkCalculatorType = validateNonNull(walkCalculatorType, "walkCalculatorType");
+        this.walkSpeed = validatePositive(walkSpeed, "walkSpeed");
+        this.walkDurationMinimum = validateNonNegative(walkDurationMinimum, "walkDurationMinimum");
         this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
         this.raptorRange = raptorRange;
         this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");

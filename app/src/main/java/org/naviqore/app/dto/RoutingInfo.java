@@ -9,9 +9,9 @@ import lombok.ToString;
 @Getter
 public class RoutingInfo {
 
-    final boolean supportsMaxNumTransfers;
-    final boolean supportsMaxTravelTime;
-    final boolean supportsMaxWalkingDuration;
+    final boolean supportsMaxTransfers;
+    final boolean supportsMaxTravelDuration;
+    final boolean supportsMaxWalkDuration;
     final boolean supportsMinTransferDuration;
     final boolean supportsAccessibility;
     final boolean supportsBikes;
