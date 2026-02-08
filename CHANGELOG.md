@@ -1,5 +1,42 @@
 # Changelog
 
+## [3.0.0](https://github.com/naviqore/public-transit-service/compare/v2.3.0...v3.0.0) (2026-02-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* The REST API changes and will break clients.
+* **app:** API endpoints now require and return date-time strings with timezone offsets.
+* **service:** Service interfaces now use `OffsetDateTime`. `getNextDepartures` is renamed to `getStopTimes`. `getNearestStops` signature is modified.
+* **raptor:** RaptorAlgorithm interface now uses OffsetDateTime instead of LocalDateTime.
+* **gtfs:** Public interface of the GtfsSchedule and model classes now require OffsetDateTime instead of LocalDateTime. GtfsSchedule has replaced getNextDepartures with getStopTimes.
+* **app:** API Error response schema change.
+
+### Features
+
+* **app:** migrate REST API to OffsetDateTime ([eb80037](https://github.com/naviqore/public-transit-service/commit/eb800373782bd2b4621965b5d014df3cb0a51701)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **app:** standardize api level errors and separate validation logic in controller ([936befd](https://github.com/naviqore/public-transit-service/commit/936befdb37c91221955f98c292f3e2ddd4be775d)), closes [#174](https://github.com/naviqore/public-transit-service/issues/174)
+* **gtfs:** migrate to OffsetDateTime and implement DST-safe stop time requests ([eb46bf6](https://github.com/naviqore/public-transit-service/commit/eb46bf62f3c0d69f5afe71073376c7d179f7f609)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **gtfs:** update link to timetable 2026 for switzerland ([e74a69c](https://github.com/naviqore/public-transit-service/commit/e74a69c4458b87933aa9d8c490028f0c774ad0d1))
+* move validation handling to service package in app ([b32ccd4](https://github.com/naviqore/public-transit-service/commit/b32ccd49b34f7fed06ddf55e8fa1c3b051c4eec5))
+* **raptor:** apply UTC offsets in route scanning and post-processing ([2c6ada5](https://github.com/naviqore/public-transit-service/commit/2c6ada5eb9013ba8de89ac2e99de4e5e28836d64)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **raptor:** migrate RAPTOR router to OffsetDateTime for timezone-awareness ([42e8226](https://github.com/naviqore/public-transit-service/commit/42e8226289baff4969e3dcff1ce25361e2ad4635)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **raptor:** return local agency timezones instead of UTC ([88480c4](https://github.com/naviqore/public-transit-service/commit/88480c472f9a006efa7fd61de48023d1d3f04e23)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **service:** migrate to OffsetDateTime and update APIs ([c7af86f](https://github.com/naviqore/public-transit-service/commit/c7af86fbb38be999452cbed64243e65daab82f26)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+* **service:** sort connection and isoline query results ([0f5d38a](https://github.com/naviqore/public-transit-service/commit/0f5d38ab195fee9aac8d8354a561aa4ae1506cfb)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+
+
+### Bug Fixes
+
+* correct distributionUrl in maven-wrapper.properties ([dba9711](https://github.com/naviqore/public-transit-service/commit/dba9711ad1b82dcced5787fa0489a0a313c4e8c1))
+* correct distributionUrl in maven-wrapper.properties ([c7ac8f1](https://github.com/naviqore/public-transit-service/commit/c7ac8f1cda9b5e60db90b25a130b68d6b6a7ffbe))
+* **docker:** resolve build failure from deprecated base image ([581b8b7](https://github.com/naviqore/public-transit-service/commit/581b8b7199b9e0d59bad055e72c5312a0d975fd4))
+
+
+### Code Refactoring
+
+* standardize terminology for durations and transfers ([261e208](https://github.com/naviqore/public-transit-service/commit/261e208261000c5b7b7d5b3d7d02eaa273473097)), closes [#422](https://github.com/naviqore/public-transit-service/issues/422)
+
 ## [2.3.0](https://github.com/naviqore/public-transit-service/compare/v2.2.0...v2.3.0) (2025-09-02)
 
 
