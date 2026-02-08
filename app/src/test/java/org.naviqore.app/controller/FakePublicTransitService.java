@@ -20,7 +20,7 @@ import java.util.*;
 
 @Setter
 @NoArgsConstructor
-class PublicTransitServiceFake implements PublicTransitService {
+class FakePublicTransitService implements PublicTransitService {
 
     public static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
 

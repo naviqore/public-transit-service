@@ -64,15 +64,15 @@ public class ScheduleControllerTest {
         @ParameterizedTest(name = "scheduleInfo_{index}")
         @MethodSource("provideScheduleInfoTestCombinations")
         void testQueryConfigValues(boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
-            PublicTransitServiceFake serviceFake = new PublicTransitServiceFake();
-            serviceFake.setHasAccessibilityInformation(supportsAccessibility);
-            serviceFake.setHasBikeInformation(supportsBikes);
-            serviceFake.setHasTravelModeInformation(supportsTravelModes);
+            FakePublicTransitService fakeService = new FakePublicTransitService();
+            fakeService.setHasAccessibilityInformation(supportsAccessibility);
+            fakeService.setHasBikeInformation(supportsBikes);
+            fakeService.setHasTravelModeInformation(supportsTravelModes);
 
-            LocalDate expStartDate = serviceFake.getValidity().getStartDate();
-            LocalDate expEndDate = serviceFake.getValidity().getEndDate();
+            LocalDate expStartDate = fakeService.getValidity().getStartDate();
+            LocalDate expEndDate = fakeService.getValidity().getEndDate();
 
-            ScheduleController scheduleController = new ScheduleController(serviceFake);
+            ScheduleController scheduleController = new ScheduleController(fakeService);
 
             org.naviqore.app.dto.ScheduleInfo routerInfo = scheduleController.getScheduleInfo();
             assertEquals(supportsAccessibility, routerInfo.isHasAccessibility());

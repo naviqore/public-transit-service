@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class RoutingControllerTest {
 
-    private final PublicTransitServiceFake serviceFake = new PublicTransitServiceFake();
+    private final FakePublicTransitService fakeService = new FakePublicTransitService();
 
-    private final RoutingController routingController = new RoutingController(serviceFake);
+    private final RoutingController routingController = new RoutingController(fakeService);
 
     static Stream<Arguments> provideQueryConfigTestCombinations() {
         int validMaxWalkDuration = 30;
@@ -230,9 +230,9 @@ public class RoutingControllerTest {
                                    boolean hasTravelModeInformation,
                                    String errorMessage) throws org.naviqore.service.exception.ConnectionRoutingException {
 
-            serviceFake.setHasAccessibilityInformation(hasAccessibilityInformation);
-            serviceFake.setHasBikeInformation(hasBikeInformation);
-            serviceFake.setHasTravelModeInformation(hasTravelModeInformation);
+            fakeService.setHasAccessibilityInformation(hasAccessibilityInformation);
+            fakeService.setHasBikeInformation(hasBikeInformation);
+            fakeService.setHasTravelModeInformation(hasTravelModeInformation);
 
             if (errorMessage == null) {
                 routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(), TimeType.DEPARTURE,
@@ -537,9 +537,9 @@ public class RoutingControllerTest {
                                    boolean hasTravelModeInformation,
                                    String errorMessage) throws org.naviqore.service.exception.ConnectionRoutingException {
 
-            serviceFake.setHasAccessibilityInformation(hasAccessibilityInformation);
-            serviceFake.setHasBikeInformation(hasBikeInformation);
-            serviceFake.setHasTravelModeInformation(hasTravelModeInformation);
+            fakeService.setHasAccessibilityInformation(hasAccessibilityInformation);
+            fakeService.setHasBikeInformation(hasBikeInformation);
+            fakeService.setHasTravelModeInformation(hasTravelModeInformation);
 
             if (errorMessage == null) {
                 routingController.getIsolines("A", null, null, OffsetDateTime.now(), TimeType.DEPARTURE,
@@ -584,13 +584,13 @@ public class RoutingControllerTest {
         void testQueryConfigValues(boolean supportsMaxNumTransfers, boolean supportsMaxTravelTime,
                                    boolean supportsMaxWalkDuration, boolean supportsMinTransferDuration,
                                    boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
-            serviceFake.setHasAccessibilityInformation(supportsAccessibility);
-            serviceFake.setHasBikeInformation(supportsBikes);
-            serviceFake.setHasTravelModeInformation(supportsTravelModes);
-            serviceFake.setSupportsMaxTransfers(supportsMaxNumTransfers);
-            serviceFake.setSupportsMaxTravelDuration(supportsMaxTravelTime);
-            serviceFake.setSupportsMaxWalkDuration(supportsMaxWalkDuration);
-            serviceFake.setSupportsMinTransferDuration(supportsMinTransferDuration);
+            fakeService.setHasAccessibilityInformation(supportsAccessibility);
+            fakeService.setHasBikeInformation(supportsBikes);
+            fakeService.setHasTravelModeInformation(supportsTravelModes);
+            fakeService.setSupportsMaxTransfers(supportsMaxNumTransfers);
+            fakeService.setSupportsMaxTravelDuration(supportsMaxTravelTime);
+            fakeService.setSupportsMaxWalkDuration(supportsMaxWalkDuration);
+            fakeService.setSupportsMinTransferDuration(supportsMinTransferDuration);
 
             org.naviqore.app.dto.RoutingInfo routingInfo = routingController.getRoutingInfo();
 
