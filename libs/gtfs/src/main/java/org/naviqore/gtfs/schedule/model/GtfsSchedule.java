@@ -152,7 +152,7 @@ public class GtfsSchedule {
      * @param stopId the identifier of the stop.
      * @return A list of stops including the stop itself and its children.
      */
-    public List<Stop> getRelatedStops(String stopId) {
+    public List<Stop> getStopWithChildren(String stopId) {
         Stop stop = getStop(stopId);
 
         if (stop.getChildren().isEmpty()) {

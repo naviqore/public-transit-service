@@ -27,6 +27,7 @@ public class GtfsRaptorService implements PublicTransitService {
     private final KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<org.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
 
+    private final GtfsStopScopeResolver resolver;
     private final RoutingQueryFacade routing;
 
     GtfsRaptorService(ServiceConfig serviceConfig, GtfsSchedule schedule,
@@ -38,6 +39,7 @@ public class GtfsRaptorService implements PublicTransitService {
         this.stopSearchIndex = stopSearchIndex;
 
         this.validity = new GtfsRaptorValidity(schedule);
+        this.resolver = new GtfsStopScopeResolver(schedule, spatialStopIndex, serviceConfig.getWalkSearchRadius());
         this.routing = new RoutingQueryFacade(serviceConfig, schedule, spatialStopIndex, walkCalculator, raptorRouter);
     }
 
@@ -107,14 +109,14 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
-    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
-        log.info("Getting {} for stop '{}', from '{}', to '{}'",
-                timeType == TimeType.DEPARTURE ? "departures" : "arrivals", stop.getId(), from, to);
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType,
+                                       StopScope scope) {
+        log.info("Querying {} for stop '{}' with scope '{}', from '{}', until '{}'",
+                timeType == TimeType.DEPARTURE ? "departures" : "arrivals", stop.getId(), scope, from, until);
 
-        return schedule.getRelatedStops(stop.getId())
+        return resolver.resolve(stop, scope)
                 .stream()
-                .flatMap(scheduleStop -> schedule.getStopTimes(scheduleStop.getId(), from, to,
-                        TypeMapper.mapToGtfs(timeType)).stream())
+                .flatMap(id -> schedule.getStopTimes(id, from, until, TypeMapper.mapToGtfs(timeType)).stream())
                 .map(stopTime -> TypeMapper.map(stopTime, from.toLocalDate()))
                 .sorted(switch (timeType) {
                     case DEPARTURE -> Comparator.comparing(StopTime::getDepartureTime);
