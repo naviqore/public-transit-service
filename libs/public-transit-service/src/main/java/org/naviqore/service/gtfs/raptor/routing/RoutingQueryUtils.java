@@ -102,7 +102,7 @@ class RoutingQueryUtils {
     }
 
     Map<String, OffsetDateTime> getAllChildStopsFromStop(Stop stop, OffsetDateTime time) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
+        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
         Map<String, OffsetDateTime> stopWithDateTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
             stopWithDateTime.put(scheduleStop.getId(), time);
@@ -112,7 +112,7 @@ class RoutingQueryUtils {
     }
 
     Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
+        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
             stopsWithWalkTime.put(scheduleStop.getId(), 0);

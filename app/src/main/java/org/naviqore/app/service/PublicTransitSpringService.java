@@ -87,8 +87,9 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
-        return delegate.getStopTimes(stop, from, to, timeType);
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType,
+                                       StopScope stopScope) {
+        return delegate.getStopTimes(stop, from, to, timeType, stopScope);
     }
 
     @Override

@@ -29,13 +29,14 @@ import static org.naviqore.app.dto.DtoMapper.map;
 @RequiredArgsConstructor
 public class ScheduleController {
 
+    // autocomplete and nearest stops returns parents or stops without a parent, children scope fits most use cases
+    public static final String DEFAULT_STOP_SCOPE = "CHILDREN";
     private static final Duration DEFAULT_WINDOW = Duration.ofHours(6);
     private static final String DEFAULT_LIMIT = "10";
     private static final String DEFAULT_MAX_DISTANCE = "1000";
     private static final String DEFAULT_SEARCH_TYPE = "CONTAINS";
     private static final String DEFAULT_SORT_BY = "RELEVANCE";
     private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
-
     private final ScheduleInformationService service;
 
     @Operation(summary = "Get information about the schedule", description = "Get all relevant information about the schedule, such as supported features and validity.")
@@ -92,12 +93,13 @@ public class ScheduleController {
                                         @RequestParam(required = false) OffsetDateTime from,
                                         @RequestParam(required = false) OffsetDateTime to,
                                         @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
+                                        @RequestParam(defaultValue = DEFAULT_STOP_SCOPE) StopScope stopScope,
                                         @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
         OffsetDateTime effectiveFrom = RequestValidator.validateAndSetDefaultDateTime(from, service);
         OffsetDateTime effectiveTo = Optional.ofNullable(to).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
         RequestValidator.validateTimeWindow(effectiveFrom, effectiveTo);
 
         return service.getStopTimes(RequestValidator.getStopById(stopId, service), effectiveFrom, effectiveTo,
-                map(timeType)).stream().limit(limit).map(DtoMapper::map).toList();
+                map(timeType), map(stopScope)).stream().limit(limit).map(DtoMapper::map).toList();
     }
 }
