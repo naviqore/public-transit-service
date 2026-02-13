@@ -64,6 +64,7 @@ public class RoutingController {
                                            @RequestParam(required = false) Double targetLongitude,
                                            @RequestParam(required = false) OffsetDateTime dateTime,
                                            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
+                                           @RequestParam(required = false) @Min(0) Integer timeWindowDuration,
                                            @RequestParam(required = false) @Min(0) Integer maxWalkDuration,
                                            @RequestParam(required = false) @Min(0) Integer maxTransfers,
                                            @RequestParam(required = false) @Min(1) Integer maxTravelDuration,
@@ -83,8 +84,8 @@ public class RoutingController {
 
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
-        ConnectionQueryConfig config = Utils.createConfig(maxWalkDuration, maxTransfers, maxTravelDuration,
-                minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
+        ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
+                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
@@ -112,6 +113,7 @@ public class RoutingController {
                                             @RequestParam(required = false) Double sourceLongitude,
                                             @RequestParam(required = false) OffsetDateTime dateTime,
                                             @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
+                                            @RequestParam(required = false) @Min(0) Integer timeWindowDuration,
                                             @RequestParam(required = false) @Min(0) Integer maxWalkDuration,
                                             @RequestParam(required = false) @Min(0) Integer maxTransfers,
                                             @RequestParam(required = false) @Min(1) Integer maxTravelDuration,
@@ -128,8 +130,8 @@ public class RoutingController {
 
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
-        ConnectionQueryConfig config = Utils.createConfig(maxWalkDuration, maxTransfers, maxTravelDuration,
-                minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
+        ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
+                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
 
         // determine routing case and get isolines
         if (sourceStop != null) {
@@ -142,7 +144,8 @@ public class RoutingController {
 
     private static class Utils {
 
-        private static ConnectionQueryConfig createConfig(@Nullable Integer maxWalkDuration,
+        private static ConnectionQueryConfig createConfig(@Nullable Integer timeWindowDuration,
+                                                          @Nullable Integer maxWalkDuration,
                                                           @Nullable Integer maxTransfers,
                                                           @Nullable Integer maxTravelDuration,
                                                           @Nullable Integer minTransferDuration,
@@ -151,6 +154,7 @@ public class RoutingController {
                                                           PublicTransitService service) {
 
             // replace null values with default value
+            timeWindowDuration = setToZeroIfNull(timeWindowDuration);
             maxWalkDuration = setToMaxIfNull(maxWalkDuration);
             maxTransfers = setToMaxIfNull(maxTransfers);
             maxTravelDuration = setToMaxIfNull(maxTravelDuration);
@@ -165,6 +169,7 @@ public class RoutingController {
                     minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
 
             return ConnectionQueryConfig.builder()
+                    .timeWindowDuration(timeWindowDuration)
                     .maximumWalkDuration(maxWalkDuration)
                     .minimumTransferDuration(minTransferDuration)
                     .maximumTransfers(maxTransfers)
