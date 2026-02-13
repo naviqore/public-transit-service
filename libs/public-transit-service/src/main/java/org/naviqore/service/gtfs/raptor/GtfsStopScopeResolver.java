@@ -25,6 +25,7 @@ class GtfsStopScopeResolver {
         return switch (scope) {
             case STRICT -> Set.of(stop.getId());
 
+            // TODO: Collect Children does not include itself by name
             case CHILDREN -> collectChildren(stop.getId());
 
             case RELATED -> collectChildren(findRoot(stop.getId()).getId());

@@ -30,8 +30,8 @@ abstract class ConnectionQueryTemplate<S, T> {
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
 
-    private final S source;
-    private final T target;
+    protected final S source;
+    protected final T target;
 
     private final boolean allowSourceTransfers;
     private final boolean allowTargetTransfers;
@@ -57,17 +57,54 @@ abstract class ConnectionQueryTemplate<S, T> {
 
     protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
 
+    protected abstract ConnectionQueryTemplate<S, T> copyAt(OffsetDateTime time);
+
     /**
      * Warning: Do not call this method outside the routing facade, use the process method directly instead. Otherwise,
-     * swapping could appear twice.
+     * swapping could occur twice.
      */
     List<Connection> run() throws ConnectionRoutingException {
-        // swap source and target if time type is arrival, which means routing in the reverse time dimension
-        if (timeType == TimeType.ARRIVAL) {
-            return swap(source, target).process();
-        }
+        List<Connection> connections = new ArrayList<>();
+        OffsetDateTime currentTime = time;
+        OffsetDateTime windowLimit = switch (timeType) {
+            case DEPARTURE -> time.plusSeconds(queryConfig.getTimeWindowDuration());
+            case ARRIVAL -> time.minusSeconds(queryConfig.getTimeWindowDuration());
+        };
 
-        return process();
+        // loop through time window
+        do {
+            List<Connection> results = switch (timeType) {
+                case DEPARTURE -> copyAt(currentTime).process();
+                // swap source and target if time type is arrival, which means routing in the reverse time dimension
+                case ARRIVAL -> copyAt(currentTime).swap(source, target).process();
+            };
+
+            if (results.isEmpty()) {
+                break;
+            }
+
+            // min oder max departure time
+            currentTime = switch (timeType) {
+                case DEPARTURE -> results.stream()
+                        .map(Connection::getDepartureTime)
+                        .min(OffsetDateTime::compareTo)
+                        .get()
+                        .plusSeconds(1);
+                case ARRIVAL -> results.stream()
+                        .map(Connection::getArrivalTime)
+                        .max(OffsetDateTime::compareTo)
+                        .get()
+                        .minusSeconds(1);
+            };
+
+            connections.addAll(results);
+
+        } while (switch (timeType) {
+            case DEPARTURE -> currentTime.isBefore(windowLimit);
+            case ARRIVAL -> currentTime.isAfter(windowLimit);
+        });
+
+        return connections;
     }
 
     List<Connection> process() throws ConnectionRoutingException {

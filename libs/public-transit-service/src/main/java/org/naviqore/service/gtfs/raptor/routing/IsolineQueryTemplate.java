@@ -51,7 +51,7 @@ abstract class IsolineQueryTemplate<T> {
         // query isolines from raptor
         Map<String, org.naviqore.raptor.Connection> isolines;
         try {
-            isolines = utils.createIsolines(sourceStops, timeType, queryConfig, allowSourceTransfers);
+            isolines = utils.routeIsolines(sourceStops, timeType, queryConfig, allowSourceTransfers);
         } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return handleInvalidStopException(e, source);

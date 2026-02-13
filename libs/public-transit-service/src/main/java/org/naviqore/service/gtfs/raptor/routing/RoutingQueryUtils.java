@@ -60,9 +60,9 @@ class RoutingQueryUtils {
         }
     }
 
-    Map<String, org.naviqore.raptor.Connection> createIsolines(Map<String, OffsetDateTime> sourceStops,
-                                                               TimeType timeType, ConnectionQueryConfig queryConfig,
-                                                               boolean allowSourceTransfer) {
+    Map<String, org.naviqore.raptor.Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops,
+                                                              TimeType timeType, ConnectionQueryConfig queryConfig,
+                                                              boolean allowSourceTransfer) {
         // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.mapToRaptor(timeType),
                 prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
