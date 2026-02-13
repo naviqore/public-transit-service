@@ -90,7 +90,8 @@ class RoutingQueryUtils {
         for (org.naviqore.gtfs.schedule.model.Stop stop : nearestStops) {
             int walkDuration = walkCalculator.calculateWalk(location, stop.getCoordinate()).duration();
             if (walkDuration <= queryConfig.getMaximumWalkDuration()) {
-                stopsWithWalkTime.put(stop.getId(), walkDuration);
+                // add access and egress time to the walk duration to account for the time between location and vehicle at stop
+                stopsWithWalkTime.put(stop.getId(), walkDuration + serviceConfig.getTransferDurationAccessEgress());
             }
         }
 
@@ -124,12 +125,14 @@ class RoutingQueryUtils {
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
-        int duration = firstWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
+        int duration = firstWalk.duration();
 
         if (shouldCreateWalk(duration, firstWalk)) {
             return TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
-                    departureTime.minusSeconds(duration), departureTime, source, firstStop.getCoordinate(),
-                    TypeMapper.map(firstStop));
+                    // shift walk time backwards to account access and egress time at the stop
+                    departureTime.minusSeconds(duration + serviceConfig.getTransferDurationAccessEgress()),
+                    departureTime.minusSeconds(serviceConfig.getTransferDurationAccessEgress()), source,
+                    firstStop.getCoordinate(), TypeMapper.map(firstStop));
         }
 
         return null;

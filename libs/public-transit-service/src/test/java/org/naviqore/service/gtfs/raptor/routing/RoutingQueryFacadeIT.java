@@ -358,22 +358,31 @@ class RoutingQueryFacadeIT {
             @Test
             void departure_withTimeWindow() throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG.toBuilder().timeWindowDuration(24 * 60 * 60).build(),
-                        sourceCoordinate, targetCoordinate);
+                        TimeType.DEPARTURE, QUERY_CONFIG.toBuilder()
+                                .timeWindowDuration(24 * 60 * 60)
+                                .maximumTravelDuration(Integer.MAX_VALUE)
+                                .build(), sourceCoordinate, targetCoordinate);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
+                assertThat(connections).hasSize(2);
 
-                // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo("2008-05-15T00:00:02-04:00");
-                assertThat(connection.getArrivalTime()).isEqualTo("2008-05-15T00:06:58-04:00");
+                for (int i = 0; i < connections.size(); i++) {
+                    Connection connection = connections.get(i);
 
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(3);
+                    OffsetDateTime expectedDepartureTime = DATE_TIME.plusDays(i).plusSeconds(2);
+                    OffsetDateTime expectedArrivalTime = expectedDepartureTime.plusMinutes(6).plusSeconds(56);
 
-                assertFirstMileWalk(legs.getFirst());
-                assertPublicTransitLeg(legs.get(1));
-                assertLastMileWalk(legs.get(2));
+                    // assert departure and arrival time of complete connection, has to be the same day
+                    assertThat(connection.getDepartureTime()).isEqualTo(expectedDepartureTime);
+                    assertThat(connection.getArrivalTime()).isEqualTo(expectedArrivalTime);
+
+                    List<Leg> legs = connection.getLegs();
+                    assertThat(legs).hasSize(3);
+
+                    assertFirstMileWalk(legs.getFirst());
+                    assertPublicTransitLeg(legs.get(1));
+                    assertLastMileWalk(legs.get(2));
+                }
+
             }
 
             @Test
