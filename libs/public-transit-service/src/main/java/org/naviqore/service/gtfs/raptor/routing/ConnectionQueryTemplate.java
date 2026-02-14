@@ -14,6 +14,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import static org.naviqore.service.TimeType.DEPARTURE;
+
 /**
  * Template for executing a connection query between a source and a target location, encapsulating common logic and
  * providing entry points for customization.
@@ -79,6 +81,10 @@ abstract class ConnectionQueryTemplate<S, T> {
                 case ARRIVAL -> copyAt(currentTime).swap(source, target).process();
             };
 
+            if( queryConfig.getTimeWindowDuration() > 0){
+                results = removeConnectionsOutsideOfTimeWindow(results, windowLimit);
+            }
+
             if (results.isEmpty()) {
                 break;
             }
@@ -88,15 +94,14 @@ abstract class ConnectionQueryTemplate<S, T> {
                 case DEPARTURE -> results.stream()
                         .map(Connection::getDepartureTime)
                         .min(OffsetDateTime::compareTo)
-                        .get()
+                        .orElseThrow()
                         .plusSeconds(1);
                 case ARRIVAL -> results.stream()
                         .map(Connection::getArrivalTime)
                         .max(OffsetDateTime::compareTo)
-                        .get()
+                        .orElseThrow()
                         .minusSeconds(1);
             };
-
             connections.addAll(results);
 
         } while (switch (timeType) {
@@ -105,6 +110,29 @@ abstract class ConnectionQueryTemplate<S, T> {
         });
 
         return connections;
+    }
+
+    /**
+     * Filters out connections that fall outside the configured time window.
+     * <p>
+     * For DEPARTURE queries, only connections departing <em>before</em> the window limit
+     * are retained.
+     * For ARRIVAL queries, only connections arriving <em>after</em> the window limit
+     * are retained.
+     * <p>
+     * This method is used to ensure that accumulated results remain within the active
+     * time window when iterating over multiple routing runs.
+     *
+     * @param connections the list of connections to filter
+     * @param windowLimit the boundary of the time window
+     * @return a list of connections that lie within the time window
+     */
+    private List<Connection> removeConnectionsOutsideOfTimeWindow(List<Connection> connections, OffsetDateTime windowLimit) {
+        return connections.stream()
+                .filter(c ->
+                    timeType == DEPARTURE ? c.getDepartureTime().isBefore(windowLimit) : c.getArrivalTime().isAfter(windowLimit)
+                )
+                .toList();
     }
 
     List<Connection> process() throws ConnectionRoutingException {
