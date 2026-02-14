@@ -68,7 +68,7 @@ public class QueryConfig {
 
     public void setMaximumTravelDuration(int maximumTravelDuration) {
         if (maximumTravelDuration <= 0) {
-            throw new IllegalArgumentException("Maximum transfer must be greater than 0.");
+            throw new IllegalArgumentException("Maximum travel duration must be greater than 0.");
         }
         this.maximumTravelDuration = maximumTravelDuration;
     }

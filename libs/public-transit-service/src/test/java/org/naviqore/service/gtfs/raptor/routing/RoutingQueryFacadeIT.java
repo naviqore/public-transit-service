@@ -389,7 +389,6 @@ class RoutingQueryFacadeIT {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
                         TimeType.DEPARTURE, QUERY_CONFIG.toBuilder()
                                 .timeWindowDuration(toSecondsInt(Duration.ofHours(3)))
-                                .maximumTravelDuration(toSecondsInt(Duration.ofHours(3))) // TODO: This is a bug in the raptor implementation, that maximum travel time is calculated releative to the requested start time
                                 .build(), sourceCoordinate, targetCoordinate);
 
                 // this should use first and second trips of route 1 but ignore the third (4 hours away)
