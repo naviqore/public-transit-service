@@ -567,12 +567,14 @@ class RoutingQueryFacadeIT {
     @Nested
     class Isolines {
 
+        static final List<String> STOP_IDS_THAT_CAN_BE_IMPROVED_BY_EXPRESS_ROUTE = List.of("A", "B2", "C", "D2");
+
         @Nested
         class StopSource {
 
             @Test
-            void departure() throws ConnectionRoutingException {
-                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME,
+            void departure_earliestArrival() throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_DEPARTURE_TIME,
                         TimeType.DEPARTURE, QUERY_CONFIG, sourceStop);
 
                 assertThat(isolines).hasSize(6);
@@ -581,13 +583,13 @@ class RoutingQueryFacadeIT {
                     assertThat(isoline.getLegs()).hasSize(1);
 
                     // assert departure time of complete connection, has to be the same day
-                    assertThat(isoline.getDepartureTime()).isEqualTo(DATE_TIME.plusMinutes(2));
+                    assertThat(isoline.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME.plusMinutes(2));
                 }
             }
 
             @Test
-            void arrival() throws ConnectionRoutingException {
-                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME.plusHours(1), TimeType.ARRIVAL,
+            void arrival_earliestArrival() throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
                         QUERY_CONFIG, targetStop);
 
                 assertThat(isolines).hasSize(3);
@@ -597,8 +599,72 @@ class RoutingQueryFacadeIT {
 
                     // assert arrival time of complete connection, should have started after midnight and arrived before
                     // requested arrival time
-                    assertThat(isoline.getArrivalTime()).isBetween(DATE_TIME, DATE_TIME.plusHours(1));
+                    assertThat(isoline.getArrivalTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_ARRIVAL_TIME);
                 }
+            }
+
+            static Stream<Arguments> stopSourceShortestTravelDurationDepartureArgs(){
+                return Stream.of(
+                        // This only takes the trip leaving shortly after 12 am into account
+                        Arguments.of(Duration.ofMinutes(30), DATE_TIME, DATE_TIME.plusMinutes(30)),
+                        // The express trip leaving at 2 am should always be fastest (overwrite everything)
+                        Arguments.of(Duration.ofHours(3), DATE_TIME.plusHours(1), DATE_TIME.plusHours(3)),
+                        // The slower trip at 4 am should not overwrite anything
+                        Arguments.of(Duration.ofHours(6), DATE_TIME.plusHours(1), DATE_TIME.plusHours(3))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("stopSourceShortestTravelDurationDepartureArgs")
+            void departure_shortestTravelDuration(Duration timeWindow, OffsetDateTime minDepartureTime, OffsetDateTime maxDepartureTime) throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_DEPARTURE_TIME,
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceStop);
+
+                assertThat(isolines).hasSize(6);
+
+                isolines.forEach((stop, isoline) -> {
+                    assertThat(isoline.getLegs()).hasSize(1);
+
+                    if (STOP_IDS_THAT_CAN_BE_IMPROVED_BY_EXPRESS_ROUTE.contains(stop.getId())){
+                        assertThat(isoline.getDepartureTime()).isBetween(minDepartureTime, maxDepartureTime);
+                    } else {
+                        assertThat(isoline.getDepartureTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_DEPARTURE_TIME.plusMinutes(30));
+                    }
+                });
+            }
+
+            static Stream<Arguments> stopSourceShortestTravelDurationArrivalArgs(){
+                return Stream.of(
+                        // This only takes the trip arriving shortly before 4:10 am into account
+                        Arguments.of(Duration.ofMinutes(30), STANDARD_ARRIVAL_TIME.minusMinutes(30), STANDARD_ARRIVAL_TIME),
+                        // The express trip leaving at 2 am should always be fastest (overwrite everything)
+                        Arguments.of(Duration.ofHours(3), STANDARD_ARRIVAL_TIME.minusHours(3), STANDARD_ARRIVAL_TIME.minusMinutes(30)),
+                        // The slower trip at 12 am should not overwrite anything
+                        Arguments.of(Duration.ofHours(6), STANDARD_ARRIVAL_TIME.minusHours(3), STANDARD_ARRIVAL_TIME.minusMinutes(30))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("stopSourceShortestTravelDurationArrivalArgs")
+            void arrival_shortestTravelDuration(Duration timeWindow, OffsetDateTime minArrivalTime, OffsetDateTime maxArrivalTime) throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
+                        getQueryConfigWithTimeWindow(timeWindow), targetStop);
+
+                // Stop B1 is only connected from Route 1 which only starts at 12:00 am and arrives at C1 12:05 + walking
+                if (STANDARD_ARRIVAL_TIME.minus(timeWindow).isBefore(STANDARD_DEPARTURE_TIME)){
+                    assertThat(isolines).hasSize(3);
+                } else {
+                    assertThat(isolines).hasSize(2);
+                }
+
+                isolines.forEach((stop, isoline) -> {
+                    assertThat(isoline.getLegs()).hasSize(1);
+                    if (STOP_IDS_THAT_CAN_BE_IMPROVED_BY_EXPRESS_ROUTE.contains(stop.getId())){
+                        assertThat(isoline.getDepartureTime()).isBetween(minArrivalTime, maxArrivalTime);
+                    } else {
+                        assertThat(isoline.getDepartureTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_ARRIVAL_TIME);
+                    }
+                });
             }
 
         }
@@ -607,8 +673,8 @@ class RoutingQueryFacadeIT {
         class GeoSource {
 
             @Test
-            void departure() throws ConnectionRoutingException {
-                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME,
+            void departure_earliestArrival() throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_DEPARTURE_TIME,
                         TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate);
 
                 assertThat(isolines).hasSize(6);
@@ -617,15 +683,15 @@ class RoutingQueryFacadeIT {
                     assertThat(isoline.getLegs()).hasSize(2);
 
                     // assert departure time of complete connection, has to be the same day
-                    assertThat(isoline.getDepartureTime()).isEqualTo(DATE_TIME.plusSeconds(2));
+                    assertThat(isoline.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME.plusSeconds(2));
 
                     getFirstMileWalkLegAssert().assertLeg(isoline.getLegs().getFirst());
                 }
             }
 
             @Test
-            void arrival() throws ConnectionRoutingException {
-                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(DATE_TIME.plusHours(1), TimeType.ARRIVAL,
+            void arrival_earliestArrival() throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
                         QUERY_CONFIG, targetCoordinate);
 
                 assertThat(isolines).hasSize(3);
@@ -635,7 +701,7 @@ class RoutingQueryFacadeIT {
 
                     // assert arrival time of complete connection, should have started after midnight and arrived before
                     // requested arrival time
-                    assertThat(isoline.getArrivalTime()).isBetween(DATE_TIME, DATE_TIME.plusHours(1));
+                    assertThat(isoline.getArrivalTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_ARRIVAL_TIME);
 
                     // last mile walking leg
                     Leg leg = isoline.getLegs().getLast();
@@ -648,6 +714,74 @@ class RoutingQueryFacadeIT {
                 }
             }
 
+            static Stream<Arguments> geoSourceShortestTravelDurationDepartureArgs(){
+                return Stream.of(
+                        // This only takes the trip leaving shortly after 12 am into account
+                        Arguments.of(Duration.ofMinutes(30), DATE_TIME, DATE_TIME.plusMinutes(30)),
+                        // The express trip leaving at 2 am should always be fastest (overwrite everything)
+                        Arguments.of(Duration.ofHours(3), DATE_TIME.plusHours(1), DATE_TIME.plusHours(3)),
+                        // The slower trip at 4 am should not overwrite anything
+                        Arguments.of(Duration.ofHours(6), DATE_TIME.plusHours(1), DATE_TIME.plusHours(3))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("geoSourceShortestTravelDurationDepartureArgs")
+            void departure_shortestTravelDuration(Duration timeWindow, OffsetDateTime minDepartureTime, OffsetDateTime maxDepartureTime) throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_DEPARTURE_TIME,
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceCoordinate);
+
+                assertThat(isolines).hasSize(6);
+
+                isolines.forEach((stop, isoline) -> {
+                    assertThat(isoline.getLegs()).hasSize(2);
+
+                    if (STOP_IDS_THAT_CAN_BE_IMPROVED_BY_EXPRESS_ROUTE.contains(stop.getId())){
+                        assertThat(isoline.getDepartureTime()).isBetween(minDepartureTime, maxDepartureTime);
+                    } else {
+                        assertThat(isoline.getDepartureTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_DEPARTURE_TIME.plusMinutes(30));
+                    }
+
+                    getFirstMileWalkLegAssert().assertLeg(isoline.getLegs().getFirst());
+                });
+            }
+
+            static Stream<Arguments> geoSourceShortestTravelDurationArrivalArgs(){
+                return Stream.of(
+                        // This only takes the trip arriving shortly before 4:10 am into account
+                        Arguments.of(Duration.ofMinutes(30), STANDARD_ARRIVAL_TIME.minusMinutes(30), STANDARD_ARRIVAL_TIME),
+                        // The express trip leaving at 2 am should always be fastest (overwrite everything)
+                        Arguments.of(Duration.ofHours(3), STANDARD_ARRIVAL_TIME.minusHours(3), STANDARD_ARRIVAL_TIME.minusMinutes(30)),
+                        // The slower trip at 12 am should not overwrite anything
+                        Arguments.of(Duration.ofHours(6), STANDARD_ARRIVAL_TIME.minusHours(3), STANDARD_ARRIVAL_TIME.minusMinutes(30))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("geoSourceShortestTravelDurationArrivalArgs")
+            void arrival_shortestTravelDuration(Duration timeWindow, OffsetDateTime minArrivalTime, OffsetDateTime maxArrivalTime) throws ConnectionRoutingException {
+                Map<Stop, org.naviqore.service.Connection> isolines = facade.queryIsolines(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
+                        getQueryConfigWithTimeWindow(timeWindow), targetCoordinate);
+
+                // Stop B1 is only connected from Route 1 which only starts at 12:00 am and arrives at C1 12:05 + walking
+                if (STANDARD_ARRIVAL_TIME.minus(timeWindow).isBefore(STANDARD_DEPARTURE_TIME)){
+                    assertThat(isolines).hasSize(3);
+                } else {
+                    assertThat(isolines).hasSize(2);
+                }
+
+                isolines.forEach((stop, isoline) -> {
+                    assertThat(isoline.getLegs()).hasSize(2);
+                    if (STOP_IDS_THAT_CAN_BE_IMPROVED_BY_EXPRESS_ROUTE.contains(stop.getId())){
+                        assertThat(isoline.getDepartureTime()).isBetween(minArrivalTime, maxArrivalTime);
+                        getLastMileWalkLegAssert().assertLeg(isoline.getLegs().getLast());
+                    } else {
+                        assertThat(isoline.getDepartureTime()).isBetween(STANDARD_DEPARTURE_TIME, STANDARD_ARRIVAL_TIME);
+                        new LastMileWalkLegAssertArgs(getStopById("C1"), targetCoordinate)
+                                .assertLeg(isoline.getLegs().getLast());
+                    }
+                });
+            }
         }
 
         @Nested
