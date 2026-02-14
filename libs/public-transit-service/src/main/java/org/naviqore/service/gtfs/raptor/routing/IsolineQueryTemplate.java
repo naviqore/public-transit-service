@@ -153,7 +153,7 @@ abstract class IsolineQueryTemplate<T> {
         while(currentTimeIsRelevant(currentTime, windowLimit)){
             sourceStops = incrementSourceStopTimes(sourceStops, nextIncrement, timeIncrementor);
             Map<String, org.naviqore.raptor.Connection> newIsolines = runForEarliestArrivalTime(sourceStops);
-            updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, newIsolines, costPerSourceStop);
+            updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, newIsolines, costPerSourceStop, windowLimit);
             nextIncrement = getNextTimeIncrement(sourceStops, newIsolines);
             if(nextIncrement == null){
                 break;
@@ -205,23 +205,55 @@ abstract class IsolineQueryTemplate<T> {
     }
 
     /**
-     * Updates the map of shortest-duration isolines with newly computed connections.
+     * Updates the per-stop shortest-travel-time isolines with newly computed connections.
      * <p>
-     * For each stop, the connection with the lowest total travel time (routing duration
-     * plus source stop cost) is retained.
+     * For each stop contained in {@code earliestArrivalIsolines}, this method decides whether
+     * the newly computed connection should replace the currently stored best connection.
+     * A replacement occurs if:
+     * <ul>
+     *   <li>no connection has been stored yet for the stop, or</li>
+     *   <li>the new connection has a strictly shorter total travel time (RAPTOR duration
+     *       plus source stop access cost),</li>
+     * </ul>
+     * <em>and</em> the connection's relevant trip time (departure or arrival, depending on
+     * the query type) lies within the configured time window.
+     * <p>
+     * The method mutates {@code shortestTravelTimeIsolines} in place.
      *
-     * @param shortestTravelTimeIsolines the current best-known connections per stop
+     * @param shortestTravelTimeIsolines the current best-known (shortest travel time)
+     *                                   connection per stop
      * @param earliestArrivalIsolines    newly computed connections for the current iteration
-     * @param costPerSourceStop          precomputed source stop time offsets
+     * @param costPerSourceStop          precomputed access-time offsets per source stop
+     * @param windowLimit                boundary of the valid time window for the query
      */
-    private void updateShortestTravelTimeIsolines(Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines, Map<String, org.naviqore.raptor.Connection> earliestArrivalIsolines, Map<String, Duration> costPerSourceStop) {
+    private void updateShortestTravelTimeIsolines(Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines, Map<String, org.naviqore.raptor.Connection> earliestArrivalIsolines, Map<String, Duration> costPerSourceStop, OffsetDateTime windowLimit) {
         earliestArrivalIsolines.forEach((stopId, newConnection) -> {
             var bestConnectionSoFar = shortestTravelTimeIsolines.get(stopId);
-            if (bestConnectionSoFar == null || newConnectionIsFaster(newConnection, bestConnectionSoFar,
-                    costPerSourceStop)) {
+            if ((bestConnectionSoFar == null || newConnectionIsFaster(newConnection, bestConnectionSoFar,
+                    costPerSourceStop)) && newConnectionDepatureTimeIsRelevant(newConnection, windowLimit)) {
                 shortestTravelTimeIsolines.put(stopId, newConnection);
             }
         });
+    }
+
+    /**
+     * Determines whether a newly computed connection is relevant with respect to the
+     * configured time window.
+     * <p>
+     * The relevant timestamp is extracted from the connection based on the query time type:
+     * <ul>
+     *   <li>for {@code DEPARTURE} queries, the departure time of the first leg</li>
+     *   <li>for {@code ARRIVAL} queries, the arrival time of the last leg</li>
+     * </ul>
+     * The connection is considered relevant if this timestamp lies on the valid side of
+     * the provided window limit.
+     *
+     * @param newConnection the newly computed RAPTOR connection
+     * @param windowLimit   the boundary of the query time window
+     * @return {@code true} if the connection should still be considered, {@code false} otherwise
+     */
+    private boolean newConnectionDepatureTimeIsRelevant(org.naviqore.raptor.Connection newConnection, OffsetDateTime windowLimit) {
+        return currentTimeIsRelevant(getTripTimeFromConnection(newConnection), windowLimit);
     }
 
     /**
