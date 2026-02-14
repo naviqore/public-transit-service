@@ -8,9 +8,11 @@ import org.naviqore.gtfs.schedule.type.ServiceDayTime;
 import org.naviqore.gtfs.schedule.type.TransferType;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.EnumSet;
+import java.util.function.Function;
 
 /**
  * GTFS schedule builder for testing. Builds a schedule as below
@@ -35,10 +37,34 @@ public class GtfsRaptorTestSchedule {
     private final GtfsScheduleBuilder builder = GtfsSchedule.builder();
 
     public GtfsRaptorTestSchedule() {
-        setup();
+        setup(1, Duration.ZERO, _ -> 1.0);
     }
 
-    private void setup() {
+    /**
+     * Creates a customizable GTFS test schedule with multiple trips on Route 2.
+     * <p>
+     * This constructor allows fine-grained control over the temporal structure of the
+     * generated schedule in order to test RAPTOR behavior under varying service patterns.
+     * In particular, it supports:
+     * <ul>
+     *   <li>multiple trips on Route 2,</li>
+     *   <li>configurable headways between consecutive trips, and</li>
+     *   <li>per-trip speed variations to simulate faster or slower services.</li>
+     * </ul>
+     *
+     * The {@code tripSpeedFactorCalculator} is applied per trip index and scales all stop
+     * times of that trip uniformly. Values greater than {@code 1.0} make the trip slower,
+     * while values less than {@code 1.0} make it faster.
+     *
+     * @param numTripsOnRoute2           number of trips to generate on Route 2
+     * @param headwayOnRoute2            time offset between consecutive trips on Route 2
+     * @param tripSpeedFactorCalculator  function mapping a trip index to a speed factor
+     */
+    public GtfsRaptorTestSchedule(int numTripsOnRoute2, Duration headwayOnRoute2, Function<Integer, Double> tripSpeedFactorCalculator){
+        setup(numTripsOnRoute2, headwayOnRoute2, tripSpeedFactorCalculator);
+    }
+
+    private void setup(int numTripsOnRoute1, Duration headwayOnRoute1, Function<Integer, Double> tripSpeedFactorCalculator) {
         builder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
         builder.addAgency("agency", "Some Agency", "", ZONE_ID);
 
@@ -65,11 +91,18 @@ public class GtfsRaptorTestSchedule {
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
-        builder.addTrip("T2", "R2", "always", "D2");
-        builder.addStopTime("T2", "A", new ServiceDayTime(60), new ServiceDayTime(120));
-        builder.addStopTime("T2", "B2", new ServiceDayTime(180), new ServiceDayTime(240));
-        builder.addStopTime("T2", "C", new ServiceDayTime(300), new ServiceDayTime(360));
-        builder.addStopTime("T2", "D2", new ServiceDayTime(420), new ServiceDayTime(480));
+        for  (int i = 0; i < numTripsOnRoute1; i++) {
+            String tripId = i == 0 ? "T2" : "T%d2".formatted(i);
+            int tripOffset = Math.toIntExact(i * headwayOnRoute1.toSeconds());
+            double tripSpeed = tripSpeedFactorCalculator.apply(i);
+            Function<Integer, ServiceDayTime> serviceDayTimeFactory = seconds -> new ServiceDayTime(
+                    (int) (tripOffset + (seconds * tripSpeed)));
+            builder.addTrip(tripId, "R2", "always", "D2");
+            builder.addStopTime(tripId, "A", serviceDayTimeFactory.apply(60), serviceDayTimeFactory.apply(120));
+            builder.addStopTime(tripId, "B2", serviceDayTimeFactory.apply(180), serviceDayTimeFactory.apply(240));
+            builder.addStopTime(tripId, "C", serviceDayTimeFactory.apply(300), serviceDayTimeFactory.apply(360));
+            builder.addStopTime(tripId, "D2", serviceDayTimeFactory.apply(420), serviceDayTimeFactory.apply(480));
+        }
     }
 
     public void addTransfer(String fromStopId, String toStopId, TransferType type, int duration) {
