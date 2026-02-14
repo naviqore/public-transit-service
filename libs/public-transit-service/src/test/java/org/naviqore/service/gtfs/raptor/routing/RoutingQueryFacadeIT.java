@@ -3,6 +3,9 @@ package org.naviqore.service.gtfs.raptor.routing;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.raptor.router.RaptorConfig;
@@ -11,11 +14,11 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.service.gtfs.raptor.GtfsRaptorTestSchedule;
+import org.naviqore.service.gtfs.raptor.GtfsRaptorTransfer;
 import org.naviqore.service.gtfs.raptor.TypeMapper;
 import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
 import org.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
 import org.naviqore.service.gtfs.raptor.convert.TransferGenerator;
-import org.naviqore.service.gtfs.raptor.convert.WalkTransferGenerator;
 import org.naviqore.service.repo.NoGtfsScheduleRepository;
 import org.naviqore.service.walk.BeeLineWalkCalculator;
 import org.naviqore.service.walk.WalkCalculator;
@@ -29,6 +32,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -67,7 +71,7 @@ class RoutingQueryFacadeIT {
     // These values ensure the first trip of Route 2 should be relevant for connecting the source stop/coordinate with
     // target stop/coordinate.
     private static final OffsetDateTime STANDARD_DEPARTURE_TIME = DATE_TIME;
-    private static final OffsetDateTime STANDARD_ARRIVAL_TIME = DATE_TIME.plusHours(1);
+    private static final OffsetDateTime STANDARD_ARRIVAL_TIME = DATE_TIME.plusHours(4).plusMinutes(10);
 
     private static final Duration WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP = Duration.ofMinutes(1).plusSeconds(58);
     private static final Duration WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP = Duration.ofMinutes(1).plusSeconds(58);
@@ -83,11 +87,6 @@ class RoutingQueryFacadeIT {
             DATE_TIME.plusHours(4).plusMinutes(5)
     );
 
-    private static final OffsetDateTime STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP = DEPATURE_TIMES_AT_SOURCE_STOP.getFirst();
-    private static final OffsetDateTime STANDARD_ARRIVAL_TIME_AT_TARGET_STOP =  ARRIVAL_TIMES_AT_TARGET_STOP.getFirst();
-    private static final OffsetDateTime STANDARD_DEPARTURE_TIME_AT_SOURCE_COORDINATE = STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP.minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
-    private static final OffsetDateTime STANDARD_ARRIVAL_TIME_AT_TARGET_COORDINATE = STANDARD_ARRIVAL_TIME_AT_TARGET_STOP.plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
-
     @BeforeEach
     void setUp() {
         // Creates a schedule with 3 daily trips on Route 2, spaced 2 hours apart.
@@ -100,10 +99,7 @@ class RoutingQueryFacadeIT {
         KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex = new KDTreeBuilder<org.naviqore.gtfs.schedule.model.Stop>().addLocations(
                 schedule.getStops().values()).build();
         WalkCalculator walkCalculator = new BeeLineWalkCalculator(SERVICE_CONFIG.getWalkSpeed());
-        List<TransferGenerator> transferGenerators = List.of(
-                new WalkTransferGenerator(walkCalculator, SERVICE_CONFIG.getTransferDurationBetweenStopsMinimum(),
-                        SERVICE_CONFIG.getTransferDurationAccessEgress(), SERVICE_CONFIG.getWalkSearchRadius(),
-                        spatialStopIndex));
+        List<TransferGenerator> transferGenerators = List.of();
 
         // setup cache and trip mask provider
         EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(
@@ -133,30 +129,28 @@ class RoutingQueryFacadeIT {
         return TypeMapper.map(schedule.getStops().get(id));
     }
 
-    private void assertFirstMileWalk(Leg leg) {
-        assertFirstMileWalk(leg, sourceStop, sourceCoordinate);
-    }
+    record ConnectionAssertArgs (OffsetDateTime expectedDepartureTime, OffsetDateTime expectedArrivalTime, List<LegAssertArgs> legs){
 
-    private void assertFirstMileWalk(Leg leg, Stop stop, GeoCoordinate coordinate) {
-        assertThat(leg).isInstanceOf(Walk.class);
-        Walk walk = (Walk) leg;
+        void assertConnection(Connection connection){
+            assertThat(connection.getDepartureTime()).isEqualTo(expectedDepartureTime);
+            assertThat(connection.getArrivalTime()).isEqualTo(expectedArrivalTime);
 
-        assertThat(walk.getStop()).isPresent();
-        assertThat(walk.getStop().get().getId()).isEqualTo(stop.getId());
-
-        assertThat(walk.getSourceLocation().distanceTo(coordinate)).isCloseTo(0, within(EPSILON));
-        assertThat(walk.getTargetLocation().distanceTo(stop.getCoordinate())).isCloseTo(0, within(EPSILON));
-    }
-
-    @Nested
-    class Connections {
-
-        private static void assertPublicTransitLeg(Leg leg) {
-            assertPublicTransitLeg(leg, "A", "C", "T2", "R2");
+            assertThat(connection.getLegs()).hasSize(legs.size());
+            for (int  i = 0; i < legs.size(); i++) {
+                legs.get(i).assertLeg(connection.getLegs().get(i));
+            }
         }
 
-        private static void assertPublicTransitLeg(Leg leg, String departureStopId, String arrivalStopId, String tripId,
-                                                   String routeId) {
+    }
+
+    interface LegAssertArgs {
+        void assertLeg(Leg leg);
+    }
+
+    record PublicTransitLegAssertArgs(String departureStopId, String arrivalStopId, String tripId,
+                                      String routeId) implements LegAssertArgs {
+        @Override
+        public void assertLeg(Leg leg) {
             assertThat(leg).isInstanceOf(PublicTransitLeg.class);
             PublicTransitLeg publicTransitLeg = (PublicTransitLeg) leg;
 
@@ -166,12 +160,25 @@ class RoutingQueryFacadeIT {
             assertThat(publicTransitLeg.getDeparture().getStop().getId()).isEqualTo(departureStopId);
             assertThat(publicTransitLeg.getArrival().getStop().getId()).isEqualTo(arrivalStopId);
         }
+    }
 
-        private void assertLastMileWalk(Leg leg) {
-            assertLastMileWalk(leg, targetStop, targetCoordinate);
+    record FirstMileWalkLegAssertArgs(Stop stop, GeoCoordinate coordinate) implements LegAssertArgs {
+        @Override
+        public void assertLeg(Leg leg) {
+            assertThat(leg).isInstanceOf(Walk.class);
+            Walk walk = (Walk) leg;
+
+            assertThat(walk.getStop()).isPresent();
+            assertThat(walk.getStop().get().getId()).isEqualTo(stop.getId());
+
+            assertThat(walk.getSourceLocation().distanceTo(coordinate)).isCloseTo(0, within(EPSILON));
+            assertThat(walk.getTargetLocation().distanceTo(stop.getCoordinate())).isCloseTo(0, within(EPSILON));
         }
+    }
 
-        private void assertLastMileWalk(Leg leg, Stop stop, GeoCoordinate coordinate) {
+    record LastMileWalkLegAssertArgs(Stop stop, GeoCoordinate coordinate) implements LegAssertArgs {
+        @Override
+        public void assertLeg(Leg leg) {
             assertThat(leg).isInstanceOf(Walk.class);
             Walk walk = (Walk) leg;
 
@@ -181,87 +188,141 @@ class RoutingQueryFacadeIT {
             assertThat(walk.getSourceLocation().distanceTo(stop.getCoordinate())).isCloseTo(0, within(EPSILON));
             assertThat(walk.getTargetLocation().distanceTo(coordinate)).isCloseTo(0, within(EPSILON));
         }
+    }
+
+    record RaptorTransferLegAssertArgs(Stop sourceStop, Stop targetStop) implements LegAssertArgs {
+        @Override
+        public void assertLeg(Leg leg) {
+            assertThat(leg).isInstanceOf(GtfsRaptorTransfer.class);
+            GtfsRaptorTransfer transfer = (GtfsRaptorTransfer) leg;
+
+            assertThat(transfer.getSourceStop().getId()).isEqualTo(sourceStop.getId());
+            assertThat(transfer.getTargetStop().getId()).isEqualTo(targetStop.getId());
+        }
+    }
+
+    private PublicTransitLegAssertArgs getPublicTransitLegAssert(int tripNumber){
+        return new PublicTransitLegAssertArgs("A", "C", "T" + tripNumber, "R2");
+    }
+
+    private FirstMileWalkLegAssertArgs getFirstMileWalkLegAssert(){
+        return new FirstMileWalkLegAssertArgs(sourceStop, sourceCoordinate);
+    }
+
+    private LastMileWalkLegAssertArgs getLastMileWalkLegAssert(){
+        return new LastMileWalkLegAssertArgs(targetStop, targetCoordinate);
+    }
+
+    private ConnectionQueryConfig getQueryConfigWithTimeWindow(Duration timeWindow) {
+        return QUERY_CONFIG.toBuilder().timeWindowDuration(toSecondsInt(timeWindow)).build();
+    }
+
+    @Nested
+    class Connections {
 
         @Nested
         class StopToStop {
 
-            @Test
-            void departure() throws ConnectionRoutingException {
+            ConnectionAssertArgs getConnectionAsserts(int index){
+                int tripNumber = index * 10 + 2;
+                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index);
+                OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getPublicTransitLegAssert(tripNumber)));
+            }
+
+            static Stream<Arguments> expectedDepartureResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(0)),
+                        Arguments.of(Duration.ofHours(3), List.of(0, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(0, 1, 2))
+                );
+            }
+
+            static Stream<Arguments> expectedArrivalResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(2)),
+                        Arguments.of(Duration.ofHours(3), List.of(2, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(2, 1, 0))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedDepartureResults")
+            void departure(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG, sourceStop, targetStop);
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceStop, targetStop);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_STOP);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(1);
-
-                assertPublicTransitLeg(legs.getFirst());
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
             }
 
-            @Test
-            void arrival() throws ConnectionRoutingException {
+            @ParameterizedTest
+            @MethodSource("expectedArrivalResults")
+            void arrival(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceStop, targetStop);
+                        getQueryConfigWithTimeWindow(timeWindow), sourceStop, targetStop);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_STOP);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(1);
-
-                assertPublicTransitLeg(legs.getFirst());
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
             }
-
         }
 
         @Nested
         class StopToGeo {
 
-            @Test
-            void departure() throws ConnectionRoutingException {
-                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG, sourceStop, targetCoordinate);
-
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_COORDINATE);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
-
-                assertPublicTransitLeg(legs.getFirst());
-                assertLastMileWalk(legs.get(1));
+            ConnectionAssertArgs getConnectionAsserts(int index){
+                int tripNumber = index * 10 + 2;
+                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index);
+                OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index).plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getPublicTransitLegAssert(tripNumber), getLastMileWalkLegAssert()));
             }
 
-            @Test
-            void arrival() throws ConnectionRoutingException {
+            static Stream<Arguments> expectedDepartureResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(0)),
+                        Arguments.of(Duration.ofHours(3), List.of(0, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(0, 1, 2))
+                );
+            }
+
+            static Stream<Arguments> expectedArrivalResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(2)),
+                        Arguments.of(Duration.ofHours(3), List.of(2, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(2, 1, 0))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedDepartureResults")
+            void departure(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
+                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceStop, targetCoordinate);
+
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedArrivalResults")
+            void arrival(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceStop, targetCoordinate);
+                        getQueryConfigWithTimeWindow(timeWindow), sourceStop, targetCoordinate);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_STOP);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_COORDINATE);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
-
-                assertPublicTransitLeg(legs.getFirst());
-                assertLastMileWalk(legs.get(1));
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
             }
 
             @Test
@@ -270,7 +331,6 @@ class RoutingQueryFacadeIT {
                 // (range search looks within 500 m --> ServiceConfig.DEFAULT_WALKING_SEARCH_RADIUS)
                 targetCoordinate = new GeoCoordinate(0.005, 2.0);
 
-                // to only take the last connections of the day into account queried departure / arrival times are 4 hours later
                 // routing from B2 only connects to C and not C1 --> no connection possible
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
                         TimeType.DEPARTURE, QUERY_CONFIG, getStopById("B2"), targetCoordinate);
@@ -280,54 +340,65 @@ class RoutingQueryFacadeIT {
                 // (through C1)
                 connections = facade.queryConnections(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL, QUERY_CONFIG, getStopById("B1"),
                         targetCoordinate);
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-                assertThat(connection.getLegs()).hasSize(2);
 
-                assertPublicTransitLeg(connection.getLegs().getFirst(), "B1", "C1", "T1", "R1");
-                assertLastMileWalk(connection.getLegs().getLast(), getStopById("C1"), targetCoordinate);
+                assertThat(connections).hasSize(1);
+                assertThat(connections.getFirst().getLegs()).hasSize(2);
+                new PublicTransitLegAssertArgs("B1", "C1", "T1", "R1")
+                        .assertLeg(connections.getFirst().getLegs().getFirst());
+                new LastMileWalkLegAssertArgs(getStopById("C1"), targetCoordinate)
+                        .assertLeg(connections.getFirst().getLegs().getLast());
             }
         }
 
         @Nested
         class GeoToStop {
-
-            @Test
-            void departure() throws ConnectionRoutingException {
-                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate, targetStop);
-
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection, has to be the same day
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_COORDINATE);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_STOP);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
-
-                assertFirstMileWalk(legs.getFirst());
-                assertPublicTransitLeg(legs.get(1));
+            ConnectionAssertArgs getConnectionAsserts(int index){
+                int tripNumber = index * 10 + 2;
+                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index).minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
+                OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getFirstMileWalkLegAssert(), getPublicTransitLegAssert(tripNumber)));
             }
 
-            @Test
-            void arrival() throws ConnectionRoutingException {
+            static Stream<Arguments> expectedDepartureResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(0)),
+                        Arguments.of(Duration.ofHours(3), List.of(0, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(0, 1, 2))
+                );
+            }
+
+            static Stream<Arguments> expectedArrivalResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(2)),
+                        Arguments.of(Duration.ofHours(3), List.of(2, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(2, 1, 0))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedDepartureResults")
+            void departure(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
+                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceCoordinate, targetStop);
+
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedArrivalResults")
+            void arrival(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceCoordinate, targetStop);
+                        getQueryConfigWithTimeWindow(timeWindow), sourceCoordinate, targetStop);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection, has to be the previous day
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_COORDINATE);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_STOP);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(2);
-
-                assertFirstMileWalk(legs.getFirst());
-                assertPublicTransitLeg(legs.get(1));
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
             }
 
             @Test
@@ -349,8 +420,10 @@ class RoutingQueryFacadeIT {
                 Connection connection = connections.getFirst();
                 assertThat(connection.getLegs()).hasSize(2);
 
-                assertFirstMileWalk(connection.getLegs().getFirst(), getStopById("B1"), sourceCoordinate);
-                assertPublicTransitLeg(connection.getLegs().getLast(), "B1", "D1", "T1", "R1");
+                new FirstMileWalkLegAssertArgs(getStopById("B1"), sourceCoordinate)
+                        .assertLeg(connection.getLegs().getFirst());
+                new PublicTransitLegAssertArgs("B1", "D1", "T1", "R1")
+                    .assertLeg(connection.getLegs().getLast());
 
                 // when the original request to route to D2 fails, it will fall back to GeoToGeo coordinate routing,
                 // however since D1 and D2 are more than 500 m apart this will also fail.
@@ -364,80 +437,54 @@ class RoutingQueryFacadeIT {
         @Nested
         class GeoToGeo {
 
-            @Test
-            void departure() throws ConnectionRoutingException {
-                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate, targetCoordinate);
-
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection
-                assertThat(connection.getDepartureTime()).isEqualTo(STANDARD_DEPARTURE_TIME_AT_SOURCE_COORDINATE);
-                assertThat(connection.getArrivalTime()).isEqualTo(STANDARD_ARRIVAL_TIME_AT_TARGET_COORDINATE);
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(3);
-
-                assertFirstMileWalk(legs.getFirst());
-                assertPublicTransitLeg(legs.get(1));
-                assertLastMileWalk(legs.get(2));
+            ConnectionAssertArgs getConnectionAsserts(int index){
+                int tripNumber = index * 10 + 2;
+                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index).minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
+                OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index).plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getFirstMileWalkLegAssert(), getPublicTransitLegAssert(tripNumber), getLastMileWalkLegAssert()));
             }
 
-            @Test
-            void departure_withTimeWindow() throws ConnectionRoutingException {
+            static Stream<Arguments> expectedDepartureResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(0)),
+                        Arguments.of(Duration.ofHours(3), List.of(0, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(0, 1, 2))
+                );
+            }
+
+            static Stream<Arguments> expectedArrivalResults() {
+                return Stream.of(
+                        Arguments.of(Duration.ZERO, List.of(2)),
+                        Arguments.of(Duration.ofHours(3), List.of(2, 1)),
+                        Arguments.of(Duration.ofHours(6), List.of(2, 1, 0))
+                );
+            }
+
+            @ParameterizedTest
+            @MethodSource("expectedDepartureResults")
+            void departure(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
                 List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
-                        TimeType.DEPARTURE, QUERY_CONFIG.toBuilder()
-                                .timeWindowDuration(toSecondsInt(Duration.ofHours(3)))
-                                .build(), sourceCoordinate, targetCoordinate);
+                        TimeType.DEPARTURE, getQueryConfigWithTimeWindow(timeWindow), sourceCoordinate, targetCoordinate);
 
-                // this should use first and second trips of route 1 but ignore the third (4 hours away)
-                assertThat(connections).hasSize(2);
-
-                for (int i = 0; i < connections.size(); i++) {
-                    Connection connection = connections.get(i);
-
-                    OffsetDateTime stopDepartureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(i);
-                    OffsetDateTime stopArrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(i);
-
-                    OffsetDateTime expectedDepartureTime = stopDepartureTime.minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
-                    OffsetDateTime expectedArrivalTime = stopArrivalTime.plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
-
-                    // assert departure and arrival time of complete connection
-                    assertThat(connection.getDepartureTime()).isEqualTo(expectedDepartureTime);
-                    assertThat(connection.getArrivalTime()).isEqualTo(expectedArrivalTime);
-
-                    List<Leg> legs = connection.getLegs();
-                    assertThat(legs).hasSize(3);
-
-                    assertFirstMileWalk(legs.getFirst());
-                    String expectedTripId = "T" + (i * 10 + 2);
-                    assertPublicTransitLeg(legs.get(1), "A", "C", expectedTripId, "R2");
-                    assertLastMileWalk(legs.get(2));
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
                 }
-
             }
 
-            @Test
-            void arrival() throws ConnectionRoutingException {
-                List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME.plusHours(1), TimeType.ARRIVAL,
-                        QUERY_CONFIG, sourceCoordinate, targetCoordinate);
+            @ParameterizedTest
+            @MethodSource("expectedArrivalResults")
+            void arrival(Duration timeWindow, List<Integer> expectedConnectionIndices) throws ConnectionRoutingException {
+                List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME, TimeType.ARRIVAL,
+                        getQueryConfigWithTimeWindow(timeWindow), sourceCoordinate, targetCoordinate);
 
-                assertThat(connections).hasSize(1);
-                Connection connection = connections.getFirst();
-
-                // assert departure and arrival time of complete connection
-                assertThat(connection.getDepartureTime()).isEqualTo(DATE_TIME.plusSeconds(2));
-                assertThat(connection.getArrivalTime()).isEqualTo(DATE_TIME.plusMinutes(6).plusSeconds(58));
-
-                List<Leg> legs = connection.getLegs();
-                assertThat(legs).hasSize(3);
-
-                assertFirstMileWalk(legs.getFirst());
-                assertPublicTransitLeg(legs.get(1));
-                assertLastMileWalk(legs.get(2));
+                assertThat(connections).hasSize(expectedConnectionIndices.size());
+                for (int i = 0; i < expectedConnectionIndices.size(); i++) {
+                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connecitonAssert.assertConnection(connections.get(i));
+                }
             }
-
         }
 
         @Nested
@@ -490,43 +537,28 @@ class RoutingQueryFacadeIT {
 
                 @Test
                 void departure() throws ConnectionRoutingException {
-                    List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME,
-                            TimeType.DEPARTURE, QUERY_CONFIG, sourceCoordinate, targetCoordinate);
+                    List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
+                            TimeType.DEPARTURE, QUERY_CONFIG, source, target);
+
+                    OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.getFirst();
+                    OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getFirst().plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
                     assertThat(connections).hasSize(1);
-                    Connection connection = connections.getFirst();
-
-                    // assert departure and arrival time of complete connection, has to be the same day
-                    assertThat(connection.getDepartureTime()).isEqualTo(DATE_TIME.plusSeconds(2));
-                    assertThat(connection.getArrivalTime()).isEqualTo(DATE_TIME.plusMinutes(6).plusSeconds(58));
-
-                    List<Leg> legs = connection.getLegs();
-                    assertThat(legs).hasSize(3);
-
-                    assertFirstMileWalk(legs.getFirst());
-                    assertPublicTransitLeg(legs.get(1));
-                    assertLastMileWalk(legs.get(2));
+                    new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getPublicTransitLegAssert(2), new RaptorTransferLegAssertArgs(targetStop, target)))
+                            .assertConnection(connections.getFirst());
                 }
 
                 @Test
                 void arrival() throws ConnectionRoutingException {
-                    List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME.plusHours(1),
-                            TimeType.ARRIVAL, QUERY_CONFIG, sourceCoordinate, targetCoordinate);
+                    List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME,
+                            TimeType.ARRIVAL, QUERY_CONFIG, source, target);
+
+                    OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.getLast();
+                    OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getLast().plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
                     assertThat(connections).hasSize(1);
-                    Connection connection = connections.getFirst();
-
-                    // assert departure and arrival time of complete connection
-                    assertThat(connection.getDepartureTime()).isEqualTo(DATE_TIME.plusSeconds(2));
-                    assertThat(connection.getArrivalTime()).isEqualTo(DATE_TIME.plusMinutes(6).plusSeconds(58));
-
-
-                    List<Leg> legs = connection.getLegs();
-                    assertThat(legs).hasSize(3);
-
-                    assertFirstMileWalk(legs.getFirst());
-                    assertPublicTransitLeg(legs.get(1));
-                    assertLastMileWalk(legs.get(2));
+                    new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getPublicTransitLegAssert(22), new RaptorTransferLegAssertArgs(targetStop, target)))
+                            .assertConnection(connections.getFirst());
                 }
             }
         }
@@ -587,7 +619,7 @@ class RoutingQueryFacadeIT {
                     // assert departure time of complete connection, has to be the same day
                     assertThat(isoline.getDepartureTime()).isEqualTo(DATE_TIME.plusSeconds(2));
 
-                    assertFirstMileWalk(isoline.getLegs().getFirst());
+                    getFirstMileWalkLegAssert().assertLeg(isoline.getLegs().getFirst());
                 }
             }
 
