@@ -207,7 +207,7 @@ class RoutingQueryUtils {
     // The raptor algorithm does not consider the first mile walk time, so we need to filter out connections
     // that exceed the maximum travel time
     boolean isBelowMaximumTravelTime(Connection serviceConnection, ConnectionQueryConfig queryConfig) {
-        return Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
+        return Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
                 .getSeconds() <= queryConfig.getMaximumTravelDuration();
     }
 }
