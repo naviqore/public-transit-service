@@ -9,10 +9,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.naviqore.service.TimeType.DEPARTURE;
 
@@ -71,7 +68,7 @@ abstract class ConnectionQueryTemplate<S, T> {
      * swapping could occur twice.
      */
     List<Connection> run() throws ConnectionRoutingException {
-        List<Connection> connections = new ArrayList<>();
+        HashSet<Connection> connections = new HashSet<>();
         OffsetDateTime currentTime = time;
         OffsetDateTime windowLimit = computeWindowLimit();
 
@@ -88,7 +85,7 @@ abstract class ConnectionQueryTemplate<S, T> {
 
         } while (isWithinTimeWindow(currentTime, windowLimit));
 
-        return sortConnectionsBasedOnTimeType(connections);
+        return sortConnectionsBasedOnTimeType(connections.stream().toList());
     }
 
     /**

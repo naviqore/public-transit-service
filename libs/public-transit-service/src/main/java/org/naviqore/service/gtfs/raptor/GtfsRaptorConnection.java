@@ -1,9 +1,6 @@
 package org.naviqore.service.gtfs.raptor;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.naviqore.service.*;
 
 import java.time.OffsetDateTime;
@@ -12,6 +9,7 @@ import java.util.List;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
+@EqualsAndHashCode
 public class GtfsRaptorConnection implements Connection {
 
     private final List<Leg> legs;

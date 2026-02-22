@@ -1,5 +1,6 @@
 package org.naviqore.service.gtfs.raptor;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.naviqore.service.LegType;
@@ -9,6 +10,7 @@ import org.naviqore.service.Trip;
 
 @Getter
 @ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class GtfsRaptorPublicTransitLeg extends GtfsRaptorLeg implements org.naviqore.service.PublicTransitLeg {
 
     private final Trip trip;

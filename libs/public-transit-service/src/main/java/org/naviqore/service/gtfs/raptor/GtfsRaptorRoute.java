@@ -1,15 +1,13 @@
 package org.naviqore.service.gtfs.raptor;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.naviqore.service.Route;
 import org.naviqore.service.TravelMode;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
+@EqualsAndHashCode
 public class GtfsRaptorRoute implements Route {
 
     private final String id;

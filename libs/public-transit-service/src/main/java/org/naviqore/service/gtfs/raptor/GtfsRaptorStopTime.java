@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString(exclude = "trip")
+@EqualsAndHashCode
 public class GtfsRaptorStopTime implements StopTime {
 
     private final Stop stop;
