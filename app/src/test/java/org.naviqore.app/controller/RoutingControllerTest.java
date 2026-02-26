@@ -108,15 +108,15 @@ public class RoutingControllerTest {
                                     String targetStopId, Double targetLatitude, Double targetLongitude,
                                     OffsetDateTime departureDateTime) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getConnections(sourceStopId, sourceLatitude, sourceLongitude, targetStopId,
-                targetLatitude, targetLongitude, departureDateTime, TimeType.DEPARTURE, null, null, null, null, 0,
-                false, false, null);
+                targetLatitude, targetLongitude, departureDateTime, TimeType.DEPARTURE, 0, null, null, null, 0, false,
+                false, null);
     }
 
     List<StopConnection> getIsolines(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
                                      OffsetDateTime departureDateTime, TimeType timeType,
                                      boolean returnConnections) throws org.naviqore.service.exception.ConnectionRoutingException {
         return routingController.getIsolines(sourceStopId, sourceLatitude, sourceLongitude, departureDateTime, timeType,
-                null, null, null, null, 0, false, false, null, returnConnections);
+                0, null, null, null, 0, false, false, null, returnConnections);
     }
 
     @Nested
@@ -245,7 +245,7 @@ public class RoutingControllerTest {
 
             if (errorMessage == null) {
                 routingController.getConnections(null, 0., 0., null, 1., 1., OffsetDateTime.now(), TimeType.DEPARTURE,
-                        null, maxWalkDuration, maxTransferDuration, maxTravelTime, minTransferTime,
+                        timeWindowDuration, maxWalkDuration, maxTransferDuration, maxTravelTime, minTransferTime,
                         wheelChairAccessible, bikeAllowed, travelModes);
             } else {
                 ValidationException exception = assertThrows(ValidationException.class,
