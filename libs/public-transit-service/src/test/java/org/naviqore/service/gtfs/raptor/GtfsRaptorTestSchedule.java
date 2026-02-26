@@ -43,28 +43,29 @@ public class GtfsRaptorTestSchedule {
     /**
      * Creates a customizable GTFS test schedule with multiple trips on Route 2.
      * <p>
-     * This constructor allows fine-grained control over the temporal structure of the
-     * generated schedule in order to test RAPTOR behavior under varying service patterns.
-     * In particular, it supports:
+     * This constructor allows fine-grained control over the temporal structure of the generated schedule in order to
+     * test RAPTOR behavior under varying service patterns. In particular, it supports:
      * <ul>
      *   <li>multiple trips on Route 2,</li>
      *   <li>configurable headways between consecutive trips, and</li>
      *   <li>per-trip speed variations to simulate faster or slower services.</li>
      * </ul>
-     *
+     * <p>
      * The {@code tripSpeedFactorCalculator} is applied per trip index and scales all stop
      * times of that trip uniformly. Values greater than {@code 1.0} make the trip slower,
      * while values less than {@code 1.0} make it faster.
      *
-     * @param numTripsOnRoute2           number of trips to generate on Route 2
-     * @param headwayOnRoute2            time offset between consecutive trips on Route 2
-     * @param tripSpeedFactorCalculator  function mapping a trip index to a speed factor
+     * @param numTripsOnRoute2          number of trips to generate on Route 2
+     * @param headwayOnRoute2           time offset between consecutive trips on Route 2
+     * @param tripSpeedFactorCalculator function mapping a trip index to a speed factor
      */
-    public GtfsRaptorTestSchedule(int numTripsOnRoute2, Duration headwayOnRoute2, Function<Integer, Double> tripSpeedFactorCalculator){
+    public GtfsRaptorTestSchedule(int numTripsOnRoute2, Duration headwayOnRoute2,
+                                  Function<Integer, Double> tripSpeedFactorCalculator) {
         setup(numTripsOnRoute2, headwayOnRoute2, tripSpeedFactorCalculator);
     }
 
-    private void setup(int numTripsOnRoute1, Duration headwayOnRoute1, Function<Integer, Double> tripSpeedFactorCalculator) {
+    private void setup(int numTripsOnRoute1, Duration headwayOnRoute1,
+                       Function<Integer, Double> tripSpeedFactorCalculator) {
         builder.addCalendar("always", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
         builder.addAgency("agency", "Some Agency", "", ZONE_ID);
 
@@ -91,7 +92,7 @@ public class GtfsRaptorTestSchedule {
 
         // Route 2 goes from A, B2, C
         builder.addRoute("R2", "agency", "R2", "R2", RouteType.parse(1));
-        for  (int i = 0; i < numTripsOnRoute1; i++) {
+        for (int i = 0; i < numTripsOnRoute1; i++) {
             String tripId = i == 0 ? "T2" : "T%d2".formatted(i);
             int tripOffset = Math.toIntExact(i * headwayOnRoute1.toSeconds());
             double tripSpeed = tripSpeedFactorCalculator.apply(i);
