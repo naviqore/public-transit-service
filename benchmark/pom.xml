@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.naviqore</groupId>
         <artifactId>naviqore</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>naviqore-benchmark</artifactId>
