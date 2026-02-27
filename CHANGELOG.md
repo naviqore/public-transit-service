@@ -1,5 +1,38 @@
 # Changelog
 
+## [4.0.0](https://github.com/naviqore/public-transit-service/compare/v3.0.0...v4.0.0) (2026-02-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **service:** ScheduleInformationService.getStopTimes now requires a StopScope parameter.
+* **service:** ScheduleInformationService.getStopTimes now requires a StopScope parameter.
+
+### Features
+
+* **app:** add time window duration parameter on routing controller ([515a463](https://github.com/naviqore/public-transit-service/commit/515a463e9c9753ced374dd1cc29ecd3b686d0d3f)), closes [#441](https://github.com/naviqore/public-transit-service/issues/441)
+* **app:** improve home page with modern layout ([784010e](https://github.com/naviqore/public-transit-service/commit/784010ec6f0e892c3fbb7afe27b3dbcc4ebe6a65))
+* **app:** rename navigation items ([ef49c3f](https://github.com/naviqore/public-transit-service/commit/ef49c3f14eb0400171009dda658937369c016b0b))
+* **service:** first running attempt of time window connection routing ([b7f3461](https://github.com/naviqore/public-transit-service/commit/b7f34617724a6ef4464067be5d587ef7f3e92be5)), closes [#441](https://github.com/naviqore/public-transit-service/issues/441)
+* **service:** first try with time window routing ([02a4cbb](https://github.com/naviqore/public-transit-service/commit/02a4cbb6b9862e88aaf2f0dcfc816743658a5c96)), closes [#441](https://github.com/naviqore/public-transit-service/issues/441)
+* **service:** first try with time window routing on isolines ([77057c3](https://github.com/naviqore/public-transit-service/commit/77057c307383d89d11f26e3e2621d03893c97706))
+* **service:** implement stop scope resolution for stop events ([a2ab50c](https://github.com/naviqore/public-transit-service/commit/a2ab50c1e2219afe0f5fe344dd1bdc4fe0f879a0)), closes [#441](https://github.com/naviqore/public-transit-service/issues/441)
+* **service:** implement stop scope resolution for stop events ([ba89ff1](https://github.com/naviqore/public-transit-service/commit/ba89ff1ade9f4695cdd61f0ebae1f76fc38b7df4))
+
+
+### Bug Fixes
+
+* **service:** Do not translate maxTravelDuration from service to raptor as they do not relate well. ([86c082f](https://github.com/naviqore/public-transit-service/commit/86c082fadf1b00578a13c40921f1bf864772e42d))
+* **service:** fix isBelowMaximumTravelTime always being true ([a766271](https://github.com/naviqore/public-transit-service/commit/a7662713913b042442ef04a993116571e48ce40a))
+* **service:** Minor fix to Isoline implementation removing departure/arrival times outside of timewindow (if timewindow is set) ([653ad39](https://github.com/naviqore/public-transit-service/commit/653ad39f8f287d061b104590aef775c7de8c69bb))
+* **service:** remove connections that start after requested time window ([0a6bc9f](https://github.com/naviqore/public-transit-service/commit/0a6bc9fb167dcd7fa7b07b4b76ffe88fb05118b8))
+* **service:** Remove duplicated connections from timewindow connection queries. ([bc88599](https://github.com/naviqore/public-transit-service/commit/bc88599b6434dd37a92b6fb027528cac066e53bd))
+
+
+### Documentation
+
+* **app:** remove todo, keep from and to logic for schedule stop time requests ([bff3ab7](https://github.com/naviqore/public-transit-service/commit/bff3ab7eea3d31525d002bc151a83ab23b14bcdf))
+
 ## [3.0.0](https://github.com/naviqore/public-transit-service/compare/v2.3.0...v3.0.0) (2026-02-08)
 
 
