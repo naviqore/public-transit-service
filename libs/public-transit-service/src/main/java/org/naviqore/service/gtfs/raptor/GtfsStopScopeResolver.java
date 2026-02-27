@@ -25,10 +25,9 @@ class GtfsStopScopeResolver {
         return switch (scope) {
             case STRICT -> Set.of(stop.getId());
 
-            // TODO: Collect Children does not include itself by name
-            case CHILDREN -> collectChildren(stop.getId());
+            case CHILDREN -> collectSubtree(stop.getId());
 
-            case RELATED -> collectChildren(findRoot(stop.getId()).getId());
+            case RELATED -> collectSubtree(findRoot(stop.getId()).getId());
 
             case NEARBY -> spatialStopIndex.rangeSearch(stop.getCoordinate(), walkSearchRadius)
                     .stream()
@@ -60,9 +59,10 @@ class GtfsStopScopeResolver {
     }
 
     /**
-     * Collects all children stop IDs in the hierarchy starting from the given stop using breadth-first traversal.
+     * Collects the stop ID and all its descendant stop IDs in the hierarchy starting from the given stop using
+     * breadth-first traversal.
      */
-    private Set<String> collectChildren(String startStopId) {
+    private Set<String> collectSubtree(String startStopId) {
         org.naviqore.gtfs.schedule.model.Stop start = schedule.getStops().get(startStopId);
         if (start == null) {
             return Collections.emptySet();
