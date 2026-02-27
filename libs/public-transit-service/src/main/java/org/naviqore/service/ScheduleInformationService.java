@@ -71,13 +71,15 @@ public interface ScheduleInformationService {
     /**
      * Retrieves the stop times (departures or arrivals) for a specific stop within a given time window.
      *
-     * @param stop     the stop for which to retrieve stop times
-     * @param from     the inclusive start datetime
-     * @param to       the exclusive end datetime
-     * @param timeType whether to retrieve arrivals or departures
+     * @param stop      the stop for which to retrieve stop times
+     * @param from      the inclusive start datetime
+     * @param to        the exclusive end datetime
+     * @param timeType  whether to retrieve arrivals or departures
+     * @param stopScope the scope for resolving stops (STRICT, CHILDREN, RELATED, NEARBY)
      * @return a list of stop times for the specified stop
      */
-    List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType);
+    List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType,
+                                StopScope stopScope);
 
     /**
      * Retrieves a stop by its ID.

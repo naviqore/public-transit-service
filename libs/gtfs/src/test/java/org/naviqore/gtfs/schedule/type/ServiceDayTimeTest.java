@@ -101,7 +101,7 @@ class ServiceDayTimeTest {
 
             @Test
             void shouldConvertToOffsetDateTimeOnNormalDay() {
-                // Summer time (CEST / +02:00)
+                // Summer (CEST / +02:00)
                 LocalDate date = LocalDate.of(2026, 6, 1);
                 ServiceDayTime sdt = new ServiceDayTime(12, 0, 0);
                 OffsetDateTime odt = sdt.toOffsetDateTime(date, ZURICH);

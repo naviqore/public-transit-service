@@ -3,6 +3,7 @@ package org.naviqore.app.controller;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.naviqore.app.dto.StopType;
 import org.naviqore.app.dto.TravelMode;
 import org.naviqore.app.exception.*;
 import org.naviqore.service.PublicTransitService;

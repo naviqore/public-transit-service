@@ -98,19 +98,19 @@ class KDTreeTest {
         @MethodSource("provideTestCases")
         void nearestNeighbour(TestFacility location, TestFacility expectedNearestLocation) {
             KDTree<TestFacility> kdTree = buildTestKDTree();
-            Assertions.assertEquals(expectedNearestLocation, kdTree.nearestNeighbour(location));
+            Assertions.assertEquals(expectedNearestLocation, kdTree.nearestNeighbor(location));
         }
 
         @Test
         void nearestNeighbour_withNull() {
             KDTree<TestFacility> kdTree = buildTestKDTree();
-            Assertions.assertThrows(IllegalArgumentException.class, () -> kdTree.nearestNeighbour((TestFacility) null));
+            Assertions.assertThrows(IllegalArgumentException.class, () -> kdTree.nearestNeighbor((TestFacility) null));
         }
 
         @Test
         void nearestNeighbour_withEmptyTree() {
             KDTree<TestFacility> kdTree = new KDTree<>();
-            Assertions.assertThrows(IllegalStateException.class, () -> kdTree.nearestNeighbour(munich));
+            Assertions.assertThrows(IllegalStateException.class, () -> kdTree.nearestNeighbor(munich));
         }
     }
 

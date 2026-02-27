@@ -30,7 +30,7 @@ class DateTimeConverter {
     }
 
     /**
-     * Maps a collection of stop datetimes to internal seconds relative to the reference date.
+     * Maps a collection of stop datetime objects to internal seconds relative to the reference date.
      */
     static Map<String, Integer> mapToUtcSeconds(Map<String, OffsetDateTime> sourceStops, LocalDate referenceDate) {
         return sourceStops.entrySet()

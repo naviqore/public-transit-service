@@ -1,9 +1,6 @@
 package org.naviqore.service.gtfs.raptor;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.naviqore.service.Route;
 import org.naviqore.service.StopTime;
 import org.naviqore.service.Trip;
@@ -13,6 +10,7 @@ import java.util.List;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
+@EqualsAndHashCode
 public class GtfsRaptorTrip implements Trip {
 
     private final String id;

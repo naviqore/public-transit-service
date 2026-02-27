@@ -76,6 +76,10 @@ public class DtoMapper {
         };
     }
 
+    public static org.naviqore.service.StopScope map(StopScope scope) {
+        return org.naviqore.service.StopScope.valueOf(scope.name());
+    }
+
     public static Connection map(org.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
         return new Connection(legs);

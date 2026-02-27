@@ -35,7 +35,7 @@ public class GeoCoordinateTest {
         static Stream<Arguments> distanceToProvider() {
             // city coordinates and distances from
             // https://www.luftlinie.org/
-            GeoCoordinate zuerich = new GeoCoordinate(47.369022, 8.538033);
+            GeoCoordinate zurich = new GeoCoordinate(47.369022, 8.538033);
             GeoCoordinate bern = new GeoCoordinate(46.948090, 7.447440);
             GeoCoordinate newYork = new GeoCoordinate(40.714270, -74.005970);
             GeoCoordinate sydney = new GeoCoordinate(-33.867138, 151.207108);
@@ -48,10 +48,10 @@ public class GeoCoordinateTest {
             GeoCoordinate hundredEightyEast = new GeoCoordinate(0, 180);
             GeoCoordinate southPole = new GeoCoordinate(-90, 0);
 
-            return Stream.of(Arguments.of(zuerich, "Zürich", zuerich, "Zürich", 0),
-                    Arguments.of(zuerich, "Zürich", bern, "Bern", 94_820),
-                    Arguments.of(zuerich, "Zürich", newYork, "New York", 6_323_800),
-                    Arguments.of(zuerich, "Zürich", sydney, "Sidney", 16_567_980),
+            return Stream.of(Arguments.of(zurich, "Zürich", zurich, "Zürich", 0),
+                    Arguments.of(zurich, "Zürich", bern, "Bern", 94_820),
+                    Arguments.of(zurich, "Zürich", newYork, "New York", 6_323_800),
+                    Arguments.of(zurich, "Zürich", sydney, "Sidney", 16_567_980),
                     Arguments.of(primeMeridian, "Prime Meridian", hundredEightyEast, "180° East", 20_015_120),
                     Arguments.of(northPole, "North Pole", southPole, "South Pole", 20_015_120),
                     Arguments.of(northPole, "North Pole", primeMeridian, "Equator", 10_007_560),

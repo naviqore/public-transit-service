@@ -189,7 +189,8 @@ class FakePublicTransitService implements PublicTransitService {
     }
 
     @Override
-    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType,
+                                       StopScope stopScope) {
         return List.of();
     }
 

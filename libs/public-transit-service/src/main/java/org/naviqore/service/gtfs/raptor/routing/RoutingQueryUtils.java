@@ -60,9 +60,9 @@ class RoutingQueryUtils {
         }
     }
 
-    Map<String, org.naviqore.raptor.Connection> createIsolines(Map<String, OffsetDateTime> sourceStops,
-                                                               TimeType timeType, ConnectionQueryConfig queryConfig,
-                                                               boolean allowSourceTransfer) {
+    Map<String, org.naviqore.raptor.Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops,
+                                                              TimeType timeType, ConnectionQueryConfig queryConfig,
+                                                              boolean allowSourceTransfer) {
         // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.mapToRaptor(timeType),
                 prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
@@ -83,14 +83,15 @@ class RoutingQueryUtils {
                 spatialStopIndex.rangeSearch(location, serviceConfig.getWalkSearchRadius()));
 
         if (nearestStops.isEmpty()) {
-            nearestStops.add(spatialStopIndex.nearestNeighbour(location));
+            nearestStops.add(spatialStopIndex.nearestNeighbor(location));
         }
 
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop stop : nearestStops) {
             int walkDuration = walkCalculator.calculateWalk(location, stop.getCoordinate()).duration();
             if (walkDuration <= queryConfig.getMaximumWalkDuration()) {
-                stopsWithWalkTime.put(stop.getId(), walkDuration);
+                // add access and egress time to the walk duration to account for the time between location and vehicle at stop
+                stopsWithWalkTime.put(stop.getId(), walkDuration + serviceConfig.getTransferDurationAccessEgress());
             }
         }
 
@@ -102,7 +103,7 @@ class RoutingQueryUtils {
     }
 
     Map<String, OffsetDateTime> getAllChildStopsFromStop(Stop stop, OffsetDateTime time) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
+        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
         Map<String, OffsetDateTime> stopWithDateTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
             stopWithDateTime.put(scheduleStop.getId(), time);
@@ -112,7 +113,7 @@ class RoutingQueryUtils {
     }
 
     Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getRelatedStops(stop.getId());
+        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
         for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
             stopsWithWalkTime.put(scheduleStop.getId(), 0);
@@ -124,12 +125,14 @@ class RoutingQueryUtils {
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
-        int duration = firstWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
+        int duration = firstWalk.duration();
 
         if (shouldCreateWalk(duration, firstWalk)) {
             return TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
-                    departureTime.minusSeconds(duration), departureTime, source, firstStop.getCoordinate(),
-                    TypeMapper.map(firstStop));
+                    // shift walk time backwards to account access and egress time at the stop
+                    departureTime.minusSeconds(duration + serviceConfig.getTransferDurationAccessEgress()),
+                    departureTime.minusSeconds(serviceConfig.getTransferDurationAccessEgress()), source,
+                    firstStop.getCoordinate(), TypeMapper.map(firstStop));
         }
 
         return null;
@@ -204,7 +207,7 @@ class RoutingQueryUtils {
     // The raptor algorithm does not consider the first mile walk time, so we need to filter out connections
     // that exceed the maximum travel time
     boolean isBelowMaximumTravelTime(Connection serviceConnection, ConnectionQueryConfig queryConfig) {
-        return Duration.between(serviceConnection.getArrivalTime(), serviceConnection.getDepartureTime())
+        return Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
                 .getSeconds() <= queryConfig.getMaximumTravelDuration();
     }
 }

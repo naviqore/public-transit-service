@@ -2,7 +2,7 @@ package org.naviqore.app.exception;
 
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.app.controller.StopType;
+import org.naviqore.app.dto.StopType;
 
 import java.util.Optional;
 

@@ -73,46 +73,46 @@ public class KDTree<T extends Location<?>> {
     }
 
     /**
-     * Finds the nearest neighbour to a given location.
+     * Finds the nearest neighbor to a given location.
      *
-     * @param location The location to find the nearest neighbour for.
-     * @return The nearest neighbour to the given location.
+     * @param location The location to find the nearest neighbor for.
+     * @return The nearest neighbor to the given location.
      */
-    public T nearestNeighbour(T location) {
+    public T nearestNeighbor(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location cannot be null");
         }
-        return nearestNeighbour(location.getCoordinate());
+        return nearestNeighbor(location.getCoordinate());
     }
 
     /**
-     * Finds the nearest neighbour to a given coordinate.
+     * Finds the nearest neighbor to a given coordinate.
      *
-     * @param coordinate The coordinate to find the nearest neighbour for.
-     * @return The nearest neighbour to the given coordinate.
+     * @param coordinate The coordinate to find the nearest neighbor for.
+     * @return The nearest neighbor to the given coordinate.
      */
-    public T nearestNeighbour(Coordinate coordinate) {
+    public T nearestNeighbor(Coordinate coordinate) {
         if (coordinate == null) {
             throw new IllegalArgumentException("Coordinate cannot be null");
         }
-        return nearestNeighbour(coordinate.getFirstComponent(), coordinate.getSecondComponent());
+        return nearestNeighbor(coordinate.getFirstComponent(), coordinate.getSecondComponent());
     }
 
     /**
-     * Finds the nearest neighbour to a coordinate specified by its components.
+     * Finds the nearest neighbor to a coordinate specified by its components.
      *
      * @param firstComponent  The first component of the coordinate.
      * @param secondComponent The second component of the coordinate.
-     * @return The nearest neighbour to the coordinate specified by firstComponent and secondComponent.
+     * @return The nearest neighbor to the coordinate specified by firstComponent and secondComponent.
      */
-    public T nearestNeighbour(double firstComponent, double secondComponent) {
+    public T nearestNeighbor(double firstComponent, double secondComponent) {
         if (root == null) {
             throw new IllegalStateException("Tree is empty");
         }
-        return nearestNeighbour(root, new InternalCoordinate(firstComponent, secondComponent), 0).location;
+        return nearestNeighbor(root, new InternalCoordinate(firstComponent, secondComponent), 0).location;
     }
 
-    private Node<T> nearestNeighbour(Node<T> node, InternalCoordinate coordinate, int depth) {
+    private Node<T> nearestNeighbor(Node<T> node, InternalCoordinate coordinate, int depth) {
         if (node == null) {
             return null;
         }
@@ -121,10 +121,10 @@ public class KDTree<T extends Location<?>> {
         Node<T> next = getNextNodeBasedOnAxisDirection(node, coordinate, axis);
         // get the other side (node) of the tree
         Node<T> other = next == node.left ? node.right : node.left;
-        Node<T> best = getNodeWithClosestDistance(node, nearestNeighbour(next, coordinate, depth + 1), coordinate);
+        Node<T> best = getNodeWithClosestDistance(node, nearestNeighbor(next, coordinate, depth + 1), coordinate);
 
         if (isDistanceGreaterThanCoordinateDifference(node, coordinate, axis)) {
-            best = getNodeWithClosestDistance(best, nearestNeighbour(other, coordinate, depth + 1), coordinate);
+            best = getNodeWithClosestDistance(best, nearestNeighbor(other, coordinate, depth + 1), coordinate);
         }
 
         return best;

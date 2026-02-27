@@ -9,10 +9,9 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static org.naviqore.service.TimeType.DEPARTURE;
 
 /**
  * Template for executing a connection query between a source and a target location, encapsulating common logic and
@@ -30,8 +29,8 @@ abstract class ConnectionQueryTemplate<S, T> {
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
 
-    private final S source;
-    private final T target;
+    protected final S source;
+    protected final T target;
 
     private final boolean allowSourceTransfers;
     private final boolean allowTargetTransfers;
@@ -57,17 +56,121 @@ abstract class ConnectionQueryTemplate<S, T> {
 
     protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
 
+    protected abstract ConnectionQueryTemplate<S, T> copyAt(OffsetDateTime time);
+
     /**
+     * Executes the routing query over the configured time window.
+     * <p>
+     * The query is repeatedly executed while advancing (DEPARTURE) or rewinding (ARRIVAL) the query time until the
+     * window limit is reached or no more results are found.
+     * <p>
      * Warning: Do not call this method outside the routing facade, use the process method directly instead. Otherwise,
-     * swapping could appear twice.
+     * swapping could occur twice.
      */
     List<Connection> run() throws ConnectionRoutingException {
-        // swap source and target if time type is arrival, which means routing in the reverse time dimension
-        if (timeType == TimeType.ARRIVAL) {
-            return swap(source, target).process();
+        HashSet<Connection> connections = new HashSet<>();
+        OffsetDateTime currentTime = time;
+        OffsetDateTime windowLimit = computeWindowLimit();
+
+        do {
+            List<Connection> results = executeRoutingAt(currentTime);
+
+            results = filterByTimeWindowIfNeeded(results, windowLimit);
+            if (results.isEmpty()) {
+                break;
+            }
+
+            currentTime = advanceQueryTime(results);
+            connections.addAll(results);
+
+        } while (isWithinTimeWindow(currentTime, windowLimit));
+
+        return sortConnectionsBasedOnTimeType(connections);
+    }
+
+    /**
+     * Computes the boundary of the routing time window based on the query type.
+     */
+    private OffsetDateTime computeWindowLimit() {
+        return switch (timeType) {
+            case DEPARTURE -> time.plusSeconds(queryConfig.getTimeWindowDuration());
+            case ARRIVAL -> time.minusSeconds(queryConfig.getTimeWindowDuration());
+        };
+    }
+
+    /**
+     * Executes a single routing query at the given time.
+     * <p>
+     * For ARRIVAL queries, the source and target are swapped to route in reverse time.
+     */
+    private List<Connection> executeRoutingAt(OffsetDateTime queryTime) throws ConnectionRoutingException {
+        return switch (timeType) {
+            case DEPARTURE -> copyAt(queryTime).process();
+            case ARRIVAL -> copyAt(queryTime).swap(source, target).process();
+        };
+    }
+
+    /**
+     * Filters routing results to ensure they lie within the configured time window, if a window duration is defined.
+     */
+    private List<Connection> filterByTimeWindowIfNeeded(List<Connection> results, OffsetDateTime windowLimit) {
+        if (queryConfig.getTimeWindowDuration() <= 0) {
+            return results;
         }
 
-        return process();
+        return removeConnectionsOutsideOfTimeWindow(results, windowLimit);
+    }
+
+    /**
+     * Advances (or rewinds) the query time based on the last batch of results.
+     * <p>
+     * DEPARTURE queries move forward from the earliest departure. ARRIVAL queries move backward from the latest
+     * arrival.
+     */
+    private OffsetDateTime advanceQueryTime(List<Connection> results) {
+        return switch (timeType) {
+            case DEPARTURE -> results.stream()
+                    .map(Connection::getDepartureTime)
+                    .min(OffsetDateTime::compareTo)
+                    .orElseThrow()
+                    .plusSeconds(1);
+            case ARRIVAL -> results.stream()
+                    .map(Connection::getArrivalTime)
+                    .max(OffsetDateTime::compareTo)
+                    .orElseThrow()
+                    .minusSeconds(1);
+        };
+    }
+
+    /**
+     * Checks whether the current query time is still within the routing time window.
+     */
+    private boolean isWithinTimeWindow(OffsetDateTime currentTime, OffsetDateTime windowLimit) {
+        return switch (timeType) {
+            case DEPARTURE -> currentTime.isBefore(windowLimit);
+            case ARRIVAL -> currentTime.isAfter(windowLimit);
+        };
+    }
+
+    /**
+     * Filters out connections that fall outside the configured time window.
+     * <p>
+     * For DEPARTURE queries, only connections departing <em>before</em> the window limit are retained. For ARRIVAL
+     * queries, only connections arriving <em>after</em> the window limit are retained.
+     * <p>
+     * This method is used to ensure that accumulated results remain within the active time window when iterating over
+     * multiple routing runs.
+     *
+     * @param connections the list of connections to filter
+     * @param windowLimit the boundary of the time window
+     * @return a list of connections that lie within the time window
+     */
+    private List<Connection> removeConnectionsOutsideOfTimeWindow(List<Connection> connections,
+                                                                  OffsetDateTime windowLimit) {
+        return connections.stream()
+                .filter(c -> timeType == DEPARTURE ? c.getDepartureTime().isBefore(windowLimit) : c.getArrivalTime()
+                        .isAfter(windowLimit))
+                .toList();
     }
 
     List<Connection> process() throws ConnectionRoutingException {
@@ -105,13 +208,15 @@ abstract class ConnectionQueryTemplate<S, T> {
             }
         }
 
-        // sort connections based on time type
-        result.sort(switch (timeType) {
-            case DEPARTURE -> Comparator.comparing(Connection::getDepartureTime);
-            case ARRIVAL -> Comparator.comparing(Connection::getArrivalTime).reversed();
-        });
-
         return result;
+    }
+
+    private List<Connection> sortConnectionsBasedOnTimeType(Set<Connection> connections) {
+        return switch (timeType) {
+            case DEPARTURE -> connections.stream().sorted(Comparator.comparing(Connection::getDepartureTime)).toList();
+            case ARRIVAL ->
+                    connections.stream().sorted(Comparator.comparing(Connection::getArrivalTime).reversed()).toList();
+        };
     }
 
 }

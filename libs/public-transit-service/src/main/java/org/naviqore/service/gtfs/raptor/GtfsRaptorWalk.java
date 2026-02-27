@@ -1,6 +1,7 @@
 package org.naviqore.service.gtfs.raptor;
 
 import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.jspecify.annotations.Nullable;
@@ -12,6 +13,7 @@ import java.util.Optional;
 
 @Getter
 @ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class GtfsRaptorWalk extends GtfsRaptorLeg implements Walk {
 
     private final WalkType walkType;

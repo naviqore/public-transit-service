@@ -6,9 +6,12 @@ import org.naviqore.service.TravelMode;
 
 import java.util.EnumSet;
 
-@Builder
+@Builder(toBuilder = true)
 @Value
 public class ConnectionQueryConfig {
+
+    @Builder.Default
+    int timeWindowDuration = 0;
 
     @Builder.Default
     int maximumWalkDuration = Integer.MAX_VALUE;

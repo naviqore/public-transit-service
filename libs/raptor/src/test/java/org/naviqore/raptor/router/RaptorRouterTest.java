@@ -498,7 +498,7 @@ class RaptorRouterTest {
             // Route connection from A <-> C can be connected by a route trip starting at 8:15 at A, arriving at B at
             // 8:20 and then at C at 8:26.
             // Since the earliest arrival request is set to depart at 08:01 and the walk to B takes 15 minutes, the
-            // earliest arrival at B is 8:16. However, in this case the traveller still has to wait until 8:21 to depart
+            // earliest arrival at B is 8:16. However, in this case the traveler still has to wait until 8:21 to depart
             // from B. The walk transfer should not be added in this case.
             OffsetDateTime requestedDepartureTime = EIGHT_AM.plusMinutes(1);
             List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,

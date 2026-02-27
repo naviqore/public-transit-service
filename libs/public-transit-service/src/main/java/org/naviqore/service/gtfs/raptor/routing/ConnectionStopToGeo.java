@@ -56,4 +56,9 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
     protected ConnectionQueryTemplate<GeoCoordinate, Stop> swap(Stop source, GeoCoordinate target) {
         return new ConnectionGeoToStop(time, timeType, queryConfig, utils, target, source);
     }
+
+    @Override
+    protected ConnectionQueryTemplate<Stop, GeoCoordinate> copyAt(OffsetDateTime time) {
+        return new ConnectionStopToGeo(time, timeType, queryConfig, utils, source, target);
+    }
 }

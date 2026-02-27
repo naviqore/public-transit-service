@@ -1,5 +1,6 @@
 package org.naviqore.service.gtfs.raptor;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.naviqore.service.LegType;
@@ -11,6 +12,7 @@ import java.time.OffsetDateTime;
 
 @Getter
 @ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class GtfsRaptorTransfer extends GtfsRaptorLeg implements Transfer {
 
     private final OffsetDateTime departureTime;
