@@ -1,4 +1,4 @@
-package org.naviqore.app.controller;
+package org.naviqore.app.dto;
 
 public enum StopType {
     SOURCE,
