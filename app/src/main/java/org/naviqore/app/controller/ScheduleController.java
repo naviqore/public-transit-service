@@ -91,7 +91,6 @@ public class ScheduleController {
     @GetMapping("/stops/{stopId}/times")
     public List<StopEvent> getStopTimes(@PathVariable String stopId,
                                         @RequestParam(required = false) OffsetDateTime from,
-                                        // TODO: Consider to unifying the parameter to a time window like on the routing controller?
                                         @RequestParam(required = false) OffsetDateTime to,
                                         @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
                                         @RequestParam(defaultValue = DEFAULT_STOP_SCOPE) StopScope stopScope,
