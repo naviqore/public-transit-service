@@ -248,8 +248,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -262,8 +262,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
         }
@@ -301,8 +301,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -315,8 +315,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -377,8 +377,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -391,8 +391,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -464,8 +464,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
 
@@ -478,8 +478,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    var connecitonAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
-                    connecitonAssert.assertConnection(connections.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    connectionAssert.assertConnection(connections.get(i));
                 }
             }
         }
