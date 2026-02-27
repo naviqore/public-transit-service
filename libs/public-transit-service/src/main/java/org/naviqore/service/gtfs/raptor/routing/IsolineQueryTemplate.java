@@ -137,7 +137,7 @@ abstract class IsolineQueryTemplate<T> {
     private Map<String, org.naviqore.raptor.Connection> runForShortestDurationTime(
             Map<String, OffsetDateTime> sourceStops) {
 
-        // timeType specific operations
+        // time type specific operations
         BiFunction<OffsetDateTime, Duration, OffsetDateTime> timeIncrementor = switch (timeType) {
             case DEPARTURE -> OffsetDateTime::plus;
             case ARRIVAL -> OffsetDateTime::minus;
@@ -155,10 +155,12 @@ abstract class IsolineQueryTemplate<T> {
             sourceStops = incrementSourceStopTimes(sourceStops, nextIncrement, timeIncrementor);
             Map<String, org.naviqore.raptor.Connection> newIsolines = runForEarliestArrivalTime(sourceStops);
             updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, newIsolines, costPerSourceStop, windowLimit);
+
             nextIncrement = getNextTimeIncrement(sourceStops, newIsolines);
             if (nextIncrement == null) {
                 break;
             }
+
             currentTime = timeIncrementor.apply(currentTime, nextIncrement);
         }
 
@@ -198,6 +200,7 @@ abstract class IsolineQueryTemplate<T> {
         return isolines.values().stream().map(connection -> {
             OffsetDateTime sourceTime = sourceStopTimes.get(getSourceStopIdFromConnection(connection));
             OffsetDateTime tripTime = getTripTimeFromConnection(connection);
+
             return Duration.between(sourceTime, tripTime).abs().plusSeconds(1);
         }).min(Duration::compareTo).orElse(null);
     }
@@ -227,9 +230,9 @@ abstract class IsolineQueryTemplate<T> {
             Map<String, org.naviqore.raptor.Connection> earliestArrivalIsolines,
             Map<String, Duration> costPerSourceStop, OffsetDateTime windowLimit) {
         earliestArrivalIsolines.forEach((stopId, newConnection) -> {
-            var bestConnectionSoFar = shortestTravelTimeIsolines.get(stopId);
+            org.naviqore.raptor.Connection bestConnectionSoFar = shortestTravelTimeIsolines.get(stopId);
             if ((bestConnectionSoFar == null || newConnectionIsFaster(newConnection, bestConnectionSoFar,
-                    costPerSourceStop)) && newConnectionDepatureTimeIsRelevant(newConnection, windowLimit)) {
+                    costPerSourceStop)) && newConnectionDepartureTimeIsRelevant(newConnection, windowLimit)) {
                 shortestTravelTimeIsolines.put(stopId, newConnection);
             }
         });
@@ -250,8 +253,8 @@ abstract class IsolineQueryTemplate<T> {
      * @param windowLimit   the boundary of the query time window
      * @return {@code true} if the connection should still be considered, {@code false} otherwise
      */
-    private boolean newConnectionDepatureTimeIsRelevant(org.naviqore.raptor.Connection newConnection,
-                                                        OffsetDateTime windowLimit) {
+    private boolean newConnectionDepartureTimeIsRelevant(org.naviqore.raptor.Connection newConnection,
+                                                         OffsetDateTime windowLimit) {
         return currentTimeIsRelevant(getTripTimeFromConnection(newConnection), windowLimit);
     }
 
@@ -272,6 +275,7 @@ abstract class IsolineQueryTemplate<T> {
                 .plus(costPerSourceStop.get(getSourceStopIdFromConnection(newConnection)));
         Duration previousBestTravelTime = Duration.ofSeconds(referenceConnection.getDurationInSeconds())
                 .plus(costPerSourceStop.get(getSourceStopIdFromConnection(referenceConnection)));
+
         return newTravelTime.compareTo(previousBestTravelTime) < 0;
     }
 

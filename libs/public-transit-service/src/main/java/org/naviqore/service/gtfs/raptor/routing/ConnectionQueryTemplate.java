@@ -85,7 +85,7 @@ abstract class ConnectionQueryTemplate<S, T> {
 
         } while (isWithinTimeWindow(currentTime, windowLimit));
 
-        return sortConnectionsBasedOnTimeType(connections.stream().toList());
+        return sortConnectionsBasedOnTimeType(connections);
     }
 
     /**
@@ -117,6 +117,7 @@ abstract class ConnectionQueryTemplate<S, T> {
         if (queryConfig.getTimeWindowDuration() <= 0) {
             return results;
         }
+
         return removeConnectionsOutsideOfTimeWindow(results, windowLimit);
     }
 
@@ -210,7 +211,7 @@ abstract class ConnectionQueryTemplate<S, T> {
         return result;
     }
 
-    private List<Connection> sortConnectionsBasedOnTimeType(List<Connection> connections) {
+    private List<Connection> sortConnectionsBasedOnTimeType(Set<Connection> connections) {
         return switch (timeType) {
             case DEPARTURE -> connections.stream().sorted(Comparator.comparing(Connection::getDepartureTime)).toList();
             case ARRIVAL ->

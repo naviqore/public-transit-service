@@ -68,7 +68,7 @@ class RoutingQueryFacadeIT {
             .plusSeconds(58);
     private static final Duration WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP = Duration.ofMinutes(1)
             .plusSeconds(58);
-    private static final List<OffsetDateTime> DEPATURE_TIMES_AT_SOURCE_STOP = List.of(DATE_TIME.plusMinutes(2),
+    private static final List<OffsetDateTime> DEPARTURE_TIMES_AT_SOURCE_STOP = List.of(DATE_TIME.plusMinutes(2),
             DATE_TIME.plusHours(2).plusMinutes(1), DATE_TIME.plusHours(4).plusMinutes(2));
     private static final List<OffsetDateTime> ARRIVAL_TIMES_AT_TARGET_STOP = List.of(DATE_TIME.plusMinutes(5),
             DATE_TIME.plusHours(2).plusMinutes(2).plusSeconds(30), DATE_TIME.plusHours(4).plusMinutes(5));
@@ -233,7 +233,7 @@ class RoutingQueryFacadeIT {
 
             ConnectionAssertArgs getConnectionAsserts(int index) {
                 int tripNumber = index * 10 + 2;
-                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index);
+                OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
                 return new ConnectionAssertArgs(departureTime, arrivalTime,
                         List.of(getPublicTransitLegAssert(tripNumber)));
@@ -285,7 +285,7 @@ class RoutingQueryFacadeIT {
 
             ConnectionAssertArgs getConnectionAsserts(int index) {
                 int tripNumber = index * 10 + 2;
-                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index);
+                OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index)
                         .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
                 return new ConnectionAssertArgs(departureTime, arrivalTime,
@@ -361,7 +361,7 @@ class RoutingQueryFacadeIT {
 
             ConnectionAssertArgs getConnectionAsserts(int index) {
                 int tripNumber = index * 10 + 2;
-                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index)
+                OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index)
                         .minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
                 return new ConnectionAssertArgs(departureTime, arrivalTime,
@@ -445,7 +445,7 @@ class RoutingQueryFacadeIT {
 
             ConnectionAssertArgs getConnectionAsserts(int index) {
                 int tripNumber = index * 10 + 2;
-                OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.get(index)
+                OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index)
                         .minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index)
                         .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
@@ -537,7 +537,7 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
                             TimeType.DEPARTURE, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.getFirst();
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getFirst();
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getFirst()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
@@ -552,7 +552,7 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME,
                             TimeType.ARRIVAL, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPATURE_TIMES_AT_SOURCE_STOP.getLast();
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getLast();
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getLast()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
