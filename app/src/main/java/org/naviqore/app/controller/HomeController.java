@@ -39,4 +39,12 @@ public class HomeController {
 
         return "home";
     }
+
+    @GetMapping("/metrics-explorer")
+    public String metricsExplorer(Model model) {
+        model.addAttribute("productName", "Naviqore");
+        model.addAttribute("serviceName", "Metrics Explorer");
+
+        return "metrics";
+    }
 }

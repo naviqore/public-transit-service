@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${productName} + ' | ' + ${serviceName}">Naviqore | Metrics Explorer</title>
+
+    <link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <link rel="stylesheet" th:href="@{/css/metrics.css}">
+</head>
+<body>
+
+<div class="blob blob-top"></div>
+<div class="blob blob-bottom"></div>
+
+<div class="viewport-container" style="justify-content: flex-start;">
+    <div class="dashboard-container dashboard-panel" id="dashboard">
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a th:href="@{/}" class="back-link-nav">&larr; Home</a>
+                <div class="search-wrapper">
+                    <span class="icon icon-search" aria-hidden="true"></span>
+                    <label for="searchInput"></label><input type="text" id="searchInput" class="search-input"
+                                                            placeholder="Search registry..."
+                                                            autocomplete="off">
+                </div>
+            </div>
+            <nav class="metrics-list" id="metricsList">
+                <div class="message">Initializing engine...</div>
+            </nav>
+        </aside>
+
+        <!-- Details View -->
+        <main class="main-content">
+            <div class="action-header">
+                <button class="back-to-list-btn" id="backToListBtn">
+                    <span class="icon icon-chevron"
+                          style="transform: rotate(180deg); background-color: var(--brand-600);"></span>
+                    Back to Registry
+                </button>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="text-emerald" style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Live Engine Data</span>
+                </div>
+            </div>
+
+            <div id="metricDetail">
+                <div class="message">Select a metric from the registry to inspect live telemetry.</div>
+            </div>
+        </main>
+
+    </div>
+</div>
+
+<script th:inline="javascript">
+    window.ACTUATOR_URL = /*[[@{/actuator/metrics}]]*/ '/actuator/metrics';
+</script>
+<script th:src="@{/js/metrics.js}"></script>
+
+</body>
+</html>
