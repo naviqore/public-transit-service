@@ -76,7 +76,7 @@ public class GtfsRaptorService implements PublicTransitService {
         log.info("Searching for nearest stop to location '({}, {})'", location.getFirstComponent(),
                 location.getSecondComponent());
 
-        org.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbour(location);
+        org.naviqore.gtfs.schedule.model.Stop stop = spatialStopIndex.nearestNeighbor(location);
 
         // if nearest stop, which could be null, is a child stop, return parent stop
         if (stop != null && stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {

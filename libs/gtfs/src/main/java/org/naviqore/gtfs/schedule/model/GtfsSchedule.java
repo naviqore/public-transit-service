@@ -118,7 +118,7 @@ public class GtfsSchedule {
                 if (st.trip().getCalendar().isServiceAvailable(date)) {
                     Instant physicalInstant = serviceDayTime.toZonedDateTime(date, zone).toInstant();
 
-                    // logical interval: [from, to)
+                    // logical interval: '[from, to)'
                     if (!physicalInstant.isBefore(fromInstant) && physicalInstant.isBefore(toInstant)) {
                         events.add(new ScheduledEvent(st, physicalInstant));
                     }

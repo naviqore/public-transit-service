@@ -83,7 +83,7 @@ class RoutingQueryUtils {
                 spatialStopIndex.rangeSearch(location, serviceConfig.getWalkSearchRadius()));
 
         if (nearestStops.isEmpty()) {
-            nearestStops.add(spatialStopIndex.nearestNeighbour(location));
+            nearestStops.add(spatialStopIndex.nearestNeighbor(location));
         }
 
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();

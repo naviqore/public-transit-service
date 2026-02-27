@@ -1,5 +1,6 @@
 package org.naviqore.raptor.router;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
@@ -11,12 +12,13 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 public class RaptorRouterTestExtension implements ParameterResolver {
 
     @Override
-    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+    public boolean supportsParameter(ParameterContext parameterContext, @NonNull ExtensionContext extensionContext) {
         return parameterContext.getParameter().getType().equals(RaptorRouterTestBuilder.class);
     }
 
     @Override
-    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+    public Object resolveParameter(@NonNull ParameterContext parameterContext,
+                                   @NonNull ExtensionContext extensionContext) {
         return new RaptorRouterTestBuilder();
     }
 }

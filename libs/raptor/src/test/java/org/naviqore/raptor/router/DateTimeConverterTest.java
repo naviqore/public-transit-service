@@ -110,11 +110,11 @@ class DateTimeConverterTest {
             LocalDate winterDate = LocalDate.of(2024, 1, 1);
             LocalDate summerDate = LocalDate.of(2024, 7, 1);
 
-            // zurich: UTC+1 in winter, UTC+2 in summer
+            // Zurich: UTC+1 in winter, UTC+2 in summer
             assertEquals(-3600, DateTimeConverter.getLocalToUtcOffset(winterDate, ZURICH));
             assertEquals(-7200, DateTimeConverter.getLocalToUtcOffset(summerDate, ZURICH));
 
-            // new york: UTC-5 in winter, UTC-4 in summer
+            // New York: UTC-5 in winter, UTC-4 in summer
             assertEquals(18000, DateTimeConverter.getLocalToUtcOffset(winterDate, NEW_YORK));
             assertEquals(14400, DateTimeConverter.getLocalToUtcOffset(summerDate, NEW_YORK));
         }

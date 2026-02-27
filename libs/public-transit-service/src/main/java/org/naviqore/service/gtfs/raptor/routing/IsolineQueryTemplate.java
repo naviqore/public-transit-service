@@ -209,7 +209,7 @@ abstract class IsolineQueryTemplate<T> {
      * Updates the per-stop shortest-travel-time isolines with newly computed connections.
      * <p>
      * For each stop contained in {@code earliestArrivalIsolines}, this method decides whether the newly computed
-     * connection should replace the currently stored best connection. A replacement occurs if:
+     * connection should replace the current best connection. A replacement occurs if:
      * <ul>
      *   <li>no connection has been stored yet for the stop, or</li>
      *   <li>the new connection has a strictly shorter total travel time (RAPTOR duration

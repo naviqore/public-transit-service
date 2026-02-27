@@ -47,7 +47,7 @@ class FootpathRelaxer {
         this.minTransferDuration = minimumTransferDuration;
         this.maxWalkDuration = maximumWalkDuration;
         this.timeType = timeType;
-        // note: will also change outside of relaxer, due to route scanning
+        // note: will also change outside relaxer, due to route scanning
         this.queryState = queryState;
         this.allowSourceTransfers = allowSourceTransfers;
         this.allowTargetTransfers = allowTargetTransfers;

@@ -47,7 +47,7 @@ public class GtfsRaptorTestSchedule {
      * test RAPTOR behavior under varying service patterns. In particular, it supports:
      * <ul>
      *   <li>multiple trips on Route 2,</li>
-     *   <li>configurable headways between consecutive trips, and</li>
+     *   <li>configurable headway between consecutive trips, and</li>
      *   <li>per-trip speed variations to simulate faster or slower services.</li>
      * </ul>
      * <p>
