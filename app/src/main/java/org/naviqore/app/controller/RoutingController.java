@@ -121,7 +121,7 @@ public class RoutingController {
                                             @RequestParam(required = false, defaultValue = "false") boolean wheelchairAccessible,
                                             @RequestParam(required = false, defaultValue = "false") boolean bikeAllowed,
                                             @RequestParam(required = false) EnumSet<TravelMode> travelModes,
-                                            @RequestParam(required = false, defaultValue = "false") boolean returnConnections) throws ConnectionRoutingException {
+                                            @RequestParam(required = false, defaultValue = "false") boolean detailed) throws ConnectionRoutingException {
 
         // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = RequestValidator.getCoordinateIfAvailable(sourceStopId, sourceLatitude,
@@ -135,10 +135,9 @@ public class RoutingController {
 
         // determine routing case and get isolines
         if (sourceStop != null) {
-            return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType, returnConnections);
+            return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType, detailed);
         } else {
-            return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType,
-                    returnConnections);
+            return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType, detailed);
         }
     }
 

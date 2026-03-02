@@ -1,6 +1,8 @@
 package org.naviqore.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -10,6 +12,7 @@ import java.time.OffsetDateTime;
 @EqualsAndHashCode
 @ToString
 @Getter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Leg {
 
     private final LegType type;
@@ -21,6 +24,7 @@ public class Leg {
     private final OffsetDateTime departureTime;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private final OffsetDateTime arrivalTime;
+    @Nullable
     private final Trip trip;
 
 }
