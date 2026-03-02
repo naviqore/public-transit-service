@@ -6,10 +6,8 @@ import org.naviqore.service.*;
 import org.naviqore.service.SearchType;
 import org.naviqore.service.StopSortStrategy;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
+import java.time.OffsetDateTime;
+import java.util.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class DtoMapper {
@@ -80,8 +78,12 @@ public class DtoMapper {
         return org.naviqore.service.StopScope.valueOf(scope.name());
     }
 
+    public static Leg map(org.naviqore.service.Leg leg) {
+        return leg.accept(new LegVisitorImpl());
+    }
+
     public static Connection map(org.naviqore.service.Connection connection) {
-        List<Leg> legs = connection.getLegs().stream().map(leg -> leg.accept(new LegVisitorImpl())).toList();
+        List<Leg> legs = connection.getLegs().stream().map(DtoMapper::map).toList();
         return new Connection(legs);
     }
 
@@ -89,17 +91,131 @@ public class DtoMapper {
         return connections.stream().map(DtoMapper::map).toList();
     }
 
+    public static StopConnection map(org.naviqore.service.Stop serviceStop,
+                                     org.naviqore.service.Connection serviceConnection,
+                                     org.naviqore.service.TimeType timeType, boolean detailed) {
+
+        Stop stop = DtoMapper.map(serviceStop);
+        OffsetDateTime departureTime = serviceConnection.getDepartureTime();
+        OffsetDateTime arrivalTime = serviceConnection.getArrivalTime();
+
+        int transfers = Math.max(0, (int) serviceConnection.getLegs()
+                .stream()
+                .filter(leg -> leg.getLegType() == org.naviqore.service.LegType.PUBLIC_TRANSIT)
+                .count() - 1);
+
+        Leg leg = switch (timeType) {
+            case DEPARTURE -> prepareDepartureConnectingLeg(serviceConnection);
+            case ARRIVAL -> prepareArrivalConnectingLeg(serviceConnection);
+        };
+
+        if (detailed) {
+            return new StopConnection(stop, departureTime, arrivalTime, transfers, leg,
+                    DtoMapper.map(serviceConnection));
+        } else {
+            return new StopConnection(stop, departureTime, arrivalTime, transfers, stripStopTimes(leg), null);
+        }
+    }
+
     public static List<StopConnection> map(Map<org.naviqore.service.Stop, org.naviqore.service.Connection> connections,
-                                           TimeType timeType, boolean returnConnections) {
+                                           TimeType timeType, boolean detailed) {
         List<StopConnection> arrivals = new ArrayList<>();
         for (Map.Entry<org.naviqore.service.Stop, org.naviqore.service.Connection> entry : connections.entrySet()) {
-            arrivals.add(new StopConnection(entry.getKey(), entry.getValue(), map(timeType), returnConnections));
+            arrivals.add(map(entry.getKey(), entry.getValue(), map(timeType), detailed));
         }
+
         return arrivals;
     }
 
     public static ScheduleValidity map(org.naviqore.service.Validity validity) {
         return new ScheduleValidity(validity.getStartDate(), validity.getEndDate());
+    }
+
+    /**
+     * Prepares the connecting leg for a departure connection (i.e. builds a leg from the second last to the last stop
+     * in the connection).
+     */
+    private static Leg prepareDepartureConnectingLeg(org.naviqore.service.Connection serviceConnection) {
+        Leg legDto = DtoMapper.map(serviceConnection.getLegs().getLast());
+
+        if (legDto.getTrip() == null) {
+            return legDto;
+        }
+
+        int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getToStop(), legDto.getArrivalTime(),
+                org.naviqore.service.TimeType.ARRIVAL);
+
+        assert legDto.getTrip().getStopTimes() != null;
+        StopTime sourceStopTime = legDto.getTrip().getStopTimes().get(stopTimeIndex - 1);
+
+        return new Leg(legDto.getType(), sourceStopTime.getStop().getCoordinates(), legDto.getTo(),
+                sourceStopTime.getStop(), legDto.getToStop(), sourceStopTime.getDepartureTime(),
+                legDto.getArrivalTime(), legDto.getTrip());
+    }
+
+    /**
+     * Prepares the connecting leg for an arrival connection (i.e. builds a leg from the first to the second stop in the
+     * connection).
+     */
+    private static Leg prepareArrivalConnectingLeg(org.naviqore.service.Connection serviceConnection) {
+        Leg legDto = DtoMapper.map(serviceConnection.getLegs().getFirst());
+
+        if (legDto.getTrip() == null) {
+            return legDto;
+        }
+
+        int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getFromStop(), legDto.getDepartureTime(),
+                org.naviqore.service.TimeType.DEPARTURE);
+
+        assert legDto.getTrip().getStopTimes() != null;
+        StopTime targetStopTime = legDto.getTrip().getStopTimes().get(stopTimeIndex + 1);
+
+        return new Leg(legDto.getType(), legDto.getFrom(), targetStopTime.getStop().getCoordinates(),
+                legDto.getFromStop(), targetStopTime.getStop(), legDto.getDepartureTime(),
+                targetStopTime.getArrivalTime(), legDto.getTrip());
+    }
+
+    /**
+     * Reduces the size of a leg by removing the full list of stop times from its associated trip.
+     */
+    private static Leg stripStopTimes(Leg leg) {
+        if (leg.getTrip() == null) {
+            return leg;
+        }
+
+        Trip trip = leg.getTrip();
+        Trip reducedTrip = new Trip(trip.getHeadSign(), trip.getRoute(), null, trip.isBikesAllowed(),
+                trip.isWheelchairAccessible());
+
+        return new Leg(leg.getType(), leg.getFrom(), leg.getTo(), leg.getFromStop(), leg.getToStop(),
+                leg.getDepartureTime(), leg.getArrivalTime(), reducedTrip);
+    }
+
+    /**
+     * Finds the index of a stop time within a trip matching a specific stop and time.
+     *
+     * @param trip     The trip to search in.
+     * @param stop     The stop to find.
+     * @param time     The time to match.
+     * @param timeType The type of time to match (DEPARTURE or ARRIVAL).
+     * @return The index of the stop time in the trip.
+     */
+    private static int findStopTimeIndexInTrip(Trip trip, Stop stop, OffsetDateTime time,
+                                               org.naviqore.service.TimeType timeType) {
+        List<StopTime> stopTimes = trip.getStopTimes();
+        for (int i = 0; i < Objects.requireNonNull(stopTimes).size(); i++) {
+            StopTime stopTime = stopTimes.get(i);
+            if (stopTime.getStop().equals(stop)) {
+                if (timeType == org.naviqore.service.TimeType.DEPARTURE && stopTime.getDepartureTime().equals(time)) {
+                    return i;
+                } else if (timeType == org.naviqore.service.TimeType.ARRIVAL && stopTime.getArrivalTime()
+                        .equals(time)) {
+                    return i;
+                }
+            }
+        }
+
+        throw new IllegalStateException("Stop time not found in trip.");
     }
 
     private static class LegVisitorImpl implements LegVisitor<Leg> {
