@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.0](https://github.com/naviqore/public-transit-service/compare/v4.0.0...v4.1.0) (2026-03-02)
+
+
+### Features
+
+* **app:** enhance StopConnection DTO and move logic to DTO mapper ([3f9b0e4](https://github.com/naviqore/public-transit-service/commit/3f9b0e451b8c934a5b18aece5d81d9b969fb0a1e))
+
 ## [4.0.0](https://github.com/naviqore/public-transit-service/compare/v3.0.0...v4.0.0) (2026-02-27)
 
 
