@@ -12,6 +12,8 @@ import org.naviqore.service.exception.ConnectionRoutingException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,12 @@ import static org.naviqore.service.TimeType.DEPARTURE;
 @Slf4j
 @RequiredArgsConstructor
 abstract class IsolineQueryTemplate<T> {
+
+    /**
+     * The minimum duration of a time window segment in seconds to justify parallel processing. Prevents
+     * over-parallelization for small windows where thread overhead would exceed routing gains.
+     */
+    public static final int MIN_WINDOW_SEGMENT_DURATION = 120;
 
     protected final OffsetDateTime time;
     protected final TimeType timeType;
@@ -121,15 +129,8 @@ abstract class IsolineQueryTemplate<T> {
     /**
      * Computes isolines by minimizing total travel duration within a configurable time window.
      * <p>
-     * The algorithm repeatedly shifts the source departure/arrival times in discrete increments, runs an
-     * earliest-arrival routing query for each shifted time, and keeps the fastest connection per stop across all
-     * iterations.
-     * <p>
-     * Travel duration includes both:
-     * <ul>
-     *   <li>the routing duration returned by the RAPTOR algorithm, and</li>
-     *   <li>the initial offset between the reference time and the source stop time.</li>
-     * </ul>
+     * The algorithm partitions the time window and executes parallel iterations to identify the fastest connection per
+     * reachable stop.
      *
      * @param sourceStops mapping of source stop IDs to their initial times
      * @return a map of stop IDs to their shortest-duration connections within the time window
@@ -143,28 +144,85 @@ abstract class IsolineQueryTemplate<T> {
             case ARRIVAL -> OffsetDateTime::minus;
         };
 
-        // initialize variables
-        Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines = new HashMap<>();
+        // perform sequential first call to warm up stop times cache before starting threads
+        Map<String, org.naviqore.raptor.Connection> initialIsolines = runForEarliestArrivalTime(sourceStops);
+        Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines = new ConcurrentHashMap<>(
+                initialIsolines);
         Map<String, Duration> costPerSourceStop = calculateCostsPerSourceStop(time, sourceStops);
-        Duration nextIncrement = Duration.ZERO;
-        OffsetDateTime currentTime = time;
-        OffsetDateTime windowLimit = timeIncrementor.apply(time,
-                Duration.ofSeconds(queryConfig.getTimeWindowDuration()));
 
-        while (currentTimeIsRelevant(currentTime, windowLimit)) {
-            sourceStops = incrementSourceStopTimes(sourceStops, nextIncrement, timeIncrementor);
-            Map<String, org.naviqore.raptor.Connection> newIsolines = runForEarliestArrivalTime(sourceStops);
-            updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, newIsolines, costPerSourceStop, windowLimit);
+        int totalWindowSeconds = queryConfig.getTimeWindowDuration();
+        OffsetDateTime windowLimit = timeIncrementor.apply(time, Duration.ofSeconds(totalWindowSeconds));
 
-            nextIncrement = getNextTimeIncrement(sourceStops, newIsolines);
-            if (nextIncrement == null) {
-                break;
+        // determine optimal partitioning based on available hardware and window density
+        int numTasks = Math.max(1,
+                Math.min(Runtime.getRuntime().availableProcessors(), totalWindowSeconds / MIN_WINDOW_SEGMENT_DURATION));
+
+        if (numTasks == 1) {
+            updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, initialIsolines, costPerSourceStop,
+                    windowLimit);
+            processWindowSegment(sourceStops, shortestTravelTimeIsolines, costPerSourceStop, time, windowLimit,
+                    timeIncrementor);
+        } else {
+            List<CompletableFuture<Void>> tasks = new ArrayList<>();
+            int secondsPerSegment = totalWindowSeconds / numTasks;
+
+            for (int i = 0; i < numTasks; i++) {
+                final int segmentIndex = i;
+                tasks.add(CompletableFuture.runAsync(() -> {
+                    int startOffset = segmentIndex * secondsPerSegment;
+                    int endOffset = (segmentIndex == numTasks - 1) ? totalWindowSeconds : (segmentIndex + 1) * secondsPerSegment;
+
+                    OffsetDateTime segmentStart = timeIncrementor.apply(time, Duration.ofSeconds(startOffset));
+                    OffsetDateTime segmentLimit = timeIncrementor.apply(time, Duration.ofSeconds(endOffset));
+                    Map<String, OffsetDateTime> segmentSourceStops = incrementSourceStopTimes(sourceStops,
+                            Duration.ofSeconds(startOffset), timeIncrementor);
+
+                    processWindowSegment(segmentSourceStops, shortestTravelTimeIsolines, costPerSourceStop,
+                            segmentStart, segmentLimit, timeIncrementor);
+                }));
             }
 
-            currentTime = timeIncrementor.apply(currentTime, nextIncrement);
+            CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
         }
 
         return shortestTravelTimeIsolines;
+    }
+
+    /**
+     * Performs sequential routing iterations within a specific time segment. Found connections are atomically merged
+     * into the shared global best results.
+     *
+     * @param sourceStops initial mapping of source stop IDs to their query times for this segment
+     * @param globalBest  thread-safe map to store the best connection found per stop across all tasks
+     * @param costs       precomputed absolute access time offsets per source stop
+     * @param startTime   the temporal start boundary of this segment
+     * @param limit       the temporal end boundary of this segment
+     * @param incrementor function to advance or rewind time based on the query time type
+     */
+    private void processWindowSegment(Map<String, OffsetDateTime> sourceStops,
+                                      Map<String, org.naviqore.raptor.Connection> globalBest,
+                                      Map<String, Duration> costs, OffsetDateTime startTime, OffsetDateTime limit,
+                                      BiFunction<OffsetDateTime, Duration, OffsetDateTime> incrementor) {
+
+        OffsetDateTime currentTime = startTime;
+        Map<String, OffsetDateTime> currentSourceStops = sourceStops;
+
+        while (currentTimeIsRelevant(currentTime, limit)) {
+            Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops);
+            updateShortestTravelTimeIsolines(globalBest, results, costs, limit);
+
+            Duration nextJump = getNextTimeIncrement(currentSourceStops, results);
+            if (nextJump == null) {
+                break;
+            }
+
+            currentTime = incrementor.apply(currentTime, nextJump);
+            if (!currentTimeIsRelevant(currentTime, limit)) {
+                break;
+            }
+
+            currentSourceStops = incrementSourceStopTimes(currentSourceStops, nextJump, incrementor);
+        }
     }
 
     /**
@@ -216,35 +274,33 @@ abstract class IsolineQueryTemplate<T> {
     }
 
     /**
-     * Updates the per-stop shortest-travel-time isolines with newly computed connections.
+     * Updates the shared global best results per stop with newly computed connections.
      * <p>
-     * For each stop contained in {@code earliestArrivalIsolines}, this method decides whether the newly computed
-     * connection should replace the current best connection. A replacement occurs if:
-     * <ul>
-     *   <li>no connection has been stored yet for the stop, or</li>
-     *   <li>the new connection has a strictly shorter total travel time (RAPTOR duration
-     *       plus source stop access cost),</li>
-     * </ul>
-     * <em>and</em> the connection's relevant trip time (departure or arrival, depending on
-     * the query type) lies within the configured time window.
-     * <p>
-     * The method mutates {@code shortestTravelTimeIsolines} in place.
+     * Connections are atomically merged into the map. A replacement occurs only if the new connection has a strictly
+     * shorter total travel time (routing duration plus source access cost) and its relevant trip time remains within
+     * the valid time window.
      *
-     * @param shortestTravelTimeIsolines the current best-known (shortest travel time) connection per stop
-     * @param earliestArrivalIsolines    newly computed connections for the current iteration
-     * @param costPerSourceStop          precomputed access-time offsets per source stop
-     * @param windowLimit                boundary of the valid time window for the query
+     * @param shortestTravelTimeIsolines shared thread-safe map storing the best connection found per stop
+     * @param earliestArrivalIsolines    connections identified in the current iteration
+     * @param costPerSourceStop          precomputed access time offsets per source stop
+     * @param windowLimit                the temporal boundary of the valid search window
      */
     private void updateShortestTravelTimeIsolines(
             Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines,
             Map<String, org.naviqore.raptor.Connection> earliestArrivalIsolines,
             Map<String, Duration> costPerSourceStop, OffsetDateTime windowLimit) {
         earliestArrivalIsolines.forEach((stopId, newConnection) -> {
-            org.naviqore.raptor.Connection bestConnectionSoFar = shortestTravelTimeIsolines.get(stopId);
-            if ((bestConnectionSoFar == null || newConnectionIsFaster(newConnection, bestConnectionSoFar,
-                    costPerSourceStop)) && newConnectionDepartureTimeIsRelevant(newConnection, windowLimit)) {
-                shortestTravelTimeIsolines.put(stopId, newConnection);
+            if (!newConnectionDepartureTimeIsRelevant(newConnection, windowLimit)) {
+                return;
             }
+
+            shortestTravelTimeIsolines.compute(stopId, (_, existingBest) -> {
+                if (existingBest == null || newConnectionIsFaster(newConnection, existingBest, costPerSourceStop)) {
+                    return newConnection;
+                }
+
+                return existingBest;
+            });
         });
     }
 
