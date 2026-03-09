@@ -190,6 +190,9 @@ abstract class IsolineQueryTemplate<T> {
      * <p>
      * The increment is chosen such that the next routing iteration starts just after the earliest relevant trip time
      * found in the current iteration, ensuring progress while avoiding redundant queries.
+     * <p>
+     * <b>Important:</b> Pure walk connections are excluded because they start at the exact query time and would yield
+     * a zero-second increment.
      *
      * @param sourceStopTimes current source stop times
      * @param isolines        isolines returned by the latest routing query
@@ -197,12 +200,19 @@ abstract class IsolineQueryTemplate<T> {
      */
     private Duration getNextTimeIncrement(Map<String, OffsetDateTime> sourceStopTimes,
                                           Map<String, org.naviqore.raptor.Connection> isolines) {
-        return isolines.values().stream().map(connection -> {
-            OffsetDateTime sourceTime = sourceStopTimes.get(getSourceStopIdFromConnection(connection));
-            OffsetDateTime tripTime = getTripTimeFromConnection(connection);
+        return isolines.values()
+                .stream()
+                .filter(connection -> connection.getLegs()
+                        .stream()
+                        .anyMatch(leg -> leg.getType() == org.naviqore.raptor.Leg.Type.ROUTE))
+                .map(connection -> {
+                    OffsetDateTime sourceTime = sourceStopTimes.get(getSourceStopIdFromConnection(connection));
+                    OffsetDateTime tripTime = getTripTimeFromConnection(connection);
 
-            return Duration.between(sourceTime, tripTime).abs().plusSeconds(1);
-        }).min(Duration::compareTo).orElse(null);
+                    return Duration.between(sourceTime, tripTime).abs().plusSeconds(1);
+                })
+                .min(Duration::compareTo)
+                .orElse(null);
     }
 
     /**
