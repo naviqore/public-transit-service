@@ -150,6 +150,13 @@ abstract class IsolineQueryTemplate<T> {
                 initialIsolines);
         Map<String, Duration> costPerSourceStop = calculateCostsPerSourceStop(time, sourceStops);
 
+        Duration firstJump = getNextTimeIncrement(sourceStops, initialIsolines);
+
+        // if no transit connections are found in the first run, there are no jumps to perform
+        if (firstJump == null) {
+            return shortestTravelTimeIsolines;
+        }
+
         int totalWindowSeconds = queryConfig.getTimeWindowDuration();
         OffsetDateTime windowLimit = timeIncrementor.apply(time, Duration.ofSeconds(totalWindowSeconds));
 
@@ -161,13 +168,15 @@ abstract class IsolineQueryTemplate<T> {
             updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, initialIsolines, costPerSourceStop,
                     windowLimit);
             processWindowSegment(sourceStops, shortestTravelTimeIsolines, costPerSourceStop, time, windowLimit,
-                    timeIncrementor);
+                    timeIncrementor, firstJump);
         } else {
             List<CompletableFuture<Void>> tasks = new ArrayList<>();
             int secondsPerSegment = totalWindowSeconds / numTasks;
 
             for (int i = 0; i < numTasks; i++) {
                 final int segmentIndex = i;
+                final Duration initialJump = (segmentIndex == 0) ? firstJump : null;
+
                 tasks.add(CompletableFuture.runAsync(() -> {
                     int startOffset = segmentIndex * secondsPerSegment;
                     int endOffset = (segmentIndex == numTasks - 1) ? totalWindowSeconds : (segmentIndex + 1) * secondsPerSegment;
@@ -178,7 +187,7 @@ abstract class IsolineQueryTemplate<T> {
                             Duration.ofSeconds(startOffset), timeIncrementor);
 
                     processWindowSegment(segmentSourceStops, shortestTravelTimeIsolines, costPerSourceStop,
-                            segmentStart, segmentLimit, timeIncrementor);
+                            segmentStart, segmentLimit, timeIncrementor, initialJump);
                 }));
             }
 
@@ -189,23 +198,31 @@ abstract class IsolineQueryTemplate<T> {
     }
 
     /**
-     * Performs sequential routing iterations within a specific time segment. Found connections are atomically merged
-     * into the shared global best results.
+     * Performs sequential routing iterations using intelligent jump logic within a specific time segment. Found
+     * connections are atomically merged into the shared global best results.
      *
-     * @param sourceStops initial mapping of source stop IDs to their query times for this segment
-     * @param globalBest  thread-safe map to store the best connection found per stop across all tasks
-     * @param costs       precomputed absolute access time offsets per source stop
-     * @param startTime   the temporal start boundary of this segment
-     * @param limit       the temporal end boundary of this segment
-     * @param incrementor function to advance or rewind time based on the query time type
+     * @param sourceStops initial segment stop-time mapping
+     * @param globalBest  shared thread-safe results map
+     * @param costs       precomputed source access offsets
+     * @param startTime   segment temporal start
+     * @param limit       segment temporal end
+     * @param incrementor function to advance or rewind time
+     * @param initialJump optional jump to skip redundant processing of the warmup query in segment 0
      */
     private void processWindowSegment(Map<String, OffsetDateTime> sourceStops,
                                       Map<String, org.naviqore.raptor.Connection> globalBest,
                                       Map<String, Duration> costs, OffsetDateTime startTime, OffsetDateTime limit,
-                                      BiFunction<OffsetDateTime, Duration, OffsetDateTime> incrementor) {
+                                      BiFunction<OffsetDateTime, Duration, OffsetDateTime> incrementor,
+                                      Duration initialJump) {
 
         OffsetDateTime currentTime = startTime;
         Map<String, OffsetDateTime> currentSourceStops = sourceStops;
+
+        // apply initial jump if provided to skip the state already covered by the warmup call
+        if (initialJump != null) {
+            currentTime = incrementor.apply(currentTime, initialJump);
+            currentSourceStops = incrementSourceStopTimes(currentSourceStops, initialJump, incrementor);
+        }
 
         while (currentTimeIsRelevant(currentTime, limit)) {
             Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops);
@@ -290,7 +307,7 @@ abstract class IsolineQueryTemplate<T> {
             Map<String, org.naviqore.raptor.Connection> earliestArrivalIsolines,
             Map<String, Duration> costPerSourceStop, OffsetDateTime windowLimit) {
         earliestArrivalIsolines.forEach((stopId, newConnection) -> {
-            if (!newConnectionDepartureTimeIsRelevant(newConnection, windowLimit)) {
+            if (!isConnectionTimeRelevant(newConnection, windowLimit)) {
                 return;
             }
 
@@ -319,8 +336,7 @@ abstract class IsolineQueryTemplate<T> {
      * @param windowLimit   the boundary of the query time window
      * @return {@code true} if the connection should still be considered, {@code false} otherwise
      */
-    private boolean newConnectionDepartureTimeIsRelevant(org.naviqore.raptor.Connection newConnection,
-                                                         OffsetDateTime windowLimit) {
+    private boolean isConnectionTimeRelevant(org.naviqore.raptor.Connection newConnection, OffsetDateTime windowLimit) {
         return currentTimeIsRelevant(getTripTimeFromConnection(newConnection), windowLimit);
     }
 
