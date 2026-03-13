@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.1](https://github.com/naviqore/public-transit-service/compare/v4.1.0...v4.1.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* **isoline:** exclude pure walk connections from time increment calculation ([#481](https://github.com/naviqore/public-transit-service/issues/481)) ([fcdc696](https://github.com/naviqore/public-transit-service/commit/fcdc696a15cb23843e5b733f48b8ec247c35d619))
+
 ## [4.1.0](https://github.com/naviqore/public-transit-service/compare/v4.0.0...v4.1.0) (2026-03-02)
 
 
