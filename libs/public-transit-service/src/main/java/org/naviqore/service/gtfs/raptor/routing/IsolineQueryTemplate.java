@@ -42,7 +42,6 @@ abstract class IsolineQueryTemplate<T> {
     protected final RoutingQueryUtils utils;
 
     private final T source;
-
     private final boolean allowSourceTransfers;
 
     protected abstract Map<String, OffsetDateTime> prepareSourceStops(T source);
@@ -62,8 +61,8 @@ abstract class IsolineQueryTemplate<T> {
             return Map.of();
         }
 
+        // query the earliest arrival or shortest duration depending on whether a time window is configured
         Map<String, org.naviqore.raptor.Connection> isolines;
-
         try {
             if (queryConfig.getTimeWindowDuration() > 0) {
                 isolines = runForShortestDurationTime(sourceStops);
@@ -138,7 +137,7 @@ abstract class IsolineQueryTemplate<T> {
     private Map<String, org.naviqore.raptor.Connection> runForShortestDurationTime(
             Map<String, OffsetDateTime> sourceStops) {
 
-        // time type specific operations
+        // set up time type specific operations
         BiFunction<OffsetDateTime, Duration, OffsetDateTime> timeIncrementor = switch (timeType) {
             case DEPARTURE -> OffsetDateTime::plus;
             case ARRIVAL -> OffsetDateTime::minus;
@@ -149,14 +148,13 @@ abstract class IsolineQueryTemplate<T> {
         Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines = new ConcurrentHashMap<>();
         Map<String, Duration> costPerSourceStop = calculateCostsPerSourceStop(time, sourceStops);
 
+        // derive the global window boundary and merge the warmup results into the shared best-connection map
         int totalWindowSeconds = queryConfig.getTimeWindowDuration();
         OffsetDateTime windowLimit = timeIncrementor.apply(time, Duration.ofSeconds(totalWindowSeconds));
-        // filter and add initial results against the global window limit
         updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, initialIsolines, costPerSourceStop, windowLimit);
 
+        // get the first time jump from the warmup results; if none exists, no transit was reachable
         Duration firstJump = getNextTimeIncrement(sourceStops, initialIsolines);
-
-        // if no transit connections are found in the first run, there are no jumps to perform
         if (firstJump == null) {
             return shortestTravelTimeIsolines;
         }
@@ -166,27 +164,32 @@ abstract class IsolineQueryTemplate<T> {
                 Math.min(Runtime.getRuntime().availableProcessors(), totalWindowSeconds / MIN_WINDOW_SEGMENT_DURATION));
 
         if (numTasks == 1) {
+            // process the full window in one segment on the calling thread
             processWindowSegment(sourceStops, shortestTravelTimeIsolines, costPerSourceStop, time, windowLimit,
                     windowLimit, timeIncrementor, firstJump);
         } else {
+            // divide the window into equally-sized segments and process concurrently
             List<CompletableFuture<Void>> tasks = new ArrayList<>();
             int secondsPerSegment = totalWindowSeconds / numTasks;
 
             for (int i = 0; i < numTasks; i++) {
-                final int segmentIndex = i;
-                final Duration initialJump = (segmentIndex == 0) ? firstJump : null;
+                // segment 0 starts from firstJump to skip the departure already processed by the warmup call;
+                // other segments start from their segment boundary and compute their own initial jump internally
+                final Duration initialJump = (i == 0) ? firstJump : null;
 
+                final int segmentIndex = i;
                 tasks.add(CompletableFuture.runAsync(() -> {
+                    // compute the time boundaries and shifted source stops for this segment
                     int startOffset = segmentIndex * secondsPerSegment;
                     int endOffset = (segmentIndex == numTasks - 1) ? totalWindowSeconds : (segmentIndex + 1) * secondsPerSegment;
-
                     OffsetDateTime segmentStart = timeIncrementor.apply(time, Duration.ofSeconds(startOffset));
-                    OffsetDateTime segmentLimit = timeIncrementor.apply(time, Duration.ofSeconds(endOffset));
+                    OffsetDateTime segmentEnd = timeIncrementor.apply(time, Duration.ofSeconds(endOffset));
+
+                    // shift source stop times to the segment start and process segment
                     Map<String, OffsetDateTime> segmentSourceStops = incrementSourceStopTimes(sourceStops,
                             Duration.ofSeconds(startOffset), timeIncrementor);
-
                     processWindowSegment(segmentSourceStops, shortestTravelTimeIsolines, costPerSourceStop,
-                            segmentStart, segmentLimit, windowLimit, timeIncrementor, initialJump);
+                            segmentStart, segmentEnd, windowLimit, timeIncrementor, initialJump);
                 }));
             }
 
@@ -200,19 +203,19 @@ abstract class IsolineQueryTemplate<T> {
      * Performs sequential routing iterations using intelligent jump logic within a specific time segment. Found
      * connections are atomically merged into the shared global best results.
      *
-     * @param sourceStops  initial segment stop-time mapping
-     * @param globalBest   shared thread-safe results map
-     * @param costs        precomputed source access offsets
-     * @param startTime    segment temporal start
-     * @param segmentLimit segment temporal end
-     * @param windowLimit  global temporal boundary for relevance
-     * @param incrementor  function to advance or rewind time
-     * @param initialJump  optional jump to skip redundant processing of the warmup query in segment 0
+     * @param sourceStops initial segment stop-time mapping
+     * @param globalBest  shared thread-safe results map
+     * @param costs       precomputed source access offsets
+     * @param startTime   segment temporal start
+     * @param endTime     segment temporal end
+     * @param windowLimit global temporal boundary for relevance
+     * @param incrementor function to advance or rewind time
+     * @param initialJump optional jump to skip redundant processing of the warmup query in segment 0
      */
     private void processWindowSegment(Map<String, OffsetDateTime> sourceStops,
                                       Map<String, org.naviqore.raptor.Connection> globalBest,
-                                      Map<String, Duration> costs, OffsetDateTime startTime,
-                                      OffsetDateTime segmentLimit, OffsetDateTime windowLimit,
+                                      Map<String, Duration> costs, OffsetDateTime startTime, OffsetDateTime endTime,
+                                      OffsetDateTime windowLimit,
                                       BiFunction<OffsetDateTime, Duration, OffsetDateTime> incrementor,
                                       Duration initialJump) {
 
@@ -225,7 +228,7 @@ abstract class IsolineQueryTemplate<T> {
             currentSourceStops = incrementSourceStopTimes(currentSourceStops, initialJump, incrementor);
         }
 
-        while (currentTimeIsRelevant(currentTime, segmentLimit)) {
+        while (currentTimeIsRelevant(currentTime, endTime)) {
             Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops);
             updateShortestTravelTimeIsolines(globalBest, results, costs, windowLimit);
 
@@ -235,7 +238,7 @@ abstract class IsolineQueryTemplate<T> {
             }
 
             currentTime = incrementor.apply(currentTime, nextJump);
-            if (!currentTimeIsRelevant(currentTime, segmentLimit)) {
+            if (!currentTimeIsRelevant(currentTime, endTime)) {
                 break;
             }
 
