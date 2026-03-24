@@ -27,35 +27,26 @@ public class GtfsTripMaskProviderTest {
 
     static Stream<Arguments> provideTestCases() {
         List<Arguments> argumentsList = new ArrayList<>();
-        argumentsList.add(
-                Arguments.of("Weekday, all travel modes, all accessibility, all bike", WEEKDAY, new QueryConfig()));
-        argumentsList.add(
-                Arguments.of("Weekend, all travel modes, all accessibility, all bike", WEEKEND, new QueryConfig()));
-        argumentsList.add(
-                Arguments.of("Exception, all travel modes, all accessibility, all bike", EXCEPTION, new QueryConfig()));
-
-        QueryConfig queryConfig = new QueryConfig();
-        queryConfig.setAllowedTravelModes(EnumSet.of(TravelMode.BUS));
-        argumentsList.add(Arguments.of("Weekday, bus only, all accessibility, all bike", WEEKDAY, queryConfig));
-
-        queryConfig = new QueryConfig();
-        queryConfig.setAllowedTravelModes(EnumSet.of(TravelMode.BUS, TravelMode.TRAM));
-        argumentsList.add(Arguments.of("Weekday, bus and tram, all accessibility, all bike", WEEKDAY, queryConfig));
-
-        queryConfig = new QueryConfig();
-        queryConfig.setWheelchairAccessible(true);
-        argumentsList.add(Arguments.of("Weekday, all travel modes, accessible only, all bike", WEEKDAY, queryConfig));
-
-        queryConfig = new QueryConfig();
-        queryConfig.setBikeAccessible(true);
-        argumentsList.add(
-                Arguments.of("Weekday, all travel modes, all accessibility, bike allowed", WEEKDAY, queryConfig));
-
-        queryConfig = new QueryConfig();
-        queryConfig.setAllowedTravelModes(EnumSet.of(TravelMode.BUS));
-        queryConfig.setWheelchairAccessible(true);
-        queryConfig.setBikeAccessible(true);
-        argumentsList.add(Arguments.of("Weekday, bus only, accessible only, bike allowed", WEEKDAY, queryConfig));
+        argumentsList.add(Arguments.of("Weekday, all travel modes, all accessibility, all bike", WEEKDAY,
+                QueryConfig.builder().build()));
+        argumentsList.add(Arguments.of("Weekend, all travel modes, all accessibility, all bike", WEEKEND,
+                QueryConfig.builder().build()));
+        argumentsList.add(Arguments.of("Exception, all travel modes, all accessibility, all bike", EXCEPTION,
+                QueryConfig.builder().build()));
+        argumentsList.add(Arguments.of("Weekday, bus only, all accessibility, all bike", WEEKDAY,
+                QueryConfig.builder().allowedTravelModes(EnumSet.of(TravelMode.BUS)).build()));
+        argumentsList.add(Arguments.of("Weekday, bus and tram, all accessibility, all bike", WEEKDAY,
+                QueryConfig.builder().allowedTravelModes(EnumSet.of(TravelMode.BUS, TravelMode.TRAM)).build()));
+        argumentsList.add(Arguments.of("Weekday, all travel modes, accessible only, all bike", WEEKDAY,
+                QueryConfig.builder().wheelchairAccessible(true).build()));
+        argumentsList.add(Arguments.of("Weekday, all travel modes, all accessibility, bike allowed", WEEKDAY,
+                QueryConfig.builder().bikeAccessible(true).build()));
+        argumentsList.add(Arguments.of("Weekday, bus only, accessible only, bike allowed", WEEKDAY,
+                QueryConfig.builder()
+                        .allowedTravelModes(EnumSet.of(TravelMode.BUS))
+                        .wheelchairAccessible(true)
+                        .bikeAccessible(true)
+                        .build()));
 
         return argumentsList.stream();
     }

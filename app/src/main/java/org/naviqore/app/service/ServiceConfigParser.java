@@ -46,7 +46,7 @@ public class ServiceConfigParser {
                 .walkSpeed(walkSpeed)
                 .walkDurationMinimum(walkDurationMinimum)
                 .raptorDaysToScan(raptorDaysToScan)
-                .raptorRange(raptorRange)
+                .raptorRangeDefault(raptorRange)
                 .cacheServiceDaySize(cacheServiceDaySize)
                 .cacheEvictionStrategy(ServiceConfig.CacheEvictionStrategy.valueOf(cacheEvictionStrategy.toUpperCase()))
                 .build();

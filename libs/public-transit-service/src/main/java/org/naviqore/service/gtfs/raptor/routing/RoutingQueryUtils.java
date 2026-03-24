@@ -40,11 +40,11 @@ class RoutingQueryUtils {
 
     private static QueryConfig prepareRaptorQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
                                                         boolean allowTargetTransfer) {
-        QueryConfig config = TypeMapper.map(queryConfig);
-        config.setAllowSourceTransfer(allowSourceTransfer);
-        config.setAllowTargetTransfer(allowTargetTransfer);
-
-        return config;
+        return TypeMapper.map(queryConfig)
+                .toBuilder()
+                .allowSourceTransfer(allowSourceTransfer)
+                .allowTargetTransfer(allowTargetTransfer)
+                .build();
     }
 
     List<org.naviqore.raptor.Connection> routeConnections(Map<String, OffsetDateTime> sourceStops,

@@ -103,9 +103,14 @@ class RoutingQueryFacadeIT {
                 SERVICE_CONFIG.getCacheServiceDaySize(), cacheStrategy);
 
         // configure and setup raptor
-        RaptorConfig raptorConfig = new RaptorConfig(SERVICE_CONFIG.getRaptorDaysToScan(),
-                SERVICE_CONFIG.getRaptorRange(), SERVICE_CONFIG.getTransferDurationSameStopDefault(),
-                SERVICE_CONFIG.getCacheServiceDaySize(), cacheStrategy, tripMaskProvider);
+        RaptorConfig raptorConfig = RaptorConfig.builder()
+                .daysToScan(SERVICE_CONFIG.getRaptorDaysToScan())
+                .raptorRangeDefault(SERVICE_CONFIG.getRaptorRangeDefault())
+                .sameStopTransferDurationDefault(SERVICE_CONFIG.getTransferDurationSameStopDefault())
+                .stopTimeCacheSize(SERVICE_CONFIG.getCacheServiceDaySize())
+                .stopTimeCacheStrategy(cacheStrategy)
+                .maskProvider(tripMaskProvider)
+                .build();
         RaptorAlgorithm raptor = new GtfsToRaptorConverter(raptorConfig, schedule, transferGenerators).run();
 
         // assemble facade
