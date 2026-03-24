@@ -24,7 +24,7 @@ public class ServiceConfig {
     public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
 
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
-    public static final int DEFAULT_RAPTOR_RANGE = -1; // -1 means no range raptor
+    public static final int DEFAULT_RAPTOR_RANGE_DEFAULT = -1; // -1 means no range raptor
 
     public static final int DEFAULT_CACHE_SIZE = 5;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
@@ -59,7 +59,7 @@ public class ServiceConfig {
     int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
 
     @Builder.Default
-    int raptorRange = DEFAULT_RAPTOR_RANGE;
+    int raptorRangeDefault = DEFAULT_RAPTOR_RANGE_DEFAULT;
 
     @Builder.Default
     int cacheServiceDaySize = DEFAULT_CACHE_SIZE;
@@ -70,7 +70,7 @@ public class ServiceConfig {
     public ServiceConfig(GtfsScheduleRepository gtfsScheduleRepository, String gtfsStaticUpdateCron,
                          int transferDurationSameStopDefault, int transferDurationBetweenStopsMinimum,
                          int transferDurationAccessEgress, int walkSearchRadius, WalkCalculatorType walkCalculatorType,
-                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, int raptorRange,
+                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, int raptorRangeDefault,
                          int cacheServiceDaySize, CacheEvictionStrategy cacheEvictionStrategy) {
         this.gtfsScheduleRepository = validateNonNull(gtfsScheduleRepository, "gtfsScheduleRepository");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
@@ -85,7 +85,7 @@ public class ServiceConfig {
         this.walkSpeed = validatePositive(walkSpeed, "walkSpeed");
         this.walkDurationMinimum = validateNonNegative(walkDurationMinimum, "walkDurationMinimum");
         this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
-        this.raptorRange = raptorRange;
+        this.raptorRangeDefault = raptorRangeDefault;
         this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }

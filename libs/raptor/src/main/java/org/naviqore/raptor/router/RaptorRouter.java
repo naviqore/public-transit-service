@@ -39,8 +39,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
-        // to prevent changing the raptor configuration after initialization the configuration is copied
-        this.config = config.copy();
+        this.config = config;
         config.getMaskProvider().setTripIds(lookup.routeTripIds());
         this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
                 config.getStopTimeCacheStrategy());
@@ -52,7 +51,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     }
 
     public void prepareStopTimesForDate(LocalDate date) {
-        stopTimeProvider.getStopTimesForDate(date, new QueryConfig());
+        stopTimeProvider.getStopTimesForDate(date, QueryConfig.builder().build());
     }
 
     @Override

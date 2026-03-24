@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RaptorRouterTestHelpers {
 
     static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops) {
-        return getIsoLines(raptor, sourceStops, new QueryConfig());
+        return getIsoLines(raptor, sourceStops, QueryConfig.builder().build());
     }
 
     static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
@@ -43,7 +43,7 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                  Map<String, Integer> targetStopIds) {
-        return routeEarliestArrival(raptor, sourceStops, targetStopIds, new QueryConfig());
+        return routeEarliestArrival(raptor, sourceStops, targetStopIds, QueryConfig.builder().build());
     }
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
@@ -58,7 +58,7 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
                                                  Map<String, OffsetDateTime> targetStops) {
-        return routeLatestDeparture(raptor, sourceStops, targetStops, new QueryConfig());
+        return routeLatestDeparture(raptor, sourceStops, targetStops, QueryConfig.builder().build());
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,

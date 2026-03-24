@@ -66,8 +66,7 @@ public class RaptorRouterTransferBehaviorTest {
             // that the transfer allows catching up with an already departed route trip at the next stop
             // --> source transfer
             RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
-            QueryConfig config = new QueryConfig();
-            config.setAllowSourceTransfer(true);
+            QueryConfig config = QueryConfig.builder().allowSourceTransfer(true).build();
 
             // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM). if start
             // time is set to 08:01 AM and the transfer time to B is 5 minutes B can be reached at 8:06 AM, allowing to
@@ -90,10 +89,9 @@ public class RaptorRouterTransferBehaviorTest {
             // that the transfer allows catching up with an already departed route trip at the next stop
             // --> source transfer
             RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 5);
-            QueryConfig config = new QueryConfig();
             // however this test should check that source transfers can be disabled, i.e. the slower solution should be
             // returned
-            config.setAllowSourceTransfer(false);
+            QueryConfig config = QueryConfig.builder().allowSourceTransfer(false).build();
 
             // first trip leaves "A" at start time (8:00 AM), second trip leaves "A" at 08:15 AM. Since no transfers
             // from the source stop are allowed, the solution must start with the 8:15 AM trip when the start time is
@@ -124,8 +122,7 @@ public class RaptorRouterTransferBehaviorTest {
             // that the transfer allows passing a route trip to arrive earlier at the final destination
             // --> target transfer
             RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 30, 5);
-            QueryConfig config = new QueryConfig();
-            config.setAllowTargetTransfer(true);
+            QueryConfig config = QueryConfig.builder().allowTargetTransfer(true).build();
 
             // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM) and continues
             // on to "C" to arrive at 08:20. However, walking from B-C would allow arriving C at 08:15.
@@ -148,8 +145,7 @@ public class RaptorRouterTransferBehaviorTest {
             // that the transfer allows passing a route trip to arrive earlier at the final destination
             // --> target transfer
             RaptorAlgorithm router = TransferBehaviorHelpers.prepareRouter(builder, 10, 30, 5);
-            QueryConfig config = new QueryConfig();
-            config.setAllowTargetTransfer(false);
+            QueryConfig config = QueryConfig.builder().allowTargetTransfer(false).build();
 
             // first trip leaves "A" at start time (8:00 AM) and arrives "B" after 10 minutes (8:10 AM) and continues
             // on to "C" to arrive at 08:20. However, walking from B-C would allow arriving C at 08:15. However, since

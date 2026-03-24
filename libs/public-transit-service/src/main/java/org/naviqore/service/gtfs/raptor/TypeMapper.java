@@ -51,7 +51,7 @@ public final class TypeMapper {
                 trip.getBikesAllowed() == BikeInformation.ALLOWED,
                 trip.getWheelchairAccessible() == AccessibilityInformation.ACCESSIBLE);
 
-        // set trip on stop times impls
+        // set trip on stop times
         stopTimes.forEach(stopTime -> stopTime.setTrip(gtfsRaptorTrip));
 
         return gtfsRaptorTrip;
@@ -106,9 +106,24 @@ public final class TypeMapper {
     }
 
     public static QueryConfig map(ConnectionQueryConfig config) {
-        return new QueryConfig(config.getMaximumWalkDuration(), config.getMinimumTransferDuration(),
-                config.getMaximumTransfers(), Integer.MAX_VALUE, config.isWheelchairAccessible(),
-                config.isBikeAllowed(), map(config.getTravelModes()));
+        QueryConfig.QueryConfigBuilder builder = QueryConfig.builder()
+                .maximumWalkDuration(config.getMaximumWalkDuration())
+                .minimumTransferDuration(config.getMinimumTransferDuration())
+                .maximumTransfers(config.getMaximumTransfers())
+                // TODO: Why do we set Integer.MAX here?
+                //  .maximumTravelDuration(config.getMaximumTravelDuration())
+                .maximumTravelDuration(Integer.MAX_VALUE)
+                .wheelchairAccessible(config.isWheelchairAccessible())
+                .bikeAccessible(config.isBikeAllowed())
+                .allowedTravelModes(map(config.getTravelModes()));
+
+        // if a time window is specified, enable Range-RAPTOR search for this duration;
+        // otherwise fallback to the global default range
+        if (config.getTimeWindowDuration() != 0) {
+            builder.raptorRange(config.getTimeWindowDuration());
+        }
+
+        return builder.build();
     }
 
     public static org.naviqore.raptor.TimeType mapToRaptor(TimeType timeType) {
