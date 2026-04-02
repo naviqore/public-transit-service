@@ -105,7 +105,7 @@ class RoutingQueryFacadeIT {
         // configure and setup raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(SERVICE_CONFIG.getRaptorDaysToScan())
-                .raptorRangeDefault(SERVICE_CONFIG.getRaptorRangeDefault())
+                .raptorRangeDefault(SERVICE_CONFIG.getRaptorRange())
                 .sameStopTransferDurationDefault(SERVICE_CONFIG.getTransferDurationSameStopDefault())
                 .stopTimeCacheSize(SERVICE_CONFIG.getCacheServiceDaySize())
                 .stopTimeCacheStrategy(cacheStrategy)

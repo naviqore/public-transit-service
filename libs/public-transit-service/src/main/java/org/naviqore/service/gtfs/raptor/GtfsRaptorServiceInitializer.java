@@ -87,7 +87,7 @@ public class GtfsRaptorServiceInitializer {
         // configure raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(config.getRaptorDaysToScan())
-                .raptorRangeDefault(config.getRaptorRangeDefault())
+                .raptorRangeDefault(config.getRaptorRange())
                 .sameStopTransferDurationDefault(config.getTransferDurationSameStopDefault())
                 .stopTimeCacheSize(config.getCacheServiceDaySize())
                 .stopTimeCacheStrategy(cacheStrategy)
