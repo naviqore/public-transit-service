@@ -126,6 +126,19 @@ public class ScheduleControllerTest {
     }
 
     @Nested
+    class GetRandomStop {
+
+        @Test
+        void shouldSucceed() {
+            org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
+            when(scheduleInformationService.getRandomStop()).thenReturn(serviceStop);
+            Stop stop = scheduleController.getRandomStop();
+            assertNotNull(stop);
+        }
+
+    }
+
+    @Nested
     class GetStop {
 
         @Test

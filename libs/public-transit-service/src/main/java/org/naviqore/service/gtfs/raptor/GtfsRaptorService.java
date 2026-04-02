@@ -126,6 +126,14 @@ public class GtfsRaptorService implements PublicTransitService {
     }
 
     @Override
+    public Stop getRandomStop(Random random) {
+        List<org.naviqore.gtfs.schedule.model.Stop> stops = new ArrayList<>(schedule.getStops().values());
+        org.naviqore.gtfs.schedule.model.Stop stop = stops.get(random.nextInt(stops.size()));
+
+        return TypeMapper.map(stop);
+    }
+
+    @Override
     public Stop getStopById(String stopId) throws StopNotFoundException {
         org.naviqore.gtfs.schedule.model.Stop stop = schedule.getStops().get(stopId);
 

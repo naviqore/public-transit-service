@@ -195,6 +195,11 @@ class FakePublicTransitService implements PublicTransitService {
     }
 
     @Override
+    public Stop getRandomStop(Random random) {
+        return STOPS.get(random.nextInt(STOPS.size()));
+    }
+
+    @Override
     public Stop getStopById(String stopId) throws StopNotFoundException {
         return STOPS.stream()
                 .filter(stop -> stop.getId().equals(stopId))

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 public interface ScheduleInformationService {
 
@@ -80,6 +81,23 @@ public interface ScheduleInformationService {
      */
     List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime to, TimeType timeType,
                                 StopScope stopScope);
+
+    /**
+     * Retrieves a random stop from the schedule.
+     *
+     * @return a random stop
+     */
+    default Stop getRandomStop() {
+        return getRandomStop(new Random());
+    }
+
+    /**
+     * Retrieves a random stop from the schedule using the provided random instance.
+     *
+     * @param random the random instance to use for selecting the stop
+     * @return a random stop
+     */
+    Stop getRandomStop(Random random);
 
     /**
      * Retrieves a stop by its ID.
