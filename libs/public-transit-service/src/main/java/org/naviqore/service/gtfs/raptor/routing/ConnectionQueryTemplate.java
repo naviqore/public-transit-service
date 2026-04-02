@@ -2,12 +2,14 @@ package org.naviqore.service.gtfs.raptor.routing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.service.Connection;
 import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -73,7 +75,7 @@ abstract class ConnectionQueryTemplate<S, T> {
         OffsetDateTime windowLimit = computeWindowLimit();
 
         do {
-            List<Connection> results = executeRoutingAt(currentTime);
+            List<Connection> results = executeRoutingAt(currentTime, windowLimit);
 
             results = filterByTimeWindowIfNeeded(results, windowLimit);
             if (results.isEmpty()) {
@@ -103,10 +105,11 @@ abstract class ConnectionQueryTemplate<S, T> {
      * <p>
      * For ARRIVAL queries, the source and target are swapped to route in reverse time.
      */
-    private List<Connection> executeRoutingAt(OffsetDateTime queryTime) throws ConnectionRoutingException {
+    private List<Connection> executeRoutingAt(OffsetDateTime queryTime,
+                                              OffsetDateTime windowLimit) throws ConnectionRoutingException {
         return switch (timeType) {
-            case DEPARTURE -> copyAt(queryTime).process();
-            case ARRIVAL -> copyAt(queryTime).swap(source, target).process();
+            case DEPARTURE -> copyAt(queryTime).process(windowLimit);
+            case ARRIVAL -> copyAt(queryTime).swap(source, target).process(windowLimit);
         };
     }
 
@@ -169,11 +172,15 @@ abstract class ConnectionQueryTemplate<S, T> {
                                                                   OffsetDateTime windowLimit) {
         return connections.stream()
                 .filter(c -> timeType == DEPARTURE ? c.getDepartureTime().isBefore(windowLimit) : c.getArrivalTime()
-                        .isAfter(windowLimit))
+                                                                                                  .isAfter(windowLimit))
                 .toList();
     }
 
     List<Connection> process() throws ConnectionRoutingException {
+        return process(null);
+    }
+
+    private List<Connection> process(@Nullable OffsetDateTime windowLimit) throws ConnectionRoutingException {
         Map<String, OffsetDateTime> sourceStops = prepareSourceStops(source);
         Map<String, Integer> targetStops = prepareTargetStops(target);
 
@@ -182,11 +189,15 @@ abstract class ConnectionQueryTemplate<S, T> {
             return List.of();
         }
 
+        // compute the remaining Range-RAPTOR range from the current query time to the window boundary
+        Integer raptorRange = windowLimit != null ? (int) Math.abs(
+                Duration.between(time, windowLimit).getSeconds()) : null;
+
         // query connection from raptor
         List<org.naviqore.raptor.Connection> connections;
         try {
             connections = utils.routeConnections(sourceStops, targetStops, timeType, queryConfig, allowSourceTransfers,
-                    allowTargetTransfers);
+                    allowTargetTransfers, raptorRange);
         } catch (RaptorAlgorithm.InvalidStopException e) {
             log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
             return handleInvalidStopException(e, source, target);

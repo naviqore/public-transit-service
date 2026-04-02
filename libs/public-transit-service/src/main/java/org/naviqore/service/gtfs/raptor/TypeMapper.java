@@ -106,7 +106,7 @@ public final class TypeMapper {
     }
 
     public static QueryConfig map(ConnectionQueryConfig config) {
-        QueryConfig.QueryConfigBuilder builder = QueryConfig.builder()
+        return QueryConfig.builder()
                 .maximumWalkDuration(config.getMaximumWalkDuration())
                 .minimumTransferDuration(config.getMinimumTransferDuration())
                 .maximumTransfers(config.getMaximumTransfers())
@@ -115,15 +115,8 @@ public final class TypeMapper {
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
                 .bikeAccessible(config.isBikeAllowed())
-                .allowedTravelModes(map(config.getTravelModes()));
-
-        // if a time window is specified, enable Range-RAPTOR search for this duration;
-        // otherwise fallback to the global default range
-        if (config.getTimeWindowDuration() != 0) {
-            builder.raptorRange(config.getTimeWindowDuration());
-        }
-
-        return builder.build();
+                .allowedTravelModes(map(config.getTravelModes()))
+                .build();
     }
 
     public static org.naviqore.raptor.TimeType mapToRaptor(TimeType timeType) {
