@@ -113,16 +113,25 @@ abstract class IsolineQueryTemplate<T> {
 
     /**
      * Executes a single earliest-arrival (or latest-departure) isoline routing query.
+     */
+    private Map<String, org.naviqore.raptor.Connection> runForEarliestArrivalTime(
+            Map<String, OffsetDateTime> sourceStops) {
+        return runForEarliestArrivalTime(sourceStops, null);
+    }
+
+    /**
+     * Executes a single earliest-arrival (or latest-departure) or RANGE raptor isoline routing query.
      * <p>
      * This delegates directly to the underlying routing utility without applying any time window or duration
      * minimization logic.
      *
      * @param sourceStops mapping of source stop IDs to their query times
+     * @param raptorRange range parameter for Range-RAPTOR queries
      * @return isolines as computed by the routing algorithm
      */
     private Map<String, org.naviqore.raptor.Connection> runForEarliestArrivalTime(
-            Map<String, OffsetDateTime> sourceStops) {
-        return utils.routeIsolines(sourceStops, timeType, queryConfig, allowSourceTransfers);
+            Map<String, OffsetDateTime> sourceStops, Integer raptorRange) {
+        return utils.routeIsolines(sourceStops, timeType, queryConfig, allowSourceTransfers, raptorRange);
     }
 
     /**
@@ -144,12 +153,13 @@ abstract class IsolineQueryTemplate<T> {
         };
 
         // perform sequential first call to warm up stop times cache before starting threads
-        Map<String, org.naviqore.raptor.Connection> initialIsolines = runForEarliestArrivalTime(sourceStops);
+        int totalWindowSeconds = queryConfig.getTimeWindowDuration();
+        Map<String, org.naviqore.raptor.Connection> initialIsolines = runForEarliestArrivalTime(sourceStops,
+                totalWindowSeconds);
         Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines = new ConcurrentHashMap<>();
         Map<String, Duration> costPerSourceStop = calculateCostsPerSourceStop(time, sourceStops);
 
         // derive the global window boundary and merge the warmup results into the shared best-connection map
-        int totalWindowSeconds = queryConfig.getTimeWindowDuration();
         OffsetDateTime windowLimit = timeIncrementor.apply(time, Duration.ofSeconds(totalWindowSeconds));
         updateShortestTravelTimeIsolines(shortestTravelTimeIsolines, initialIsolines, costPerSourceStop, windowLimit);
 
@@ -160,8 +170,8 @@ abstract class IsolineQueryTemplate<T> {
         }
 
         // determine optimal partitioning based on available hardware and window density
-        int numTasks = Math.max(1,
-                Math.min(Runtime.getRuntime().availableProcessors(), totalWindowSeconds / MIN_WINDOW_SEGMENT_DURATION));
+        int numTasks = Math.clamp(totalWindowSeconds / MIN_WINDOW_SEGMENT_DURATION, 1,
+                Runtime.getRuntime().availableProcessors());
 
         if (numTasks == 1) {
             // process the full window in one segment on the calling thread
@@ -229,7 +239,10 @@ abstract class IsolineQueryTemplate<T> {
         }
 
         while (currentTimeIsRelevant(currentTime, endTime)) {
-            Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops);
+            // set range to the remaining duration of the specific jump segment
+            Integer raptorRange = (int) Math.abs(Duration.between(currentTime, endTime).getSeconds());
+            Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops,
+                    raptorRange);
             updateShortestTravelTimeIsolines(globalBest, results, costs, windowLimit);
 
             Duration nextJump = getNextTimeIncrement(currentSourceStops, results);
@@ -376,8 +389,8 @@ abstract class IsolineQueryTemplate<T> {
      */
     private OffsetDateTime getTripTimeFromConnection(org.naviqore.raptor.Connection connection) {
         return timeType == DEPARTURE ? connection.getLegs().getFirst().getDepartureTime() : connection.getLegs()
-                .getLast()
-                .getArrivalTime();
+                                                                                            .getLast()
+                                                                                            .getArrivalTime();
     }
 
     /**
@@ -391,8 +404,8 @@ abstract class IsolineQueryTemplate<T> {
      */
     private String getSourceStopIdFromConnection(org.naviqore.raptor.Connection connection) {
         return timeType == DEPARTURE ? connection.getLegs().getFirst().getFromStopId() : connection.getLegs()
-                .getLast()
-                .getToStopId();
+                                                                                         .getLast()
+                                                                                         .getToStopId();
     }
 
     /**

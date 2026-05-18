@@ -80,8 +80,14 @@ public final class RaptorRouterBenchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, RAPTOR_RANGE, SAME_STOP_TRANSFER_TIME,
-                MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
+        RaptorConfig config = RaptorConfig.builder()
+                .daysToScan(MAX_DAYS_TO_SCAN)
+                .raptorRangeDefault(RAPTOR_RANGE)
+                .sameStopTransferDurationDefault(SAME_STOP_TRANSFER_TIME)
+                .stopTimeCacheSize(MAX_DAYS_TO_SCAN)
+                .stopTimeCacheStrategy(EvictionCache.Strategy.LRU)
+                .maskProvider(new GtfsTripMaskProvider(schedule))
+                .build();
         RaptorRouter raptor = new GtfsToRaptorConverter(config, schedule).run();
         manageResources();
 
@@ -140,7 +146,8 @@ public final class RaptorRouterBenchmark {
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops, new QueryConfig());
+                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
+                        QueryConfig.builder().build());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {

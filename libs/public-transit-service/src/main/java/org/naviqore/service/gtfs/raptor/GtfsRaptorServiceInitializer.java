@@ -85,9 +85,14 @@ public class GtfsRaptorServiceInitializer {
                 cacheStrategy);
 
         // configure raptor
-        RaptorConfig raptorConfig = new RaptorConfig(config.getRaptorDaysToScan(), config.getRaptorRange(),
-                config.getTransferDurationSameStopDefault(), config.getCacheServiceDaySize(), cacheStrategy,
-                tripMaskProvider);
+        RaptorConfig raptorConfig = RaptorConfig.builder()
+                .daysToScan(config.getRaptorDaysToScan())
+                .raptorRangeDefault(config.getRaptorRange())
+                .sameStopTransferDurationDefault(config.getTransferDurationSameStopDefault())
+                .stopTimeCacheSize(config.getCacheServiceDaySize())
+                .stopTimeCacheStrategy(cacheStrategy)
+                .maskProvider(tripMaskProvider)
+                .build();
 
         return new GtfsToRaptorConverter(raptorConfig, schedule, transferGenerators).run();
     }
