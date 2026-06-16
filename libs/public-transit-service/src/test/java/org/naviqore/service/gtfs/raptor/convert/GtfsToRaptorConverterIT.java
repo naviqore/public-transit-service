@@ -37,7 +37,7 @@ class GtfsToRaptorConverterIT {
 
         @Test
         void shouldConvertGtfsScheduleToRaptor() {
-            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(new RaptorConfig(), schedule);
+            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(RaptorConfig.builder().build(), schedule);
             RaptorAlgorithm raptor = converter.run();
             assertThat(raptor).isNotNull();
         }
@@ -73,7 +73,7 @@ class GtfsToRaptorConverterIT {
             GtfsSchedule schedule = builder.build();
 
             // run converter
-            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(new RaptorConfig(), schedule,
+            GtfsToRaptorConverter converter = new GtfsToRaptorConverter(RaptorConfig.builder().build(), schedule,
                     transferGenerators);
             converter.run();
 

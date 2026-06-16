@@ -66,12 +66,14 @@ class Query {
         this.walkDurationsToTarget = walkDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
-        this.raptorRange = raptorConfig.getRaptorRange();
 
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
         numStops = raptorData.getStopContext().stops().length;
         queryState = new QueryState(raptorData.getStopContext().stops().length, timeType);
+
+        // query-scoped override takes precedence over global default range
+        raptorRange = config.getRaptorRange().orElse(raptorConfig.getRaptorRangeDefault());
 
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
@@ -226,10 +228,10 @@ class Query {
         log.debug("Initializing global best times per stop and best labels per round");
 
         // fill target stops
-        for (int i = 0; i < targetStops.length; i += 2) {
-            int index = (int) Math.ceil(i / 2.0);
-            targetStops[i] = targetStopIndices[index];
-            targetStops[i + 1] = walkDurationsToTarget[index];
+        for (int i = 0; i < targetStopIndices.length; i++) {
+            int base = i * 2;
+            targetStops[base] = targetStopIndices[i];
+            targetStops[base + 1] = walkDurationsToTarget[i];
         }
 
         // set initial labels, best time and mark source stops
