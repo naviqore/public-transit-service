@@ -169,7 +169,7 @@ public class RaptorRouterBuilder {
             int numberOfTransfers = currentTransfers.size();
 
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId,
-                    config.getDefaultSameStopTransferDuration());
+                    config.getSameStopTransferDurationDefault());
 
             // add stop entry to stop array
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
