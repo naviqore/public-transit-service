@@ -83,7 +83,7 @@ public class PublicTransitServiceExample {
         PublicTransitService service = new PublicTransitServiceFactory(serviceConfig).create();
 
         Stop orig = service.getStopById(ORIG_STOP_ID);
-        ConnectionQueryConfig queryConfig = ConnectionQueryConfig.builder().build();
+        ConnectionQueryConfig queryConfig = ConnectionQueryConfig.defaults();
         List<Connection> connections = service.getConnections(orig, DEST_LOCATION, DEPARTURE_TIME, TimeType.DEPARTURE,
                 queryConfig);
     }
