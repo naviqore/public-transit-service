@@ -45,7 +45,7 @@ public final class RaptorRouterBenchmark {
     private static final Path INPUT_DATA_DIRECTORY = Path.of("benchmark/input");
     private static final GtfsScheduleDataset DATASET = GtfsScheduleDataset.SWITZERLAND;
     private static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
-    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2025, 4, 26);
+    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2026, 4, 25);
 
     // sampling
     /**
@@ -80,8 +80,14 @@ public final class RaptorRouterBenchmark {
     }
 
     private static RaptorAlgorithm initializeRaptor(GtfsSchedule schedule) throws InterruptedException {
-        RaptorConfig config = new RaptorConfig(MAX_DAYS_TO_SCAN, RAPTOR_RANGE, SAME_STOP_TRANSFER_TIME,
-                MAX_DAYS_TO_SCAN, EvictionCache.Strategy.LRU, new GtfsTripMaskProvider(schedule));
+        RaptorConfig config = RaptorConfig.builder()
+                .daysToScan(MAX_DAYS_TO_SCAN)
+                .raptorRangeDefault(RAPTOR_RANGE)
+                .sameStopTransferDurationDefault(SAME_STOP_TRANSFER_TIME)
+                .stopTimeCacheSize(MAX_DAYS_TO_SCAN)
+                .stopTimeCacheStrategy(EvictionCache.Strategy.LRU)
+                .maskProvider(new GtfsTripMaskProvider(schedule))
+                .build();
         RaptorRouter raptor = new GtfsToRaptorConverter(config, schedule).run();
         manageResources();
 
@@ -107,6 +113,14 @@ public final class RaptorRouterBenchmark {
             }
         }
         List<String> stopIds = new ArrayList<>(uniqueStopIds);
+
+        // abort early if no trips are active on the schedule date, which typically indicates a date outside the
+        // validity period of the dataset
+        if (stopIds.isEmpty()) {
+            throw new IllegalStateException(
+                    String.format("No active trips found on schedule date %s, check the validity of the dataset.",
+                            SCHEDULE_DATE));
+        }
 
         // sample
         Random random = new Random(RANDOM_SEED);
@@ -140,7 +154,8 @@ public final class RaptorRouterBenchmark {
                         requests[i].departureTime());
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
-                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops, new QueryConfig());
+                List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
+                        QueryConfig.defaults());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {

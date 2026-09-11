@@ -126,6 +126,28 @@ public class ScheduleControllerTest {
     }
 
     @Nested
+    class GetRandomStop {
+
+        @Test
+        void shouldReturnStopMappedFromService() {
+            GeoCoordinate coordinate = new GeoCoordinate(47.3769, 8.5417);
+            org.naviqore.service.Stop serviceStop = mock(org.naviqore.service.Stop.class);
+            when(serviceStop.getId()).thenReturn("stopId");
+            when(serviceStop.getName()).thenReturn("Zurich HB");
+            when(serviceStop.getCoordinate()).thenReturn(coordinate);
+            when(scheduleInformationService.getRandomStop()).thenReturn(serviceStop);
+
+            Stop stop = scheduleController.getRandomStop();
+
+            assertEquals("stopId", stop.getId());
+            assertEquals("Zurich HB", stop.getName());
+            assertEquals(coordinate, stop.getCoordinates());
+            verify(scheduleInformationService).getRandomStop();
+        }
+
+    }
+
+    @Nested
     class GetStop {
 
         @Test

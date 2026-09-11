@@ -26,6 +26,7 @@ public class GtfsRaptorService implements PublicTransitService {
     private final Validity validity;
     private final KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
     private final SearchIndex<org.naviqore.gtfs.schedule.model.Stop> stopSearchIndex;
+    private final List<org.naviqore.gtfs.schedule.model.Stop> stops;
 
     private final GtfsStopScopeResolver resolver;
     private final RoutingQueryFacade routing;
@@ -37,6 +38,14 @@ public class GtfsRaptorService implements PublicTransitService {
         this.schedule = schedule;
         this.spatialStopIndex = spatialStopIndex;
         this.stopSearchIndex = stopSearchIndex;
+        // the schedule is immutable after initialization, so the candidates for random selection can be derived once;
+        // they are sorted by id since the iteration order of the immutable schedule map varies between JVM runs, which
+        // would otherwise make the selection non-reproducible even for a seeded random instance
+        this.stops = schedule.getStops()
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(org.naviqore.gtfs.schedule.model.Stop::getId))
+                .toList();
 
         this.validity = new GtfsRaptorValidity(schedule);
         this.resolver = new GtfsStopScopeResolver(schedule, spatialStopIndex, serviceConfig.getWalkSearchRadius());
@@ -123,6 +132,11 @@ public class GtfsRaptorService implements PublicTransitService {
                     case ARRIVAL -> Comparator.comparing(StopTime::getArrivalTime);
                 })
                 .toList();
+    }
+
+    @Override
+    public Stop getRandomStop(Random random) {
+        return TypeMapper.map(stops.get(random.nextInt(stops.size())));
     }
 
     @Override

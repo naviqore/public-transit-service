@@ -648,8 +648,9 @@ class RaptorRouterTest {
         @Test
         void findWalkableTransferWithMaxWalkTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
+            QueryConfig queryConfig = QueryConfig.builder()
+                    .maximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR)
+                    .build();
 
             // Should return two pareto optimal connections:
             // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
@@ -676,8 +677,9 @@ class RaptorRouterTest {
         @Test
         void notFindWalkableTransferWithMaxWalkTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR / 4); // 15 minutes
+            QueryConfig queryConfig = QueryConfig.builder()
+                    .maximumWalkDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR / 4) // 15 minutes
+                    .build();
 
             // Should only find three route leg connections, since direct transfer between D and N is longer than
             // allowed maximum walking distance (60 minutes):
@@ -691,8 +693,7 @@ class RaptorRouterTest {
         @Test
         void findConnectionWithMaxTransferNumber(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumTransfers(1);
+            QueryConfig queryConfig = QueryConfig.builder().maximumTransfers(1).build();
 
             // Should only find the connection with the fewest transfers:
             // 1. Connection (with two route legs and one transfer (including footpath) --> slower but fewer transfers)
@@ -710,8 +711,9 @@ class RaptorRouterTest {
         @Test
         void findConnectionWithMaxTravelTime(RaptorRouterTestBuilder builder) {
             RaptorAlgorithm raptor = builder.buildWithDefaults();
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMaximumTravelDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR);
+            QueryConfig queryConfig = QueryConfig.builder()
+                    .maximumTravelDuration(RaptorRouterTestBuilder.SECONDS_IN_HOUR)
+                    .build();
 
             // Should only find the quicker connection (more transfers):
             //  - Route R1-F from A to F
@@ -726,8 +728,7 @@ class RaptorRouterTest {
 
         @Test
         void useSameStopTransferTimeWithZeroMinimumTransferDuration(RaptorRouterTestBuilder builder) {
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMinimumTransferDuration(0);
+            QueryConfig queryConfig = QueryConfig.builder().minimumTransferDuration(0).build();
 
             RaptorAlgorithm raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
                     .withAddRoute2_HL()
@@ -746,8 +747,8 @@ class RaptorRouterTest {
 
         @Test
         void useMinimumTransferTime(RaptorRouterTestBuilder builder) {
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMinimumTransferDuration(20 * 60); // 20 minutes
+            QueryConfig queryConfig = QueryConfig.builder().minimumTransferDuration(20 * 60) // 20 minutes
+                    .build();
 
             RaptorAlgorithm raptor = builder.withAddRoute1_AG(19, 15, 5, 1)
                     .withAddRoute2_HL()
@@ -765,8 +766,8 @@ class RaptorRouterTest {
 
         @Test
         void addMinimumTransferTimeToWalkTransferDuration(RaptorRouterTestBuilder builder) {
-            QueryConfig queryConfig = new QueryConfig();
-            queryConfig.setMinimumTransferDuration(20 * 60); // 20 minutes
+            QueryConfig queryConfig = QueryConfig.builder().minimumTransferDuration(20 * 60) // 20 minutes
+                    .build();
 
             RaptorAlgorithm raptor = builder.buildWithDefaults();
             List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_Q,

@@ -76,6 +76,13 @@ public class ScheduleController {
                 .toList();
     }
 
+    @Operation(summary = "Get a random stop", description = "Retrieves a random stop from the schedule.")
+    @ApiResponse(responseCode = "200", description = "A random stop from the schedule.", content = @Content(schema = @Schema(implementation = Stop.class)))
+    @GetMapping("/stops/random")
+    public Stop getRandomStop() {
+        return map(service.getRandomStop());
+    }
+
     @Operation(summary = "Get information about a stop", description = "Provides detailed information about a specific stop, including coordinates and the name.")
     @ApiResponse(responseCode = "200", description = "Information about the specified stop.", content = @Content(schema = @Schema(implementation = Stop.class)))
     @ApiResponse(responseCode = "404", description = "Stop not found")

@@ -176,12 +176,13 @@ public class RaptorRouterTestBuilder {
     }
 
     public RaptorAlgorithm build() {
-        RaptorConfig config = new RaptorConfig();
-        config.setDaysToScan(daysToScan);
-        config.setDefaultSameStopTransferDuration(defaultSameStopTransferTime);
-        config.setMaskProvider(tripMaskProvider);
-        config.setStopTimeCacheSize(daysToScan);
-        config.setRaptorRange(raptorRange);
+        RaptorConfig config = RaptorConfig.builder()
+                .daysToScan(daysToScan)
+                .sameStopTransferDurationDefault(defaultSameStopTransferTime)
+                .maskProvider(tripMaskProvider)
+                .stopTimeCacheSize(daysToScan)
+                .raptorRangeDefault(raptorRange)
+                .build();
 
         RaptorRouterBuilder builder = new RaptorRouterBuilder(config);
         Set<String> addedStops = new HashSet<>();

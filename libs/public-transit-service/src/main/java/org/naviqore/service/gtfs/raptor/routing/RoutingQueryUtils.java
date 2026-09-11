@@ -39,19 +39,26 @@ class RoutingQueryUtils {
     private final RaptorAlgorithm raptor;
 
     private static QueryConfig prepareRaptorQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
-                                                        boolean allowTargetTransfer) {
-        QueryConfig config = TypeMapper.map(queryConfig);
-        config.setAllowSourceTransfer(allowSourceTransfer);
-        config.setAllowTargetTransfer(allowTargetTransfer);
+                                                        boolean allowTargetTransfer, @Nullable Integer raptorRange) {
+        QueryConfig.QueryConfigBuilder builder = TypeMapper.map(queryConfig)
+                .toBuilder()
+                .allowSourceTransfer(allowSourceTransfer)
+                .allowTargetTransfer(allowTargetTransfer);
 
-        return config;
+        if (raptorRange != null) {
+            builder.raptorRange(raptorRange);
+        }
+
+        return builder.build();
     }
 
     List<org.naviqore.raptor.Connection> routeConnections(Map<String, OffsetDateTime> sourceStops,
                                                           Map<String, Integer> targetStops, TimeType timeType,
                                                           ConnectionQueryConfig queryConfig,
-                                                          boolean allowSourceTransfer, boolean allowTargetTransfer) {
-        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
+                                                          boolean allowSourceTransfer, boolean allowTargetTransfer,
+                                                          @Nullable Integer raptorRange) {
+        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer,
+                raptorRange);
 
         if (timeType == TimeType.DEPARTURE) {
             return raptor.routeEarliestArrival(sourceStops, targetStops, config);
@@ -62,10 +69,11 @@ class RoutingQueryUtils {
 
     Map<String, org.naviqore.raptor.Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops,
                                                               TimeType timeType, ConnectionQueryConfig queryConfig,
-                                                              boolean allowSourceTransfer) {
+                                                              boolean allowSourceTransfer,
+                                                              @Nullable Integer raptorRange) {
         // allow target transfers does not work for isolines since no targets are defined
         return raptor.routeIsolines(sourceStops, TypeMapper.mapToRaptor(timeType),
-                prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true));
+                prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true, raptorRange));
     }
 
     Map<String, OffsetDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, OffsetDateTime startTime,

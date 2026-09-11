@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 @Slf4j
@@ -132,6 +133,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     public Map<Stop, Connection> getIsolines(Stop source, OffsetDateTime time, TimeType timeType,
                                              ConnectionQueryConfig config) throws ConnectionRoutingException {
         return delegate.getIsolines(source, time, timeType, config);
+    }
+
+    @Override
+    public Stop getRandomStop(Random random) {
+        return delegate.getRandomStop(random);
     }
 
     @Override
