@@ -62,6 +62,10 @@ public class QueryConfig {
         this.allowedTravelModes = allowedTravelModes;
     }
 
+    public static QueryConfig defaults() {
+        return builder().build();
+    }
+
     public OptionalInt getRaptorRange() {
         return raptorRange == null ? OptionalInt.empty() : OptionalInt.of(raptorRange);
     }

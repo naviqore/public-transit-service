@@ -28,11 +28,11 @@ public class GtfsTripMaskProviderTest {
     static Stream<Arguments> provideTestCases() {
         List<Arguments> argumentsList = new ArrayList<>();
         argumentsList.add(Arguments.of("Weekday, all travel modes, all accessibility, all bike", WEEKDAY,
-                QueryConfig.builder().build()));
+                QueryConfig.defaults()));
         argumentsList.add(Arguments.of("Weekend, all travel modes, all accessibility, all bike", WEEKEND,
-                QueryConfig.builder().build()));
+                QueryConfig.defaults()));
         argumentsList.add(Arguments.of("Exception, all travel modes, all accessibility, all bike", EXCEPTION,
-                QueryConfig.builder().build()));
+                QueryConfig.defaults()));
         argumentsList.add(Arguments.of("Weekday, bus only, all accessibility, all bike", WEEKDAY,
                 QueryConfig.builder().allowedTravelModes(EnumSet.of(TravelMode.BUS)).build()));
         argumentsList.add(Arguments.of("Weekday, bus and tram, all accessibility, all bike", WEEKDAY,

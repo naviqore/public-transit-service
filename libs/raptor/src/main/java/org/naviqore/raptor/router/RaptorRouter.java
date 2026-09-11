@@ -51,7 +51,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     }
 
     public void prepareStopTimesForDate(LocalDate date) {
-        stopTimeProvider.getStopTimesForDate(date, QueryConfig.builder().build());
+        stopTimeProvider.getStopTimesForDate(date, QueryConfig.defaults());
     }
 
     @Override

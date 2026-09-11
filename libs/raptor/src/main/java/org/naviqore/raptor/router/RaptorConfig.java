@@ -48,6 +48,10 @@ public class RaptorConfig {
         this.stopTimeCacheStrategy = stopTimeCacheStrategy;
     }
 
+    public static RaptorConfig defaults() {
+        return builder().build();
+    }
+
     public static class NoMaskProvider implements RaptorTripMaskProvider {
         private Map<String, String[]> tripIds;
 

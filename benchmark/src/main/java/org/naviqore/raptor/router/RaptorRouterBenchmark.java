@@ -155,7 +155,7 @@ public final class RaptorRouterBenchmark {
                 Map<String, Integer> targetStops = Map.of(requests[i].targetStop().getId(), 0);
 
                 List<Connection> connections = raptor.routeEarliestArrival(sourceStops, targetStops,
-                        QueryConfig.builder().build());
+                        QueryConfig.defaults());
                 long endTime = System.nanoTime();
                 responses[i] = toResult(i, requests[i], connections, startTime, endTime);
             } catch (IllegalArgumentException e) {

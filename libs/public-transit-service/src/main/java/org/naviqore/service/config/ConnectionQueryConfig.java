@@ -34,4 +34,8 @@ public class ConnectionQueryConfig {
     @Builder.Default
     EnumSet<TravelMode> travelModes = EnumSet.allOf(TravelMode.class);
 
+    public static ConnectionQueryConfig defaults() {
+        return builder().build();
+    }
+
 }
