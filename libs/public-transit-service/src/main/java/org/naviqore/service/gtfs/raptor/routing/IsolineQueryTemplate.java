@@ -34,7 +34,7 @@ abstract class IsolineQueryTemplate<T> {
      * The minimum duration of a time window segment in seconds to justify parallel processing. Prevents
      * over-parallelization for small windows where thread overhead would exceed routing gains.
      */
-    public static final int MIN_WINDOW_SEGMENT_DURATION = 120;
+    private static final int MIN_WINDOW_SEGMENT_DURATION = 120;
 
     protected final OffsetDateTime time;
     protected final TimeType timeType;
@@ -389,8 +389,8 @@ abstract class IsolineQueryTemplate<T> {
      */
     private OffsetDateTime getTripTimeFromConnection(org.naviqore.raptor.Connection connection) {
         return timeType == DEPARTURE ? connection.getLegs().getFirst().getDepartureTime() : connection.getLegs()
-                                                                                            .getLast()
-                                                                                            .getArrivalTime();
+                .getLast()
+                .getArrivalTime();
     }
 
     /**
@@ -404,8 +404,8 @@ abstract class IsolineQueryTemplate<T> {
      */
     private String getSourceStopIdFromConnection(org.naviqore.raptor.Connection connection) {
         return timeType == DEPARTURE ? connection.getLegs().getFirst().getFromStopId() : connection.getLegs()
-                                                                                         .getLast()
-                                                                                         .getToStopId();
+                .getLast()
+                .getToStopId();
     }
 
     /**
