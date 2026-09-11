@@ -172,7 +172,7 @@ abstract class ConnectionQueryTemplate<S, T> {
                                                                   OffsetDateTime windowLimit) {
         return connections.stream()
                 .filter(c -> timeType == DEPARTURE ? c.getDepartureTime().isBefore(windowLimit) : c.getArrivalTime()
-                                                                                                  .isAfter(windowLimit))
+                        .isAfter(windowLimit))
                 .toList();
     }
 
@@ -190,8 +190,9 @@ abstract class ConnectionQueryTemplate<S, T> {
         }
 
         // compute the remaining Range-RAPTOR range from the current query time to the window boundary
-        Integer raptorRange = windowLimit != null ? (int) Math.abs(
-                Duration.between(time, windowLimit).getSeconds()) : null;
+        // only derive a range for an active time window; otherwise preserve the globally configured default
+        Integer raptorRange = queryConfig.getTimeWindowDuration() > 0 && windowLimit != null ? (int) Duration.between(
+                time, windowLimit).abs().getSeconds() : null;
 
         // query connection from raptor
         List<org.naviqore.raptor.Connection> connections;

@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.naviqore.raptor.Connection;
+import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
@@ -308,6 +309,43 @@ public class RaptorRouterRangeTest {
         assertEquals(1, connections.size());
         RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 2,
                 STOP_A, STOP_K);
+    }
+
+    /**
+     * The range can be set per query, which takes precedence over the globally configured default range of the router.
+     * This is used by the service layer to derive the range from the time window of a query.
+     */
+    @Test
+    void applyQueryScopedRangeOverGlobalDefault(RaptorRouterTestBuilder builder) {
+        int headwayRoute1 = 15;
+        int headwayRoute2 = 30;
+        int offsetRoute2 = 15;
+
+        // the router is configured without a range, so Range-RAPTOR is globally disabled
+        RaptorAlgorithm raptor = builder.withAddRoute1_AG(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute1,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withAddRoute2_HL(offsetRoute2, headwayRoute2, RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS,
+                        RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                .withSameStopTransferTime(0)
+                .withRaptorRange(-1)
+                .withMaxDaysToScan(1)
+                .build();
+
+        OffsetDateTime expectedArrivalTime = EIGHT_AM.plusMinutes(
+                15 + 2 * RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS + RaptorRouterTestBuilder.DEFAULT_DWELL_TIME);
+
+        // without a query range the global default applies, which yields the departure at 08:00 and therefore an
+        // unnecessary idle time of 15 minutes at the transfer stop
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_I, EIGHT_AM);
+        assertEquals(1, connections.size());
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), EIGHT_AM, expectedArrivalTime);
+
+        // a query scoped range enables Range-RAPTOR for this query only and finds the later departure at 08:15, which
+        // arrives at the same time and hence has a shorter travel time
+        QueryConfig queryConfig = QueryConfig.builder().raptorRange(1800).build();
+        connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_I, EIGHT_AM, queryConfig);
+        assertEquals(1, connections.size());
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), EIGHT_AM.plusMinutes(15), expectedArrivalTime);
     }
 
     static class RangeRaptorHelpers {

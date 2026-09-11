@@ -110,8 +110,9 @@ public final class TypeMapper {
                 .maximumWalkDuration(config.getMaximumWalkDuration())
                 .minimumTransferDuration(config.getMinimumTransferDuration())
                 .maximumTransfers(config.getMaximumTransfers())
-                // TODO: Why do we set Integer.MAX here?
-                //  .maximumTravelDuration(config.getMaximumTravelDuration())
+                // RAPTOR does not apply the maximum travel duration as expected by the query definition: it sets the
+                // cutoff time when RAPTOR stops progressing, but to work as intended this would require starting the
+                // journey immediately, which is not necessarily the case.
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
                 .bikeAccessible(config.isBikeAllowed())
