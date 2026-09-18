@@ -113,6 +113,7 @@ public final class TypeMapper {
                 // RAPTOR does not apply the maximum travel duration as expected by the query definition: it sets the
                 // cutoff time when RAPTOR stops progressing, but to work as intended this would require starting the
                 // journey immediately, which is not necessarily the case.
+                // Set this explicitly so the service's unbounded RAPTOR cutoff does not depend on QueryConfig default.
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
                 .bikeAccessible(config.isBikeAllowed())
