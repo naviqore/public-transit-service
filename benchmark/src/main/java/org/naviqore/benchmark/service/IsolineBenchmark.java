@@ -1,27 +1,20 @@
-package org.naviqore.service;
+package org.naviqore.benchmark.service;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVPrinter;
+import org.naviqore.benchmark.BenchmarkUtils;
 import org.naviqore.gtfs.schedule.GtfsScheduleDataset;
-import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
-import org.naviqore.gtfs.schedule.model.StopTime;
-import org.naviqore.gtfs.schedule.model.Trip;
+import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.service.exception.StopNotFoundException;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -34,15 +27,15 @@ import java.util.*;
  *
  * @author munterfi
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@UtilityClass
 @Slf4j
-public final class IsolineBenchmark {
+public class IsolineBenchmark {
 
     // dataset
     private static final Path INPUT_DATA_DIRECTORY = Path.of("benchmark/input");
     private static final GtfsScheduleDataset DATASET = GtfsScheduleDataset.SWITZERLAND;
     private static final ZoneId ZONE_ID = ZoneId.of("Europe/Zurich");
-    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2026, 4, 25);
+    private static final LocalDate SCHEDULE_DATE = LocalDate.of(2026, Month.APRIL, 25);
 
     // sampling
     /**
@@ -60,7 +53,6 @@ public final class IsolineBenchmark {
 
     // constants
     private static final long MONITORING_INTERVAL_MS = 30000;
-    private static final int NS_TO_MS_CONVERSION_FACTOR = 1_000_000;
     private static final int MAX_DAYS_TO_SCAN = 3;
     private static final int RAPTOR_RANGE = -1; // No range raptor
     /**
@@ -75,19 +67,14 @@ public final class IsolineBenchmark {
             new Scenario("30min_travel_no_window", 30 * 60, 0));
 
     static void main() throws IOException, InterruptedException, StopNotFoundException {
-        GtfsSchedule schedule = initializeSchedule();
+        LocalDateTime runTimestamp = LocalDateTime.now();
+        GtfsSchedule schedule = BenchmarkUtils.initializeSchedule(DATASET, INPUT_DATA_DIRECTORY,
+                MONITORING_INTERVAL_MS);
         PublicTransitService service = initializeService(schedule);
-        IsolineRequest[] requests = sampleIsolineRequests(schedule, service);
-        IsolineResult[] results = processRequests(service, requests);
-        writeResultsToCsv(results);
-        writeSummaryToCsv(results);
-    }
-
-    private static GtfsSchedule initializeSchedule() throws IOException, InterruptedException {
-        File file = DATASET.getZip(INPUT_DATA_DIRECTORY);
-        GtfsSchedule schedule = new GtfsScheduleReader().read(file.getPath());
-        manageResources();
-        return schedule;
+        List<IsolineRequest> requests = sampleIsolineRequests(schedule, service);
+        List<IsolineResult> results = processRequests(service, requests);
+        writeResultsToCsv(results, runTimestamp);
+        writeSummaryToCsv(results, runTimestamp);
     }
 
     private static PublicTransitService initializeService(
@@ -99,7 +86,7 @@ public final class IsolineBenchmark {
                 .walkDurationMinimum(WALK_DURATION_MINIMUM)
                 .build();
         PublicTransitService service = new PublicTransitServiceFactory(config).create();
-        manageResources();
+        BenchmarkUtils.manageResources(MONITORING_INTERVAL_MS);
 
         // abort early if the schedule date is outside the validity of the dataset, results would be meaningless
         Validity validity = service.getValidity();
@@ -112,22 +99,10 @@ public final class IsolineBenchmark {
         return service;
     }
 
-    private static void manageResources() throws InterruptedException {
-        System.gc();
-        Thread.sleep(MONITORING_INTERVAL_MS);
-    }
-
-    private static IsolineRequest[] sampleIsolineRequests(GtfsSchedule schedule,
-                                                          PublicTransitService service) throws StopNotFoundException {
-        // extract valid stops for day, sorted to ensure a reproducible sample for the seed
-        Set<String> uniqueStopIds = new HashSet<>();
-        for (Trip trip : schedule.getActiveTrips(SCHEDULE_DATE)) {
-            for (StopTime stopTime : trip.getStopTimes()) {
-                uniqueStopIds.add(stopTime.stop().getId());
-            }
-        }
-        List<String> stopIds = new ArrayList<>(uniqueStopIds);
-        Collections.sort(stopIds);
+    private static List<IsolineRequest> sampleIsolineRequests(GtfsSchedule schedule,
+                                                              PublicTransitService service) throws StopNotFoundException {
+        // sampling a source stop requires at least one active stop
+        List<String> stopIds = BenchmarkUtils.getActiveStopIds(schedule, SCHEDULE_DATE, 1);
 
         // sample source stops, each is combined with every scenario and executed several times
         Random random = new Random(RANDOM_SEED);
@@ -142,13 +117,13 @@ public final class IsolineBenchmark {
             }
         }
 
-        return requests.toArray(new IsolineRequest[0]);
+        return requests;
     }
 
-    private static IsolineResult[] processRequests(PublicTransitService service, IsolineRequest[] requests) {
-        IsolineResult[] results = new IsolineResult[requests.length];
-        for (int i = 0; i < requests.length; i++) {
-            IsolineRequest request = requests[i];
+    private static List<IsolineResult> processRequests(PublicTransitService service, List<IsolineRequest> requests) {
+        List<IsolineResult> results = new ArrayList<>(requests.size());
+        for (int i = 0; i < requests.size(); i++) {
+            IsolineRequest request = requests.get(i);
             ConnectionQueryConfig queryConfig = ConnectionQueryConfig.builder()
                     .maximumTravelDuration(request.scenario().maximumTravelDuration())
                     .timeWindowDuration(request.scenario().timeWindowDuration())
@@ -159,10 +134,10 @@ public final class IsolineBenchmark {
                 Map<Stop, Connection> isolines = service.getIsolines(request.sourceStop(), request.queryTime(),
                         TimeType.DEPARTURE, queryConfig);
                 long endTime = System.nanoTime();
-                results[i] = toResult(i, request, isolines, startTime, endTime);
+                IsolineResult result = toResult(i, request, isolines, startTime, endTime);
+                results.add(result);
                 log.info("{} from {} (run {}): {} isolines in {} ms", request.scenario().label(),
-                        request.sourceStop().getName(), request.run(), results[i].isolines(),
-                        results[i].processingTime());
+                        request.sourceStop().getName(), request.run(), result.isolines(), result.processingTime());
             } catch (ConnectionRoutingException e) {
                 log.error("Could not process isoline request: {}", e.getMessage());
             }
@@ -172,27 +147,21 @@ public final class IsolineBenchmark {
 
     private static IsolineResult toResult(int id, IsolineRequest request, Map<Stop, Connection> isolines,
                                           long startTime, long endTime) {
-        long processingTime = (endTime - startTime) / NS_TO_MS_CONVERSION_FACTOR;
+        long processingTime = BenchmarkUtils.elapsedMillis(startTime, endTime);
         return new IsolineResult(id, request.sourceStop().getId(), request.sourceStop().getName(), request.queryTime(),
                 request.scenario(), request.run(), isolines.size(), processingTime);
     }
 
-    private static void writeResultsToCsv(IsolineResult[] results) throws IOException {
+    private static void writeResultsToCsv(List<IsolineResult> results, LocalDateTime runTimestamp) throws IOException {
         String[] headers = {"id", "source_stop_id", "source_stop_name", "requested_departure_time", "scenario",
-                "max_travel_duration", "time_window_duration", "run", "isolines", "processing_time_ms"};
+                "max_travel_duration_s", "time_window_duration_s", "run", "isolines", "processing_time_ms"};
 
-        try (PrintWriter writer = openWriter("isoline_results")) {
-            writer.println(String.join(",", headers));
+        try (CSVPrinter writer = BenchmarkUtils.openCsv(DATASET, runTimestamp, "isoline_results", headers)) {
             for (IsolineResult result : results) {
-                if (result == null) {
-                    continue;
-                }
-                writer.printf("%d,%s,\"%s\",%s,%s,%d,%d,%d,%d,%d%n", result.id(), result.sourceStopId(),
-                        result.sourceStopName(),
-                        result.requestedDepartureTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                        result.scenario().label(), result.scenario().maximumTravelDuration(),
-                        result.scenario().timeWindowDuration(), result.run(), result.isolines(),
-                        result.processingTime());
+                writer.printRecord(result.id(), result.sourceStopId(), result.sourceStopName(),
+                        BenchmarkUtils.formatDateTime(result.requestedDepartureTime()), result.scenario().label(),
+                        result.scenario().maximumTravelDuration(), result.scenario().timeWindowDuration(), result.run(),
+                        result.isolines(), result.processingTime());
             }
         }
     }
@@ -201,22 +170,18 @@ public final class IsolineBenchmark {
      * Aggregates the runs per source stop and scenario. The number of isolines must be identical across the runs of the
      * same request, a deviation indicates non-deterministic routing results.
      */
-    private static void writeSummaryToCsv(IsolineResult[] results) throws IOException {
+    private static void writeSummaryToCsv(List<IsolineResult> results, LocalDateTime runTimestamp) throws IOException {
         String[] headers = {"source_stop_id", "source_stop_name", "scenario", "runs", "min_isolines", "max_isolines",
                 "consistent", "min_processing_time_ms", "max_processing_time_ms", "avg_processing_time_ms"};
 
         // group by source stop and scenario, insertion order preserved
         Map<String, List<IsolineResult>> groups = new LinkedHashMap<>();
         for (IsolineResult result : results) {
-            if (result == null) {
-                continue;
-            }
             String key = result.sourceStopId() + "|" + result.scenario().label();
             groups.computeIfAbsent(key, _ -> new ArrayList<>()).add(result);
         }
 
-        try (PrintWriter writer = openWriter("isoline_summary")) {
-            writer.println(String.join(",", headers));
+        try (CSVPrinter writer = BenchmarkUtils.openCsv(DATASET, runTimestamp, "isoline_summary", headers)) {
             for (List<IsolineResult> group : groups.values()) {
                 IsolineResult first = group.getFirst();
                 IntSummaryStatistics isolines = group.stream().mapToInt(IsolineResult::isolines).summaryStatistics();
@@ -230,24 +195,11 @@ public final class IsolineBenchmark {
                             first.scenario().label(), first.sourceStopName(), isolines.getMin(), isolines.getMax());
                 }
 
-                writer.printf("%s,\"%s\",%s,%d,%d,%d,%b,%d,%d,%d%n", first.sourceStopId(), first.sourceStopName(),
-                        first.scenario().label(), group.size(), isolines.getMin(), isolines.getMax(), consistent,
-                        times.getMin(), times.getMax(), Math.round(times.getAverage()));
+                writer.printRecord(first.sourceStopId(), first.sourceStopName(), first.scenario().label(), group.size(),
+                        isolines.getMin(), isolines.getMax(), consistent, times.getMin(), times.getMax(),
+                        Math.round(times.getAverage()));
             }
         }
-    }
-
-    private static PrintWriter openWriter(String suffix) throws IOException {
-        String folderPath = String.format("benchmark/output/%s", DATASET.name().toLowerCase());
-        String fileName = String.format("%s_%s.csv",
-                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss")), suffix);
-        Path directoryPath = Paths.get(folderPath);
-        if (!Files.exists(directoryPath)) {
-            Files.createDirectories(directoryPath);
-        }
-        Path filePath = directoryPath.resolve(fileName);
-
-        return new PrintWriter(Files.newBufferedWriter(filePath, StandardOpenOption.CREATE, StandardOpenOption.WRITE));
     }
 
     /**
