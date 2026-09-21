@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.2.0](https://github.com/naviqore/public-transit-service/compare/v4.1.1...v4.2.0) (2026-09-21)
+
+
+### Features
+
+* **app:** introduce random stop endpoint ([b0a33e1](https://github.com/naviqore/public-transit-service/commit/b0a33e12e149d31a1a8c353062ca7c91466f7e40))
+* **raptor:** map query time window to raptor search range ([31b6970](https://github.com/naviqore/public-transit-service/commit/31b697095b8fa9e3da625fec25bc5f08c5b39d16)), closes [#489](https://github.com/naviqore/public-transit-service/issues/489)
+
+
+### Bug Fixes
+
+* **service:** preserve global range and stabilize random stop selection ([760f046](https://github.com/naviqore/public-transit-service/commit/760f04612f3e7f3479745bae89765c9d54dfa0bf)), closes [#489](https://github.com/naviqore/public-transit-service/issues/489)
+
+
+### Documentation
+
+* **service:** clarify explicit unbounded RAPTOR cutoff ([49dac25](https://github.com/naviqore/public-transit-service/commit/49dac251eaee3b692cf55dff57d01340e3a970dd)), closes [#489](https://github.com/naviqore/public-transit-service/issues/489)
+
 ## [4.1.1](https://github.com/naviqore/public-transit-service/compare/v4.1.0...v4.1.1) (2026-03-13)
 
 
