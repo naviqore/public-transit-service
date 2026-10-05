@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.2.1](https://github.com/naviqore/public-transit-service/compare/v4.2.0...v4.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **release:** build releases from the release tag and reject snapshot versions ([aef7ba4](https://github.com/naviqore/public-transit-service/commit/aef7ba497d16f9fe53df5d9876c0bb9f2423ce25))
+* **release:** build releases from the release tag and reject snapshot versions ([7c65b05](https://github.com/naviqore/public-transit-service/commit/7c65b0547577484fa812305573520c7a9b002d82))
+
 ## [4.2.0](https://github.com/naviqore/public-transit-service/compare/v4.1.1...v4.2.0) (2026-09-21)
 
 
