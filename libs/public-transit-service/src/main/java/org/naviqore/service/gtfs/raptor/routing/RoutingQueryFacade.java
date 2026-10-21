@@ -8,6 +8,8 @@ import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
+import org.naviqore.service.gtfs.raptor.GtfsTransitSchedule;
+import org.naviqore.service.spi.TransitSchedule;
 import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.naviqore.utils.spatial.index.KDTree;
@@ -28,7 +30,12 @@ public class RoutingQueryFacade {
     public RoutingQueryFacade(ServiceConfig config, GtfsSchedule schedule,
                               KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
                               WalkCalculator walkCalculator, RaptorAlgorithm raptor) {
-        this.utils = new RoutingQueryUtils(config, schedule, spatialStopIndex, walkCalculator, raptor);
+        this(config, new GtfsTransitSchedule(schedule, spatialStopIndex), walkCalculator, raptor);
+    }
+
+    public RoutingQueryFacade(ServiceConfig config, TransitSchedule schedule, WalkCalculator walkCalculator,
+                              RaptorAlgorithm raptor) {
+        this.utils = new RoutingQueryUtils(config, schedule, walkCalculator, raptor);
     }
 
     public List<Connection> queryConnections(OffsetDateTime time, TimeType timeType, ConnectionQueryConfig queryConfig,

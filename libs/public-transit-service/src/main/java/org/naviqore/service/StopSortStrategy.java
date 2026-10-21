@@ -3,6 +3,7 @@ package org.naviqore.service;
 import org.naviqore.gtfs.schedule.model.Stop;
 
 import java.util.Comparator;
+import java.util.function.Function;
 
 /**
  * Sorting strategies for stop search results.
@@ -14,8 +15,8 @@ public enum StopSortStrategy {
      */
     ALPHABETICAL {
         @Override
-        public Comparator<Stop> getComparator(String query) {
-            return Comparator.comparing(Stop::getName);
+        public <T> Comparator<T> getComparator(String query, Function<T, String> nameExtractor) {
+            return Comparator.comparing(nameExtractor);
         }
     },
 
@@ -30,12 +31,12 @@ public enum StopSortStrategy {
      */
     RELEVANCE {
         @Override
-        public Comparator<Stop> getComparator(String query) {
+        public <T> Comparator<T> getComparator(String query, Function<T, String> nameExtractor) {
             String lowerCaseQuery = query.toLowerCase();
 
             return (s1, s2) -> {
-                String name1 = s1.getName().toLowerCase();
-                String name2 = s2.getName().toLowerCase();
+                String name1 = nameExtractor.apply(s1).toLowerCase();
+                String name2 = nameExtractor.apply(s2).toLowerCase();
 
                 int score1 = calculateScore(name1, lowerCaseQuery);
                 int score2 = calculateScore(name2, lowerCaseQuery);
@@ -51,7 +52,7 @@ public enum StopSortStrategy {
                 }
 
                 // tertiary sort: alphabetically
-                return s1.getName().compareTo(s2.getName());
+                return nameExtractor.apply(s1).compareTo(nameExtractor.apply(s2));
             };
         }
 
@@ -70,5 +71,12 @@ public enum StopSortStrategy {
     /**
      * Get the comparator for the specific strategy.
      */
-    public abstract Comparator<Stop> getComparator(String query);
+    public Comparator<Stop> getComparator(String query) {
+        return getComparator(query, Stop::getName);
+    }
+
+    /**
+     * Get the comparator for the specific strategy, for any type of stop that can provide its name.
+     */
+    public abstract <T> Comparator<T> getComparator(String query, Function<T, String> nameExtractor);
 }

@@ -3,16 +3,15 @@ package org.naviqore.service.gtfs.raptor.routing;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.gtfs.raptor.TypeMapper;
+import org.naviqore.service.spi.TransitSchedule;
 import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.naviqore.utils.spatial.index.KDTree;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -33,8 +32,7 @@ import java.util.stream.Collectors;
 class RoutingQueryUtils {
 
     private final ServiceConfig serviceConfig;
-    private final GtfsSchedule schedule;
-    private final KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
+    private final TransitSchedule schedule;
     private final WalkCalculator walkCalculator;
     private final RaptorAlgorithm raptor;
 
@@ -87,15 +85,15 @@ class RoutingQueryUtils {
     }
 
     Map<String, Integer> getStopsWithWalkTimeFromLocation(GeoCoordinate location, ConnectionQueryConfig queryConfig) {
-        List<org.naviqore.gtfs.schedule.model.Stop> nearestStops = new ArrayList<>(
-                spatialStopIndex.rangeSearch(location, serviceConfig.getWalkSearchRadius()));
+        List<Stop> nearestStops = new ArrayList<>(
+                schedule.getStopsWithinRadius(location, serviceConfig.getWalkSearchRadius()));
 
         if (nearestStops.isEmpty()) {
-            nearestStops.add(spatialStopIndex.nearestNeighbor(location));
+            nearestStops.add(schedule.getNearestStop(location));
         }
 
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
-        for (org.naviqore.gtfs.schedule.model.Stop stop : nearestStops) {
+        for (Stop stop : nearestStops) {
             int walkDuration = walkCalculator.calculateWalk(location, stop.getCoordinate()).duration();
             if (walkDuration <= queryConfig.getMaximumWalkDuration()) {
                 // add access and egress time to the walk duration to account for the time between location and vehicle at stop
@@ -107,13 +105,13 @@ class RoutingQueryUtils {
     }
 
     Stop getStopById(String stopId) {
-        return TypeMapper.map(schedule.getStops().get(stopId));
+        return schedule.getStop(stopId);
     }
 
     Map<String, OffsetDateTime> getAllChildStopsFromStop(Stop stop, OffsetDateTime time) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
+        List<Stop> stops = getStopWithChildren(stop.getId());
         Map<String, OffsetDateTime> stopWithDateTime = new HashMap<>();
-        for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
+        for (Stop scheduleStop : stops) {
             stopWithDateTime.put(scheduleStop.getId(), time);
         }
 
@@ -121,9 +119,9 @@ class RoutingQueryUtils {
     }
 
     Map<String, Integer> getAllChildStopsFromStop(Stop stop) {
-        List<org.naviqore.gtfs.schedule.model.Stop> stops = schedule.getStopWithChildren(stop.getId());
+        List<Stop> stops = getStopWithChildren(stop.getId());
         Map<String, Integer> stopsWithWalkTime = new HashMap<>();
-        for (org.naviqore.gtfs.schedule.model.Stop scheduleStop : stops) {
+        for (Stop scheduleStop : stops) {
             stopsWithWalkTime.put(scheduleStop.getId(), 0);
         }
 
@@ -131,7 +129,7 @@ class RoutingQueryUtils {
     }
 
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
-        org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
+        Stop firstStop = schedule.getStop(firstStopId);
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
         int duration = firstWalk.duration();
 
@@ -140,7 +138,7 @@ class RoutingQueryUtils {
                     // shift walk time backwards to account access and egress time at the stop
                     departureTime.minusSeconds(duration + serviceConfig.getTransferDurationAccessEgress()),
                     departureTime.minusSeconds(serviceConfig.getTransferDurationAccessEgress()), source,
-                    firstStop.getCoordinate(), TypeMapper.map(firstStop));
+                    firstStop.getCoordinate(), firstStop);
         }
 
         return null;
@@ -148,27 +146,27 @@ class RoutingQueryUtils {
 
     @Nullable
     public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
-        org.naviqore.gtfs.schedule.model.Stop firstStop = schedule.getStops().get(firstStopId);
+        Stop firstStop = schedule.getStop(firstStopId);
         WalkCalculator.Walk firstWalkTransfer = walkCalculator.calculateWalk(sourceStop.getCoordinate(),
                 firstStop.getCoordinate());
         int duration = firstWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         if (shouldCreateWalk(duration, firstWalkTransfer)) {
             return TypeMapper.createTransfer(firstWalkTransfer.distance(), duration,
-                    departureTime.minusSeconds(duration), departureTime, sourceStop, TypeMapper.map(firstStop));
+                    departureTime.minusSeconds(duration), departureTime, sourceStop, firstStop);
         }
 
         return null;
     }
 
     @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, OffsetDateTime arrivalTime) {
-        org.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
+        Stop lastStop = schedule.getStop(lastStopId);
         WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastStop.getCoordinate());
         int duration = lastWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         if (shouldCreateWalk(duration, lastWalk)) {
             return TypeMapper.createWalk(lastWalk.distance(), duration, WalkType.LAST_MILE, arrivalTime,
-                    arrivalTime.plusSeconds(duration), lastStop.getCoordinate(), target, TypeMapper.map(lastStop));
+                    arrivalTime.plusSeconds(duration), lastStop.getCoordinate(), target, lastStop);
         }
 
         return null;
@@ -176,14 +174,14 @@ class RoutingQueryUtils {
 
     @Nullable
     public Transfer createLastWalkTransfer(Stop target, String lastStopId, OffsetDateTime arrivalTime) {
-        org.naviqore.gtfs.schedule.model.Stop lastStop = schedule.getStops().get(lastStopId);
+        Stop lastStop = schedule.getStop(lastStopId);
         WalkCalculator.Walk lastWalkTransfer = walkCalculator.calculateWalk(target.getCoordinate(),
                 lastStop.getCoordinate());
         int duration = lastWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         if (shouldCreateWalk(duration, lastWalkTransfer)) {
             return TypeMapper.createTransfer(lastWalkTransfer.distance(), duration, arrivalTime,
-                    arrivalTime.plusSeconds(duration), TypeMapper.map(lastStop), target);
+                    arrivalTime.plusSeconds(duration), lastStop, target);
         }
 
         return null;
@@ -194,6 +192,21 @@ class RoutingQueryUtils {
     // this will be filtered out by the first condition).
     private boolean shouldCreateWalk(int duration, WalkCalculator.Walk walk) {
         return duration > serviceConfig.getWalkDurationMinimum() && walk.duration() > 0;
+    }
+
+    // a parent stop also includes its children, since trips may also depart from the parent stop itself
+    private List<Stop> getStopWithChildren(String stopId) {
+        List<Stop> children = schedule.getChildren(stopId);
+
+        if (children.isEmpty()) {
+            return List.of(schedule.getStop(stopId));
+        }
+
+        List<Stop> stops = new ArrayList<>();
+        stops.add(schedule.getStop(stopId));
+        stops.addAll(children);
+
+        return stops;
     }
 
     Connection composeConnection(org.naviqore.raptor.Connection connection) {

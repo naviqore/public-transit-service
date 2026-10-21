@@ -3,12 +3,14 @@ package org.naviqore.service.gtfs.raptor;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.type.*;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.service.*;
 import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
+import org.naviqore.service.spi.ScheduledStopTime;
+import org.naviqore.service.spi.ScheduledTrip;
+import org.naviqore.service.spi.TransitSchedule;
 import org.naviqore.utils.search.SearchIndex;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -35,21 +37,20 @@ public final class TypeMapper {
                 route.getType().getDescription(), route.getAgency().name());
     }
 
-    public static Trip map(org.naviqore.gtfs.schedule.model.Trip trip, LocalDate date) {
+    public static Trip map(ScheduledTrip trip, LocalDate date, TransitSchedule schedule) {
         // create stop times
-        ZoneId zoneId = trip.getRoute().getAgency().timezone();
-        List<GtfsRaptorStopTime> stopTimes = trip.getStopTimes()
+        ZoneId zoneId = trip.zoneId();
+        List<GtfsRaptorStopTime> stopTimes = trip.stopTimes()
                 .stream()
-                .map(stopTime -> new GtfsRaptorStopTime(map(stopTime.stop()),
-                        stopTime.arrival().toOffsetDateTime(date, zoneId),
-                        stopTime.departure().toOffsetDateTime(date, zoneId)))
+                .map(stopTime -> new GtfsRaptorStopTime(schedule.getStop(stopTime.stopId()),
+                        toOffsetDateTime(stopTime.arrival(), date, zoneId),
+                        toOffsetDateTime(stopTime.departure(), date, zoneId)))
                 .toList();
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
-        GtfsRaptorTrip gtfsRaptorTrip = new GtfsRaptorTrip(trip.getId(), trip.getHeadSign(), map(trip.getRoute()),
-                stopTimes.stream().map(stopTime -> (StopTime) stopTime).toList(),
-                trip.getBikesAllowed() == BikeInformation.ALLOWED,
-                trip.getWheelchairAccessible() == AccessibilityInformation.ACCESSIBLE);
+        GtfsRaptorTrip gtfsRaptorTrip = new GtfsRaptorTrip(trip.id(), trip.headSign(),
+                schedule.getRoute(trip.routeId()), stopTimes.stream().map(stopTime -> (StopTime) stopTime).toList(),
+                trip.bikesAllowed(), trip.wheelchairAccessible());
 
         // set trip on stop times
         stopTimes.forEach(stopTime -> stopTime.setTrip(gtfsRaptorTrip));
@@ -57,10 +58,12 @@ public final class TypeMapper {
         return gtfsRaptorTrip;
     }
 
-    public static StopTime map(org.naviqore.gtfs.schedule.model.StopTime stopTime, LocalDate date) {
-        ZoneId zoneId = stopTime.trip().getRoute().getAgency().timezone();
-        return new GtfsRaptorStopTime(map(stopTime.stop()), stopTime.arrival().toOffsetDateTime(date, zoneId),
-                stopTime.departure().toOffsetDateTime(date, zoneId), map(stopTime.trip(), date));
+    public static StopTime map(ScheduledStopTime stopTime, LocalDate date, TransitSchedule schedule) {
+        ScheduledTrip trip = schedule.getTrip(stopTime.tripId());
+        ZoneId zoneId = trip.zoneId();
+        return new GtfsRaptorStopTime(schedule.getStop(stopTime.stopId()),
+                toOffsetDateTime(stopTime.arrival(), date, zoneId),
+                toOffsetDateTime(stopTime.departure(), date, zoneId), map(trip, date, schedule));
     }
 
     public static SearchIndex.SearchStrategy map(SearchType searchType) {
@@ -73,7 +76,7 @@ public final class TypeMapper {
     }
 
     public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
-                                 @Nullable Leg lastMile, GtfsSchedule schedule) {
+                                 @Nullable Leg lastMile, TransitSchedule schedule) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -91,10 +94,10 @@ public final class TypeMapper {
         return new GtfsRaptorConnection(legs);
     }
 
-    public static Leg map(org.naviqore.raptor.Leg leg, GtfsSchedule schedule) {
+    public static Leg map(org.naviqore.raptor.Leg leg, TransitSchedule schedule) {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
-        Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
-        Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
+        Stop sourceStop = schedule.getStop(leg.getFromStopId());
+        Stop targetStop = schedule.getStop(leg.getToStopId());
         int distance = (int) Math.round(sourceStop.getCoordinate().distanceTo(targetStop.getCoordinate()));
 
         return switch (leg.getType()) {
@@ -174,33 +177,31 @@ public final class TypeMapper {
         return new GtfsRaptorTransfer(distance, duration, departureTime, arrivalTime, sourceStop, targetStop);
     }
 
-    private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, GtfsSchedule schedule,
+    private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, TransitSchedule schedule,
                                                            int distance) {
-        org.naviqore.gtfs.schedule.model.Trip gtfsTrip = schedule.getTrips().get(leg.getTripId());
-        LocalDate serviceDay = getServiceDay(leg, gtfsTrip);
+        ScheduledTrip scheduledTrip = schedule.getTrip(leg.getTripId());
+        LocalDate serviceDay = getServiceDay(leg, scheduledTrip);
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
-        Trip trip = map(gtfsTrip, serviceDay);
+        Trip trip = map(scheduledTrip, serviceDay, schedule);
 
-        assert gtfsTrip.getStopTimes().size() == trip.getStopTimes()
-                .size() : "GTFS trip and trip implementation in service must have the same number of stop times.";
+        assert scheduledTrip.stopTimes().size() == trip.getStopTimes()
+                .size() : "Scheduled trip and trip implementation in service must have the same number of stop times.";
 
         // find departure and arrival stop time in stop sequence of trip
         StopTime departure = null;
         StopTime arrival = null;
-        for (int i = 0; i < gtfsTrip.getStopTimes().size(); i++) {
-            var gtfsStopTime = gtfsTrip.getStopTimes().get(i);
+        for (int i = 0; i < scheduledTrip.stopTimes().size(); i++) {
+            ScheduledStopTime scheduledStopTime = scheduledTrip.stopTimes().get(i);
             // if the fromStop id and the departure time matches, set the departure stop time
-            if (gtfsStopTime.stop().getId().equals(leg.getFromStopId()) && gtfsStopTime.departure()
-                    .toLocalTime()
-                    .equals(leg.getDepartureTime().toLocalTime())) {
+            if (scheduledStopTime.stopId().equals(leg.getFromStopId()) && toLocalTime(
+                    scheduledStopTime.departure()).equals(leg.getDepartureTime().toLocalTime())) {
                 departure = trip.getStopTimes().get(i);
                 continue;
             }
 
             // if the toStop id and the arrival time matches, set the arrival stop time
-            if (gtfsStopTime.stop().getId().equals(leg.getToStopId()) && gtfsStopTime.arrival()
-                    .toLocalTime()
-                    .equals(leg.getArrivalTime().toLocalTime())) {
+            if (scheduledStopTime.stopId().equals(leg.getToStopId()) && toLocalTime(
+                    scheduledStopTime.arrival()).equals(leg.getArrivalTime().toLocalTime())) {
                 arrival = trip.getStopTimes().get(i);
                 break;
             }
@@ -212,17 +213,25 @@ public final class TypeMapper {
         return new GtfsRaptorPublicTransitLeg(distance, duration, trip, departure, arrival);
     }
 
-    private static LocalDate getServiceDay(org.naviqore.raptor.Leg leg, org.naviqore.gtfs.schedule.model.Trip trip) {
+    private static LocalDate getServiceDay(org.naviqore.raptor.Leg leg, ScheduledTrip trip) {
         String StopId = leg.getFromStopId();
         LocalTime departureTime = leg.getDepartureTime().toLocalTime();
 
-        for (org.naviqore.gtfs.schedule.model.StopTime stopTime : trip.getStopTimes()) {
-            if (stopTime.stop().getId().equals(StopId) && stopTime.departure().toLocalTime().equals(departureTime)) {
-                int dayShift = stopTime.departure().getTotalSeconds() / SECONDS_IN_DAY;
+        for (ScheduledStopTime stopTime : trip.stopTimes()) {
+            if (stopTime.stopId().equals(StopId) && toLocalTime(stopTime.departure()).equals(departureTime)) {
+                int dayShift = stopTime.departure() / SECONDS_IN_DAY;
                 return leg.getDepartureTime().toLocalDate().minusDays(dayShift);
             }
         }
 
         throw new IllegalStateException("Could not find service day for leg");
+    }
+
+    private static OffsetDateTime toOffsetDateTime(int serviceDaySeconds, LocalDate date, ZoneId zoneId) {
+        return new ServiceDayTime(serviceDaySeconds).toOffsetDateTime(date, zoneId);
+    }
+
+    private static LocalTime toLocalTime(int serviceDaySeconds) {
+        return new ServiceDayTime(serviceDaySeconds).toLocalTime();
     }
 }

@@ -14,8 +14,6 @@ import org.naviqore.service.gtfs.raptor.convert.WalkTransferGenerator;
 import org.naviqore.service.walk.BeeLineWalkCalculator;
 import org.naviqore.service.walk.WalkCalculator;
 import org.naviqore.utils.cache.EvictionCache;
-import org.naviqore.utils.search.SearchIndex;
-import org.naviqore.utils.search.SearchIndexBuilder;
 import org.naviqore.utils.spatial.index.KDTree;
 import org.naviqore.utils.spatial.index.KDTreeBuilder;
 
@@ -30,7 +28,6 @@ public class GtfsRaptorServiceInitializer {
     private final ServiceConfig config;
     private final GtfsSchedule schedule;
     private final WalkCalculator walkCalculator;
-    private final SearchIndex<Stop> stopSearchIndex;
     private final KDTree<Stop> spatialStopIndex;
     private final RaptorRouter raptorRouter;
 
@@ -39,7 +36,6 @@ public class GtfsRaptorServiceInitializer {
         this.config = config;
         this.schedule = config.getGtfsScheduleRepository().get();
         this.walkCalculator = initializeWalkCalculator(config);
-        this.stopSearchIndex = createStopSearchIndex(schedule);
         this.spatialStopIndex = createSpatialStopIndex(schedule);
 
         // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
@@ -48,23 +44,10 @@ public class GtfsRaptorServiceInitializer {
         this.raptorRouter = createRaptorRouter(config, schedule, transferGenerators);
     }
 
-    private static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
+    static WalkCalculator initializeWalkCalculator(ServiceConfig config) {
         return switch (config.getWalkCalculatorType()) {
             case ServiceConfig.WalkCalculatorType.BEE_LINE_DISTANCE -> new BeeLineWalkCalculator(config.getWalkSpeed());
         };
-    }
-
-    private static SearchIndex<Stop> createStopSearchIndex(GtfsSchedule schedule) {
-        SearchIndexBuilder<Stop> builder = SearchIndex.builder();
-
-        // only add parent stops and stops without a parent
-        for (org.naviqore.gtfs.schedule.model.Stop stop : schedule.getStops().values()) {
-            if (stop.getParent().isEmpty()) {
-                builder.add(stop.getName().toLowerCase(), stop);
-            }
-        }
-
-        return builder.build();
     }
 
     private static KDTree<Stop> createSpatialStopIndex(GtfsSchedule schedule) {
@@ -98,7 +81,8 @@ public class GtfsRaptorServiceInitializer {
     }
 
     public GtfsRaptorService get() {
-        return new GtfsRaptorService(config, schedule, spatialStopIndex, stopSearchIndex, walkCalculator, raptorRouter);
+        return new GtfsRaptorService(config, new GtfsTransitSchedule(schedule, spatialStopIndex), walkCalculator,
+                raptorRouter);
     }
 
 }

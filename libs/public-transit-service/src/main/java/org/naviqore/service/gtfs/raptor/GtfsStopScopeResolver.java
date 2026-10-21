@@ -1,22 +1,30 @@
 package org.naviqore.service.gtfs.raptor;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.service.Stop;
 import org.naviqore.service.StopScope;
+import org.naviqore.service.spi.TransitSchedule;
 import org.naviqore.utils.spatial.index.KDTree;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-@RequiredArgsConstructor
 class GtfsStopScopeResolver {
 
-    private final GtfsSchedule schedule;
-    private final KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex;
+    private final TransitSchedule schedule;
     private final int walkSearchRadius;
+
+    GtfsStopScopeResolver(GtfsSchedule schedule, KDTree<org.naviqore.gtfs.schedule.model.Stop> spatialStopIndex,
+                          int walkSearchRadius) {
+        this(new GtfsTransitSchedule(schedule, spatialStopIndex), walkSearchRadius);
+    }
+
+    GtfsStopScopeResolver(TransitSchedule schedule, int walkSearchRadius) {
+        this.schedule = schedule;
+        this.walkSearchRadius = walkSearchRadius;
+    }
 
     /**
      * Resolves a stop and scope into a set of unique stop IDs.
@@ -29,9 +37,9 @@ class GtfsStopScopeResolver {
 
             case RELATED -> collectSubtree(findRoot(stop.getId()).getId());
 
-            case NEARBY -> spatialStopIndex.rangeSearch(stop.getCoordinate(), walkSearchRadius)
+            case NEARBY -> schedule.getStopsWithinRadius(stop.getCoordinate(), walkSearchRadius)
                     .stream()
-                    .map(org.naviqore.gtfs.schedule.model.Stop::getId)
+                    .map(Stop::getId)
                     .collect(Collectors.toSet());
         };
     }
@@ -39,13 +47,13 @@ class GtfsStopScopeResolver {
     /**
      * Finds the root ancestor of a stop by traversing upward through parent references with cycle detection.
      */
-    private org.naviqore.gtfs.schedule.model.Stop findRoot(String stopId) {
-        org.naviqore.gtfs.schedule.model.Stop current = schedule.getStops().get(stopId);
+    private Stop findRoot(String stopId) {
+        Stop current = schedule.getStop(stopId);
         Set<String> visited = new HashSet<>();
         visited.add(current.getId());
 
-        while (current.getParent().isPresent()) {
-            org.naviqore.gtfs.schedule.model.Stop parent = current.getParent().get();
+        while (schedule.getParent(current.getId()).isPresent()) {
+            Stop parent = schedule.getParent(current.getId()).get();
 
             if (!visited.add(parent.getId())) {
                 log.warn("Circular parent_station reference detected at stop '{}'", parent.getId());
@@ -63,24 +71,20 @@ class GtfsStopScopeResolver {
      * breadth-first traversal.
      */
     private Set<String> collectSubtree(String startStopId) {
-        org.naviqore.gtfs.schedule.model.Stop start = schedule.getStops().get(startStopId);
+        Stop start = schedule.getStop(startStopId);
         if (start == null) {
             return Collections.emptySet();
         }
 
         Set<String> result = new HashSet<>();
-        Deque<org.naviqore.gtfs.schedule.model.Stop> queue = new ArrayDeque<>();
+        Deque<Stop> queue = new ArrayDeque<>();
         queue.add(start);
 
         while (!queue.isEmpty()) {
-            org.naviqore.gtfs.schedule.model.Stop current = queue.poll();
+            Stop current = queue.poll();
 
             if (result.add(current.getId())) {
-                List<org.naviqore.gtfs.schedule.model.Stop> children = current.getChildren();
-
-                if (children != null) {
-                    queue.addAll(children);
-                }
+                queue.addAll(schedule.getChildren(current.getId()));
             }
         }
 
