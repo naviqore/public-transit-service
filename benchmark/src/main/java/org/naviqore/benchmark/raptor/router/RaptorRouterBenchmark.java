@@ -12,8 +12,8 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.raptor.router.RaptorConfig;
 import org.naviqore.raptor.router.RaptorRouter;
-import org.naviqore.service.gtfs.raptor.convert.GtfsToRaptorConverter;
-import org.naviqore.service.gtfs.raptor.convert.GtfsTripMaskProvider;
+import org.naviqore.service.raptor.convert.TimetableToRaptorConverter;
+import org.naviqore.service.raptor.convert.TimetableTripMaskProvider;
 import org.naviqore.utils.cache.EvictionCache;
 
 import java.io.IOException;
@@ -71,9 +71,9 @@ public class RaptorRouterBenchmark {
                 .sameStopTransferDurationDefault(SAME_STOP_TRANSFER_TIME)
                 .stopTimeCacheSize(MAX_DAYS_TO_SCAN)
                 .stopTimeCacheStrategy(EvictionCache.Strategy.LRU)
-                .maskProvider(new GtfsTripMaskProvider(schedule))
+                .maskProvider(new TimetableTripMaskProvider(schedule))
                 .build();
-        RaptorRouter raptor = new GtfsToRaptorConverter(config, schedule).run();
+        RaptorRouter raptor = new TimetableToRaptorConverter(config, schedule).run();
         BenchmarkUtils.manageResources(MONITORING_INTERVAL_MS);
 
         for (int dayIndex = 0; dayIndex < MAX_DAYS_TO_SCAN; dayIndex++) {

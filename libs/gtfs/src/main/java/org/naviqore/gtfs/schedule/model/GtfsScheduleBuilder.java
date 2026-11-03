@@ -4,7 +4,12 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.gtfs.schedule.type.*;
+import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.RouteType;
+import org.naviqore.timetable.type.AccessibilityInformation;
+import org.naviqore.timetable.type.BikeInformation;
+import org.naviqore.timetable.type.ServiceDayTime;
+import org.naviqore.timetable.type.TransferType;
 import org.naviqore.utils.cache.ValueObjectCache;
 import org.naviqore.utils.spatial.GeoCoordinate;
 

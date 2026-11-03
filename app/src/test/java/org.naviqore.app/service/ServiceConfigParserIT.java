@@ -49,7 +49,7 @@ public class ServiceConfigParserIT {
     @Test
     void testServiceConfigParser_withValidInputs(@TempDir Path tempDir) throws IOException {
         ServiceConfig config = getServiceConfig(tempDir);
-        assertNotNull(config.getGtfsScheduleRepository());
+        assertNotNull(config.getTimetableRepository());
         assertEquals(DEFAULT_GTFS_STATIC_UPDATE_CRON, config.getGtfsStaticUpdateCron());
         assertEquals(DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT, config.getTransferDurationSameStopDefault());
         assertEquals(DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM, config.getTransferDurationBetweenStopsMinimum());

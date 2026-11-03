@@ -80,7 +80,7 @@ public class IsolineBenchmark {
     private static PublicTransitService initializeService(
             GtfsSchedule schedule) throws IOException, InterruptedException {
         ServiceConfig config = ServiceConfig.builder()
-                .gtfsScheduleRepository(() -> schedule)
+                .timetableRepository(() -> schedule)
                 .raptorDaysToScan(MAX_DAYS_TO_SCAN)
                 .raptorRange(RAPTOR_RANGE)
                 .walkDurationMinimum(WALK_DURATION_MINIMUM)

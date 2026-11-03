@@ -6,7 +6,7 @@ import org.naviqore.app.infrastructure.GtfsScheduleFile;
 import org.naviqore.app.infrastructure.GtfsScheduleS3;
 import org.naviqore.app.infrastructure.GtfsScheduleUrl;
 import org.naviqore.service.config.ServiceConfig;
-import org.naviqore.service.repo.GtfsScheduleRepository;
+import org.naviqore.service.repo.TimetableRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +36,7 @@ public class ServiceConfigParser {
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
         this.serviceConfig = ServiceConfig.builder()
-                .gtfsScheduleRepository(getRepository(gtfsStaticUri))
+                .timetableRepository(getRepository(gtfsStaticUri))
                 .gtfsStaticUpdateCron(gtfsStaticUpdateCron)
                 .transferDurationSameStopDefault(transferDurationSameStopDefault)
                 .transferDurationBetweenStopsMinimum(transferDurationBetweenStopsMinimum)
@@ -52,7 +52,7 @@ public class ServiceConfigParser {
                 .build();
     }
 
-    private static GtfsScheduleRepository getRepository(String gtfsStaticUri) {
+    private static TimetableRepository getRepository(String gtfsStaticUri) {
         if (isLocalFile(gtfsStaticUri)) {
             return new GtfsScheduleFile(gtfsStaticUri);
         }

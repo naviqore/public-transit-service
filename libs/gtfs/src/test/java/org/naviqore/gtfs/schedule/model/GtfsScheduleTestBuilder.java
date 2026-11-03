@@ -2,7 +2,12 @@ package org.naviqore.gtfs.schedule.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.naviqore.gtfs.schedule.type.*;
+import org.naviqore.gtfs.schedule.type.DefaultRouteType;
+import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.HierarchicalVehicleType;
+import org.naviqore.gtfs.schedule.type.RouteType;
+import org.naviqore.timetable.type.ServiceDayTime;
+import org.naviqore.timetable.type.TransferType;
 
 import java.time.*;
 import java.util.*;
