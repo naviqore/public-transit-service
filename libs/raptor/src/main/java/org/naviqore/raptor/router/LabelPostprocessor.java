@@ -148,8 +148,11 @@ class LabelPostprocessor {
         maybeCombineFirstTwoLabels(labels);
         maybeCombineLastTwoLabels(labels);
 
-        // reverse to chronological order (source to target) for leg construction and timezone propagation
-        Collections.reverse(labels);
+        // reverse to chronological order for leg construction and timezone propagation, labels of arrival queries are
+        // already in chronological order since the routing runs backwards in time
+        if (timeType == TimeType.DEPARTURE) {
+            Collections.reverse(labels);
+        }
 
         // build the connection
         RaptorConnection connection = new RaptorConnection();

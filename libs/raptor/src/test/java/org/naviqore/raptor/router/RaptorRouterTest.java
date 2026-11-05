@@ -4,10 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.naviqore.raptor.Connection;
-import org.naviqore.raptor.Leg;
-import org.naviqore.raptor.QueryConfig;
-import org.naviqore.raptor.RaptorAlgorithm;
+import org.naviqore.raptor.*;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -489,6 +486,33 @@ class RaptorRouterTest {
         }
 
         @Test
+        void findLatestDepartureWithZeroDurationWalkTransferAndTripInTheSameMinute(RaptorRouterTestBuilder builder) {
+            // An arrival query routes backwards in time. When a walk transfer of zero duration and the trip after it
+            // depart and arrive in the same minute, their times cannot tell them apart: the order of the legs has to
+            // follow the stops.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddRoute3_MQ(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddTransfer1_ND(0)
+                    .build();
+
+            // Connection C <-> O will be a 1-stop leg from C to D, a walk transfer to N and a 1-stop leg from N to O,
+            // where the walk transfer and the leg from N to O both depart and arrive at 08:47.
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_C, STOP_O,
+                    NINE_AM);
+
+            assertEquals(1, connections.size());
+            List<Leg> legs = connections.getFirst().getLegs();
+            assertEquals(List.of(STOP_C, STOP_D, STOP_N), legs.stream().map(Leg::getFromStopId).toList());
+            assertEquals(List.of(STOP_D, STOP_N, STOP_O), legs.stream().map(Leg::getToStopId).toList());
+            assertEquals(legs.get(1).getDepartureTime(), legs.get(2).getArrivalTime(),
+                    "Walk transfer and trip to O should share the same minute");
+            RaptorRouterTestHelpers.assertLatestDepartureConnection(connections.getFirst(), STOP_C, STOP_O, NINE_AM, 0,
+                    1, 2, raptor);
+        }
+
+        @Test
         void ensureUnnecessaryWalkTransferIsNotAdded(RaptorRouterTestBuilder builder) {
             // This test should ensure that the router does not add a walk transfer at the beginning of a trip only to
             // reduce the earliest arrival time at the next stop when the following route leg could have also been entered
@@ -830,6 +854,29 @@ class RaptorRouterTest {
             for (String stop : reachableStops) {
                 assertTrue(isoLines.containsKey(stop), "Stop " + stop + " should be reachable");
             }
+        }
+
+        @Test
+        void createArrivalIsoLinesThroughZeroDurationWalkTransferAndTripInTheSameMinute(
+                RaptorRouterTestBuilder builder) {
+            // To arrive at O by 9 AM, the walk transfer of zero duration from D to N and the trip from N to O depart and
+            // arrive in the same minute: the connections of the isolines must still be built.
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddRoute3_MQ(0, RaptorRouterTestBuilder.DEFAULT_HEADWAY_TIME, 0,
+                            RaptorRouterTestBuilder.DEFAULT_DWELL_TIME)
+                    .withAddTransfer1_ND(0)
+                    .build();
+
+            Map<String, Connection> isoLines = raptor.routeIsolines(Map.of(STOP_O, NINE_AM), TimeType.ARRIVAL,
+                    QueryConfig.defaults());
+
+            Connection fromD = isoLines.get(STOP_D);
+            assertNotNull(fromD, "Stop D should reach O");
+            assertEquals(List.of(STOP_D, STOP_N), fromD.getLegs().stream().map(Leg::getFromStopId).toList());
+            Connection fromC = isoLines.get(STOP_C);
+            assertNotNull(fromC, "Stop C should reach O");
+            assertEquals(List.of(STOP_C, STOP_D, STOP_N), fromC.getLegs().stream().map(Leg::getFromStopId).toList());
         }
 
         @Test
