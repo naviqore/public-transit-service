@@ -9,6 +9,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.timetable.model.Timetable;
 import org.naviqore.timetable.type.AccessibilityInformation;
 import org.naviqore.timetable.type.BikeInformation;
+import org.naviqore.timetable.type.ServiceDayTime;
 import org.naviqore.utils.search.SearchIndex;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -19,8 +20,6 @@ import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
 public final class TypeMapper {
-
-    private static final int SECONDS_IN_DAY = 86400;
 
     public static Stop map(org.naviqore.timetable.model.Stop stop) {
         if (stop == null) {
@@ -168,52 +167,49 @@ public final class TypeMapper {
     private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, Timetable schedule,
                                                            int distance) {
         org.naviqore.timetable.model.Trip timetableTrip = schedule.getTrips().get(leg.getTripId());
-        LocalDate serviceDay = getServiceDay(leg, timetableTrip);
+        List<? extends org.naviqore.timetable.model.StopTime> stopTimes = timetableTrip.getStopTimes();
+        ZoneId zoneId = timetableTrip.getRoute().getAgency().timezone();
+        Instant departureTime = leg.getDepartureTime().toInstant();
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
-        Trip trip = map(timetableTrip, serviceDay);
 
-        assert timetableTrip.getStopTimes().size() == trip.getStopTimes()
-                .size() : "Timetable trip and trip implementation in service must have the same number of stop times.";
-
-        // find departure and arrival stop time in stop sequence of trip
-        StopTime departure = null;
-        StopTime arrival = null;
-        for (int i = 0; i < timetableTrip.getStopTimes().size(); i++) {
-            var timetableStopTime = timetableTrip.getStopTimes().get(i);
-            // if the fromStop id and the departure time matches, set the departure stop time
-            if (timetableStopTime.stop().getId().equals(leg.getFromStopId()) && timetableStopTime.departure()
-                    .toLocalTime()
-                    .equals(leg.getDepartureTime().toLocalTime())) {
-                departure = trip.getStopTimes().get(i);
+        // find departure and arrival stop time in stop sequence of trip: the departure is a stop time at the from stop
+        // that departs at the departure time of the leg on some service day, the arrival the first later stop time at
+        // the to stop that arrives the duration of the leg later. Times are compared as instants, since on the day of a
+        // DST change the time of a stop time is not the time on the clock.
+        for (int departureIdx = 0; departureIdx < stopTimes.size(); departureIdx++) {
+            org.naviqore.timetable.model.StopTime departure = stopTimes.get(departureIdx);
+            if (!departure.stop().getId().equals(leg.getFromStopId())) {
                 continue;
             }
 
-            // if the toStop id and the arrival time matches, set the arrival stop time
-            if (timetableStopTime.stop().getId().equals(leg.getToStopId()) && timetableStopTime.arrival()
-                    .toLocalTime()
-                    .equals(leg.getArrivalTime().toLocalTime())) {
-                arrival = trip.getStopTimes().get(i);
-                break;
+            LocalDate serviceDay = getServiceDay(departure.departure(), departureTime, zoneId);
+            if (!departure.departure().toZonedDateTime(serviceDay, zoneId).toInstant().equals(departureTime)) {
+                continue;
+            }
+
+            for (int arrivalIdx = departureIdx + 1; arrivalIdx < stopTimes.size(); arrivalIdx++) {
+                org.naviqore.timetable.model.StopTime arrival = stopTimes.get(arrivalIdx);
+                // both times count the seconds from the start of the service day, so they differ by the duration
+                if (arrival.stop().getId().equals(leg.getToStopId()) && arrival.arrival()
+                        .getTotalSeconds() - departure.departure().getTotalSeconds() == duration) {
+                    Trip trip = map(timetableTrip, serviceDay);
+                    return new RaptorServicePublicTransitLeg(distance, duration, trip,
+                            trip.getStopTimes().get(departureIdx), trip.getStopTimes().get(arrivalIdx));
+                }
             }
         }
 
-        assert departure != null : "Departure stop time cannot be null";
-        assert arrival != null : "Arrival stop time cannot be null";
-
-        return new RaptorServicePublicTransitLeg(distance, duration, trip, departure, arrival);
+        throw new IllegalStateException(
+                String.format("Trip %s does not run from stop %s at %s to stop %s at %s", leg.getTripId(),
+                        leg.getFromStopId(), leg.getDepartureTime(), leg.getToStopId(), leg.getArrivalTime()));
     }
 
-    private static LocalDate getServiceDay(org.naviqore.raptor.Leg leg, org.naviqore.timetable.model.Trip trip) {
-        String StopId = leg.getFromStopId();
-        LocalTime departureTime = leg.getDepartureTime().toLocalTime();
-
-        for (org.naviqore.timetable.model.StopTime stopTime : trip.getStopTimes()) {
-            if (stopTime.stop().getId().equals(StopId) && stopTime.departure().toLocalTime().equals(departureTime)) {
-                int dayShift = stopTime.departure().getTotalSeconds() / SECONDS_IN_DAY;
-                return leg.getDepartureTime().toLocalDate().minusDays(dayShift);
-            }
-        }
-
-        throw new IllegalStateException("Could not find service day for leg");
+    /**
+     * Gets the only service day on which the time can be the given instant; whether it is, the caller checks. The time
+     * counts from "noon minus 12h" of its service day, so twelve hours after the instant minus the time is noon of that
+     * day.
+     */
+    private static LocalDate getServiceDay(ServiceDayTime time, Instant instant, ZoneId zoneId) {
+        return instant.minusSeconds(time.getTotalSeconds()).atZone(zoneId).plusHours(12).toLocalDate();
     }
 }
