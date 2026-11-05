@@ -178,6 +178,36 @@ public class RaptorRouterMultiDayTest {
             assertEquals(0, connectionsWithLessDays.size());
         }
 
+        @Test
+        void foldInitialWalkIntoTripOfNextDayService(RaptorRouterTestBuilder builder) {
+            int startOfDay = 5;
+            int endOfDay = 22;
+
+            // route 1 runs on the next day only, and A and B are a walk apart
+            RoutePerDayMasker tripMaskProvider = new RoutePerDayMasker();
+            tripMaskProvider.deactivateRouteOnDate("R1", PREVIOUS_DAY.toLocalDate());
+            tripMaskProvider.deactivateRouteOnDate("R1", REFERENCE_DAY.toLocalDate());
+
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withAddTransfer(STOP_A, "B", 1)
+                    .withMaxDaysToScan(3)
+                    .withTripMaskProvider(tripMaskProvider)
+                    .withServiceDayRange(startOfDay, endOfDay)
+                    .build();
+
+            // the router walks from A to B and boards the first trip of the next day there; folding the walk into the
+            // ride must board that trip at A on the next day as well, not at its time of day on the reference day
+            OffsetDateTime departureTime = REFERENCE_DAY.plusHours(4);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    departureTime);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
+                    raptor);
+            assertEquals(NEXT_DAY.plusHours(startOfDay).toInstant(), connection.getDepartureTime().toInstant());
+        }
+
     }
 
     @Nested
