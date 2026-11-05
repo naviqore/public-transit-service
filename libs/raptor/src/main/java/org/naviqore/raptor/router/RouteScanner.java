@@ -275,17 +275,19 @@ class RouteScanner {
     private int getFurthestTripTimeOfRoute(Route route) {
         // get index of latest trip for departure and earliest trip for arrival
         int stopTimeIdx = forward ? route.firstStopTimeIdx() + 1 : route.firstStopTimeIdx();
-        for (int dayIndex = stopTimes.length - 1; dayIndex >= 0; dayIndex--) {
-            int dayOffset = dayIndex + startDayOffset;
+        // every day counts, since trips of one service day can run after trips of the next (e.g. after midnight)
+        int furthestTripTime = forward ? -INFINITY : INFINITY;
+        for (int dayIndex = 0; dayIndex < stopTimes.length; dayIndex++) {
             int time = stopTimes[dayIndex][stopTimeIdx];
-
-            if (time != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
-                return time + timeOffset;
+            if (time == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+                continue;
             }
+
+            time += timeDirection * (dayIndex + startDayOffset) * SECONDS_IN_DAY;
+            furthestTripTime = forward ? Math.max(furthestTripTime, time) : Math.min(furthestTripTime, time);
         }
 
-        return forward ? -INFINITY : INFINITY;
+        return furthestTripTime;
     }
 
     /**
@@ -337,6 +339,8 @@ class RouteScanner {
      * Find the possible trip on the route for the given trip mask. This loops through all trips departing or arriving
      * from a given stop for a given route and returns details about the first or last trip that can be taken (departing
      * after or arriving before the time of the previous round at this stop and accounting for transfer constraints).
+     * The first or last trip is looked for over all days to scan, since trips of one service day can run after trips of
+     * the next, e.g. trips after midnight stored as 24:30 of one day and as 00:15 of the next.
      *
      * @param stopIdx    the index of the stop to find the possible trip from.
      * @param stop       the stop to find the possible trip from.
@@ -358,6 +362,7 @@ class RouteScanner {
                     stop.sameStopTransferTime(), minTransferDuration);
         }
 
+        ActiveTrip possibleTrip = null;
         for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
             int dayOffset = dayIndex + startDayOffset;
             int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
@@ -368,6 +373,12 @@ class RouteScanner {
             // check if the day has any trips relevant
             if ((forward ? latestTripTime < referenceTime : referenceTime < earliestTripTime)) {
                 log.debug("No usable trips on route {} for stop {} on day {}", route.id(), stop.id(), dayIndex);
+                continue;
+            }
+
+            // check if any trip of the day can be better than the one found on a previous day
+            if (possibleTrip != null && !isBetter(forward ? earliestTripTime : latestTripTime,
+                    possibleTrip.entryTime())) {
                 continue;
             }
 
@@ -384,15 +395,29 @@ class RouteScanner {
 
                 relevantStopTime += timeOffset;
                 if (forward ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
-                    log.debug("Found active trip ({}) on route {}", i, route.id());
-                    return new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel, currentDayStopTimes);
+                    // the first possible trip of a day is the best of the day
+                    if (possibleTrip == null || isBetter(relevantStopTime, possibleTrip.entryTime())) {
+                        log.debug("Found active trip ({}) on route {}", i, route.id());
+                        possibleTrip = new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel,
+                                currentDayStopTimes);
+                    }
+                    break;
                 }
             }
         }
 
-        // no active trip found
-        log.debug("No active trip found on route {}", route.id());
-        return null;
+        if (possibleTrip == null) {
+            log.debug("No active trip found on route {}", route.id());
+        }
+
+        return possibleTrip;
+    }
+
+    /**
+     * Whether a trip time is better than another for the time type: earlier when departing, later when arriving.
+     */
+    private boolean isBetter(int time, int otherTime) {
+        return forward ? time < otherTime : time > otherTime;
     }
 
     /**
