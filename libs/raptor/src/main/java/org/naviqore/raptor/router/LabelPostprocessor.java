@@ -17,6 +17,8 @@ import static org.naviqore.raptor.router.QueryState.INFINITY;
  */
 class LabelPostprocessor {
 
+    private static final int SECONDS_IN_DAY = 86400;
+
     private final Stop[] stops;
     private final int[] stopTimes;
     private final Route[] routes;
@@ -370,12 +372,11 @@ class LabelPostprocessor {
             stopIdx = transferLabel.previous().stopIdx();
         }
 
-        StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel.routeOrTransferIdx(),
-                routeLabel.tripOffset());
+        StopTime stopTime = getTripStopTimeForStopInTrip(stopIdx, routeLabel, fromTarget);
 
-        // if stopTime is null, then the stop is not part of the trip of the route label, if stop time is not null, then
-        // check if the temporal order of the stop time and the route label is correct (e.g. for time type departure the
-        // stop time departure must be before the route label target time)
+        // if stopTime is null, then the trip of the route label does not call at the stop on the side of the leg it would
+        // replace, if stop time is not null, then check if the temporal order of the stop time and the route label is
+        // correct (e.g. for time type departure the stop time departure must be before the route label target time)
         if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel, transferLabel,
                 timeType) : !canStopTimeBeSource(stopTime, routeLabel, transferLabel, timeType))) {
             if (!fromTarget) {
@@ -480,36 +481,116 @@ class LabelPostprocessor {
     }
 
     /**
-     * Retrieve the stop time adjusted to UTC for a specific stop on a specific trip.
+     * Retrieve the stop time adjusted to UTC for a specific stop on the trip of a route label. The stop replaces one
+     * end of the label's leg, so the trip has to call at it after the boarding stop if it replaces the alighting stop,
+     * and before the alighting stop if it replaces the boarding stop. The times are those of the trip on the label's
+     * day.
      *
      * @param stopIdx    the index of the stop.
-     * @param routeIdx   the index of the route.
-     * @param tripOffset the offset of the trip on the route.
-     * @return the stop time adjusted to UTC, or null if stop not on trip.
+     * @param routeLabel the route label whose trip is searched.
+     * @param fromTarget if true, the stop replaces the end of the leg closest to the target.
+     * @return the stop time adjusted to UTC, or null if the trip does not call at the stop on that side of the leg.
      */
-    private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, int routeIdx, int tripOffset) {
-        int firstStopTimeIdx = routes[routeIdx].firstStopTimeIdx();
-        int numberOfStops = routes[routeIdx].numberOfStops();
+    private @Nullable StopTime getTripStopTimeForStopInTrip(int stopIdx, QueryState.Label routeLabel,
+                                                            boolean fromTarget) {
+        assert routeLabel.previous() != null;
+        boolean isDeparture = timeType == TimeType.DEPARTURE;
+        int boardingStopIdx = isDeparture ? routeLabel.previous().stopIdx() : routeLabel.stopIdx();
+        int alightingStopIdx = isDeparture ? routeLabel.stopIdx() : routeLabel.previous().stopIdx();
+        int boardingTime = isDeparture ? routeLabel.sourceTime() : routeLabel.targetTime();
+        int alightingTime = isDeparture ? routeLabel.targetTime() : routeLabel.sourceTime();
 
-        int stopOffset = -1;
-        for (int i = 0; i < numberOfStops; i++) {
-            if (routeStops[routes[routeIdx].firstRouteStopIdx() + i].stopIndex() == stopIdx) {
-                stopOffset = i;
-                break;
-            }
-        }
-
-        if (stopOffset == -1) {
+        // most stops are not on the route at all, which is cheap to rule out
+        Route route = routes[routeLabel.routeOrTransferIdx()];
+        if (findStopOffset(route, stopIdx, 0, 1) == -1) {
             return null;
         }
 
-        int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
+        int numberOfStops = route.numberOfStops();
+        int firstRouteStopIdx = route.firstRouteStopIdx();
+        // raw local times of the trip: the arrival at its first stop, followed by the departure, and so on
+        int firstTripStopTimeIdx = route.firstStopTimeIdx() + 2 * routeLabel.tripOffset() * numberOfStops + 2;
 
-        // apply UTC offset to the raw local time from the array
-        Route route = routes[routeIdx];
-        int utcOffset = DateTimeConverter.getLocalToUtcOffset(referenceDate, route.zoneId());
+        // find the stops the leg boards and alights at on the trip: the label's times are the trip's raw local times
+        // shifted to the trip's day and UTC offset, which also tells apart the rounds of a trip passing a stop twice
+        for (int boarding = 0; boarding < numberOfStops; boarding++) {
+            if (routeStops[firstRouteStopIdx + boarding].stopIndex() != boardingStopIdx) {
+                continue;
+            }
+            int timeOffset = boardingTime - stopTimes[firstTripStopTimeIdx + 2 * boarding + 1];
+            if (!isServiceDayTimeOffset(timeOffset, route.zoneId())) {
+                continue;
+            }
+            for (int alighting = boarding + 1; alighting < numberOfStops; alighting++) {
+                boolean isAlightingStop = routeStops[firstRouteStopIdx + alighting].stopIndex() == alightingStopIdx;
+                if (!isAlightingStop || stopTimes[firstTripStopTimeIdx + 2 * alighting] + timeOffset != alightingTime) {
+                    continue;
+                }
 
-        return new StopTime(stopTimes[stopTimeIndex] + utcOffset, stopTimes[stopTimeIndex + 1] + utcOffset);
+                // the stop replaces the alighting stop after boarding, or the boarding stop before alighting
+                int stopOffset;
+                if (fromTarget == isDeparture) {
+                    stopOffset = findStopOffset(route, stopIdx, boarding + 1, 1);
+                } else {
+                    stopOffset = findStopOffset(route, stopIdx, alighting - 1, -1);
+                }
+                if (stopOffset == -1) {
+                    return null;
+                }
+
+                int stopTimeIndex = firstTripStopTimeIdx + 2 * stopOffset;
+                return new StopTime(stopTimes[stopTimeIndex] + timeOffset, stopTimes[stopTimeIndex + 1] + timeOffset);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if a time offset shifts raw local times to a day around the reference date, at the UTC offset of the time
+     * zone on that day: the stop times of a trip running on that day are shifted by exactly this offset.
+     *
+     * @param timeOffset the time offset in seconds.
+     * @param zoneId     the time zone of the trip.
+     * @return true if the time offset is the one of a day, false otherwise.
+     */
+    private boolean isServiceDayTimeOffset(int timeOffset, ZoneId zoneId) {
+        // the nearest day first: it is the trip's day unless the UTC offset tips the rounding
+        long nearestDay = Math.round((double) timeOffset / SECONDS_IN_DAY);
+        return isTimeOffsetOfDay(timeOffset, nearestDay, zoneId) || isTimeOffsetOfDay(timeOffset, nearestDay - 1,
+                zoneId) || isTimeOffsetOfDay(timeOffset, nearestDay + 1, zoneId);
+    }
+
+    /**
+     * Check if a time offset is the one of a day: the UTC offset of the time zone on that day, plus the day's distance
+     * from the reference date.
+     *
+     * @param timeOffset the time offset in seconds.
+     * @param day        the day, relative to the reference date.
+     * @param zoneId     the time zone of the trip.
+     * @return true if the time offset is the one of the day, false otherwise.
+     */
+    private boolean isTimeOffsetOfDay(int timeOffset, long day, ZoneId zoneId) {
+        return timeOffset == DateTimeConverter.getLocalToUtcOffset(referenceDate.plusDays(day),
+                zoneId) + day * SECONDS_IN_DAY;
+    }
+
+    /**
+     * Find the next offset of a stop on a route, searching from an offset in the given direction.
+     *
+     * @param route   the route.
+     * @param stopIdx the index of the stop.
+     * @param from    the offset on the route to start searching from.
+     * @param step    1 to search forward, -1 to search backward.
+     * @return the offset of the stop on the route, or -1 if the route does not pass the stop in that direction.
+     */
+    private int findStopOffset(Route route, int stopIdx, int from, int step) {
+        for (int i = from; i >= 0 && i < route.numberOfStops(); i += step) {
+            if (routeStops[route.firstRouteStopIdx() + i].stopIndex() == stopIdx) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

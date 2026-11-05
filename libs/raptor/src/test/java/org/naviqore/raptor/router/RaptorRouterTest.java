@@ -41,6 +41,30 @@ class RaptorRouterTest {
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
     private static final OffsetDateTime NINE_AM = START_OF_DAY.plusHours(9);
 
+    /**
+     * Builds a router with a single trip, running in one direction only and calling at the stops the given minutes
+     * after 8 AM, and a walk transfer of the given minutes between two stops, in both directions. Like the routers of
+     * the {@link RaptorRouterTestBuilder}, it routes without range raptor.
+     */
+    private static RaptorAlgorithm buildSingleTrip(List<String> stops, List<Integer> minutesAfterEight, String walkFrom,
+                                                   String walkTo, int walkMinutes) {
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        stops.stream().distinct().forEach(builder::addStop);
+        builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, stops).addTrip("R-1", "R");
+        for (int i = 0; i < stops.size(); i++) {
+            int secondsOfDay = (8 * 60 + minutesAfterEight.get(i)) * 60;
+            builder.addStopTime("R", "R-1", i, stops.get(i), secondsOfDay, secondsOfDay);
+        }
+        return builder.addTransfer(walkFrom, walkTo, walkMinutes * 60)
+                .addTransfer(walkTo, walkFrom, walkMinutes * 60)
+                .build();
+    }
+
+    private static void assertLegs(Connection connection, List<String> fromStops, List<String> toStops) {
+        assertEquals(fromStops, connection.getLegs().stream().map(Leg::getFromStopId).toList());
+        assertEquals(toStops, connection.getLegs().stream().map(Leg::getToStopId).toList());
+    }
+
     @Nested
     class EarliestArrival {
 
@@ -587,6 +611,98 @@ class RaptorRouterTest {
                     1, 1, raptor);
         }
 
+        @Test
+        void ensureFinalWalkTransferIsNotReplacedByTheTripBeforeBoarding() {
+            // The trip calls at A and B at 8:00 and at C at 8:05. From B, A can only be reached by riding to C and
+            // walking back, arriving at 8:07. The trip also calls at A at 8:00, but before it calls at B, so it cannot
+            // replace the walk.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_A, STOP_B, STOP_C), List.of(0, 0, 5), STOP_C, STOP_A,
+                    2);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_B, STOP_A,
+                    EIGHT_AM);
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_B, STOP_C), List.of(STOP_C, STOP_A));
+            assertEquals(EIGHT_AM.plusMinutes(7), connections.getFirst().getArrivalTime());
+        }
+
+        @Test
+        void ensureFinalWalkTransferIsNotReplacedByTheTripBeforeBoardingForLatestDeparture() {
+            // The same trip and walk as above, routed backwards from an arrival at A by 8:10.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_A, STOP_B, STOP_C), List.of(0, 0, 5), STOP_C, STOP_A,
+                    2);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_B, STOP_A,
+                    EIGHT_AM.plusMinutes(10));
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_B, STOP_C), List.of(STOP_C, STOP_A));
+            assertEquals(EIGHT_AM, connections.getFirst().getDepartureTime());
+        }
+
+        @Test
+        void ensureFinalWalkTransferIsNotReplacedByTheFirstRoundOfATripPassingStopsTwice() {
+            // The trip passes B and A twice, at 8:00 and 8:02 and again at 8:10 and 8:12, and calls at C at 8:05 in
+            // between. From B at 8:06, C can only be reached by riding the second round from B to A and walking to C,
+            // arriving at 8:17. The trip's call at C lies in its first round, before boarding at B, so it cannot
+            // replace the walk.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_A, STOP_C, STOP_B, STOP_A, STOP_D),
+                    List.of(0, 2, 5, 10, 12, 20), STOP_A, STOP_C, 5);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_B, STOP_C,
+                    EIGHT_AM.plusMinutes(6));
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_B, STOP_A), List.of(STOP_A, STOP_C));
+            assertEquals(EIGHT_AM.plusMinutes(17), connections.getFirst().getArrivalTime());
+        }
+
+        @Test
+        void ensureFinalWalkTransferIsNotReplacedByTheFirstRoundOfATripPassingStopsTwiceForLatestDeparture() {
+            // The same trip and walk as above, routed backwards from an arrival at C by 8:20: the latest departure
+            // leaves B at 8:10 on the second round and walks from A to C.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_A, STOP_C, STOP_B, STOP_A, STOP_D),
+                    List.of(0, 2, 5, 10, 12, 20), STOP_A, STOP_C, 5);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_B, STOP_C,
+                    EIGHT_AM.plusMinutes(20));
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_B, STOP_A), List.of(STOP_A, STOP_C));
+            assertEquals(EIGHT_AM.plusMinutes(10), connections.getFirst().getDepartureTime());
+        }
+
+        @Test
+        void ensureInitialWalkTransferIsNotReplacedByTheTripAfterAlighting() {
+            // The trip calls at B at 8:00 and at C and A at 8:05. From A, C can only be reached by walking to B and
+            // riding from there, leaving A at 7:58. The trip also calls at A at 8:05, but after it calls at C, so it
+            // cannot replace the walk.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_C, STOP_A), List.of(0, 5, 5), STOP_A, STOP_B,
+                    2);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,
+                    EIGHT_AM.minusMinutes(5));
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_A, STOP_B), List.of(STOP_B, STOP_C));
+            assertEquals(EIGHT_AM.minusMinutes(2), connections.getFirst().getDepartureTime());
+        }
+
+        @Test
+        void ensureInitialWalkTransferIsNotReplacedByTheTripAfterAlightingForLatestDeparture() {
+            // The same trip and walk as above, routed backwards from an arrival at C by 8:10.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_C, STOP_A), List.of(0, 5, 5), STOP_A, STOP_B,
+                    2);
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_C,
+                    EIGHT_AM.plusMinutes(10));
+
+            assertEquals(1, connections.size());
+            assertLegs(connections.getFirst(), List.of(STOP_A, STOP_B), List.of(STOP_B, STOP_C));
+            assertEquals(EIGHT_AM.minusMinutes(2), connections.getFirst().getDepartureTime());
+        }
+
     }
 
     @Nested
@@ -877,6 +993,29 @@ class RaptorRouterTest {
             Connection fromC = isoLines.get(STOP_C);
             assertNotNull(fromC, "Stop C should reach O");
             assertEquals(List.of(STOP_C, STOP_D, STOP_N), fromC.getLegs().stream().map(Leg::getFromStopId).toList());
+        }
+
+        @Test
+        void ensureIsoLinesDoNotReplaceAWalkTransferByTheTripBeforeBoarding() {
+            // The trip calls at A and B at 8:00 and at C at 8:05: from B, A is reached by riding to C and walking back.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_A, STOP_B, STOP_C), List.of(0, 0, 5), STOP_C, STOP_A,
+                    2);
+
+            Map<String, Connection> isoLines = RaptorRouterTestHelpers.getIsoLines(raptor, Map.of(STOP_B, EIGHT_AM));
+
+            assertLegs(isoLines.get(STOP_A), List.of(STOP_B, STOP_C), List.of(STOP_C, STOP_A));
+        }
+
+        @Test
+        void ensureArrivalIsoLinesDoNotReplaceAWalkTransferByTheTripAfterAlighting() {
+            // The trip calls at B at 8:00 and at C and A at 8:05: from A, C is reached by walking to B and riding.
+            RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_C, STOP_A), List.of(0, 5, 5), STOP_A, STOP_B,
+                    2);
+
+            Map<String, Connection> isoLines = raptor.routeIsolines(Map.of(STOP_C, EIGHT_AM.plusMinutes(10)),
+                    TimeType.ARRIVAL, QueryConfig.defaults());
+
+            assertLegs(isoLines.get(STOP_A), List.of(STOP_A, STOP_B), List.of(STOP_B, STOP_C));
         }
 
         @Test
