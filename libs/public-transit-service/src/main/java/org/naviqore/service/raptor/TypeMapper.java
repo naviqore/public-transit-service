@@ -21,6 +21,8 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.NONE)
 public final class TypeMapper {
 
+    private static final ServiceDayTime START_OF_SERVICE_DAY = new ServiceDayTime(0);
+
     public static Stop map(org.naviqore.timetable.model.Stop stop) {
         if (stop == null) {
             return null;
@@ -35,13 +37,14 @@ public final class TypeMapper {
     }
 
     public static Trip map(org.naviqore.timetable.model.Trip trip, LocalDate date) {
-        // create stop times
+        // create stop times, counted from the start of the service day, which is the same for all of them
         ZoneId zoneId = trip.getRoute().getAgency().timezone();
+        Instant startOfServiceDay = START_OF_SERVICE_DAY.toZonedDateTime(date, zoneId).toInstant();
         List<RaptorServiceStopTime> stopTimes = trip.getStopTimes()
                 .stream()
                 .map(stopTime -> new RaptorServiceStopTime(map(stopTime.stop()),
-                        stopTime.arrival().toOffsetDateTime(date, zoneId),
-                        stopTime.departure().toOffsetDateTime(date, zoneId)))
+                        toOffsetDateTime(stopTime.arrival(), startOfServiceDay, zoneId),
+                        toOffsetDateTime(stopTime.departure(), startOfServiceDay, zoneId)))
                 .toList();
 
         // initialize trip, needs a cast to stop times from stop time impl (list)
@@ -54,6 +57,10 @@ public final class TypeMapper {
         stopTimes.forEach(stopTime -> stopTime.setTrip(raptorServiceTrip));
 
         return raptorServiceTrip;
+    }
+
+    private static OffsetDateTime toOffsetDateTime(ServiceDayTime time, Instant startOfServiceDay, ZoneId zoneId) {
+        return OffsetDateTime.ofInstant(startOfServiceDay.plusSeconds(time.getTotalSeconds()), zoneId);
     }
 
     public static StopTime map(org.naviqore.timetable.model.StopTime stopTime, LocalDate date) {
