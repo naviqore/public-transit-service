@@ -288,7 +288,7 @@ class LabelPostprocessor {
             tripId = route.tripIds()[label.tripOffset()];
             type = Leg.Type.ROUTE;
         } else {
-            routeId = String.format("transfer_%s_%s", fromStopId, toStopId);
+            routeId = "transfer_" + fromStopId + "_" + toStopId;
             type = Leg.Type.WALK_TRANSFER;
         }
 

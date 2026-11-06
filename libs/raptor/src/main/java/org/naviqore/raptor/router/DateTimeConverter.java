@@ -58,11 +58,8 @@ class DateTimeConverter {
      * @return OffsetDateTime correctly adjusted to the target zone
      */
     static OffsetDateTime toOffsetDateTime(int utcSeconds, LocalDate referenceDate, ZoneId zoneId) {
-        return referenceDate.atStartOfDay(ZoneOffset.UTC)
-                .plusSeconds(utcSeconds)
-                .toInstant()
-                .atZone(zoneId)
-                .toOffsetDateTime();
+        long epochSecond = referenceDate.toEpochSecond(LocalTime.MIDNIGHT, ZoneOffset.UTC) + utcSeconds;
+        return OffsetDateTime.ofInstant(Instant.ofEpochSecond(epochSecond), zoneId);
     }
 
     /**
