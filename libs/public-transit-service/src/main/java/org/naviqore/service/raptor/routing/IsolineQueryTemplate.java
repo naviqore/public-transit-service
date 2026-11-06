@@ -36,6 +36,12 @@ abstract class IsolineQueryTemplate<T> {
      */
     private static final int MIN_WINDOW_SEGMENT_DURATION = 120;
 
+    /**
+     * The range of each routing run within a time window: none. The runs step from one departure to the next anyway,
+     * and Range-RAPTOR would report the latest departure of equally fast connections, which can lie after the window.
+     */
+    private static final int NO_RANGE = 0;
+
     protected final OffsetDateTime time;
     protected final TimeType timeType;
     protected final ConnectionQueryConfig queryConfig;
@@ -154,8 +160,7 @@ abstract class IsolineQueryTemplate<T> {
 
         // perform sequential first call to warm up stop times cache before starting threads
         int totalWindowSeconds = queryConfig.getTimeWindowDuration();
-        Map<String, org.naviqore.raptor.Connection> initialIsolines = runForEarliestArrivalTime(sourceStops,
-                totalWindowSeconds);
+        Map<String, org.naviqore.raptor.Connection> initialIsolines = runForEarliestArrivalTime(sourceStops, NO_RANGE);
         Map<String, org.naviqore.raptor.Connection> shortestTravelTimeIsolines = new ConcurrentHashMap<>();
         Map<String, Duration> costPerSourceStop = calculateCostsPerSourceStop(time, sourceStops);
 
@@ -239,10 +244,8 @@ abstract class IsolineQueryTemplate<T> {
         }
 
         while (currentTimeIsRelevant(currentTime, endTime)) {
-            // set range to the remaining duration of the specific jump segment
-            Integer raptorRange = (int) Math.abs(Duration.between(currentTime, endTime).getSeconds());
             Map<String, org.naviqore.raptor.Connection> results = runForEarliestArrivalTime(currentSourceStops,
-                    raptorRange);
+                    NO_RANGE);
             updateShortestTravelTimeIsolines(globalBest, results, costs, windowLimit);
 
             Duration nextJump = getNextTimeIncrement(currentSourceStops, results);
