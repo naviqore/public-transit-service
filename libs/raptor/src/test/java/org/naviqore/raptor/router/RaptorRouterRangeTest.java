@@ -8,6 +8,7 @@ import org.naviqore.raptor.RaptorAlgorithm;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -25,6 +26,31 @@ public class RaptorRouterRangeTest {
     private static final OffsetDateTime START_OF_DAY = RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.atStartOfDay(
             RaptorRouterTestBuilder.DEFAULT_ZONE_ID).toOffsetDateTime();
     private static final OffsetDateTime EIGHT_AM = START_OF_DAY.plusHours(8);
+
+    /**
+     * Builds a range raptor router with a low frequency fast connection and a high frequency slower connection from A
+     * to K, and a range of 15 minutes, which covers the departures from A at 08:00 and 08:15.
+     */
+    private static RaptorAlgorithm buildRouterWithFastAndSlowConnection() {
+        int headwayRoute1 = 15;
+        int headwayRoute2 = 60;
+        int headwayRoute3and4 = 5;
+
+        int dwellTime = 0; // simplification to better calculate times by hand
+
+        return new RaptorRouterTestBuilder().withAddRoute1_AG(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute1,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute2_HL(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute2,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute3_MQ(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withAddRoute4_RS(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
+                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
+                .withSameStopTransferTime(0)
+                .withRaptorRange(900) // departures at 08:00 and 08:15
+                .withMaxDaysToScan(1)
+                .build();
+    }
 
     @Test
     void findDepartureConnections(RaptorRouterTestBuilder builder) {
@@ -272,26 +298,7 @@ public class RaptorRouterRangeTest {
         // offset with more rounds than the final best arrival time.
         // this test reproduces this case by introducing a low frequency fast connection and a high frequency slower
         // connection.
-
-        int headwayRoute1 = 15;
-        int headwayRoute2 = 60;
-        int headwayRoute3and4 = 5;
-
-        int dwellTime = 0; // simplification to better calculate times by hand
-
-        RaptorAlgorithm rangeRaptor = new RaptorRouterTestBuilder().withAddRoute1_AG(
-                        RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute1,
-                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
-                .withAddRoute2_HL(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute2,
-                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
-                .withAddRoute3_MQ(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
-                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
-                .withAddRoute4_RS(RaptorRouterTestBuilder.DEFAULT_OFFSET, headwayRoute3and4,
-                        RaptorRouterTestBuilder.DEFAULT_TIME_BETWEEN_STOPS, dwellTime)
-                .withSameStopTransferTime(0)
-                .withRaptorRange(900) // departures at 08:00 and 08:15
-                .withMaxDaysToScan(1)
-                .build();
+        RaptorAlgorithm rangeRaptor = buildRouterWithFastAndSlowConnection();
 
         // departure at 8:00 will yield only one fastest connection
         // 08:00 A --> R1 --> 08:05 B
@@ -309,6 +316,18 @@ public class RaptorRouterRangeTest {
         assertEquals(1, connections.size());
         RangeRaptorHelpers.assertConnection(connections.getFirst(), expectedDepartureTime, expectedArrivalTime, 2,
                 STOP_A, STOP_K);
+    }
+
+    @Test
+    void ensureIsolinesTakeTheBestLabelOfAllRounds() {
+        // the isoline counterpart of ensureParetoOptimalConnections: spawning at 08:15 reaches K in round 3 at 09:00,
+        // spawning at 08:00 then reaches K in round 2 at 08:20, and round 3 keeps its label of 09:00, since it cannot
+        // improve on 08:20. The isoline must report the best label of all rounds, not the one of the highest round.
+        Map<String, Connection> isolines = RaptorRouterTestHelpers.getIsoLines(buildRouterWithFastAndSlowConnection(),
+                Map.of(STOP_A, EIGHT_AM));
+
+        RangeRaptorHelpers.assertConnection(isolines.get(STOP_K), EIGHT_AM, EIGHT_AM.plusMinutes(20), 2, STOP_A,
+                STOP_K);
     }
 
     /**

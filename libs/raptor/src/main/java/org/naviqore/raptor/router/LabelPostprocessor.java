@@ -594,22 +594,47 @@ class LabelPostprocessor {
     }
 
     /**
-     * Loops through labels in reverse order to find the earliest/latest occurrence for a stop.
+     * Loops through the labels of all rounds to find the earliest/latest occurrence for a stop, compared as the router
+     * compares them. Without range raptor, the label of the highest round is the best one, since a later round only
+     * sets a label that improves the stop; range raptor keeps the labels of a later departure in the rounds that an
+     * earlier departure cannot improve.
      *
      * @param bestLabelsPerRound the list of labels per round.
      * @param stopIdx            the stop index.
      * @return the best label for the stop, or null if never reached.
      */
     private QueryState.@Nullable Label getBestLabelForStop(List<QueryState.Label[]> bestLabelsPerRound, int stopIdx) {
-        // loop through the list in reverse order since the first occurrence will be the best target time
+        QueryState.Label bestLabel = null;
+        // loop through the list in reverse order, so that of equally good labels the one of the highest round is kept
         for (int i = bestLabelsPerRound.size() - 1; i >= 0; i--) {
             QueryState.Label label = bestLabelsPerRound.get(i)[stopIdx];
-            if (label != null) {
-                return label;
+            if (label != null && (bestLabel == null || isBetter(getComparableTime(label),
+                    getComparableTime(bestLabel)))) {
+                bestLabel = label;
             }
         }
 
-        return null;
+        return bestLabel;
+    }
+
+    /**
+     * Gets the time the router compares a label by: its target time, or for a walk transfer, which needs no same stop
+     * transfer before the next trip, its target time less the same stop transfer time (see {@link FootpathRelaxer}).
+     */
+    private int getComparableTime(QueryState.Label label) {
+        if (label.type() != QueryState.LabelType.TRANSFER) {
+            return label.targetTime();
+        }
+
+        int sameStopTransferTime = stops[label.stopIdx()].sameStopTransferTime();
+        return timeType == TimeType.DEPARTURE ? label.targetTime() - sameStopTransferTime : label.targetTime() + sameStopTransferTime;
+    }
+
+    /**
+     * Whether a time is better than another for the time type: earlier when departing, later when arriving.
+     */
+    private boolean isBetter(int time, int otherTime) {
+        return timeType == TimeType.DEPARTURE ? time < otherTime : time > otherTime;
     }
 
     /**
