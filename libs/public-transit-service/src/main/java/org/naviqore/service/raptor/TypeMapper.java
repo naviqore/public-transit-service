@@ -14,9 +14,7 @@ import org.naviqore.utils.search.SearchIndex;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
+import java.util.*;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
 public final class TypeMapper {
@@ -80,6 +78,14 @@ public final class TypeMapper {
 
     public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
                                  @Nullable Leg lastMile, Timetable schedule) {
+        return map(connection, firstMile, lastMile, schedule, new Trips());
+    }
+
+    /**
+     * Maps a connection whose rides take their trips from the given trips, which the connections of one query share.
+     */
+    public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
+                                 @Nullable Leg lastMile, Timetable schedule, Trips trips) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -87,7 +93,7 @@ public final class TypeMapper {
         }
 
         for (org.naviqore.raptor.Leg leg : connection.getLegs()) {
-            legs.add(map(leg, schedule));
+            legs.add(map(leg, schedule, trips));
         }
 
         if (lastMile != null) {
@@ -98,6 +104,10 @@ public final class TypeMapper {
     }
 
     public static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule) {
+        return map(leg, schedule, new Trips());
+    }
+
+    private static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
@@ -107,7 +117,7 @@ public final class TypeMapper {
             case WALK_TRANSFER ->
                     new RaptorServiceTransfer(distance, duration, leg.getDepartureTime(), leg.getArrivalTime(),
                             sourceStop, targetStop);
-            case ROUTE -> createPublicTransitLeg(leg, schedule, distance);
+            case ROUTE -> createPublicTransitLeg(leg, schedule, distance, trips);
         };
     }
 
@@ -172,7 +182,7 @@ public final class TypeMapper {
     }
 
     private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, Timetable schedule,
-                                                           int distance) {
+                                                           int distance, Trips trips) {
         org.naviqore.timetable.model.Trip timetableTrip = schedule.getTrips().get(leg.getTripId());
         List<? extends org.naviqore.timetable.model.StopTime> stopTimes = timetableTrip.getStopTimes();
         ZoneId zoneId = timetableTrip.getRoute().getAgency().timezone();
@@ -199,7 +209,7 @@ public final class TypeMapper {
                 // both times count the seconds from the start of the service day, so they differ by the duration
                 if (arrival.stop().getId().equals(leg.getToStopId()) && arrival.arrival()
                         .getTotalSeconds() - departure.departure().getTotalSeconds() == duration) {
-                    Trip trip = map(timetableTrip, serviceDay);
+                    Trip trip = trips.get(timetableTrip, serviceDay);
                     return new RaptorServicePublicTransitLeg(distance, duration, trip,
                             trip.getStopTimes().get(departureIdx), trip.getStopTimes().get(arrivalIdx));
                 }
@@ -218,5 +228,21 @@ public final class TypeMapper {
      */
     private static LocalDate getServiceDay(ServiceDayTime time, Instant instant, ZoneId zoneId) {
         return instant.minusSeconds(time.getTotalSeconds()).atZone(zoneId).plusHours(12).toLocalDate();
+    }
+
+    /**
+     * Trips mapped for one query, each once per service day, since the many rides of an isoline's connections run on
+     * few trips.
+     */
+    public static final class Trips {
+
+        private final Map<TripOfServiceDay, Trip> trips = new HashMap<>();
+
+        private Trip get(org.naviqore.timetable.model.Trip trip, LocalDate serviceDay) {
+            return trips.computeIfAbsent(new TripOfServiceDay(trip.getId(), serviceDay), _ -> map(trip, serviceDay));
+        }
+
+        private record TripOfServiceDay(String tripId, LocalDate serviceDay) {
+        }
     }
 }

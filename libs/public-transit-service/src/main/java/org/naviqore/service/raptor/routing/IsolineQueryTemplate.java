@@ -8,6 +8,7 @@ import org.naviqore.service.Stop;
 import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
+import org.naviqore.service.raptor.TypeMapper;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -46,6 +47,11 @@ abstract class IsolineQueryTemplate<T> {
     protected final TimeType timeType;
     protected final ConnectionQueryConfig queryConfig;
     protected final RoutingQueryUtils utils;
+
+    /**
+     * The trips the connections of this query ride, mapped once each instead of once per ride.
+     */
+    protected final TypeMapper.Trips trips = new TypeMapper.Trips();
 
     private final T source;
     private final boolean allowSourceTransfers;

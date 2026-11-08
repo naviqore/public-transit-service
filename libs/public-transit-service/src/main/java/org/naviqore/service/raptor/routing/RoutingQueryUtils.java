@@ -212,6 +212,18 @@ class RoutingQueryUtils {
         return TypeMapper.map(connection, firstMile, lastMile, schedule);
     }
 
+    Connection composeConnection(org.naviqore.raptor.Connection connection, TypeMapper.Trips trips) {
+        return TypeMapper.map(connection, null, null, schedule, trips);
+    }
+
+    Connection composeConnection(Leg firstMile, org.naviqore.raptor.Connection connection, TypeMapper.Trips trips) {
+        return TypeMapper.map(connection, firstMile, null, schedule, trips);
+    }
+
+    Connection composeConnection(org.naviqore.raptor.Connection connection, Leg lastMile, TypeMapper.Trips trips) {
+        return TypeMapper.map(connection, null, lastMile, schedule, trips);
+    }
+
     // The raptor algorithm does not consider the first mile walk time, so we need to filter out connections
     // that exceed the maximum travel time
     boolean isBelowMaximumTravelTime(Connection serviceConnection, ConnectionQueryConfig queryConfig) {
