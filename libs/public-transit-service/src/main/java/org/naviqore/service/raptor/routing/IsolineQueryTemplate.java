@@ -89,7 +89,7 @@ abstract class IsolineQueryTemplate<T> {
         }
 
         // convert to service connections and collect results in a list to avoid intermediate hashing overhead
-        List<Map.Entry<Stop, Connection>> results = new ArrayList<>(isolines.size());
+        List<ReachedStop> results = new ArrayList<>(isolines.size());
         for (Map.Entry<String, org.naviqore.raptor.Connection> entry : isolines.entrySet()) {
             org.naviqore.raptor.Connection raptorConnection = entry.getValue();
             Stop stop = utils.getStopById(entry.getKey());
@@ -100,24 +100,26 @@ abstract class IsolineQueryTemplate<T> {
             };
 
             if (utils.isBelowMaximumTravelTime(serviceConnection, queryConfig)) {
-                results.add(Map.entry(stop, serviceConnection));
+                results.add(ReachedStop.of(stop, serviceConnection, timeType));
             }
         }
 
         // sort connections based on time type
-        Comparator<Map.Entry<Stop, Connection>> comparator = switch (timeType) {
+        Comparator<ReachedStop> byTime = Comparator.comparingLong(ReachedStop::epochNanos)
+                .thenComparingInt(ReachedStop::offsetSeconds);
+        Comparator<ReachedStop> comparator = switch (timeType) {
             // by arrival time ASC; earlier arrival at destination = closer
-            case DEPARTURE -> Comparator.comparing(e -> e.getValue().getArrivalTime());
+            case DEPARTURE -> byTime;
             // by departure time DESC; later departure from origin = closer
-            case ARRIVAL -> Comparator.comparing(e -> e.getValue().getDepartureTime(), Comparator.reverseOrder());
+            case ARRIVAL -> byTime.reversed();
         };
         // use stop name as tie-breaker for deterministic results
-        results.sort(comparator.thenComparing(e -> e.getKey().getName()));
+        results.sort(comparator.thenComparing(ReachedStop::name));
 
         // assemble isoline result
         Map<Stop, Connection> sortedResult = LinkedHashMap.newLinkedHashMap(results.size());
-        for (Map.Entry<Stop, Connection> entry : results) {
-            sortedResult.put(entry.getKey(), entry.getValue());
+        for (ReachedStop result : results) {
+            sortedResult.put(result.stop(), result.connection());
         }
 
         return sortedResult;
@@ -449,6 +451,23 @@ abstract class IsolineQueryTemplate<T> {
     private boolean currentTimeIsRelevant(OffsetDateTime currentTime, OffsetDateTime windowLimit) {
         return timeType == DEPARTURE && currentTime.isBefore(windowLimit) || timeType == ARRIVAL && currentTime.isAfter(
                 windowLimit);
+    }
+
+    /**
+     * A stop of the result with what it is sorted by, read once from its connection instead of in every comparison: the
+     * time that makes it closer, as an instant and an offset, which order times as {@link OffsetDateTime} does, and the
+     * name of the stop.
+     */
+    private record ReachedStop(Stop stop, Connection connection, long epochNanos, int offsetSeconds, String name) {
+
+        static ReachedStop of(Stop stop, Connection connection, TimeType timeType) {
+            OffsetDateTime time = switch (timeType) {
+                case DEPARTURE -> connection.getArrivalTime();
+                case ARRIVAL -> connection.getDepartureTime();
+            };
+            return new ReachedStop(stop, connection, time.toEpochSecond() * 1_000_000_000L + time.getNano(),
+                    time.getOffset().getTotalSeconds(), stop.getName());
+        }
     }
 
 }

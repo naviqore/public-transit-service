@@ -30,6 +30,7 @@ import org.naviqore.utils.spatial.index.KDTreeBuilder;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -700,6 +701,8 @@ class RoutingQueryFacadeIT {
                         TimeType.DEPARTURE, QUERY_CONFIG, sourceStop);
 
                 assertThat(isolines).hasSize(6);
+                // the closest stop first: the earliest arrival
+                assertThat(isolines.values()).extracting(Connection::getArrivalTime).isSorted();
 
                 for (Connection isoline : isolines.values()) {
                     assertThat(isoline.getLegs()).hasSize(1);
@@ -715,6 +718,9 @@ class RoutingQueryFacadeIT {
                         TimeType.ARRIVAL, QUERY_CONFIG, targetStop);
 
                 assertThat(isolines).hasSize(3);
+                // the closest stop first: the latest departure
+                assertThat(isolines.values()).extracting(Connection::getDepartureTime)
+                        .isSortedAccordingTo(Comparator.reverseOrder());
 
                 for (Connection isoline : isolines.values()) {
                     assertThat(isoline.getLegs()).hasSize(1);
