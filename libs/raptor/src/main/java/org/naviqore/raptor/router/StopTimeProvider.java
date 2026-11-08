@@ -4,6 +4,7 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -27,11 +28,21 @@ class StopTimeProvider {
     private final RaptorData data;
     private final RaptorTripMaskProvider tripMaskProvider;
 
+    /**
+     * The time zones of all routes, each once: their offsets on a date are part of the date's cache key, which every
+     * query computes for each day it scans.
+     */
+    private final ZoneId[] routeZones;
+
     StopTimeProvider(RaptorData data, RaptorTripMaskProvider tripMaskProvider, int cacheSize,
                      EvictionCache.Strategy cacheStrategy) {
         this.data = data;
         this.tripMaskProvider = tripMaskProvider;
         this.stopTimeCache = new EvictionCache<>(cacheSize, cacheStrategy);
+        this.routeZones = Arrays.stream(data.getRouteTraversal().routes())
+                .map(Route::zoneId)
+                .distinct()
+                .toArray(ZoneId[]::new);
     }
 
     /**
@@ -64,8 +75,7 @@ class StopTimeProvider {
         String serviceId = tripMaskProvider.getServiceIdForDate(date);
 
         // offsets of all unique route zones at local noon
-        String dstFingerprint = Arrays.stream(data.getRouteTraversal().routes())
-                .map(Route::zoneId)
+        String dstFingerprint = Arrays.stream(routeZones)
                 .map(zoneId -> DateTimeConverter.getLocalToUtcOffset(date, zoneId))
                 .distinct()
                 .sorted()
