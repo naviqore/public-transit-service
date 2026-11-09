@@ -40,3 +40,4 @@ build/
 # Benchmark test files
 benchmark/input/
 benchmark/output/
+benchmark/versions/

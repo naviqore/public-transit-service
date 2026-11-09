@@ -22,7 +22,7 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
     - **naviqore-gtfs**: Implementation of the General Transit Feed Specification.
     - **naviqore-gtfs-sample**: Access to GTFS sample datasets for testing purposes.
     - **naviqore-utils**: Common utility classes shared across the Naviqore libraries.
-- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
+- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries, see [its README](benchmark/README.md).
 
 ### Build Locally
 
