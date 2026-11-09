@@ -15,7 +15,9 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
  *     <li>All stops of a route must be known before adding the route.</li>
  *     <li>All trips of a route must have the same stop sequence.</li>
  *     <li>Each stop time of a trip must have a departure time after the previous stop time's arrival time.</li>
- *     <li>All trips in the final route container must be sorted by departure time.</li>
+ *     <li>All trips in the final route containers must be sorted by departure time.</li>
+ *     <li>No trip of a route container overtakes another: the trips of a route that do are held in several route
+ *     containers, each a route of RAPTOR, which keep the id of the route.</li>
  * </ul>
  *
  * @author munterfi
@@ -124,19 +126,37 @@ public class RaptorRouterBuilder {
     }
 
     private List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
-        return routeBuilders.values().parallelStream().map(RouteBuilder::build).sorted().toList();
+        List<RouteBuilder.RouteContainer> routeContainers = routeBuilders.values()
+                .parallelStream()
+                .flatMap(routeBuilder -> routeBuilder.build().stream())
+                .sorted()
+                .toList();
+
+        if (routeContainers.size() > routeBuilders.size()) {
+            log.info("Split routes with trips overtaking one another into {} additional routes",
+                    routeContainers.size() - routeBuilders.size());
+        }
+
+        return routeContainers;
     }
 
     private Lookup buildLookup(List<RouteBuilder.RouteContainer> routeContainers) {
         log.debug("Building lookup with {} stops and {} routes", stops.size(), routeContainers.size());
-        Map<String, Integer> routes = new HashMap<>(routeContainers.size());
-        Map<String, String[]> routeTripIds = new HashMap<>();
 
-        // assign idx to routes based on sorted order
+        // assign idx to routes based on sorted order, the route containers of a route in the same order
+        Map<String, List<Integer>> routeIndices = new HashMap<>(routeBuilders.size());
         for (int i = 0; i < routeContainers.size(); i++) {
-            RouteBuilder.RouteContainer routeContainer = routeContainers.get(i);
-            routes.put(routeContainer.id(), i);
-            routeTripIds.put(routeContainer.id(), routeContainer.trips().keySet().toArray(new String[0]));
+            routeIndices.computeIfAbsent(routeContainers.get(i).id(), _ -> new ArrayList<>(1)).add(i);
+        }
+
+        Map<String, int[]> routes = new HashMap<>(routeIndices.size());
+        Map<String, String[]> routeTripIds = new HashMap<>(routeIndices.size());
+        for (Map.Entry<String, List<Integer>> entry : routeIndices.entrySet()) {
+            routes.put(entry.getKey(), entry.getValue().stream().mapToInt(Integer::intValue).toArray());
+            routeTripIds.put(entry.getKey(), entry.getValue()
+                    .stream()
+                    .flatMap(i -> routeContainers.get(i).trips().keySet().stream())
+                    .toArray(String[]::new));
         }
 
         return new Lookup(Map.copyOf(stops), Map.copyOf(routes), Map.copyOf(routeTripIds));
@@ -147,7 +167,11 @@ public class RaptorRouterBuilder {
 
         // allocate arrays in needed size
         Stop[] stopArr = new Stop[stops.size()];
-        int[] stopRouteArr = new int[stopRoutes.values().stream().mapToInt(Set::size).sum()];
+        int[] stopRouteArr = new int[stopRoutes.values()
+                .stream()
+                .flatMap(Set::stream)
+                .mapToInt(routeId -> lookup.routes().get(routeId).length)
+                .sum()];
         Transfer[] transferArr = new Transfer[transferSize];
 
         // iterate over stops and populate arrays
@@ -171,8 +195,11 @@ public class RaptorRouterBuilder {
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId,
                     config.getSameStopTransferDurationDefault());
 
-            // add stop entry to stop array
-            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
+            // add stop entry to stop array, a route held in several route containers is served by each of them
+            int numberOfRoutes = currentStopRoutes.stream()
+                    .mapToInt(routeId -> lookup.routes().get(routeId).length)
+                    .sum();
+            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, numberOfRoutes, sameStopTransferTime,
                     numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
 
             // add transfer entry to transfer array if there are any
@@ -182,7 +209,9 @@ public class RaptorRouterBuilder {
 
             // add route index entries to stop route array
             for (String routeId : currentStopRoutes) {
-                stopRouteArr[stopRouteIdx++] = lookup.routes().get(routeId);
+                for (int routeIdx : lookup.routes().get(routeId)) {
+                    stopRouteArr[stopRouteIdx++] = routeIdx;
+                }
             }
         }
 
@@ -190,12 +219,16 @@ public class RaptorRouterBuilder {
     }
 
     private RouteTraversal buildRouteTraversal(List<RouteBuilder.RouteContainer> routeContainers) {
+        // the stops of a route held in several route containers are those of each of them
+        int routeContainerStopSize = routeContainers.stream()
+                .mapToInt(routeContainer -> routeContainer.stopSequence().size())
+                .sum();
         log.debug("Building route traversal with {} routes, {} route stops, {} stop times", routeContainers.size(),
-                routeStopSize, stopTimeSize);
+                routeContainerStopSize, stopTimeSize);
 
         // allocate arrays in needed size
         Route[] routeArr = new Route[routeContainers.size()];
-        RouteStop[] routeStopArr = new RouteStop[routeStopSize];
+        RouteStop[] routeStopArr = new RouteStop[routeContainerStopSize];
         int[] stopTimeArr = new int[2 + (stopTimeSize * 2) + (routeContainers.size() * 2)];
 
         // iterate over routes and populate arrays

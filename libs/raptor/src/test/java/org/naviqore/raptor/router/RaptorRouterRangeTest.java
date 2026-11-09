@@ -20,6 +20,7 @@ public class RaptorRouterRangeTest {
 
     private static final String STOP_A = "A";
     private static final String STOP_B = "B";
+    private static final String STOP_C = "C";
     private static final String STOP_I = "I";
     private static final String STOP_K = "K";
     private static final String STOP_N = "N";
@@ -409,6 +410,25 @@ public class RaptorRouterRangeTest {
         assertEquals(1, connections.size());
         RangeRaptorHelpers.assertConnection(connections.getFirst(), START_OF_DAY.plusHours(5),
                 START_OF_DAY.plusHours(5).plusMinutes(30), 1, STOP_A, STOP_B);
+    }
+
+    @Test
+    void findLatestDepartureOfTripOvertakingEarlierTripOfSameRoute() {
+        // the first trip of R leaves A at 8:00, the second five minutes later, overtakes it at B and arrives at C at
+        // the same time: RAPTOR scans the trips as two routes, but their departures are the range offsets of one
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(600).build());
+        List.of(STOP_A, STOP_B, STOP_C).forEach(builder::addStop);
+        addRouteWithTrips(builder, "R", List.of(STOP_A, STOP_B, STOP_C),
+                List.of(List.of(8 * 60, 8 * 60 + 20, 8 * 60 + 40), List.of(8 * 60 + 5, 8 * 60 + 15, 8 * 60 + 40)));
+        RaptorAlgorithm rangeRaptor = builder.build();
+
+        // range raptor reports the latest departure of the earliest arrival
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(rangeRaptor, STOP_A, STOP_C,
+                EIGHT_AM);
+
+        assertEquals(1, connections.size());
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), EIGHT_AM.plusMinutes(5), EIGHT_AM.plusMinutes(40),
+                1, STOP_A, STOP_C);
     }
 
     static class RangeRaptorHelpers {

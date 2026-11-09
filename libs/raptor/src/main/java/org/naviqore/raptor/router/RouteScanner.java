@@ -9,9 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.naviqore.raptor.router.QueryState.INFINITY;
 
@@ -453,10 +451,20 @@ class RouteScanner {
         int rangeStart = Math.min(refSourceTime, endRangeSourceTime);
         int rangeEnd = Math.max(refSourceTime, endRangeSourceTime);
 
-        // check all departures of passing routes
+        // check all departures of passing routes, those of a route held in several RAPTOR routes as one route's
+        Map<String, List<Integer>> stopTimesInRangePerRoute = new HashMap<>();
         for (int stopRouteIdx = stopRouteStartIdx; stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
             Route route = routes[stopRoutes[stopRouteIdx]];
-            List<Integer> tripOffsetsForRoute = getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd);
+            stopTimesInRangePerRoute.merge(route.id(), getStopTimesInRange(route, stopIdx, rangeStart, rangeEnd),
+                    (stopTimes, otherStopTimes) -> {
+                        List<Integer> stopTimesOfRoute = new ArrayList<>(stopTimes);
+                        stopTimesOfRoute.addAll(otherStopTimes);
+                        stopTimesOfRoute.sort(null);
+                        return stopTimesOfRoute;
+                    });
+        }
+
+        for (List<Integer> tripOffsetsForRoute : stopTimesInRangePerRoute.values()) {
             for (int tripOffsetIdx = 0; tripOffsetIdx < tripOffsetsForRoute.size(); tripOffsetIdx++) {
                 int tripOffset;
 

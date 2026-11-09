@@ -97,61 +97,76 @@ class StopTimeProvider {
         newStopTimesArray[0] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
         newStopTimesArray[1] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
 
-        // set the stop times for each route
+        // set the stop times for each route, whose trips are those of its RAPTOR routes, one after the other
         for (Map.Entry<String, RaptorTripMaskProvider.RouteTripMask> entry : mask.tripMask().entrySet()) {
-            String routeId = entry.getKey();
-            RaptorTripMaskProvider.RouteTripMask tripMask = entry.getValue();
-            int routeIdx = data.getLookup().routes().get(routeId);
-            Route route = data.getRouteTraversal().routes()[routeIdx];
-            int numStops = route.numberOfStops();
-            int stopTimeIndex = route.firstStopTimeIdx();
-            int utcOffset = DateTimeConverter.getLocalToUtcOffset(date, route.zoneId());
-
-            boolean[] booleanMask = tripMask.routeTripMask();
-
-            int earliestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-            int latestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-
-            int tripOffset = 0;
-            for (boolean tripActive : booleanMask) {
-                for (int stopOffset = 0; stopOffset < numStops; stopOffset++) {
-                    int arrivalIndex = stopTimeIndex + (tripOffset * numStops * 2) + stopOffset * 2 + 2;
-                    int departureIndex = arrivalIndex + 1;
-                    // arrival and departure
-                    if (tripActive) {
-                        newStopTimesArray[arrivalIndex] = utcOffset + originalStopTimesArray[arrivalIndex];
-                        newStopTimesArray[departureIndex] = utcOffset + originalStopTimesArray[departureIndex];
-                        if (earliestRouteStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                            earliestRouteStopTime = utcOffset + originalStopTimesArray[arrivalIndex];
-                        }
-                        latestRouteStopTime = utcOffset + originalStopTimesArray[departureIndex];
-
-                    } else {
-                        newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-                        newStopTimesArray[departureIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-                    }
-                }
-                tripOffset++;
+            boolean[] booleanMask = entry.getValue().routeTripMask();
+            int firstTripOfRoute = 0;
+            for (int routeIdx : data.getLookup().routes().get(entry.getKey())) {
+                Route route = data.getRouteTraversal().routes()[routeIdx];
+                setStopTimesForRoute(route, booleanMask, firstTripOfRoute, date, originalStopTimesArray,
+                        newStopTimesArray);
+                firstTripOfRoute += route.numberOfTrips();
             }
-
-            // set the earliest and latest stop times for the route
-            newStopTimesArray[stopTimeIndex] = earliestRouteStopTime;
-            newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
-
-            // maybe update the global start/end times for day
-            if (earliestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && latestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                // set the global earliest stop time if not set or if the new time is earlier
-                if (newStopTimesArray[0] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
-                    newStopTimesArray[0] = earliestRouteStopTime;
-                }
-                // set the global latest stop time if not set or if the new time is later
-                if (newStopTimesArray[1] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
-                    newStopTimesArray[1] = latestRouteStopTime;
-                }
-            }
-
         }
 
         return newStopTimesArray;
+    }
+
+    /**
+     * Sets the stop times of the trips of a RAPTOR route on a date, and the earliest and latest stop time of the route
+     * and of the day.
+     *
+     * @param route                  the RAPTOR route.
+     * @param booleanMask            the trip mask of the route the RAPTOR route belongs to.
+     * @param firstTripOfRoute       the position of the first trip of the RAPTOR route in the trip mask.
+     * @param date                   the date.
+     * @param originalStopTimesArray the stop times of all trips, relative to their service day.
+     * @param newStopTimesArray      the stop times of the date.
+     */
+    private void setStopTimesForRoute(Route route, boolean[] booleanMask, int firstTripOfRoute, LocalDate date,
+                                      int[] originalStopTimesArray, int[] newStopTimesArray) {
+        int numStops = route.numberOfStops();
+        int stopTimeIndex = route.firstStopTimeIdx();
+        int utcOffset = DateTimeConverter.getLocalToUtcOffset(date, route.zoneId());
+
+        int earliestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        int latestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+
+        for (int tripOffset = 0; tripOffset < route.numberOfTrips(); tripOffset++) {
+            boolean tripActive = booleanMask[firstTripOfRoute + tripOffset];
+            for (int stopOffset = 0; stopOffset < numStops; stopOffset++) {
+                int arrivalIndex = stopTimeIndex + (tripOffset * numStops * 2) + stopOffset * 2 + 2;
+                int departureIndex = arrivalIndex + 1;
+                // arrival and departure
+                if (tripActive) {
+                    newStopTimesArray[arrivalIndex] = utcOffset + originalStopTimesArray[arrivalIndex];
+                    newStopTimesArray[departureIndex] = utcOffset + originalStopTimesArray[departureIndex];
+                    if (earliestRouteStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+                        earliestRouteStopTime = utcOffset + originalStopTimesArray[arrivalIndex];
+                    }
+                    latestRouteStopTime = utcOffset + originalStopTimesArray[departureIndex];
+
+                } else {
+                    newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+                    newStopTimesArray[departureIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+                }
+            }
+        }
+
+        // set the earliest and latest stop times for the route
+        newStopTimesArray[stopTimeIndex] = earliestRouteStopTime;
+        newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
+
+        // maybe update the global start/end times for day
+        if (earliestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && latestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+            // set the global earliest stop time if not set or if the new time is earlier
+            if (newStopTimesArray[0] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
+                newStopTimesArray[0] = earliestRouteStopTime;
+            }
+            // set the global latest stop time if not set or if the new time is later
+            if (newStopTimesArray[1] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
+                newStopTimesArray[1] = latestRouteStopTime;
+            }
+        }
     }
 }

@@ -60,6 +60,27 @@ class RaptorRouterTest {
                 .build();
     }
 
+    /**
+     * Builds a router with one route from A over B to C, whose second trip overtakes the first: it departs from A ten
+     * minutes later, but calls at B and C earlier.
+     */
+    private static RaptorAlgorithm buildOvertakingTrips() {
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        List<String> stops = List.of(STOP_A, STOP_B, STOP_C);
+        stops.forEach(builder::addStop);
+        builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, stops);
+        Map<String, List<Integer>> minutesAfterEightOfTrips = Map.of("R-1", List.of(0, 30, 50), "R-2",
+                List.of(10, 20, 45));
+        minutesAfterEightOfTrips.forEach((tripId, minutesAfterEight) -> {
+            builder.addTrip(tripId, "R");
+            for (int i = 0; i < stops.size(); i++) {
+                int secondsOfDay = (8 * 60 + minutesAfterEight.get(i)) * 60;
+                builder.addStopTime("R", tripId, i, stops.get(i), secondsOfDay, secondsOfDay);
+            }
+        });
+        return builder.build();
+    }
+
     private static void assertLegs(Connection connection, List<String> fromStops, List<String> toStops) {
         assertEquals(fromStops, connection.getLegs().stream().map(Leg::getFromStopId).toList());
         assertEquals(toStops, connection.getLegs().stream().map(Leg::getToStopId).toList());
@@ -440,6 +461,43 @@ class RaptorRouterTest {
             // check that R1(-F for forward) route was used
             assertEquals("R1-F", connection.getRouteLegs().getFirst().getRouteId());
         }
+    }
+
+    @Nested
+    class OvertakingTrips {
+
+        @Test
+        void takeTripThatOvertakesEarlierTripOfSameRoute() {
+            RaptorAlgorithm raptor = buildOvertakingTrips();
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_C,
+                    EIGHT_AM);
+
+            // trip R-2 departs from A ten minutes after trip R-1, but arrives at C five minutes earlier
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            assertEquals(EIGHT_AM.plusMinutes(10), connection.getDepartureTime());
+            assertEquals(EIGHT_AM.plusMinutes(45), connection.getArrivalTime());
+            assertEquals("R", connection.getRouteLegs().getFirst().getRouteId());
+            assertEquals("R-2", connection.getRouteLegs().getFirst().getTripId());
+        }
+
+        @Test
+        void takeTripThatIsOvertakenByLaterTripOfSameRoute() {
+            RaptorAlgorithm raptor = buildOvertakingTrips();
+
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_B, STOP_C,
+                    EIGHT_AM.plusMinutes(55));
+
+            // trip R-1 departs from B ten minutes after trip R-2, which overtook it, and arrives at C before 8:55
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            assertEquals(EIGHT_AM.plusMinutes(30), connection.getDepartureTime());
+            assertEquals(EIGHT_AM.plusMinutes(50), connection.getArrivalTime());
+            assertEquals("R", connection.getRouteLegs().getFirst().getRouteId());
+            assertEquals("R-1", connection.getRouteLegs().getFirst().getTripId());
+        }
+
     }
 
     @Nested

@@ -13,7 +13,9 @@ import java.util.*;
  * <ul>
  *     <li>All trips of a route have the same stop sequence.</li>
  *     <li>Each stop time of a trip has a departure time that is temporally after the previous stop time's arrival time.</li>
- *     <li>In the final route container, all trips are sorted according to their departure time.</li>
+ *     <li>In the final route containers, all trips are sorted according to their departure time.</li>
+ *     <li>No trip of a route container overtakes another: RAPTOR takes the first trip it can catch at a stop and stays
+ *     on it, so a route whose trips overtake one another is held in several route containers.</li>
  * </ul>
  */
 @Slf4j
@@ -30,6 +32,41 @@ class RouteBuilder {
         for (int i = 0; i < stopIds.size(); i++) {
             stopSequence.put(i, stopIds.get(i));
         }
+    }
+
+    /**
+     * Compares the stop times of two trips by the departure at the first stop, then by the times at the following
+     * stops, so that of two trips departing together, the one that is faster comes first and is not overtaken.
+     */
+    private static int compareStopTimes(StopTime[] stopTimes, StopTime[] otherStopTimes) {
+        int comparison = Integer.compare(stopTimes[0].departure(), otherStopTimes[0].departure());
+        for (int position = 1; comparison == 0 && position < stopTimes.length; position++) {
+            comparison = Integer.compare(stopTimes[position].arrival(), otherStopTimes[position].arrival());
+            if (comparison == 0) {
+                comparison = Integer.compare(stopTimes[position].departure(), otherStopTimes[position].departure());
+            }
+        }
+
+        return comparison;
+    }
+
+    /**
+     * Checks if a trip overtakes an earlier trip, i.e. departs from or arrives at any stop earlier than it. Only the
+     * times RAPTOR routes with count: the departures from all stops but the last and the arrivals at all stops but the
+     * first.
+     */
+    private static boolean overtakes(StopTime[] stopTimes, StopTime[] earlierStopTimes) {
+        int lastPosition = stopTimes.length - 1;
+        for (int position = 0; position <= lastPosition; position++) {
+            if (position < lastPosition && stopTimes[position].departure() < earlierStopTimes[position].departure()) {
+                return true;
+            }
+            if (position > 0 && stopTimes[position].arrival() < earlierStopTimes[position].arrival()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void addTrip(String tripId) {
@@ -95,21 +132,46 @@ class RouteBuilder {
         }
     }
 
-    RouteContainer build() {
+    /**
+     * Builds the route containers of the route: one, or several if trips of the route overtake one another. Each trip
+     * joins the first container whose last trip it does not overtake, so the trips of a container are in the same order
+     * at every stop.
+     */
+    List<RouteContainer> build() {
         log.debug("Validating and building route {}", routeId);
         validate();
 
-        // sort trips by the departure time of the first stop
+        // sort trips by the departure time of the first stop, and trips departing together by their following times
         List<Map.Entry<String, StopTime[]>> sortedEntries = new ArrayList<>(trips.entrySet());
-        sortedEntries.sort(Comparator.comparingInt(entry -> entry.getValue()[0].departure()));
+        sortedEntries.sort(Map.Entry.comparingByValue(RouteBuilder::compareStopTimes));
 
-        // populate sortedTrips in the same order as sortedEntries, LinkedHashMap stores insertion order
-        LinkedHashMap<String, StopTime[]> sortedTrips = new LinkedHashMap<>(sortedEntries.size());
+        // populate the trips of each container in the same order as sortedEntries, LinkedHashMap stores insertion order
+        List<LinkedHashMap<String, StopTime[]>> containerTrips = new ArrayList<>();
         for (Map.Entry<String, StopTime[]> entry : sortedEntries) {
+            LinkedHashMap<String, StopTime[]> sortedTrips = null;
+            for (LinkedHashMap<String, StopTime[]> candidate : containerTrips) {
+                if (!overtakes(entry.getValue(), candidate.lastEntry().getValue())) {
+                    sortedTrips = candidate;
+                    break;
+                }
+            }
+
+            if (sortedTrips == null) {
+                sortedTrips = new LinkedHashMap<>();
+                containerTrips.add(sortedTrips);
+            }
+
             sortedTrips.put(entry.getKey(), entry.getValue());
         }
 
-        return new RouteContainer(routeId, zoneId, stopSequence, sortedTrips);
+        if (containerTrips.size() > 1) {
+            log.debug("Route {} has trips overtaking one another, split into {} route containers", routeId,
+                    containerTrips.size());
+        }
+
+        return containerTrips.stream()
+                .map(sortedTrips -> new RouteContainer(routeId, zoneId, stopSequence, sortedTrips))
+                .toList();
     }
 
     record RouteContainer(String id, ZoneId zoneId, Map<Integer, String> stopSequence,
