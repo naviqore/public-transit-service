@@ -364,9 +364,14 @@ class RouteScanner {
 
         ActiveTrip possibleTrip = null;
         for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
+            int[] currentDayStopTimes = stopTimes[dayIndex];
+            // the route does not run on the day, it has no earliest and latest trip time to add the day's offset to
+            if (currentDayStopTimes[firstStopTimeIdx] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+                continue;
+            }
+
             int dayOffset = dayIndex + startDayOffset;
             int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
-            int[] currentDayStopTimes = stopTimes[dayIndex];
             int earliestTripTime = currentDayStopTimes[firstStopTimeIdx] + timeOffset;
             int latestTripTime = currentDayStopTimes[firstStopTimeIdx + 1] + timeOffset;
 
@@ -508,6 +513,11 @@ class RouteScanner {
         int numberOfTrips = route.numberOfTrips();
 
         for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
+            // the route does not run on the day, it has no earliest and latest trip time to add the day's offset to
+            if (stopTimes[dayIndex][firstStopTimeIdx] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+                continue;
+            }
+
             int dayOffset = dayIndex + startDayOffset;
             int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
             int earliestTripTime = stopTimes[dayIndex][firstStopTimeIdx] + timeOffset;

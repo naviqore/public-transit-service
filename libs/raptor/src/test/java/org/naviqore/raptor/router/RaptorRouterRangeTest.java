@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class RaptorRouterRangeTest {
 
     private static final String STOP_A = "A";
+    private static final String STOP_B = "B";
     private static final String STOP_I = "I";
     private static final String STOP_K = "K";
     private static final String STOP_N = "N";
@@ -50,6 +51,22 @@ public class RaptorRouterRangeTest {
                 .withRaptorRange(900) // departures at 08:00 and 08:15
                 .withMaxDaysToScan(1)
                 .build();
+    }
+
+    /**
+     * Adds a route with trips calling at its stops the given minutes after the start of the service day.
+     */
+    private static void addRouteWithTrips(RaptorRouterBuilder builder, String routeId, List<String> stops,
+                                          List<List<Integer>> minutesOfTrips) {
+        builder.addRoute(routeId, RaptorRouterTestBuilder.DEFAULT_ZONE_ID, stops);
+        for (int trip = 0; trip < minutesOfTrips.size(); trip++) {
+            String tripId = routeId + "-" + trip;
+            builder.addTrip(tripId, routeId);
+            for (int i = 0; i < stops.size(); i++) {
+                int seconds = minutesOfTrips.get(trip).get(i) * 60;
+                builder.addStopTime(routeId, tripId, i, stops.get(i), seconds, seconds);
+            }
+        }
     }
 
     @Test
@@ -365,6 +382,33 @@ public class RaptorRouterRangeTest {
         connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_I, EIGHT_AM, queryConfig);
         assertEquals(1, connections.size());
         RangeRaptorHelpers.assertConnection(connections.getFirst(), EIGHT_AM.plusMinutes(15), expectedArrivalTime);
+    }
+
+    @Test
+    void findDepartureConnectionsOfRouteNotRunningOnPreviousDay() {
+        // R leaves A at 5:00, but not on the previous day, S leaves A at 6:00 on both days and is slower, and N runs
+        // between two other stops until 2:30, so that the previous day is scanned too when departing at 2:00
+        RaptorRouterMultiDayTest.RoutePerDayMasker masker = new RaptorRouterMultiDayTest.RoutePerDayMasker();
+        masker.deactivateRouteOnDate("R", RaptorRouterTestBuilder.DEFAULT_REFERENCE_DATE.minusDays(1));
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder()
+                .maskProvider(masker)
+                .daysToScan(3)
+                .stopTimeCacheSize(3)
+                .raptorRangeDefault(6 * RaptorRouterTestBuilder.SECONDS_IN_HOUR)
+                .build());
+        List.of(STOP_A, STOP_B, "X", "Y").forEach(builder::addStop);
+        addRouteWithTrips(builder, "R-F", List.of(STOP_A, STOP_B), List.of(List.of(5 * 60, 5 * 60 + 30)));
+        addRouteWithTrips(builder, "S-F", List.of(STOP_A, STOP_B), List.of(List.of(6 * 60, 7 * 60)));
+        addRouteWithTrips(builder, "N-F", List.of("X", "Y"), List.of(List.of(25 * 60, 26 * 60 + 30)));
+        RaptorAlgorithm rangeRaptor = builder.build();
+
+        // the range offsets are those of both routes leaving A, the earliest of R
+        List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(rangeRaptor, STOP_A, STOP_B,
+                START_OF_DAY.plusHours(2));
+
+        assertEquals(1, connections.size());
+        RangeRaptorHelpers.assertConnection(connections.getFirst(), START_OF_DAY.plusHours(5),
+                START_OF_DAY.plusHours(5).plusMinutes(30), 1, STOP_A, STOP_B);
     }
 
     static class RangeRaptorHelpers {
