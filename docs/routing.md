@@ -204,3 +204,7 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `raptor.optimize.travel.ti
   connection as there is, and its cost does not grow with a range.
 - **Time windows of connections and isolines differ** in what they compare with: connections with every connection,
   isolines with the connections leaving in the window, see above.
+- **The same timetable gives the same answers, on every start.** Of equally good alternatives, RAPTOR keeps the one it
+  meets first. The order it meets them in is set when the router is built, never by the order of its input or of a
+  map, which can change from one JVM start to the next: stops are numbered by id, routes ordered by their first
+  departure and then by id, trips with the same times by id, and the stops of a query by their number.

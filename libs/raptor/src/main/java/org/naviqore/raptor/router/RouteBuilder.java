@@ -141,9 +141,11 @@ class RouteBuilder {
         log.debug("Validating and building route {}", routeId);
         validate();
 
-        // sort trips by the departure time of the first stop, and trips departing together by their following times
+        // sort trips by the departure time of the first stop, trips departing together by their following times, and
+        // trips with the same times by id
         List<Map.Entry<String, StopTime[]>> sortedEntries = new ArrayList<>(trips.entrySet());
-        sortedEntries.sort(Map.Entry.comparingByValue(RouteBuilder::compareStopTimes));
+        sortedEntries.sort(Map.Entry.<String, StopTime[]>comparingByValue(RouteBuilder::compareStopTimes)
+                .thenComparing(Map.Entry.comparingByKey()));
 
         // populate the trips of each container in the same order as sortedEntries, LinkedHashMap stores insertion order
         List<LinkedHashMap<String, StopTime[]>> containerTrips = new ArrayList<>();
@@ -177,11 +179,25 @@ class RouteBuilder {
     record RouteContainer(String id, ZoneId zoneId, Map<Integer, String> stopSequence,
                           LinkedHashMap<String, StopTime[]> trips) implements Comparable<RouteContainer> {
 
+        /**
+         * Orders route containers by the departure of their first trip, then by id, and the containers of a route by
+         * the id of their first trip, which no other container of the route holds.
+         */
+        private static final Comparator<RouteContainer> ORDER = Comparator.comparingInt(RouteContainer::firstDeparture)
+                .thenComparing(RouteContainer::id)
+                .thenComparing(RouteContainer::firstTripId);
+
         @Override
         public int compareTo(@NonNull RouteContainer o) {
-            StopTime thisFirstStopTime = this.trips.values().iterator().next()[0];
-            StopTime otherFirstStopTime = o.trips.values().iterator().next()[0];
-            return Integer.compare(thisFirstStopTime.departure(), otherFirstStopTime.departure());
+            return ORDER.compare(this, o);
+        }
+
+        private int firstDeparture() {
+            return trips.firstEntry().getValue()[0].departure();
+        }
+
+        private String firstTripId() {
+            return trips.firstEntry().getKey();
         }
 
     }

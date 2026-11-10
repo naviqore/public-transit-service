@@ -231,8 +231,9 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
                 throw new InvalidStopException("At least one stop ID must be provided.");
             }
 
-            // loop over all stop pairs and check if stop exists in raptor, then validate departure time
-            Map<Integer, Integer> validStopIds = new LinkedHashMap<>();
+            // loop over all stop pairs and check if stop exists in raptor, then validate departure time; ordered by
+            // stop index, so that of stops reached equally well the same one is taken whatever order the map has
+            Map<Integer, Integer> validStopIds = new TreeMap<>();
             for (Map.Entry<String, Integer> entry : stops.entrySet()) {
                 String stopId = entry.getKey();
                 int time = entry.getValue();

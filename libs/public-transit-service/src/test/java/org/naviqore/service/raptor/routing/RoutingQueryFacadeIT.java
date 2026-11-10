@@ -146,6 +146,16 @@ class RoutingQueryFacadeIT {
         return new PublicTransitLegAssertArgs("A", "C", "T" + tripNumber, "R2");
     }
 
+    /**
+     * The ride of a connection arriving at stop C. The first trip of route 1, T1, leaves A at the same time as the
+     * first of route 2, T2, and arrives at C1, a child of C, as early: departing, of the target stops reached as early,
+     * the first by id, C, is taken, but arriving, of the routes leaving A as late, the one RAPTOR scans first, R1.
+     */
+    private PublicTransitLegAssertArgs getArrivingPublicTransitLegAssert(int tripNumber) {
+        return tripNumber == 2 ? new PublicTransitLegAssertArgs("A", "C1", "T1", "R1") : getPublicTransitLegAssert(
+                tripNumber);
+    }
+
     private FirstMileWalkLegAssertArgs getFirstMileWalkLegAssert() {
         return new FirstMileWalkLegAssertArgs(sourceStop, sourceCoordinate);
     }
@@ -327,12 +337,13 @@ class RoutingQueryFacadeIT {
                         Arguments.of(Duration.ofHours(6), List.of(2, 1, 0)));
             }
 
-            ConnectionAssertArgs getConnectionAsserts(int index) {
+            ConnectionAssertArgs getConnectionAsserts(int index, TimeType timeType) {
                 int tripNumber = index * 10 + 2;
                 OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
-                return new ConnectionAssertArgs(departureTime, arrivalTime,
-                        List.of(getPublicTransitLegAssert(tripNumber)));
+                PublicTransitLegAssertArgs ride = timeType == TimeType.ARRIVAL ? getArrivingPublicTransitLegAssert(
+                        tripNumber) : getPublicTransitLegAssert(tripNumber);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(ride));
             }
 
             @ParameterizedTest
@@ -344,7 +355,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i),
+                            TimeType.DEPARTURE);
                     connectionAssert.assertConnection(connections.get(i));
                 }
             }
@@ -358,7 +370,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i),
+                            TimeType.ARRIVAL);
                     connectionAssert.assertConnection(connections.get(i));
                 }
             }
@@ -455,13 +468,14 @@ class RoutingQueryFacadeIT {
                         Arguments.of(Duration.ofHours(6), List.of(2, 1, 0)));
             }
 
-            ConnectionAssertArgs getConnectionAsserts(int index) {
+            ConnectionAssertArgs getConnectionAsserts(int index, TimeType timeType) {
                 int tripNumber = index * 10 + 2;
                 OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.get(index)
                         .minus(WALKING_DURATION_FROM_SOURCE_COORDINATE_TO_STOP);
                 OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.get(index);
-                return new ConnectionAssertArgs(departureTime, arrivalTime,
-                        List.of(getFirstMileWalkLegAssert(), getPublicTransitLegAssert(tripNumber)));
+                PublicTransitLegAssertArgs ride = timeType == TimeType.ARRIVAL ? getArrivingPublicTransitLegAssert(
+                        tripNumber) : getPublicTransitLegAssert(tripNumber);
+                return new ConnectionAssertArgs(departureTime, arrivalTime, List.of(getFirstMileWalkLegAssert(), ride));
             }
 
             @ParameterizedTest
@@ -473,7 +487,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i),
+                            TimeType.DEPARTURE);
                     connectionAssert.assertConnection(connections.get(i));
                 }
             }
@@ -487,7 +502,8 @@ class RoutingQueryFacadeIT {
 
                 assertThat(connections).hasSize(expectedConnectionIndices.size());
                 for (int i = 0; i < expectedConnectionIndices.size(); i++) {
-                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i));
+                    ConnectionAssertArgs connectionAssert = getConnectionAsserts(expectedConnectionIndices.get(i),
+                            TimeType.ARRIVAL);
                     connectionAssert.assertConnection(connections.get(i));
                 }
             }

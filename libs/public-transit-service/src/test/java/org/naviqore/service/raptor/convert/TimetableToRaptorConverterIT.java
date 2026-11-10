@@ -203,7 +203,7 @@ class TimetableToRaptorConverterIT {
 
         static class RaptorBuilderData {
 
-            Map<String, Integer> stops;
+            Set<String> stops;
             Map<String, Set<String>> stopRoutes;
 
             List<String> betweenStopTransferIds;
@@ -242,10 +242,12 @@ class TimetableToRaptorConverterIT {
                     RaptorRouterBuilder raptorBuilder) throws NoSuchFieldException, IllegalAccessException {
                 Map<String, Object> transfers = getPrivateField(raptorBuilder, "transfers");
 
+                // the transfers of each source stop are kept by their target stop
                 List<String> betweenStopTransferIds = new ArrayList<>();
                 for (var entry : transfers.entrySet()) {
                     Map<String, ?> transfersAtCurrentStop = (Map<String, ?>) entry.getValue();
-                    betweenStopTransferIds.addAll(transfersAtCurrentStop.keySet());
+                    transfersAtCurrentStop.keySet()
+                            .forEach(targetStopId -> betweenStopTransferIds.add(entry.getKey() + "-" + targetStopId));
                 }
 
                 return betweenStopTransferIds;
@@ -278,15 +280,15 @@ class TimetableToRaptorConverterIT {
             }
 
             void assertStops(Set<String> ids) {
-                assertThat(stops.keySet()).containsExactlyInAnyOrderElementsOf(ids);
+                assertThat(stops).containsExactlyInAnyOrderElementsOf(ids);
             }
 
             void assertStopExists(String stopId) {
-                assertThat(stops.containsKey(stopId)).isTrue();
+                assertThat(stops.contains(stopId)).isTrue();
             }
 
             void assertStopWithNoDeparturesNotExists(String stopId) {
-                assertThat(stops.containsKey(stopId)).isFalse();
+                assertThat(stops.contains(stopId)).isFalse();
             }
 
             void assertStopHasNumRoutes(String stopId, int numRoutes) {
