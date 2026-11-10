@@ -10,6 +10,9 @@ Public transit schedule information and connection routing service based on GTFS
   routes [2].
 - **RESTful API:** Provides an API for querying transit schedule information and connections.
 
+How connections and isolines are routed, with and without a time window, and the options of the router and the
+service: [docs/routing.md](docs/routing.md).
+
 ## Installation
 
 This project is structured as a Maven multi-module project under `org.naviqore`:

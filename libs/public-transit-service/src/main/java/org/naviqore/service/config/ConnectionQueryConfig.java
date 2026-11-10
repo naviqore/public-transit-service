@@ -10,6 +10,10 @@ import java.util.EnumSet;
 @Value
 public class ConnectionQueryConfig {
 
+    /**
+     * The time window in seconds after the time of a departure query (before the time of an arrival query), in which
+     * connections leave (arrive), or 0 for none. See {@link org.naviqore.service.ConnectionRoutingService}.
+     */
     @Builder.Default
     int timeWindowDuration = 0;
 
