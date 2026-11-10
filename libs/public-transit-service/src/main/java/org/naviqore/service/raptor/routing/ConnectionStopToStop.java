@@ -53,9 +53,4 @@ class ConnectionStopToStop extends ConnectionQueryTemplate<Stop, Stop> {
     protected ConnectionQueryTemplate<Stop, Stop> swap(Stop source, Stop target) {
         return new ConnectionStopToStop(time, timeType, queryConfig, utils, target, source);
     }
-
-    @Override
-    protected ConnectionQueryTemplate<Stop, Stop> copyAt(OffsetDateTime time) {
-        return new ConnectionStopToStop(time, timeType, queryConfig, utils, source, target);
-    }
 }

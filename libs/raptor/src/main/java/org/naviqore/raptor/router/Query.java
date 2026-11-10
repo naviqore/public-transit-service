@@ -1,23 +1,39 @@
 package org.naviqore.raptor.router;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.TimeType;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import static org.naviqore.raptor.router.QueryState.INFINITY;
 
 /**
  * The query represents a request to the RAPTOR router and coordinates the routing logic. Each request needs a new query
  * instance.
+ * <p>
+ * A query routes from the source stops at their times in one pass of RAPTOR. A range query (rRAPTOR in the RAPTOR
+ * paper) routes over a time window that starts at the source times (ends at them, routing backward): one pass per time
+ * in the window at which leaving the source stops just catches a trip, the latest first, and the labels and best times
+ * of one pass kept for the next. A label of a later departure bounds every earlier one, since whoever leaves earlier
+ * can wait, so a pass improves only what it reaches earlier than the passes before, and continues from that alone. The
+ * window shifts all source times alike, so a connection leaves in it if it leaves the source stops in it.
+ * <p>
+ * The connections of a range query are those leaving in the window that no other connection beats, also one leaving
+ * after the window: a first pass leaves at the end of the window and finds the best connections leaving after it, which
+ * bound the passes in the window without being reported, and every pass takes the first trips it can catch, also after
+ * the window, but keeps only the connections leaving in it. So a connection that one leaving after the window beats is
+ * not reported, and the windows that follow one another report the connections of a longer one. The isolines of a range
+ * query are the shortest travel times among the connections leaving in the window: the first trip of a pass must leave
+ * in the rest of the window, which the route scanner limits, since a connection leaving after the window would take the
+ * place of one leaving in it.
  */
 @Slf4j
 class Query {
+
+    private static final int NO_LIMIT = -1;
 
     private final int[] sourceStopIndices;
     private final int[] targetStopIndices;
@@ -26,16 +42,23 @@ class Query {
 
     private final QueryConfig config;
     private final TimeType timeType;
+    private final int timeDirection;
+    private final int timeWindow;
 
-    private final int[] targetStops;
-    private final int cutoffTime;
+    private final Stop[] stops;
+    private final Transfer[] transfers;
     private final QueryState queryState;
     private final FootpathRelaxer footpathRelaxer;
     private final RouteScanner routeScanner;
 
     private final int numStops;
 
-    private final int raptorRange;
+    // the labels at the target stops of the connections found
+    private final List<QueryState.Label> targetLabels = new ArrayList<>();
+
+    // of the current pass
+    private int cutoffTime;
+    private int offset;
 
     /**
      * @param raptorData            the current raptor data structures.
@@ -43,14 +66,15 @@ class Query {
      * @param targetStopIndices     the indices of the target stops.
      * @param sourceTimes           the start times at the source stops.
      * @param walkDurationsToTarget the walking durations to the target stops.
-     * @param timeType              the time type (arrival or departure) of the query.
      * @param config                the query configuration.
+     * @param timeType              the time type (arrival or departure) of the query.
+     * @param timeWindow            the time window of a range query in seconds, 0 for a query at the source times.
      * @param referenceDateTime     the reference date time for the query.
      * @param raptorConfig          the raptor configuration.
      */
     Query(RaptorData raptorData, int[] sourceStopIndices, int[] targetStopIndices, int[] sourceTimes,
-          int[] walkDurationsToTarget, QueryConfig config, TimeType timeType, OffsetDateTime referenceDateTime,
-          RaptorConfig raptorConfig) {
+          int[] walkDurationsToTarget, QueryConfig config, TimeType timeType, int timeWindow,
+          OffsetDateTime referenceDateTime, RaptorConfig raptorConfig) {
 
         if (sourceStopIndices.length != sourceTimes.length) {
             throw new IllegalArgumentException("Source stops and departure/arrival times must have the same size.");
@@ -60,20 +84,23 @@ class Query {
             throw new IllegalArgumentException("Target stops and walk durations to target must have the same size.");
         }
 
+        if (timeWindow < 0) {
+            throw new IllegalArgumentException("Time window must not be negative.");
+        }
+
         this.sourceStopIndices = sourceStopIndices;
         this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
         this.walkDurationsToTarget = walkDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
+        this.timeWindow = timeWindow;
+        timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
-        targetStops = new int[targetStopIndices.length * 2];
-        cutoffTime = determineCutoffTime();
-        numStops = raptorData.getStopContext().stops().length;
-        queryState = new QueryState(raptorData.getStopContext().stops(), timeType);
-
-        // query-scoped override takes precedence over global default range
-        raptorRange = config.getRaptorRange().orElse(raptorConfig.getRaptorRangeDefault());
+        stops = raptorData.getStopContext().stops();
+        transfers = raptorData.getStopContext().transfers();
+        numStops = stops.length;
+        queryState = new QueryState(stops, timeType, isRangeQuery());
 
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
@@ -83,9 +110,79 @@ class Query {
                 raptorConfig.getDaysToScan());
     }
 
+    private boolean isRangeQuery() {
+        return timeWindow > 0;
+    }
+
     /**
-     * Main control flow of the routing algorithm. Spawns from source stops, coordinates route scanning, footpath
-     * relaxation, and time/label updates in the correct order.
+     * Routes the connections to the target stops: those that no other one beats in its time at the target and its
+     * number of trips, and for a range query also in its time at the source stops. They are found where a round
+     * improves the best time at the target, see {@link #updateBestTimeAtTarget}.
+     *
+     * @return the labels at the target stops of the connections, in the order found: a query's by number of trips, a
+     * range query's by pass, the latest departure (earliest arrival, routing backward) first.
+     */
+    List<QueryState.Label> routeConnections() {
+        run(false, round -> {
+        });
+
+        return targetLabels;
+    }
+
+    /**
+     * Routes isolines: the earliest arrival (latest departure) at each stop, or for a range query, the shortest travel
+     * time to each stop among the connections leaving the source stops in the window (reaching them, routing
+     * backward).
+     *
+     * @return the label to reconstruct the connection to each stop from, null for a stop not reached.
+     */
+    QueryState.@Nullable Label[] routeIsolines() {
+        if (!isRangeQuery()) {
+            run(false, round -> {
+            });
+            return queryState.getEarliestArrivalLabels();
+        }
+
+        ShortestTravelTimes shortestTravelTimes = new ShortestTravelTimes(queryState, numStops, timeType);
+        run(true, new PassListener() {
+            @Override
+            public void afterRound(int round) {
+                shortestTravelTimes.collect(round);
+            }
+
+            @Override
+            public void afterPass(int passOffset) {
+                shortestTravelTimes.endPass(passOffset);
+            }
+        });
+
+        return shortestTravelTimes.labels();
+    }
+
+    /**
+     * Main control flow of the routing algorithm: one pass from the source stops at their times, or for a range query,
+     * one per offset into the time window, see {@link #getPassOffsets(boolean)}.
+     *
+     * @param limitFirstTrip whether the first trip of a range query must leave in the window.
+     * @param listener       what to do with the labels of each round and pass.
+     */
+    private void run(boolean limitFirstTrip, PassListener listener) {
+        if (!isRangeQuery()) {
+            runPass(0, NO_LIMIT, listener);
+            return;
+        }
+
+        // without a first trip limit, the connections leaving after the window bound those leaving in it: a first pass
+        // at its end finds the best of them
+        for (int passOffset : getPassOffsets(!limitFirstTrip)) {
+            // a connection leaving in the window takes its first trip in the rest of it
+            runPass(passOffset, limitFirstTrip ? timeWindow - passOffset - 1 : NO_LIMIT, listener);
+        }
+    }
+
+    /**
+     * Runs a pass of the routing algorithm. Spawns from source stops, coordinates route scanning, footpath relaxation,
+     * and time/label updates in the correct order.
      * <p>
      * The process starts by relaxing all source stops and adding the newly improved stops by relaxation to the set of
      * marked stops. It then iterates through rounds of route scanning and footpath relaxation until no new stops are
@@ -98,76 +195,25 @@ class Query {
      *     <li>Relax footpaths for all newly marked stops.</li>
      *     <li>Prepare for the next round by removing suboptimal labels.</li>
      * </ul>
+     *
+     * @param passOffset     the offset of the pass into the time window, in seconds, 0 for a query without one.
+     * @param firstTripLimit how long after the start of a journey its first trip may leave at the latest, in seconds,
+     *                       or {@link #NO_LIMIT}.
+     * @param listener       what to do with the labels of each round and of the pass.
      */
-    QueryState.LabelsPerRound run() {
+    private void runPass(int passOffset, int firstTripLimit, PassListener listener) {
+        log.debug("Running a pass with offset {}", passOffset);
+        offset = passOffset;
+        cutoffTime = determineCutoffTime(passOffset);
+        queryState.startPass();
+        initializeSourceStops(passOffset);
+        routeScanner.setFirstTripLimit(firstTripLimit);
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        initialize();
-
         footpathRelaxer.relaxInitial();
-        removeSuboptimalLabelsForRound(0);
+        endRound(0, listener);
 
-        // if range is 0 or smaller there is no range, and we don't need to rerun rounds with different start offsets
-        if (raptorRange <= 0) {
-            doRounds();
-        } else {
-            doRangeRaptor();
-        }
-        return queryState.getLabelsPerRound();
-    }
-
-    void doRangeRaptor() {
-        // prepare range offsets
-        // get initial marked stops to reset after each range offset
-        List<Integer> initialMarkedStops = new ArrayList<>();
-        HashMap<Integer, Integer> stopIdxSourceTimes = new HashMap<>();
-        for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
-            if (!queryState.isMarkedNextRound(stopIdx)) {
-                continue;
-            }
-            initialMarkedStops.add(stopIdx);
-            stopIdxSourceTimes.put(stopIdx, queryState.getLabel(0, stopIdx).targetTime());
-        }
-        List<Integer> rangeOffsets = getRangeOffsets(initialMarkedStops, routeScanner);
-        // scan all range offsets in reverse order (earliest arrival / latest departure first)
-        for (int offsetIdx = rangeOffsets.size() - 1; offsetIdx >= 0; offsetIdx--) {
-            queryState.resetRounds();
-            int rangeOffset = rangeOffsets.get(offsetIdx);
-            int timeFactor = timeType == TimeType.DEPARTURE ? 1 : -1;
-            log.debug("Running rounds with range offset {}", rangeOffset);
-
-            // set source times to the source times of the previous round
-            for (int stopIdx : initialMarkedStops) {
-                QueryState.Label label = queryState.getLabel(0, stopIdx);
-                int targetTime = stopIdxSourceTimes.get(stopIdx) + timeFactor * rangeOffset;
-                queryState.setLabel(0, stopIdx, copyLabelWithNewTargetTime(label, targetTime));
-                queryState.mark(stopIdx);
-            }
-            doRounds();
-        }
-    }
-
-    QueryState.Label copyLabelWithNewTargetTime(QueryState.Label label, int targetTime) {
-        int sourceTime = label.sourceTime();
-
-        // if the label is not a source label, we need to adjust the source time by the same offset
-        if (label.type() != QueryState.LabelType.INITIAL) {
-            int offset = targetTime - label.targetTime();
-            sourceTime += offset;
-        }
-
-        return new QueryState.Label(sourceTime, targetTime, label.type(), label.routeOrTransferIdx(),
-                label.tripOffset(), label.stopIdx(), label.previous());
-
-    }
-
-    /**
-     * Method to perform the rounds of the routing algorithm (see {@link #run()}).
-     */
-    private void doRounds() {
-
-        // check if marked stops has any true values
-        while (queryState.hasMarkedStops() && (queryState.getRound()) <= config.getMaximumTransfers()) {
+        while (hasNextRound()) {
             // add label layer for new round
             queryState.addNewRound();
 
@@ -178,83 +224,195 @@ class Query {
             footpathRelaxer.relax(queryState.getRound());
 
             // prepare next round
-            removeSuboptimalLabelsForRound(queryState.getRound());
+            endRound(queryState.getRound(), listener);
         }
+
+        listener.afterPass(passOffset);
     }
 
     /**
-     * Get the range offsets for the marked stops.
-     * <p>
-     * The range offsets define the offsets of the requested departure / arrival time when the range raptor
-     * implementation shall start spawning from the source stop. E.g. if the source stop has departures at 10:00, 10:10,
-     * 10:20, and the range is 30 minutes, the range offsets would be 0, 10, 20.
-     * <p>
-     * To be efficient, the range offsets are looked at on per route basis. So if Route A has departures at 10:00,
-     * 10:10, 10:20, and Route B has departures at 10:05, 10:15, 10:25, the range offsets are be 0, 10, 20 and not 0, 5,
-     * 10, 15, 20, 25 (note real values are in seconds and not minutes --> *60).
+     * Ends a round: records where it reached the target best, and removes its suboptimal labels.
      *
-     * @param initialMarkedStops the initial marked stops to get the range offsets for.
-     * @param routeScanner       the route scanner to get the trip offsets for the stops.
-     * @return the range offsets (in seconds) applicable for all marked stops.
+     * @param round    the round, once its labels are set.
+     * @param listener what to do with the labels of the round.
      */
-    private List<Integer> getRangeOffsets(List<Integer> initialMarkedStops, RouteScanner routeScanner) {
-        ArrayList<Integer> rangeOffsets = new ArrayList<>();
-        for (int stopIdx : initialMarkedStops) {
-            List<Integer> stopRangeOffsets = routeScanner.getTripOffsetsForStop(stopIdx, raptorRange);
-            for (int i = 0; i < stopRangeOffsets.size(); i++) {
-                // if the rangeOffsets list is not long enough, add the offset
-                if (rangeOffsets.size() == i) {
-                    rangeOffsets.add(stopRangeOffsets.get(i));
-                } else {
-                    // if the rangeOffsets list is long enough, update the offset to the minimum of the current and the
-                    // new offset, this ensures that the range offset is applicable for all marked stops
-                    rangeOffsets.set(i, Math.min(rangeOffsets.get(i), stopRangeOffsets.get(i)));
+    private void endRound(int round, PassListener listener) {
+        QueryState.Label targetLabel = updateBestTimeAtTarget(round);
+        removeSuboptimalLabelsForRound(round);
+        if (targetLabel != null && isConnection(targetLabel, round)) {
+            targetLabels.add(targetLabel);
+        }
+        listener.afterRound(round);
+    }
+
+    /**
+     * Whether the label at the target of a round is a connection: not if it is beyond the cut-off time, nor if it
+     * leaves after the window of a range query. A connection on foot alone, of round 0, can leave at any time: a range
+     * query records it once, leaving at the start of the window (arriving at its end, routing backward).
+     */
+    private boolean isConnection(QueryState.Label targetLabel, int round) {
+        boolean onFootAlone = round == 0;
+        boolean inTime = !isWorse(targetLabel.targetTime(), cutoffTime);
+        return inTime && (!onFootAlone || offset == 0) && leavesInWindow(targetLabel);
+    }
+
+    /**
+     * Whether the connection of a label leaves in the time window, if the query has one: whether its first trip (its
+     * last trip, routing backward) leaves in the rest of the window after the start of the current pass, from a source
+     * stop or after walking from one, as the route scanner limits it for isolines. A connection on foot alone leaves at
+     * the start of the pass.
+     *
+     * @param targetLabel the label at the end of the connection.
+     */
+    private boolean leavesInWindow(QueryState.Label targetLabel) {
+        if (!isRangeQuery()) {
+            return true;
+        }
+
+        QueryState.Label firstTrip = null;
+        for (QueryState.Label label = targetLabel; label.previous() != null; label = label.previous()) {
+            if (label.type() == QueryState.LabelType.ROUTE) {
+                firstTrip = label;
+            }
+        }
+        if (firstTrip == null) {
+            return true;
+        }
+
+        QueryState.Label start = firstTrip.previous();
+        assert start != null;
+        int latestTime = start.targetTime() + timeDirection * (timeWindow - 1 - offset);
+        return timeDirection * firstTrip.sourceTime() <= timeDirection * latestTime;
+    }
+
+    private boolean hasNextRound() {
+        return queryState.hasMarkedStops() && queryState.getRound() <= config.getMaximumTransfers();
+    }
+
+    /**
+     * Gets the offsets into the time window at which passes start: the start of the window, and every time in it at
+     * which leaving the source stops just catches a trip, at a source stop or after walking from one.
+     *
+     * @param withWindowEnd whether to start a pass at the end of the window too, the first of all.
+     * @return the offsets in seconds, the latest first.
+     */
+    private int[] getPassOffsets(boolean withWindowEnd) {
+        Set<Integer> offsets = new HashSet<>();
+        offsets.add(0);
+        if (withWindowEnd) {
+            offsets.add(timeWindow);
+        }
+        for (int i = 0; i < sourceStopIndices.length; i++) {
+            int stopIdx = sourceStopIndices[i];
+            addPassOffsets(offsets, stopIdx, sourceTimes[i]);
+            if (!config.isAllowSourceTransfer()) {
+                continue;
+            }
+
+            // a transfer label allows the next trip after its target time, see RouteScanner
+            Stop stop = stops[stopIdx];
+            int transferEndIdx = stop.transferIdx() + stop.numberOfTransfers();
+            for (int transferIdx = stop.transferIdx(); transferIdx < transferEndIdx; transferIdx++) {
+                Transfer transfer = transfers[transferIdx];
+                if (transfer.duration() <= config.getMaximumWalkDuration()) {
+                    int walk = transfer.duration() + config.getMinimumTransferDuration();
+                    addPassOffsets(offsets, transfer.targetStopIdx(), sourceTimes[i] + timeDirection * walk);
                 }
             }
         }
 
-        // if no range offsets are found, add 0 as default to allow "normal" raptor to run
-        if (rangeOffsets.isEmpty()) {
-            rangeOffsets.add(0);
-        }
-
-        return rangeOffsets;
+        return offsets.stream().sorted(Comparator.reverseOrder()).mapToInt(Integer::intValue).toArray();
     }
 
     /**
-     * Set up the best times per stop and best labels per round for a new query.
+     * Adds the offsets into the time window at which the trips at a stop can just be caught.
+     *
+     * @param offsets the offsets to add to.
+     * @param stopIdx the index of the stop.
+     * @param time    the time the stop is reached at when leaving the source stop at the start of the window.
      */
-    void initialize() {
-        log.debug("Initializing global best times per stop and best labels per round");
-
-        // fill target stops
-        for (int i = 0; i < targetStopIndices.length; i++) {
-            int base = i * 2;
-            targetStops[base] = targetStopIndices[i];
-            targetStops[base + 1] = walkDurationsToTarget[i];
+    private void addPassOffsets(Set<Integer> offsets, int stopIdx, int time) {
+        int minValue = timeType == TimeType.DEPARTURE ? time : time - timeWindow + 1;
+        int maxValue = timeType == TimeType.DEPARTURE ? time + timeWindow - 1 : time;
+        for (int tripTime : routeScanner.getTripTimesAtStop(stopIdx, minValue, maxValue)) {
+            offsets.add(timeDirection * (tripTime - time));
         }
+    }
 
-        // set initial labels, best time and mark source stops
+    /**
+     * Sets the initial labels of the source stops at their times shifted by an offset into a time window, and marks
+     * them. A source stop that a pass before reached earlier for boarding, on foot from another source stop, keeps that
+     * label.
+     *
+     * @param passOffset the offset into the window, 0 for a query without one.
+     */
+    private void initializeSourceStops(int passOffset) {
         for (int i = 0; i < sourceStopIndices.length; i++) {
-            int currentStopIdx = sourceStopIndices[i];
-            int targetTime = sourceTimes[i];
+            int stopIdx = sourceStopIndices[i];
+            int targetTime = sourceTimes[i] + timeDirection * passOffset;
 
             QueryState.Label label = new QueryState.Label(0, targetTime, QueryState.LabelType.INITIAL,
-                    QueryState.NO_INDEX, QueryState.NO_INDEX, currentStopIdx, null);
-            queryState.setLabel(0, currentStopIdx, label);
-            queryState.setBestTime(currentStopIdx, queryState.getComparableTime(label));
-            queryState.mark(currentStopIdx);
+                    QueryState.NO_INDEX, QueryState.NO_INDEX, stopIdx, null);
+            int comparableTime = queryState.getComparableTime(label);
+            if (timeDirection * comparableTime < timeDirection * queryState.getComparableBestTime(stopIdx)) {
+                queryState.setLabel(0, stopIdx, label);
+                queryState.setBestTime(stopIdx, comparableTime);
+                queryState.mark(stopIdx);
+            }
         }
+    }
+
+    /**
+     * Updates the best time at the target with the labels the current round set at the target stops: the best time of
+     * all connections found with as many trips or fewer, over all passes so far.
+     * <p>
+     * Only the labels this round of this pass set count, since the labels of passes before, which a range query keeps,
+     * belong to their connections. Of equally good labels, the one at the first target stop is taken, and at a stop the
+     * arrival on a trip, which needs no walk at the end.
+     *
+     * @param round the current round.
+     * @return the label of the improvement at its target stop, or null if the round did not improve the target.
+     */
+    private QueryState.@Nullable Label updateBestTimeAtTarget(int round) {
+        int bestTime = queryState.getBestTimeAtTarget();
+        QueryState.Label bestLabel = null;
+        for (int i = 0; i < targetStopIndices.length; i++) {
+            int stopIdx = targetStopIndices[i];
+            int walkDuration = walkDurationsToTarget[i];
+            QueryState.Label tripLabel = queryState.isTripArrivalImproved(stopIdx) ? queryState.getTripLabel(round,
+                    stopIdx) : null;
+            QueryState.Label label = queryState.isMarkedNextRound(stopIdx) ? queryState.getLabel(round, stopIdx) : null;
+            for (QueryState.Label candidate : new QueryState.Label[]{tripLabel, label}) {
+                if (candidate == null) {
+                    continue;
+                }
+                int timeAtTarget = candidate.targetTime() + timeDirection * walkDuration;
+                if (timeDirection * timeAtTarget < timeDirection * bestTime) {
+                    bestTime = timeAtTarget;
+                    bestLabel = candidate;
+                }
+            }
+        }
+
+        if (bestLabel != null) {
+            queryState.setBestTimeAtTarget(bestTime);
+        }
+
+        return bestLabel;
     }
 
     /**
      * Nullify labels that are suboptimal for the current round. This method checks if the label time is worse than the
-     * optimal time mark and removes the mark for the next round and nullifies the label in this case.
+     * optimal time mark and removes the mark for the next round and nullifies the label in this case. The optimal time
+     * is the best time at the target, or the cut-off time if that is better.
      *
      * @param round the round to remove suboptimal labels for.
      */
-    void removeSuboptimalLabelsForRound(int round) {
-        int bestTime = getBestTimeForAllTargetStops();
+    private void removeSuboptimalLabelsForRound(int round) {
+        int bestTime = cutoffTime;
+        if (timeDirection * queryState.getBestTimeAtTarget() < timeDirection * bestTime) {
+            bestTime = queryState.getBestTimeAtTarget();
+        }
 
         if (bestTime == INFINITY || bestTime == -INFINITY) {
             return;
@@ -293,49 +451,47 @@ class Query {
     }
 
     /**
-     * Get the best time for the target stops. The best time is the earliest arrival time for each stop if the time type
-     * is departure, and the latest arrival time for each stop if the time type is arrival.
-     */
-    private int getBestTimeForAllTargetStops() {
-        int bestTime = cutoffTime;
-
-        for (int i = 0; i < targetStops.length; i += 2) {
-            int targetStopIdx = targetStops[i];
-            int walkDurationToTarget = targetStops[i + 1];
-            int bestTimeForStop = queryState.getActualBestTime(targetStopIdx);
-
-            if (timeType == TimeType.DEPARTURE && bestTimeForStop != INFINITY) {
-                bestTimeForStop += walkDurationToTarget;
-                bestTime = Math.min(bestTime, bestTimeForStop);
-            } else if (timeType == TimeType.ARRIVAL && bestTimeForStop != -INFINITY) {
-                bestTimeForStop -= walkDurationToTarget;
-                bestTime = Math.max(bestTime, bestTimeForStop);
-            }
-        }
-
-        return bestTime;
-    }
-
-    /**
      * The cut-off time is the latest allowed arrival / the earliest allowed departure time, if a stop is reached
      * after/before (depending on timeType), the stop is no longer considered for further expansion.
      *
+     * @param passOffset the offset of the source times into a time window, 0 for a query without one.
      * @return the cut-off time.
      */
-    private int determineCutoffTime() {
+    private int determineCutoffTime(int passOffset) {
         int cutoffTime;
 
         if (config.getMaximumTravelDuration() == INFINITY) {
             cutoffTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
         } else if (timeType == TimeType.DEPARTURE) {
-            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow();
+            int earliestDeparture = Arrays.stream(sourceTimes).min().orElseThrow() + passOffset;
             cutoffTime = earliestDeparture + config.getMaximumTravelDuration();
         } else {
-            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow();
+            int latestArrival = Arrays.stream(sourceTimes).max().orElseThrow() - passOffset;
             cutoffTime = latestArrival - config.getMaximumTravelDuration();
         }
 
         return cutoffTime;
+    }
+
+    /**
+     * What a query does with the labels of its passes.
+     */
+    private interface PassListener {
+
+        /**
+         * After a round of a pass, once its labels are final.
+         *
+         * @param round the round.
+         */
+        void afterRound(int round);
+
+        /**
+         * After a pass.
+         *
+         * @param passOffset the offset of the pass into the time window, in seconds.
+         */
+        default void afterPass(int passOffset) {
+        }
     }
 
 }

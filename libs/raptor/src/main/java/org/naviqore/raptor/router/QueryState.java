@@ -6,7 +6,6 @@ import org.naviqore.raptor.TimeType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -17,6 +16,14 @@ import java.util.List;
  * be boarded after any of them, but only an arrival on a trip may be continued on foot, since a connection never walks
  * twice in a row. So a stop has two best arrivals: the best for boarding, compared by {@link #getComparableTime}, and
  * the best on a trip. An arrival on a trip that is too late for boarding can still be the one to walk on from.
+ * <p>
+ * A range query runs several passes and keeps the labels and times of one pass for the next (see {@link Query}). Its
+ * best times are kept per round, as in the RAPTOR paper: the best time of a round is the best of that round and the
+ * rounds before it, over all passes so far, and each round starts from the best times of the round before it in the
+ * same pass. A label is then only better if no connection with as many trips or fewer was as good, which a single best
+ * time over all rounds would not tell: a later pass may have needed more trips for it. A query of one pass needs no
+ * best times per round: its rounds only improve on the rounds before them, so the best times of its current round are
+ * those of all its rounds, and all rounds share one array.
  */
 final class QueryState {
 
@@ -25,72 +32,111 @@ final class QueryState {
 
     private final Stop[] stops;
     private final TimeType timeType;
+    private final int unreached;
+    private final boolean bestTimesPerRound;
 
-    // the best labels per stop and round, by the time a trip can be boarded after them
+    // the labels per round and stop of the best arrival for boarding and of the best arrival on a trip, set in the
+    // round that improved them
     private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-    // the labels per stop and round of the best arrival on a trip, set in the round that improved it
     private final List<Label[]> bestTripLabelsPerRound = new ArrayList<>();
-    // the global best time per stop, comparable for boarding
-    private final int[] bestTimeForStops;
-    // the global best arrival on a trip per stop
-    private final int[] bestTripTimeForStops;
+    // the best times per round and stop, of the round and the rounds before it: comparable for boarding, and of
+    // arrivals on a trip
+    private final List<int[]> bestTimes = new ArrayList<>();
+    private final List<int[]> bestTripTimes = new ArrayList<>();
     // the stops whose best arrival on a trip the current round improved, to walk on from
     private final boolean[] tripArrivalImprovedMask;
+    // the best time at the target per round, of the round and the rounds before it
+    private int[] bestTimesAtTarget = new int[0];
     // the marked stops for route scanning and footpath relaxing
     private boolean[] markedStopsMaskThisRound;
     private boolean[] markedStopsMaskNextRound;
     @Getter
     private int round;
 
-    QueryState(Stop[] stops, TimeType timeType) {
+    /**
+     * @param stops             the stops of the router.
+     * @param timeType          the time type (arrival or departure).
+     * @param bestTimesPerRound whether to keep the best times per round, for a query of several passes.
+     */
+    QueryState(Stop[] stops, TimeType timeType, boolean bestTimesPerRound) {
         this.stops = stops;
         this.timeType = timeType;
-
-        // set best times to initial value
-        bestTimeForStops = new int[stops.length];
-        Arrays.fill(bestTimeForStops, timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY);
-        bestTripTimeForStops = bestTimeForStops.clone();
+        this.unreached = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
+        this.bestTimesPerRound = bestTimesPerRound;
 
         markedStopsMaskThisRound = new boolean[stops.length];
         markedStopsMaskNextRound = new boolean[stops.length];
         tripArrivalImprovedMask = new boolean[stops.length];
 
-        round = -1;
-
-        // set empty labels for first round
-        addNewRound();
+        startPass();
     }
 
     /**
-     * Resets the round and marked stops.
+     * Starts a pass at round 0, without any marked stop, keeping the labels and best times of the passes before.
      */
-    void resetRounds() {
+    void startPass() {
         round = 0;
         Arrays.fill(markedStopsMaskThisRound, false);
         Arrays.fill(markedStopsMaskNextRound, false);
         Arrays.fill(tripArrivalImprovedMask, false);
+        ensureRoundExists();
     }
 
     /**
-     * Adds a new round with empty labels and reset boolean marked stop masks.
+     * Adds a new round with empty labels and reset boolean marked stop masks. With best times per round, the new
+     * round's best times become the better of its own, of the passes before, and those of the round before it.
      */
     void addNewRound() {
-        if (round != -1) {
-            // reset boolean marked stop masks, not needed when running the first time
-            boolean[] tmp = markedStopsMaskThisRound;
-            markedStopsMaskThisRound = markedStopsMaskNextRound;
-            markedStopsMaskNextRound = tmp;
-            Arrays.fill(markedStopsMaskNextRound, false);
-            Arrays.fill(tripArrivalImprovedMask, false);
-        }
+        // reset boolean marked stop masks
+        boolean[] tmp = markedStopsMaskThisRound;
+        markedStopsMaskThisRound = markedStopsMaskNextRound;
+        markedStopsMaskNextRound = tmp;
+        Arrays.fill(markedStopsMaskNextRound, false);
+        Arrays.fill(tripArrivalImprovedMask, false);
 
         round++;
+        ensureRoundExists();
 
-        // only add new round if it does not exist yet (-> in range raptor same round can occur more than once)
-        if (round >= bestLabelsPerRound.size()) {
-            bestLabelsPerRound.add(new Label[stops.length]);
-            bestTripLabelsPerRound.add(new Label[stops.length]);
+        if (bestTimesPerRound) {
+            takeBetter(bestTimes.get(round), bestTimes.get(round - 1));
+            takeBetter(bestTripTimes.get(round), bestTripTimes.get(round - 1));
         }
+        bestTimesAtTarget[round] = better(bestTimesAtTarget[round], bestTimesAtTarget[round - 1]);
+    }
+
+    private void ensureRoundExists() {
+        if (round < bestLabelsPerRound.size()) {
+            return;
+        }
+
+        bestLabelsPerRound.add(new Label[stops.length]);
+        bestTripLabelsPerRound.add(new Label[stops.length]);
+        if (bestTimesPerRound || round == 0) {
+            bestTimes.add(unreachedTimes());
+            bestTripTimes.add(unreachedTimes());
+        } else {
+            // a query of one pass: the rounds share the best times, see the class comment
+            bestTimes.add(bestTimes.getFirst());
+            bestTripTimes.add(bestTripTimes.getFirst());
+        }
+        bestTimesAtTarget = Arrays.copyOf(bestTimesAtTarget, round + 1);
+        bestTimesAtTarget[round] = unreached;
+    }
+
+    private int[] unreachedTimes() {
+        int[] times = new int[stops.length];
+        Arrays.fill(times, unreached);
+        return times;
+    }
+
+    private void takeBetter(int[] times, int[] otherTimes) {
+        for (int stopIdx = 0; stopIdx < times.length; stopIdx++) {
+            times[stopIdx] = better(times[stopIdx], otherTimes[stopIdx]);
+        }
+    }
+
+    private int better(int time, int otherTime) {
+        return timeType == TimeType.DEPARTURE ? Math.min(time, otherTime) : Math.max(time, otherTime);
     }
 
     /**
@@ -131,7 +177,7 @@ final class QueryState {
      */
     void setTripLabel(int stopIdx, Label label) {
         bestTripLabelsPerRound.get(round)[stopIdx] = label;
-        bestTripTimeForStops[stopIdx] = label.targetTime();
+        bestTripTimes.get(round)[stopIdx] = label.targetTime();
         tripArrivalImprovedMask[stopIdx] = true;
     }
 
@@ -143,12 +189,19 @@ final class QueryState {
     }
 
     /**
-     * Get global best time of a stop for comparison. The comparison of arrival/departures requires that the same stop
-     * transfer time is subtracted (departure) or added (arrival) to the actual target time, so that the comparison is
-     * correct with route target times.
+     * Get the best time of a stop for comparison in the current round. The comparison of arrival/departures requires
+     * that the same stop transfer time is subtracted (departure) or added (arrival) to the actual target time, so that
+     * the comparison is correct with route target times, see {@link #getComparableTime(Label)}.
      */
     int getComparableBestTime(int stopIdx) {
-        return bestTimeForStops[stopIdx];
+        return bestTimes.get(round)[stopIdx];
+    }
+
+    /**
+     * Set the best time for a stop in the current round, comparable for boarding.
+     */
+    void setBestTime(int stopIdx, int time) {
+        bestTimes.get(round)[stopIdx] = time;
     }
 
     /**
@@ -178,51 +231,63 @@ final class QueryState {
     }
 
     /**
-     * Get the global best arrival on a trip at a stop.
+     * Get the best arrival on a trip at a stop in the current round.
      */
     int getBestTripTime(int stopIdx) {
-        return bestTripTimeForStops[stopIdx];
+        return bestTripTimes.get(round)[stopIdx];
     }
 
     /**
-     * Get the actual best time of a stop: the earliest arrival (latest departure) at it of all its labels, on a trip,
-     * on foot or at the start. This should not be used to compare times of different label types (transfer vs. route),
-     * as the same stop transfer time is not considered.
+     * Gets the best time at the target in the current round: the earliest arrival (latest departure) of the connections
+     * found with as many trips or fewer.
      */
-    int getActualBestTime(int stopIdx) {
-        int best_time = (timeType == TimeType.DEPARTURE) ? INFINITY : -INFINITY;
+    int getBestTimeAtTarget() {
+        return bestTimesAtTarget[round];
+    }
 
-        // because range raptor potentially fills target times in higher rounds which are not the best solutions, every
-        // round has to be looked at.
+    /**
+     * Sets the best time at the target in the current round.
+     */
+    void setBestTimeAtTarget(int time) {
+        bestTimesAtTarget[round] = time;
+    }
+
+    /**
+     * Gets the label of the earliest arrival (latest departure) at each stop, on a trip, on foot or at the start, of
+     * all rounds. Of equally early arrivals, the one of the lowest round is kept, which takes the fewest trips, and in
+     * a round the one on a trip, which needs no walk at the end.
+     *
+     * @return the label per stop, null for a stop not reached.
+     */
+    @Nullable Label[] getEarliestArrivalLabels() {
+        Label[] earliestArrivals = new Label[stops.length];
         for (int i = 0; i < bestLabelsPerRound.size(); i++) {
-            best_time = earlier(best_time, bestLabelsPerRound.get(i)[stopIdx]);
-            best_time = earlier(best_time, bestTripLabelsPerRound.get(i)[stopIdx]);
+            Label[] tripLabels = bestTripLabelsPerRound.get(i);
+            Label[] labels = bestLabelsPerRound.get(i);
+            for (int stopIdx = 0; stopIdx < stops.length; stopIdx++) {
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[stopIdx]);
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], labels[stopIdx]);
+            }
         }
 
-        return best_time;
+        return earliestArrivals;
     }
 
-    private int earlier(int time, @Nullable Label label) {
+    /**
+     * Of two labels, the one arriving earlier (departing later), or the first of equally good ones.
+     */
+    @Nullable Label earlier(@Nullable Label label, @Nullable Label otherLabel) {
         if (label == null) {
-            return time;
+            return otherLabel;
+        }
+        if (otherLabel == null) {
+            return label;
         }
 
-        return timeType == TimeType.DEPARTURE ? Math.min(time, label.targetTime()) : Math.max(time, label.targetTime());
-    }
-
-    /**
-     * Set the global best time for a stop.
-     */
-    void setBestTime(int stopIdx, int time) {
-        bestTimeForStops[stopIdx] = time;
-    }
-
-    /**
-     * Return the result as unmodifiable lists, since it should only be modified via the setter and getter methods.
-     */
-    LabelsPerRound getLabelsPerRound() {
-        return new LabelsPerRound(Collections.unmodifiableList(bestLabelsPerRound),
-                Collections.unmodifiableList(bestTripLabelsPerRound));
+        int time = label.targetTime();
+        int otherTime = otherLabel.targetTime();
+        boolean otherIsEarlier = timeType == TimeType.DEPARTURE ? otherTime < time : otherTime > time;
+        return otherIsEarlier ? otherLabel : label;
     }
 
     /**
@@ -303,15 +368,6 @@ final class QueryState {
          */
         TRANSFER
 
-    }
-
-    /**
-     * The labels of a query per round and stop.
-     *
-     * @param best       the best labels, by the time a trip can be boarded after them.
-     * @param bestOnTrip the labels of the best arrivals on a trip, in the round that improved them.
-     */
-    record LabelsPerRound(List<Label[]> best, List<Label[]> bestOnTrip) {
     }
 
     /**

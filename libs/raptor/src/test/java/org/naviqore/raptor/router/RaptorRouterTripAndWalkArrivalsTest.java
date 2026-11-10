@@ -25,7 +25,7 @@ class RaptorRouterTripAndWalkArrivalsTest {
     }
 
     private static RaptorRouterBuilder builder(String... stops) {
-        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
         for (String stop : stops) {
             builder.addStop(stop);
         }
@@ -61,12 +61,12 @@ class RaptorRouterTripAndWalkArrivalsTest {
         builder.addTransfer("S", "T", 300);
         RaptorAlgorithm raptor = builder.build();
 
-        Map<String, Connection> isolines = raptor.routeIsolines(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
+        Map<String, Connection> isolines = raptor.isolineQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertArrival(isolines.get("S"), at(8, 5), 0, 1);
         assertArrival(isolines.get("T"), at(8, 35), 2, 1);
 
-        List<Connection> connections = raptor.routeEarliestArrival(Map.of("A", at(8, 0)), Map.of("T", 0),
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", at(8, 0)), Map.of("T", 0), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertEquals(1, connections.size());
         assertArrival(connections.getFirst(), at(8, 35), 2, 1);
@@ -83,7 +83,7 @@ class RaptorRouterTripAndWalkArrivalsTest {
         builder.addTransfer("S", "T", 300);
         RaptorAlgorithm raptor = builder.build();
 
-        List<Connection> connections = raptor.routeLatestDeparture(Map.of("T", 0), Map.of("A", at(9, 0)),
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", at(9, 0)), Map.of("T", 0), TimeType.ARRIVAL,
                 QueryConfig.defaults());
         assertEquals(1, connections.size());
         assertEquals(at(8, 25), connections.getFirst().getDepartureTime());
@@ -101,7 +101,7 @@ class RaptorRouterTripAndWalkArrivalsTest {
         builder.addTransfer("S2", "Q", 180);
         RaptorAlgorithm raptor = builder.build();
 
-        Map<String, Connection> isolines = raptor.routeIsolines(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
+        Map<String, Connection> isolines = raptor.isolineQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertArrival(isolines.get("Q"), at(8, 15), 1, 1);
     }
@@ -120,8 +120,8 @@ class RaptorRouterTripAndWalkArrivalsTest {
         builder.addTransfer("A", "B", 360);
         RaptorAlgorithm raptor = builder.build();
 
-        List<Connection> connections = raptor.routeEarliestArrival(Map.of("A", at(8, 0), "B", at(8, 5)), Map.of("C", 0),
-                QueryConfig.defaults());
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", at(8, 0), "B", at(8, 5)), Map.of("C", 0),
+                TimeType.DEPARTURE, QueryConfig.defaults());
         assertEquals(1, connections.size());
         assertEquals(at(8, 5), connections.getFirst().getDepartureTime());
         assertArrival(connections.getFirst(), at(8, 15), 1, 0);
@@ -137,11 +137,11 @@ class RaptorRouterTripAndWalkArrivalsTest {
         builder.addTransfer("P2", "P", 180);
         RaptorAlgorithm raptor = builder.build();
 
-        Map<String, Connection> isolines = raptor.routeIsolines(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
+        Map<String, Connection> isolines = raptor.isolineQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertArrival(isolines.get("P"), at(8, 12), 1, 0);
 
-        List<Connection> connections = raptor.routeEarliestArrival(Map.of("A", at(8, 0)), Map.of("P", 0),
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", at(8, 0)), Map.of("P", 0), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertEquals(1, connections.size());
         assertArrival(connections.getFirst(), at(8, 12), 1, 0);

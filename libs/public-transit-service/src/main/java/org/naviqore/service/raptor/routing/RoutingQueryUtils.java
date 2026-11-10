@@ -39,41 +39,48 @@ class RoutingQueryUtils {
     private final RaptorAlgorithm raptor;
 
     private static QueryConfig prepareRaptorQueryConfig(ConnectionQueryConfig queryConfig, boolean allowSourceTransfer,
-                                                        boolean allowTargetTransfer, @Nullable Integer raptorRange) {
-        QueryConfig.QueryConfigBuilder builder = TypeMapper.map(queryConfig)
+                                                        boolean allowTargetTransfer) {
+        return TypeMapper.map(queryConfig)
                 .toBuilder()
                 .allowSourceTransfer(allowSourceTransfer)
-                .allowTargetTransfer(allowTargetTransfer);
-
-        if (raptorRange != null) {
-            builder.raptorRange(raptorRange);
-        }
-
-        return builder.build();
+                .allowTargetTransfer(allowTargetTransfer)
+                .build();
     }
 
+    /**
+     * Routes connections in the direction of the search: from the source stops at their times to the target stops,
+     * backward in time for an arrival query. Without a time window, a query of RAPTOR; with one, a range query.
+     */
     List<org.naviqore.raptor.Connection> routeConnections(Map<String, OffsetDateTime> sourceStops,
                                                           Map<String, Integer> targetStops, TimeType timeType,
                                                           ConnectionQueryConfig queryConfig,
-                                                          boolean allowSourceTransfer, boolean allowTargetTransfer,
-                                                          @Nullable Integer raptorRange) {
-        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer,
-                raptorRange);
-
-        if (timeType == TimeType.DEPARTURE) {
-            return raptor.routeEarliestArrival(sourceStops, targetStops, config);
-        } else {
-            return raptor.routeLatestDeparture(targetStops, sourceStops, config);
+                                                          boolean allowSourceTransfer, boolean allowTargetTransfer) {
+        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, allowTargetTransfer);
+        org.naviqore.raptor.TimeType raptorTimeType = TypeMapper.mapToRaptor(timeType);
+        if (queryConfig.getTimeWindowDuration() > 0) {
+            return raptor.connectionRangeQuery(sourceStops, targetStops, raptorTimeType,
+                    Duration.ofSeconds(queryConfig.getTimeWindowDuration()), config);
         }
+
+        return raptor.connectionQuery(sourceStops, targetStops, raptorTimeType, config);
     }
 
+    /**
+     * Routes isolines: the earliest arrival (latest departure) at each stop, or with a time window, the shortest travel
+     * time among the connections leaving (arriving) in the window.
+     */
     Map<String, org.naviqore.raptor.Connection> routeIsolines(Map<String, OffsetDateTime> sourceStops,
                                                               TimeType timeType, ConnectionQueryConfig queryConfig,
-                                                              boolean allowSourceTransfer,
-                                                              @Nullable Integer raptorRange) {
+                                                              boolean allowSourceTransfer) {
         // allow target transfers does not work for isolines since no targets are defined
-        return raptor.routeIsolines(sourceStops, TypeMapper.mapToRaptor(timeType),
-                prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true, raptorRange));
+        QueryConfig config = prepareRaptorQueryConfig(queryConfig, allowSourceTransfer, true);
+        org.naviqore.raptor.TimeType raptorTimeType = TypeMapper.mapToRaptor(timeType);
+        if (queryConfig.getTimeWindowDuration() > 0) {
+            return raptor.isolineRangeQuery(sourceStops, raptorTimeType,
+                    Duration.ofSeconds(queryConfig.getTimeWindowDuration()), config);
+        }
+
+        return raptor.isolineQuery(sourceStops, raptorTimeType, config);
     }
 
     Map<String, OffsetDateTime> getStopsWithWalkTimeFromLocation(GeoCoordinate location, OffsetDateTime startTime,

@@ -31,7 +31,6 @@ public class ServiceConfigParser {
                                @Value("${walk.speed}") double walkSpeed,
                                @Value("${walk.duration.minimum}") int walkDurationMinimum,
                                @Value("${raptor.days.to.scan}") int raptorDaysToScan,
-                               @Value("${raptor.range}") int raptorRange,
                                @Value("${cache.service.day.size}") int cacheServiceDaySize,
                                @Value("${cache.eviction.strategy}") String cacheEvictionStrategy) {
 
@@ -46,7 +45,6 @@ public class ServiceConfigParser {
                 .walkSpeed(walkSpeed)
                 .walkDurationMinimum(walkDurationMinimum)
                 .raptorDaysToScan(raptorDaysToScan)
-                .raptorRange(raptorRange)
                 .cacheServiceDaySize(cacheServiceDaySize)
                 .cacheEvictionStrategy(ServiceConfig.CacheEvictionStrategy.valueOf(cacheEvictionStrategy.toUpperCase()))
                 .build();

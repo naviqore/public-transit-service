@@ -132,7 +132,6 @@ class RoutingQueryFacadeIT {
         // configure and setup raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(serviceConfig.getRaptorDaysToScan())
-                .raptorRangeDefault(serviceConfig.getRaptorRange())
                 .sameStopTransferDurationDefault(serviceConfig.getTransferDurationSameStopDefault())
                 .stopTimeCacheSize(serviceConfig.getCacheServiceDaySize())
                 .stopTimeCacheStrategy(cacheStrategy)
@@ -233,16 +232,15 @@ class RoutingQueryFacadeIT {
     }
 
     /**
-     * The Range-RAPTOR range of a windowed query is derived from the remaining time window. This makes the router
-     * report, for a given arrival time, the latest possible departure and therefore the shortest travel time. As a
-     * consequence, departures that are dominated by a later departure arriving at the same time are no longer part of
-     * the result.
+     * A query with a time window is a range query of the router, which reports the connections leaving in the window
+     * that no other connection beats: for a given arrival time, the latest possible departure and therefore the
+     * shortest travel time. Departures that are dominated by a later departure arriving at the same time are not part
+     * of the result.
      */
     @Nested
     class TimeWindowRange {
 
         private static final int WINDOW_DURATION = 1800;
-        private static final int GLOBAL_RAPTOR_RANGE = 1800;
 
         // headway is 60 seconds and the second trip runs at 6/7 of the regular travel time, so it departs at A 42
         // seconds after the first trip but still arrives at D2 at the very same time
@@ -272,8 +270,8 @@ class RoutingQueryFacadeIT {
             List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME, TimeType.DEPARTURE,
                     queryConfig, source, target);
 
-            // the range derived from the time window makes the router report the latest departure for the earliest
-            // arrival, so the dominated first trip must not be part of the result
+            // the range query reports the latest departure for the earliest arrival, so the dominated first trip must
+            // not be part of the result
             assertThat(connections).isNotEmpty()
                     .noneMatch(connection -> connection.getDepartureTime().isEqual(DOMINATED_DEPARTURE));
             assertThat(connections.getFirst().getDepartureTime()).isEqualTo(EXPRESS_DEPARTURE);
@@ -281,28 +279,8 @@ class RoutingQueryFacadeIT {
         }
 
         @Test
-        void shouldApplyGlobalRangeWithoutTimeWindow() throws ConnectionRoutingException {
-            // no time window, but Range-RAPTOR is enabled globally
-            ServiceConfig serviceConfig = ServiceConfig.builder()
-                    .timetableRepository(new NoTimetableRepository())
-                    .walkDurationMinimum(WALK_DURATION_MINIMUM)
-                    .raptorRange(GLOBAL_RAPTOR_RANGE)
-                    .build();
-            facade = buildFacade(schedule, serviceConfig);
-
-            List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME, TimeType.DEPARTURE,
-                    QUERY_CONFIG, source, target);
-
-            // without a time window no range must be derived from the query, since a range of zero would override
-            // the global range and silently disable Range-RAPTOR; the express trip is only found with the global range
-            assertThat(connections).hasSize(1);
-            assertThat(connections.getFirst().getDepartureTime()).isEqualTo(EXPRESS_DEPARTURE);
-            assertThat(connections.getFirst().getArrivalTime()).isEqualTo(ARRIVAL);
-        }
-
-        @Test
-        void shouldNotApplyRangeWithoutTimeWindowAndGlobalRange() throws ConnectionRoutingException {
-            // no time window and Range-RAPTOR is disabled globally, so plain RAPTOR reports the first departure
+        void shouldReportFirstDepartureWithoutTimeWindow() throws ConnectionRoutingException {
+            // without a time window, a query of RAPTOR reports the first departure arriving the earliest
             List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME, TimeType.DEPARTURE,
                     QUERY_CONFIG, source, target);
 

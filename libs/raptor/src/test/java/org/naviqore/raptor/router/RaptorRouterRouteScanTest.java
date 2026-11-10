@@ -5,6 +5,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
+import org.naviqore.raptor.TimeType;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,7 +43,7 @@ class RaptorRouterRouteScanTest {
         // U reaches X at 08:03, in time for R leaving X at 08:05, and S reaches Q at 08:09, one minute before R: a
         // trip boarded at Q after the same stop transfer time of two minutes leaves at 08:30, or with no later trip
         // not at all, which must not replace the trip boarded at X
-        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
         List.of("A", "X", "Q", "Y").forEach(builder::addStop);
         addRouteWithTrips(builder, "U", List.of("A", "X"), List.of(List.of(8 * 60, 8 * 60 + 3)));
         addRouteWithTrips(builder, "S", List.of("A", "Q"), List.of(List.of(8 * 60, 8 * 60 + 9)));
@@ -52,7 +53,7 @@ class RaptorRouterRouteScanTest {
         addRouteWithTrips(builder, "R", List.of("X", "Q", "Y"), tripsOfR);
         RaptorAlgorithm raptor = builder.build();
 
-        List<Connection> connections = raptor.routeEarliestArrival(Map.of("A", EIGHT_AM), Map.of("Y", 0),
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", EIGHT_AM), Map.of("Y", 0), TimeType.DEPARTURE,
                 QueryConfig.defaults());
 
         assertEquals(1, connections.size());
@@ -65,7 +66,7 @@ class RaptorRouterRouteScanTest {
     void keepTheTrip_whenTheLabelAtALaterStopIsTooLateForIt_routingBackward(boolean earlierTrip) {
         // the mirror image: arriving at A by 09:00, U leaves X at 08:57 and S leaves Q at 08:51; R reaching X at 08:55
         // passes Q at 08:50, which a trip from Q leaving at 08:51 cannot be reached from after the same stop transfer
-        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
         List.of("Y", "Q", "X", "A").forEach(builder::addStop);
         addRouteWithTrips(builder, "U", List.of("X", "A"), List.of(List.of(8 * 60 + 57, 9 * 60)));
         addRouteWithTrips(builder, "S", List.of("Q", "A"), List.of(List.of(8 * 60 + 51, 9 * 60)));
@@ -75,8 +76,8 @@ class RaptorRouterRouteScanTest {
         addRouteWithTrips(builder, "R", List.of("Y", "Q", "X"), tripsOfR);
         RaptorAlgorithm raptor = builder.build();
 
-        List<Connection> connections = raptor.routeLatestDeparture(Map.of("Y", 0), Map.of("A", EIGHT_AM.plusHours(1)),
-                QueryConfig.defaults());
+        List<Connection> connections = raptor.connectionQuery(Map.of("A", EIGHT_AM.plusHours(1)), Map.of("Y", 0),
+                TimeType.ARRIVAL, QueryConfig.defaults());
 
         assertEquals(1, connections.size());
         assertEquals(EIGHT_AM.plusMinutes(40), connections.getFirst().getDepartureTime());

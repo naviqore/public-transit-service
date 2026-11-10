@@ -81,8 +81,8 @@ The hubs are stations of the Swiss feed; on another feed, a name no stop has dra
   runs all queries of a workload on both versions, in an order drawn anew each round, after rounds to warm up. Two JVMs
   load the versions in either order, since the version loaded second runs differently. The ratio is the geometric mean
   over both orders, with a 95 % bootstrap interval over the rounds; `~` means that the interval contains 1, as
-  [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) reports it. Isolines with a time window route on
-  several threads, which only the wall time accounts for.
+  [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) reports it. Before the range queries of the router,
+  isolines with a time window routed on several threads, which only the wall time accounts for.
 - **profile** and **load** record JFR with an execution sample every millisecond: `profile` the queries of each
   workload in a recording of its own, after a round to warm up, and `load` reading the feed and building the service.
   `jfr` reads any recording with execution samples, also one made outside the benchmark.

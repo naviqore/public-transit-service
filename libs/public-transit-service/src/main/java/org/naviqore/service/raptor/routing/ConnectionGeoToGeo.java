@@ -113,9 +113,4 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     protected ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> swap(GeoCoordinate source, GeoCoordinate target) {
         return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, target, source);
     }
-
-    @Override
-    protected ConnectionQueryTemplate<GeoCoordinate, GeoCoordinate> copyAt(OffsetDateTime time) {
-        return new ConnectionGeoToGeo(time, timeType, queryConfig, utils, source, target);
-    }
 }

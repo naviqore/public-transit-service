@@ -43,12 +43,11 @@ class RaptorRouterTest {
 
     /**
      * Builds a router with a single trip, running in one direction only and calling at the stops the given minutes
-     * after 8 AM, and a walk transfer of the given minutes between two stops, in both directions. Like the routers of
-     * the {@link RaptorRouterTestBuilder}, it routes without range raptor.
+     * after 8 AM, and a walk transfer of the given minutes between two stops, in both directions.
      */
     private static RaptorAlgorithm buildSingleTrip(List<String> stops, List<Integer> minutesAfterEight, String walkFrom,
                                                    String walkTo, int walkMinutes) {
-        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
         stops.stream().distinct().forEach(builder::addStop);
         builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, stops).addTrip("R-1", "R");
         for (int i = 0; i < stops.size(); i++) {
@@ -65,7 +64,7 @@ class RaptorRouterTest {
      * minutes later, but calls at B and C earlier.
      */
     private static RaptorAlgorithm buildOvertakingTrips() {
-        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.builder().raptorRangeDefault(-1).build());
+        RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
         List<String> stops = List.of(STOP_A, STOP_B, STOP_C);
         stops.forEach(builder::addStop);
         builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, stops);
@@ -1042,7 +1041,7 @@ class RaptorRouterTest {
                     .withAddTransfer1_ND(0)
                     .build();
 
-            Map<String, Connection> isoLines = raptor.routeIsolines(Map.of(STOP_O, NINE_AM), TimeType.ARRIVAL,
+            Map<String, Connection> isoLines = raptor.isolineQuery(Map.of(STOP_O, NINE_AM), TimeType.ARRIVAL,
                     QueryConfig.defaults());
 
             Connection fromD = isoLines.get(STOP_D);
@@ -1070,7 +1069,7 @@ class RaptorRouterTest {
             RaptorAlgorithm raptor = buildSingleTrip(List.of(STOP_B, STOP_C, STOP_A), List.of(0, 5, 5), STOP_A, STOP_B,
                     2);
 
-            Map<String, Connection> isoLines = raptor.routeIsolines(Map.of(STOP_C, EIGHT_AM.plusMinutes(10)),
+            Map<String, Connection> isoLines = raptor.isolineQuery(Map.of(STOP_C, EIGHT_AM.plusMinutes(10)),
                     TimeType.ARRIVAL, QueryConfig.defaults());
 
             assertLegs(isoLines.get(STOP_A), List.of(STOP_A, STOP_B), List.of(STOP_B, STOP_C));

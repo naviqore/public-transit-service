@@ -352,7 +352,7 @@ public class RaptorRouterMultiDayTest {
             TripPerDayMasker tripMaskProvider = new TripPerDayMasker(
                     Map.of("previous-day", PREVIOUS_DAY.toLocalDate(), "reference-day", REFERENCE_DAY.toLocalDate()));
             RaptorRouterBuilder builder = RaptorRouter.builder(
-                    RaptorConfig.builder().daysToScan(3).raptorRangeDefault(-1).maskProvider(tripMaskProvider).build());
+                    RaptorConfig.builder().daysToScan(3).maskProvider(tripMaskProvider).build());
             builder.addStop(STOP_A).addStop(STOP_B);
             builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(STOP_A, STOP_B));
             builder.addTrip("previous-day", "R").addTrip("reference-day", "R");

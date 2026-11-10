@@ -87,7 +87,6 @@ public class RaptorServiceInitializer {
         // configure raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(config.getRaptorDaysToScan())
-                .raptorRangeDefault(config.getRaptorRange())
                 .sameStopTransferDurationDefault(config.getTransferDurationSameStopDefault())
                 .stopTimeCacheSize(config.getCacheServiceDaySize())
                 .stopTimeCacheStrategy(cacheStrategy)

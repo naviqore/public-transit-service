@@ -10,8 +10,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
-import static org.naviqore.raptor.router.QueryState.INFINITY;
-
 /**
  * Postprocessing of the RAPTOR algorithm results. Reconstructs connections from the labels per round.
  */
@@ -46,20 +44,17 @@ class LabelPostprocessor {
     }
 
     /**
-     * Reconstructs isolines from the labels per round: the connection of each stop's earliest arrival (latest
-     * departure), see {@link #getBestLabelForStop}.
+     * Reconstructs isolines from a label per stop.
      *
-     * @param labelsPerRound the labels per round.
-     * @return a map containing the best connection to reach all stops.
+     * @param labelPerStop the label to reconstruct the connection to each stop from, null for a stop not reached.
+     * @return a map containing the connection to each stop reached by other than an initial label.
      */
-    Map<String, Connection> reconstructIsolines(QueryState.LabelsPerRound labelsPerRound) {
+    Map<String, Connection> reconstructIsolines(QueryState.@Nullable Label[] labelPerStop) {
         Map<String, Connection> isolines = new HashMap<>();
         for (int i = 0; i < stops.length; i++) {
-            Stop stop = stops[i];
-            QueryState.Label bestLabelForStop = getBestLabelForStop(labelsPerRound, i);
-            if (bestLabelForStop != null && bestLabelForStop.type() != QueryState.LabelType.INITIAL) {
-                Connection connection = reconstructConnectionFromLabel(bestLabelForStop);
-                isolines.put(stop.id(), connection);
+            QueryState.Label label = labelPerStop[i];
+            if (label != null && label.type() != QueryState.LabelType.INITIAL) {
+                isolines.put(stops[i].id(), reconstructConnectionFromLabel(label));
             }
         }
 
@@ -67,91 +62,21 @@ class LabelPostprocessor {
     }
 
     /**
-     * Reconstructs pareto-optimal connections from the labels per round.
+     * Reconstructs connections from their labels at the target stops.
      *
-     * @param labelsPerRound the labels per round.
-     * @param targetStops    map of target stop indices and walk durations to destination.
-     * @return a list of pareto-optimal connections.
+     * @param targetLabels the labels at the target stops.
+     * @return the connections, in the order of their labels.
      */
-    List<Connection> reconstructParetoOptimalSolutions(QueryState.LabelsPerRound labelsPerRound,
-                                                       Map<Integer, Integer> targetStops) {
-        List<Connection> connections = new ArrayList<>();
-        int bestTime = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
-
-        // iterate over all rounds
-        for (int round = 0; round < labelsPerRound.best().size(); round++) {
-            // an arrival on a trip can reach a target stop earlier than the best label for boarding, a walk
-            QueryState.Label label = findBestLabelInRound(labelsPerRound.bestOnTrip().get(round), targetStops,
-                    bestTime);
-            if (label != null) {
-                bestTime = getTimeAtTarget(label, targetStops);
-            }
-            QueryState.Label bestLabel = findBestLabelInRound(labelsPerRound.best().get(round), targetStops, bestTime);
-            if (bestLabel != null) {
-                label = bestLabel;
-            }
-
-            if (label != null) {
-                // update best time for Pareto filtering
-                bestTime = getTimeAtTarget(label, targetStops);
-
-                Connection connection = reconstructConnectionFromLabel(label);
-                if (connection != null) {
-                    connections.add(connection);
-                }
+    List<Connection> reconstructConnections(List<QueryState.Label> targetLabels) {
+        List<Connection> connections = new ArrayList<>(targetLabels.size());
+        for (QueryState.Label label : targetLabels) {
+            Connection connection = reconstructConnectionFromLabel(label);
+            if (connection != null) {
+                connections.add(connection);
             }
         }
 
         return connections;
-    }
-
-    /**
-     * Gets the time a label reaches the target at: the arrival after walking from its stop to the target, or for an
-     * arrival query, the departure before walking from the target to its stop.
-     */
-    private int getTimeAtTarget(QueryState.Label label, Map<Integer, Integer> targetStops) {
-        int walkTime = targetStops.get(label.stopIdx());
-        return timeType == TimeType.DEPARTURE ? label.targetTime() + walkTime : label.targetTime() - walkTime;
-    }
-
-    /**
-     * Identifies the best label for a set of target stops within a single round.
-     *
-     * @param labels          array of labels for the current round.
-     * @param targetStops     map of target stops and their walk durations.
-     * @param currentBestTime the current best time across all previous rounds.
-     * @return the best label for this round, or null if no improvement was found.
-     */
-    private QueryState.@Nullable Label findBestLabelInRound(QueryState.Label[] labels,
-                                                            Map<Integer, Integer> targetStops, int currentBestTime) {
-        QueryState.Label bestLabel = null;
-        int bestRoundTime = currentBestTime;
-
-        for (Map.Entry<Integer, Integer> entry : targetStops.entrySet()) {
-            int stopIdx = entry.getKey();
-            int walkTime = entry.getValue();
-            QueryState.Label label = labels[stopIdx];
-
-            if (label == null) {
-                continue;
-            }
-
-            if (timeType == TimeType.DEPARTURE) {
-                int arrivalTime = label.targetTime() + walkTime;
-                if (arrivalTime < bestRoundTime) {
-                    bestLabel = label;
-                    bestRoundTime = arrivalTime;
-                }
-            } else {
-                int departureTime = label.targetTime() - walkTime;
-                if (departureTime > bestRoundTime) {
-                    bestLabel = label;
-                    bestRoundTime = departureTime;
-                }
-            }
-        }
-
-        return bestLabel;
     }
 
     /**
@@ -609,36 +534,6 @@ class LabelPostprocessor {
             }
         }
         return -1;
-    }
-
-    /**
-     * Loops through the labels of all rounds to find the earliest arrival (latest departure) at a stop, on a trip, on
-     * foot or at the start. Of equally early arrivals, the one of the lowest round is kept, which takes the fewest
-     * trips, and in a round the one on a trip, which needs no walk at the end.
-     *
-     * @param labelsPerRound the labels per round.
-     * @param stopIdx        the stop index.
-     * @return the best label for the stop, or null if never reached.
-     */
-    private QueryState.@Nullable Label getBestLabelForStop(QueryState.LabelsPerRound labelsPerRound, int stopIdx) {
-        QueryState.Label bestLabel = null;
-        for (int i = 0; i < labelsPerRound.best().size(); i++) {
-            for (QueryState.Label label : new QueryState.Label[]{labelsPerRound.bestOnTrip().get(i)[stopIdx],
-                    labelsPerRound.best().get(i)[stopIdx]}) {
-                if (label != null && (bestLabel == null || isBetter(label.targetTime(), bestLabel.targetTime()))) {
-                    bestLabel = label;
-                }
-            }
-        }
-
-        return bestLabel;
-    }
-
-    /**
-     * Whether a time is better than another for the time type: earlier when departing, later when arriving.
-     */
-    private boolean isBetter(int time, int otherTime) {
-        return timeType == TimeType.DEPARTURE ? time < otherTime : time > otherTime;
     }
 
     /**
