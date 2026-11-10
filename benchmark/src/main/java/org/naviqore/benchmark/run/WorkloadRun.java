@@ -28,7 +28,7 @@ import java.util.LongSummaryStatistics;
 public class WorkloadRun {
 
     private static final List<String> DEFAULT_WORKLOADS = List.of(Workloads.CONNECTIONS, Workloads.ISOLINES,
-            Workloads.WINDOW_ISOLINES);
+            Workloads.WINDOW_ISOLINES, Workloads.WINDOW_CONNECTIONS);
     private static final int DEFAULT_RUNS = 3;
 
     private static final String[] RESULT_HEADERS = {"workload", "query", "run", "answers", "wall_time_ms",

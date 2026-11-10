@@ -26,7 +26,7 @@ class WorkloadsTest {
     @Test
     void drawsTheSameQueriesEveryTime() {
         for (String name : new String[]{Workloads.ANSWERS, Workloads.CONNECTIONS, Workloads.ISOLINES,
-                Workloads.WINDOW_ISOLINES}) {
+                Workloads.WINDOW_ISOLINES, Workloads.WINDOW_CONNECTIONS}) {
             assertEquals(Workloads.of(name, subject), Workloads.of(name, subject), name);
         }
     }
@@ -45,6 +45,8 @@ class WorkloadsTest {
         assertEquals(450, Workloads.of(Workloads.CONNECTIONS, subject).queries().size());
         assertEquals(20, Workloads.of(Workloads.ISOLINES, subject).queries().size());
         assertEquals(5, Workloads.of(Workloads.WINDOW_ISOLINES, subject).queries().size());
+        // 4 pairs of hubs and 20 of random stops, departing and arriving
+        assertEquals(48, Workloads.of(Workloads.WINDOW_CONNECTIONS, subject).queries().size());
     }
 
     @Test

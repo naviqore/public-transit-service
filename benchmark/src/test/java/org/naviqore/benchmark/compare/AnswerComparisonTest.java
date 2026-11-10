@@ -72,6 +72,16 @@ class AnswerComparisonTest {
         }
 
         @Test
+        void leavingLaterForTheSameArrivalIsShorter() {
+            String laterRide = connection("08:10", "08:30", "PT T4 R3 A -> B");
+
+            assertEquals("different: connections, same times optimized, shorter",
+                    outcome(CONNECTIONS, List.of(ride), List.of(laterRide)));
+            assertEquals("different: connections, same times optimized, longer or with more walks",
+                    outcome(CONNECTIONS, List.of(laterRide), List.of(ride)));
+        }
+
+        @Test
         void failures() {
             List<String> failure = List.of("EXCEPTION StopNotFoundException: Stop A not found");
             List<String> otherFailure = List.of("EXCEPTION IllegalStateException: broken");
@@ -81,6 +91,57 @@ class AnswerComparisonTest {
             assertEquals("still failing: StopNotFoundException", outcome(CONNECTIONS, failure, failure));
             assertEquals("failing differently: StopNotFoundException -> IllegalStateException",
                     outcome(CONNECTIONS, failure, otherFailure));
+        }
+    }
+
+    @Nested
+    class ConnectionsOverATimeWindow {
+
+        private static final Query WINDOW = Query.connections(Location.stop("A"), Location.stop("B"), TIME,
+                TimeType.DEPARTURE, "window60");
+
+        private final String direct = connection("08:10", "09:00", "PT T1 R1 A -> B");
+        private final String withTransfer = connection("08:10", "08:40", "PT T2 R2 A -> C", "PT T3 R3 C -> B");
+        private final String laterDirect = connection("08:20", "09:00", "PT T4 R1 A -> B");
+
+        private static String outcome(List<String> before, List<String> after) {
+            return AnswerComparisonTest.outcome(WINDOW, before, after);
+        }
+
+        @Test
+        void aConnectionBeatingOneOfTheBaselineIsBetter() {
+            assertEquals("different: connections over a time window: better",
+                    outcome(List.of(direct, withTransfer), List.of(laterDirect, withTransfer)));
+        }
+
+        @Test
+        void connectionsTheOtherVersionNeitherHasNorBeatsAreNewOrMissing() {
+            assertEquals("different: connections over a time window: new",
+                    outcome(List.of(direct), List.of(direct, withTransfer)));
+            assertEquals("different: connections over a time window: missing",
+                    outcome(List.of(direct, withTransfer), List.of(direct)));
+        }
+
+        @Test
+        void aConnectionBeatenByTheBaselineOrByItsOwnIsWorse() {
+            assertEquals("different: connections over a time window: missing, worse",
+                    outcome(List.of(laterDirect), List.of(direct)));
+            assertEquals("different: connections over a time window: better, beaten",
+                    outcome(List.of(direct), List.of(direct, laterDirect)));
+        }
+
+        @Test
+        void aConnectionDepartingAfterTheWindowIsOutsideOfIt() {
+            String afterTheWindow = connection("09:00", "09:40", "PT T5 R1 A -> B");
+
+            assertEquals("different: connections over a time window: new, outside window",
+                    outcome(List.of(direct), List.of(direct, afterTheWindow)));
+        }
+
+        @Test
+        void theSameTimesOnOtherLegs() {
+            assertEquals("different: connections over a time window: other legs",
+                    outcome(List.of(direct), List.of(connection("08:10", "09:00", "PT T6 R4 A -> B"))));
         }
     }
 
@@ -127,6 +188,16 @@ class AnswerComparisonTest {
             List<String> after = List.of("B " + connection("07:35", "08:00", "PT T2 R1 B -> A"));
 
             assertEquals("different: isolines, stops: better", outcome(arriving, before, after));
+        }
+
+        @Test
+        void overATimeWindow_aShorterTravelTimeIsBetter() {
+            Query window = Query.isolines(Location.stop("A"), TIME, TimeType.DEPARTURE, "window60");
+            // arriving later after leaving even later: the travel time drops from 25 to 20 minutes
+            List<String> after = List.of("B " + connection("08:15", "08:35", "PT T2 R1 A -> B"));
+
+            assertEquals("different: isolines, stops: better", outcome(window, List.of(stopB), after));
+            assertEquals("different: isolines, stops: worse", outcome(ISOLINES, List.of(stopB), after));
         }
     }
 

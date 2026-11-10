@@ -2,6 +2,7 @@ package org.naviqore.benchmark.workload;
 
 import org.jspecify.annotations.Nullable;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -31,6 +32,8 @@ public record Query(Kind kind, Location source, @Nullable Location target, Offse
                     String configuration) {
 
     private static final String NO_TARGET = "-";
+    private static final String TIME_WINDOW = "window60";
+    private static final Duration TIME_WINDOW_DURATION = Duration.ofMinutes(60);
 
     public Query {
         if ((kind == Kind.ISOLINES) != (target == null)) {
@@ -58,6 +61,21 @@ public record Query(Kind kind, Location source, @Nullable Location target, Offse
         return new Query(Kind.valueOf(fields.get(0)), Location.decode(fields.get(1)),
                 target.equals(NO_TARGET) ? null : Location.decode(target), OffsetDateTime.parse(fields.get(3)),
                 TimeType.valueOf(fields.get(4)), fields.get(5));
+    }
+
+    /**
+     * Whether the query has a time window: isolines report the shortest travel time to each stop over it, and
+     * connections all those departing in it (arriving, for an arrival query) that no other one beats.
+     */
+    public boolean hasTimeWindow() {
+        return List.of(configuration.split("\\+")).contains(TIME_WINDOW);
+    }
+
+    /**
+     * The duration of the time window of the query, zero if it has none.
+     */
+    public Duration timeWindow() {
+        return hasTimeWindow() ? TIME_WINDOW_DURATION : Duration.ZERO;
     }
 
     /**

@@ -53,12 +53,13 @@ path.
 The queries are drawn from the timetable of the baseline with fixed seeds, so that every version and every run gets
 the same queries: dates from its validity, hubs found by name and stops drawn at random.
 
-| Workload          | Queries                                                                                                                                                                                                                                                  |
-|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `answers`         | 1 504 on the Swiss feed: connections at three times of a winter weekday, a Saturday, a Sunday, New Year's Day, the changes of daylight saving time, the first and last day and a day after; every query configuration; from and to coordinates; isolines |
-| `connections`     | 450 connections between random stops on a winter weekday at 07:30, 12:30 and 17:30                                                                                                                                                                       |
-| `isolines`        | 20 isolines from random stops on a winter weekday at 08:00                                                                                                                                                                                               |
-| `window-isolines` | 5 isolines with a time window of 60 minutes from hubs, departing and arriving                                                                                                                                                                            |
+| Workload             | Queries                                                                                                                                                                                                                                                  |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `answers`            | 1 504 on the Swiss feed: connections at three times of a winter weekday, a Saturday, a Sunday, New Year's Day, the changes of daylight saving time, the first and last day and a day after; every query configuration; from and to coordinates; isolines |
+| `connections`        | 450 connections between random stops on a winter weekday at 07:30, 12:30 and 17:30                                                                                                                                                                       |
+| `isolines`           | 20 isolines from random stops on a winter weekday at 08:00                                                                                                                                                                                               |
+| `window-isolines`    | 5 isolines with a time window of 60 minutes from hubs, departing and arriving                                                                                                                                                                            |
+| `window-connections` | 48 connections with a time window of 60 minutes between hubs and between random stops, departing and arriving                                                                                                                                            |
 
 The hubs are stations of the Swiss feed; on another feed, a name no stop has draws a random stop.
 
@@ -70,8 +71,11 @@ The hubs are stations of the Swiss feed; on another feed, a name no stop has dra
   results are JDK types only. When the API of the libraries changes, adapt `ServiceSubject` in the same commit.
 - **compare** sorts every query into: the same answer; the same answer in another order (equally good connections,
   which also differ between runs of one version); fixed, still failing, failing differently or a new failure; or
-  different, and how: stops reached earlier, later, no longer, with fewer walks or on other legs, and connections
-  better, worse or in another number.
+  different, and how: stops reached earlier, later, no longer, with fewer walks or on other legs (over a time window,
+  faster or slower instead of earlier or later), and connections better, worse, in another number, or at the same
+  times shorter or longer. Over a time window, connections are the set of all that no other one beats, and the outcome
+  names the connections of the candidate that beat or are beaten by those of the baseline, the new and the missing
+  ones, and those beaten by its own or outside the window.
 - **timing** runs randomized multiple interleaved trials
   ([Abedi and Brecht, ICPE 2017](https://research.spec.org/icpe_proceedings/2017/proceedings/p287.pdf)): every round
   runs all queries of a workload on both versions, in an order drawn anew each round, after rounds to warm up. Two JVMs

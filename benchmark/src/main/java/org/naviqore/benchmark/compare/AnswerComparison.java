@@ -12,6 +12,7 @@ import org.naviqore.benchmark.workload.Query;
 import org.naviqore.benchmark.workload.Workload;
 import org.naviqore.benchmark.workload.Workloads;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -32,8 +33,11 @@ import java.util.stream.Collectors;
  *     <li>a different answer, and how it differs. For isolines: whether stops are reached earlier (better), later
  *     (worse) or no longer (lost), or at the same time with a walk replaced by a ride (folded) or by other legs; the
  *     outcome names these changes and the difference counts their stops, so that queries with the same changes share
- *     an outcome. For connections: whether their number changed, and whether the times they optimize, the arrival of
- *     a departure query and the departure of an arrival query, got better or worse.</li>
+ *     an outcome. With a time window, isolines report the shortest travel time to a stop, and a stop reached faster is
+ *     better. For connections: whether their number changed, and whether the times they optimize, the arrival of a
+ *     departure query and the departure of an arrival query, got better or worse, and if not, whether the connections
+ *     got shorter or longer. With a time window, connections are all those in the window that no other one beats, and
+ *     the outcome names the connections the candidate beats, misses, adds or has beaten.</li>
  * </ul>
  * The outcome of every query goes to a CSV file; the number of queries of each outcome, with examples, to the log.
  */
@@ -106,6 +110,9 @@ public class AnswerComparison {
             if (query.kind() == Query.Kind.ISOLINES) {
                 return compareIsolines(query, before, after, firstDifference);
             }
+            if (query.hasTimeWindow()) {
+                return compareConnectionsOverWindow(query, before, after, firstDifference);
+            }
             return new Comparison(new Outcome(Outcome.Kind.DIFFERENT, compareConnections(query, before, after)),
                     firstDifference);
         }
@@ -130,6 +137,8 @@ public class AnswerComparison {
         Map<String, Journey> was = byStop(before);
         Map<String, Journey> now = byStop(after);
         boolean arrival = query.timeType() == Query.TimeType.ARRIVAL;
+        // over a time window, an isoline reports the shortest travel time to a stop, not its earliest arrival
+        boolean window = query.hasTimeWindow();
 
         int folded = 0;
         int better = 0;
@@ -142,9 +151,10 @@ public class AnswerComparison {
                 better++;
                 continue;
             }
-            int comparison = journey.optimized(arrival).compareTo(previous.optimized(arrival));
+            int comparison = window ? journey.travelTime().compareTo(previous.travelTime()) : journey.optimized(arrival)
+                    .compareTo(previous.optimized(arrival));
             if (comparison != 0) {
-                if (improves(comparison, arrival)) {
+                if (window ? comparison < 0 : improves(comparison, arrival)) {
                     better++;
                 } else {
                     worse++;
@@ -197,18 +207,100 @@ public class AnswerComparison {
         if (anyBetter) {
             return "connections, better";
         }
+        boolean anyShorter = false;
         for (int i = 0; i < was.size(); i++) {
             Journey previous = was.get(i);
             Journey journey = now.get(i);
             // the times optimized are the same: the others decide whether the connection got shorter
-            boolean noLonger = arrival ? !journey.arrival().isAfter(previous.arrival()) : !journey.departure()
+            boolean longer = arrival ? journey.arrival().isAfter(previous.arrival()) : journey.departure()
                     .isBefore(previous.departure());
-            if (!noLonger || journey.walks() > previous.walks()) {
+            if (longer || journey.walks() > previous.walks()) {
                 return "connections, same times optimized, longer or with more walks";
             }
+            anyShorter |= arrival ? journey.arrival().isBefore(previous.arrival()) : journey.departure()
+                    .isAfter(previous.departure());
         }
 
-        return "connections, same times optimized, other legs";
+        return "connections, same times optimized, " + (anyShorter ? "shorter" : "other legs");
+    }
+
+    /**
+     * Compares the connections of a query over a time window: all connections departing in the window (arriving in it,
+     * for an arrival query) that no other one beats. One connection beats another if it departs no earlier, arrives no
+     * later and has no more rides, and is better in one of them. The outcome names the changes, and the difference
+     * counts their connections:
+     * <ul>
+     *     <li>better: connections of the candidate that beat one of the baseline;</li>
+     *     <li>new: connections of the candidate the baseline lacks, which neither beat one of the baseline nor are
+     *     beaten by one;</li>
+     *     <li>missing: connections of the baseline that the candidate neither has nor beats;</li>
+     *     <li>worse: connections of the candidate that one of the baseline beats;</li>
+     *     <li>beaten: connections of the candidate that another of its own beats;</li>
+     *     <li>outside window: connections of the candidate that do not depart (arrive) in the window;</li>
+     *     <li>other legs: connections of the candidate at the times and with the rides of one of the baseline, on other
+     *     legs.</li>
+     * </ul>
+     */
+    private static Comparison compareConnectionsOverWindow(Query query, List<String> before, List<String> after,
+                                                           String firstDifference) {
+        List<Journey> was = before.stream().map(Journey::of).toList();
+        List<Journey> now = after.stream().map(Journey::of).toList();
+
+        Map<String, Long> changes = new LinkedHashMap<>();
+        changes.put("better", now.stream().filter(journey -> beatsAny(journey, was)).count());
+        changes.put("new", now.stream()
+                .filter(journey -> !hasCriteriaOf(was, journey) && !beatsAny(journey, was) && !isBeaten(journey, was))
+                .count());
+        changes.put("missing",
+                was.stream().filter(journey -> !hasCriteriaOf(now, journey) && !isBeaten(journey, now)).count());
+        changes.put("worse", now.stream().filter(journey -> isBeaten(journey, was)).count());
+        changes.put("beaten", now.stream().filter(journey -> isBeaten(journey, now)).count());
+        changes.put("outside window", now.stream().filter(journey -> !isInWindow(query, journey)).count());
+        changes.put("other legs",
+                now.stream().filter(journey -> hasCriteriaOf(was, journey) && !was.contains(journey)).count());
+        changes.values().removeIf(count -> count == 0);
+        String counts = changes.entrySet()
+                .stream()
+                .map(change -> change.getKey() + " " + change.getValue())
+                .collect(Collectors.joining(", "));
+
+        return new Comparison(new Outcome(Outcome.Kind.DIFFERENT,
+                "connections over a time window: " + String.join(", ", changes.keySet())),
+                "connections: " + counts + "\n    " + firstDifference);
+    }
+
+    /**
+     * Whether one of the journeys departs, arrives and rides as often as a journey.
+     */
+    private static boolean hasCriteriaOf(List<Journey> journeys, Journey journey) {
+        return journeys.stream().anyMatch(other -> other.hasCriteriaOf(journey));
+    }
+
+    /**
+     * Whether one of the journeys beats a journey.
+     */
+    private static boolean isBeaten(Journey journey, List<Journey> journeys) {
+        return journeys.stream().anyMatch(other -> other.beats(journey));
+    }
+
+    /**
+     * Whether a journey beats one of the journeys.
+     */
+    private static boolean beatsAny(Journey journey, List<Journey> journeys) {
+        return journeys.stream().anyMatch(journey::beats);
+    }
+
+    /**
+     * Whether a journey departs in the time window of a query, or for an arrival query, arrives in it.
+     */
+    private static boolean isInWindow(Query query, Journey journey) {
+        if (query.timeType() == Query.TimeType.ARRIVAL) {
+            return !journey.arrival().isAfter(query.time()) && journey.arrival()
+                    .isAfter(query.time().minus(query.timeWindow()));
+        }
+
+        return !journey.departure().isBefore(query.time()) && journey.departure()
+                .isBefore(query.time().plus(query.timeWindow()));
     }
 
     /**
@@ -293,24 +385,43 @@ public class AnswerComparison {
     }
 
     /**
-     * A connection, as far as comparisons need it: when it departs and arrives, how many of its legs walk, and its legs
-     * as text.
+     * A connection, as far as comparisons need it: when it departs and arrives, how many of its legs ride and walk, and
+     * its legs as text.
      */
-    record Journey(OffsetDateTime departure, OffsetDateTime arrival, int walks, String legs) {
+    record Journey(OffsetDateTime departure, OffsetDateTime arrival, int rides, int walks, String legs) {
 
         static Journey of(String connection) {
             int separator = connection.indexOf(" |");
             String[] times = connection.substring(0, separator).split(" -> ");
             String legs = connection.substring(separator + 2);
+            int rides = 0;
             int walks = 0;
             for (String leg : legs.split(" ;")) {
                 String trimmed = leg.trim();
-                if (trimmed.startsWith("TR ") || trimmed.startsWith("WA ")) {
+                if (trimmed.startsWith("PT ")) {
+                    rides++;
+                } else if (trimmed.startsWith("TR ") || trimmed.startsWith("WA ")) {
                     walks++;
                 }
             }
 
-            return new Journey(OffsetDateTime.parse(times[0]), OffsetDateTime.parse(times[1]), walks, legs);
+            return new Journey(OffsetDateTime.parse(times[0]), OffsetDateTime.parse(times[1]), rides, walks, legs);
+        }
+
+        /**
+         * Whether the journey departs, arrives and rides as often as another.
+         */
+        boolean hasCriteriaOf(Journey other) {
+            return departure.isEqual(other.departure) && arrival.isEqual(other.arrival) && rides == other.rides;
+        }
+
+        /**
+         * Whether the journey beats another: it departs no earlier, arrives no later and has no more rides, and is
+         * better in one of them.
+         */
+        boolean beats(Journey other) {
+            boolean noWorseInTime = !departure.isBefore(other.departure) && !arrival.isAfter(other.arrival);
+            return noWorseInTime && rides <= other.rides && !hasCriteriaOf(other);
         }
 
         /**
@@ -318,6 +429,10 @@ public class AnswerComparison {
          */
         Instant optimized(boolean arrivalQuery) {
             return (arrivalQuery ? departure : arrival).toInstant();
+        }
+
+        Duration travelTime() {
+            return Duration.between(departure, arrival);
         }
     }
 

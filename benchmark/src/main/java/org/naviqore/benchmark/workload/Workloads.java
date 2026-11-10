@@ -26,6 +26,8 @@ import java.util.List;
  *     <li>{@value #ISOLINES}: 20 isolines from random stops on a winter weekday, departing at 08:00.</li>
  *     <li>{@value #WINDOW_ISOLINES}: isolines with a time window of 60 minutes on a winter weekday, from four hubs
  *     departing at 08:00, and from one arriving at 18:00.</li>
+ *     <li>{@value #WINDOW_CONNECTIONS}: connections with a time window of 60 minutes on a winter weekday, between four
+ *     hubs and between 20 pairs of random stops, departing at 07:30 and arriving at 17:30.</li>
  * </ul>
  * The hubs are stations of the Swiss national feed; on another feed, a name no stop has draws a random stop.
  */
@@ -36,6 +38,7 @@ public class Workloads {
     public static final String CONNECTIONS = "connections";
     public static final String ISOLINES = "isolines";
     public static final String WINDOW_ISOLINES = "window-isolines";
+    public static final String WINDOW_CONNECTIONS = "window-connections";
 
     private static final List<String> HUB_NAMES = List.of("Zürich HB", "Bern", "Genève", "Basel SBB", "Lausanne",
             "Luzern", "Lugano", "Chur", "St. Gallen", "Interlaken Ost", "Zermatt", "Brig", "Winterthur", "Olten",
@@ -57,11 +60,13 @@ public class Workloads {
     private static final int ANSWERS_ISOLINE_SOURCES = 40;
     private static final int TIMING_CONNECTIONS_PER_TIME = 150;
     private static final int TIMING_ISOLINES = 20;
+    private static final int TIMING_WINDOW_CONNECTIONS = 20;
 
     /**
      * The workload of a name, drawn from the timetable of a version.
      *
-     * @param name    one of {@link #ANSWERS}, {@link #CONNECTIONS}, {@link #ISOLINES} and {@link #WINDOW_ISOLINES}
+     * @param name    one of {@link #ANSWERS}, {@link #CONNECTIONS}, {@link #ISOLINES}, {@link #WINDOW_ISOLINES} and
+     *                {@link #WINDOW_CONNECTIONS}
      * @param subject the subject of the version, whose service is built
      */
     public static Workload of(String name, Subject subject) {
@@ -71,9 +76,10 @@ public class Workloads {
             case CONNECTIONS -> connections(subject, days);
             case ISOLINES -> isolines(subject, days);
             case WINDOW_ISOLINES -> windowIsolines(subject, days);
+            case WINDOW_CONNECTIONS -> windowConnections(subject, days);
             default -> throw new IllegalArgumentException(
-                    String.format("Unknown workload %s, the workloads are %s, %s, %s and %s", name, ANSWERS,
-                            CONNECTIONS, ISOLINES, WINDOW_ISOLINES));
+                    String.format("Unknown workload %s, the workloads are %s, %s, %s, %s and %s", name, ANSWERS,
+                            CONNECTIONS, ISOLINES, WINDOW_ISOLINES, WINDOW_CONNECTIONS));
         };
     }
 
@@ -186,6 +192,27 @@ public class Workloads {
                 days.at(days.winter(), 18, 0), TimeType.ARRIVAL, WINDOW));
 
         return new Workload(WINDOW_ISOLINES, queries);
+    }
+
+    private static Workload windowConnections(Subject subject, Days days) {
+        // the first pairs of random stops of the connections, drawn with the same seed
+        List<String> stops = subject.randomStops(2 * TIMING_WINDOW_CONNECTIONS, TIMING_SEED);
+        List<String> hubs = WINDOW_DEPARTURE_HUB_NAMES.stream().map(subject::stopByName).toList();
+        List<Pair> pairs = new ArrayList<>();
+        for (int i = 0; i < hubs.size(); i++) {
+            pairs.add(new Pair(hubs.get(i), hubs.get((i + 1) % hubs.size())));
+        }
+        for (int i = 0; i < TIMING_WINDOW_CONNECTIONS; i++) {
+            pairs.add(new Pair(stops.get(2 * i), stops.get(2 * i + 1)));
+        }
+
+        List<Query> queries = new ArrayList<>();
+        for (Pair pair : pairs) {
+            queries.add(pair.connections(days.at(days.winter(), 7, 30), TimeType.DEPARTURE, WINDOW));
+            queries.add(pair.connections(days.at(days.winter(), 17, 30), TimeType.ARRIVAL, WINDOW));
+        }
+
+        return new Workload(WINDOW_CONNECTIONS, queries);
     }
 
     private record Pair(String from, String to) {
