@@ -122,7 +122,6 @@ class FootpathRelaxer {
             if (!allowTargetTransfers && targetStopIndices.contains(transfer.targetStopIdx())) {
                 continue;
             }
-            Stop targetStop = stops[transfer.targetStopIdx()];
             int duration = transfer.duration();
             if (maxWalkDuration < duration) {
                 continue;
@@ -142,7 +141,6 @@ class FootpathRelaxer {
                 continue;
             }
 
-            log.debug("Stop {} was improved by transfer from stop {}", targetStop.id(), sourceStop.id());
             // update best times with comparable target time
             queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
             // add real target time to label

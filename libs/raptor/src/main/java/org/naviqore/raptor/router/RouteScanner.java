@@ -186,7 +186,6 @@ class RouteScanner {
     private void scanRoute(int currentRouteIdx, int round) {
         Route currentRoute = routes[currentRouteIdx];
         if (!isRouteActiveInDaysToScan(currentRoute)) {
-            log.debug("Route {} is not active in time range.", currentRoute.id());
             return;
         }
 
@@ -207,7 +206,7 @@ class RouteScanner {
 
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(stop, bestStopTime, stopIdx, stopOffset, currentRoute)) {
+                if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, currentRoute)) {
                     continue;
                 }
             } else {
@@ -217,7 +216,7 @@ class RouteScanner {
                 int targetTime = activeTrip.stopTimes[forward ? stopTimeIndex : stopTimeIndex + 1];
                 targetTime += activeTrip.dayTimeOffset;
 
-                if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, stop, bestStopTime, stopIdx, round,
+                if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, bestStopTime, stopIdx, round,
                         lastRound, currentRouteIdx)) {
                     continue;
                 }
@@ -262,47 +261,36 @@ class RouteScanner {
      * performance reasons) assuming that this check is only run when not traveling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stop         the stop to check if a trip can be entered.
      * @param stopTime     the time at the stop.
      * @param stopIdx      the index of the stop to check if a trip can be entered.
      * @param stopOffset   the offset of the stop in the route.
      * @param currentRoute the current route.
      */
-    private boolean canEnterAtStop(Stop stop, int stopTime, int stopIdx, int stopOffset, Route currentRoute) {
+    private boolean canEnterAtStop(int stopTime, int stopIdx, int stopOffset, Route currentRoute) {
         int unreachableValue = forward ? INFINITY : -INFINITY;
         if (stopTime == unreachableValue) {
-            log.debug("Stop {} cannot be reached, continue", stop.id());
             return false;
         }
 
-        int furthestStopTime = getFurthestTripTimeOfRoute(currentRoute);
-        if (forward && furthestStopTime < stopTime) {
-            log.debug("No trips departing after best stop time on route {} for stop {}", currentRoute.id(), stop.id());
-            return false;
-        } else if (!forward && furthestStopTime > stopTime) {
-            log.debug("No trips arriving before best stop time on route {} for stop {}", currentRoute.id(), stop.id());
+        // no trip of the route departs after the time at the stop (arrives before it, routing backward)
+        if (isBetter(getFurthestTripTimeOfRoute(currentRoute), stopTime)) {
             return false;
         }
 
         if (!queryState.isMarkedThisRound(stopIdx)) {
             // this stop has already been scanned in previous round without improved target time
-            log.debug("Stop {} was not improved in previous round, continue", stop.id());
             return false;
         }
 
         if (forward && (stopOffset + 1 == currentRoute.numberOfStops())) {
             // last stop in route, does not make sense to check for trip to enter
-            log.debug("Stop {} is last stop in route, continue", stop.id());
             return false;
         } else if (!forward && (stopOffset == 0)) {
             // first stop in route, does not make sense to check for trip to enter
-            log.debug("Stop {} is first stop in route, continue", stop.id());
             return false;
         }
 
         // got first marked stop in the route
-        log.debug("Got first entry point at stop {} at {}", stop.id(), stopTime);
-
         return true;
     }
 
@@ -344,19 +332,17 @@ class RouteScanner {
      *
      * @param targetTime      the stop time to check for an earlier or later trip.
      * @param activeTrip      the active trip to check for an earlier or later trip.
-     * @param stop            the stop to check for an earlier or later trip.
      * @param bestStopTime    the earliest or latest time at the stop based on the TimeType.
      * @param stopIdx         the index of the stop to check for an earlier or later trip.
      * @param currentRouteIdx the index of the current route.
      * @return true if an earlier or later trip is possible, false otherwise.
      */
-    private boolean checkIfTripIsPossibleAndUpdateMarks(int targetTime, ActiveTrip activeTrip, Stop stop,
-                                                        int bestStopTime, int stopIdx, int thisRound, int lastRound,
+    private boolean checkIfTripIsPossibleAndUpdateMarks(int targetTime, ActiveTrip activeTrip, int bestStopTime,
+                                                        int stopIdx, int thisRound, int lastRound,
                                                         int currentRouteIdx) {
         boolean isImproved = forward ? targetTime < bestStopTime : targetTime > bestStopTime;
 
         if (isImproved) {
-            log.debug("Stop {} was improved", stop.id());
             queryState.setBestTime(stopIdx, targetTime);
 
             QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
@@ -367,7 +353,6 @@ class RouteScanner {
 
             return false;
         } else {
-            log.debug("Stop {} was not improved", stop.id());
             if (isBetter(targetTime, queryState.getBestTripTime(stopIdx))) {
                 // the earliest arrival on a trip so far, which walks start from
                 queryState.setTripLabel(stopIdx,
@@ -381,13 +366,8 @@ class RouteScanner {
                     stopIdx) : null;
 
             boolean isImprovedInSameRound = previous == null || (forward ? previous.targetTime() >= targetTime : previous.targetTime() <= targetTime);
-            if (isImprovedInSameRound) {
-                log.debug("Stop {} has been improved in same round, trip not possible within this round", stop.id());
-                return false;
-            } else {
-                log.debug("Checking for trips at stop {}", stop.id());
-                return true;
-            }
+            // an earlier (later, routing backward) trip can only be boarded after a label of the round before
+            return !isImprovedInSameRound;
         }
     }
 
@@ -437,7 +417,6 @@ class RouteScanner {
 
             // check if the day has any trips relevant
             if ((forward ? latestTripTime < referenceTime : referenceTime < earliestTripTime)) {
-                log.debug("No usable trips on route {} for stop {} on day {}", route.id(), stop.id(), dayIndex);
                 continue;
             }
 
@@ -466,17 +445,12 @@ class RouteScanner {
                     }
                     // the first possible trip of a day is the best of the day
                     if (possibleTrip == null || isBetter(relevantStopTime, possibleTrip.entryTime())) {
-                        log.debug("Found active trip ({}) on route {}", i, route.id());
                         possibleTrip = new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel,
                                 currentDayStopTimes);
                     }
                     break;
                 }
             }
-        }
-
-        if (possibleTrip == null) {
-            log.debug("No active trip found on route {}", route.id());
         }
 
         return possibleTrip;
