@@ -86,6 +86,12 @@ A trip boarded at a stop is ridden until a stop reached in the round before allo
 which then replaces it. The trip boarded must be better: a label that comes in time for the trip ridden may, once the
 transfer time is added, only come in time for a later one, or none.
 
+The trips are those running on the days a query scans. The stop times of a day hold only the trips running on it,
+route by route, which the router caches per day. The trips of a route keep their order at every stop, since trips
+that overtake one another are held in separate routes, so the trip to take at a stop is the first one leaving at or
+after the label (routing backward, the last one arriving at or before it): read one after the other on a route that
+runs fewer than 64 trips on the day, and found by binary search on one that runs 64 or more.
+
 ### Arrivals on a trip and on foot
 
 A stop is reached on a trip, on foot or at the start, and these arrivals serve differently:

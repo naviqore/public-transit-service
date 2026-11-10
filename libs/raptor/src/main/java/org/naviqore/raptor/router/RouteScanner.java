@@ -23,6 +23,14 @@ class RouteScanner {
 
     private static final int SECONDS_IN_DAY = 86400;
     private static final int NO_LIMIT = -1;
+    private static final int NO_TRIP_FOUND = -1;
+
+    /**
+     * The number of trips a route runs on a day from which the trip to take at a stop is found by binary search, not by
+     * reading the trips one after the other: on the Swiss feed, reading them is faster up to 63 trips, a binary search
+     * from 64 on.
+     */
+    private static final int BINARY_SEARCH_MIN_TRIPS = 64;
 
     private final Stop[] stops;
     private final int[] stopRoutes;
@@ -34,8 +42,8 @@ class RouteScanner {
     private final boolean forward;
     private final int timeDirection;
 
-    private final int[][] stopTimes;
-    private final int actualDaysToScan;
+    // the stop times of the days to scan, from the first day (startDayOffset) on, forward or backward in time
+    private final DayStopTimes[] days;
     private final int startDayOffset;
 
     private final BitSet routesToScanMask;
@@ -75,17 +83,17 @@ class RouteScanner {
         LocalDate referenceDate = referenceDateTime.toLocalDate();
         if (maxDaysToScan == 1) {
             // single-day scan
-            stopTimes = new int[1][];
-            stopTimes[0] = raptorData.getStopTimeProvider().getStopTimesForDate(referenceDate, queryConfig);
-            actualDaysToScan = 1;
+            days = new DayStopTimes[1];
+            days[0] = raptorData.getStopTimeProvider().getStopTimesForDate(referenceDate, queryConfig);
             startDayOffset = 0;
 
         } else {
             // multi-day scan: there is no need to scan the next day for arrival trips but previous day is maybe needed
             // in departure trips
+            int actualDaysToScan;
             if (forward) {
                 LocalDate previousDay = referenceDate.minusDays(1);
-                int[] previousDayStopTimes = raptorData.getStopTimeProvider()
+                DayStopTimes previousDayStopTimes = raptorData.getStopTimeProvider()
                         .getStopTimesForDate(previousDay, queryConfig);
 
                 int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(ZoneOffset.UTC),
@@ -93,7 +101,7 @@ class RouteScanner {
 
                 // if latest stop time of previous day is after / equal the departure time, we need to include the
                 // previous day to scanning
-                if (previousDayStopTimes[1] >= departureTimeInPreviousDaySeconds) {
+                if (previousDayStopTimes.latest() >= departureTimeInPreviousDaySeconds) {
                     startDayOffset = -1;
                     actualDaysToScan = maxDaysToScan;
                 } else {
@@ -106,11 +114,11 @@ class RouteScanner {
                 startDayOffset = 0;
             }
 
-            stopTimes = new int[actualDaysToScan][];
+            days = new DayStopTimes[actualDaysToScan];
             for (int i = 0; i < actualDaysToScan; i++) {
                 int dayOffset = i + startDayOffset;
                 LocalDate date = forward ? referenceDate.plusDays(dayOffset) : referenceDate.minusDays(dayOffset);
-                stopTimes[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
+                days[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
             }
         }
     }
@@ -179,7 +187,7 @@ class RouteScanner {
      */
     private void scanRoute(int currentRouteIdx, int round) {
         Route currentRoute = routes[currentRouteIdx];
-        if (!isRouteActiveInDaysToScan(currentRoute)) {
+        if (!isRouteActiveInDaysToScan(currentRouteIdx)) {
             return;
         }
 
@@ -187,7 +195,6 @@ class RouteScanner {
         ActiveTrip activeTrip = null;
 
         int firstRouteStopIdx = currentRoute.firstRouteStopIdx();
-        int firstStopTimeIdx = currentRoute.firstStopTimeIdx();
         int numberOfStops = currentRoute.numberOfStops();
 
         int startOffset = forward ? 0 : numberOfStops - 1;
@@ -200,12 +207,12 @@ class RouteScanner {
 
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, currentRoute)) {
+                if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, currentRouteIdx, numberOfStops)) {
                     continue;
                 }
             } else {
                 // in this case we are on a trip and need to check if time has improved
-                int stopTimeIndex = firstStopTimeIdx + 2 * (activeTrip.tripOffset * numberOfStops + stopOffset) + 2;
+                int stopTimeIndex = activeTrip.firstStopTimeIdx + 2 * stopOffset;
                 // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
                 int targetTime = activeTrip.stopTimes[forward ? stopTimeIndex : stopTimeIndex + 1];
                 targetTime += activeTrip.dayTimeOffset;
@@ -216,12 +223,13 @@ class RouteScanner {
                 }
             }
 
-            ActiveTrip possibleTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
+            ActiveTrip possibleTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRouteIdx, numberOfStops,
+                    lastRound);
             // a trip boarded here replaces the active trip unless it is worse: the stop's label may be in time for an
             // earlier (later, routing backward) trip than the active one, or only for a worse one, or for none, once
             // the transfer time is added
-            if (activeTrip == null || possibleTrip != null && !isBetter(
-                    getTripTime(activeTrip, currentRoute, stopOffset), possibleTrip.entryTime())) {
+            if (activeTrip == null || possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
+                    possibleTrip.entryTime())) {
                 activeTrip = possibleTrip;
             }
         }
@@ -231,17 +239,15 @@ class RouteScanner {
      * Gets the time of a trip at a stop of its route that a trip boarded at the stop is compared by: its departure, or
      * routing backward its arrival.
      */
-    private int getTripTime(ActiveTrip trip, Route route, int stopOffset) {
-        int stopTimeIndex = route.firstStopTimeIdx() + 2 * (trip.tripOffset * route.numberOfStops() + stopOffset) + 2;
+    private int getTripTime(ActiveTrip trip, int stopOffset) {
+        int stopTimeIndex = trip.firstStopTimeIdx + 2 * stopOffset;
         // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
         return trip.stopTimes[forward ? stopTimeIndex + 1 : stopTimeIndex] + trip.dayTimeOffset;
     }
 
-    private boolean isRouteActiveInDaysToScan(Route route) {
-        for (int i = 0; i < actualDaysToScan; i++) {
-            int stopTimeStartIndex = route.firstStopTimeIdx();
-            // this means the earliest and latest trip time are set for the route (route is active on given day)
-            if (stopTimes[i][stopTimeStartIndex] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && stopTimes[i][stopTimeStartIndex + 1] != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+    private boolean isRouteActiveInDaysToScan(int routeIdx) {
+        for (DayStopTimes day : days) {
+            if (day.numberOfTrips(routeIdx) > 0) {
                 return true;
             }
         }
@@ -255,19 +261,20 @@ class RouteScanner {
      * performance reasons) assuming that this check is only run when not traveling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stopTime     the time at the stop.
-     * @param stopIdx      the index of the stop to check if a trip can be entered.
-     * @param stopOffset   the offset of the stop in the route.
-     * @param currentRoute the current route.
+     * @param stopTime      the time at the stop.
+     * @param stopIdx       the index of the stop to check if a trip can be entered.
+     * @param stopOffset    the offset of the stop in the route.
+     * @param routeIdx      the index of the current route.
+     * @param numberOfStops the number of stops of the current route.
      */
-    private boolean canEnterAtStop(int stopTime, int stopIdx, int stopOffset, Route currentRoute) {
+    private boolean canEnterAtStop(int stopTime, int stopIdx, int stopOffset, int routeIdx, int numberOfStops) {
         int unreachableValue = forward ? INFINITY : -INFINITY;
         if (stopTime == unreachableValue) {
             return false;
         }
 
         // no trip of the route departs after the time at the stop (arrives before it, routing backward)
-        if (isBetter(getFurthestTripTimeOfRoute(currentRoute), stopTime)) {
+        if (isBetter(getFurthestTripTimeOfRoute(routeIdx), stopTime)) {
             return false;
         }
 
@@ -276,7 +283,7 @@ class RouteScanner {
             return false;
         }
 
-        if (forward && (stopOffset + 1 == currentRoute.numberOfStops())) {
+        if (forward && (stopOffset + 1 == numberOfStops)) {
             // last stop in route, does not make sense to check for trip to enter
             return false;
         } else if (!forward && (stopOffset == 0)) {
@@ -294,16 +301,15 @@ class RouteScanner {
      * <p>
      * Returns -INFINITY for DEPARTURE and INFINITY for ARRIVAL if no trip is possible.
      *
-     * @param route the route to get the furthest trip time from.
+     * @param routeIdx the index of the route to get the furthest trip time from.
      * @return the furthest trip time of the route.
      */
-    private int getFurthestTripTimeOfRoute(Route route) {
-        // get index of latest trip for departure and earliest trip for arrival
-        int stopTimeIdx = forward ? route.firstStopTimeIdx() + 1 : route.firstStopTimeIdx();
+    private int getFurthestTripTimeOfRoute(int routeIdx) {
         // every day counts, since trips of one service day can run after trips of the next (e.g. after midnight)
         int furthestTripTime = forward ? -INFINITY : INFINITY;
-        for (int dayIndex = 0; dayIndex < stopTimes.length; dayIndex++) {
-            int time = stopTimes[dayIndex][stopTimeIdx];
+        for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
+            // the latest trip time for departure and the earliest for arrival
+            int time = forward ? days[dayIndex].routeLatest()[routeIdx] : days[dayIndex].routeEarliest()[routeIdx];
             if (time == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
                 continue;
             }
@@ -372,17 +378,15 @@ class RouteScanner {
      * The first or last trip is looked for over all days to scan, since trips of one service day can run after trips of
      * the next, e.g. trips after midnight stored as 24:30 of one day and as 00:15 of the next.
      *
-     * @param stopIdx    the index of the stop to find the possible trip from.
-     * @param stop       the stop to find the possible trip from.
-     * @param stopOffset the offset of the stop in the route.
-     * @param route      the route to find the possible trip on.
-     * @param lastRound  the last round.
+     * @param stopIdx       the index of the stop to find the possible trip from.
+     * @param stop          the stop to find the possible trip from.
+     * @param stopOffset    the offset of the stop in the route.
+     * @param routeIdx      the index of the route to find the possible trip on.
+     * @param numberOfStops the number of stops of the route.
+     * @param lastRound     the last round.
      */
-    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, Route route, int lastRound) {
-        int firstStopTimeIdx = route.firstStopTimeIdx();
-        int numberOfStops = route.numberOfStops();
-        int numberOfTrips = route.numberOfTrips();
-
+    private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, int routeIdx,
+                                                  int numberOfStops, int lastRound) {
         QueryState.Label previousLabel = queryState.getLabel(lastRound, stopIdx);
 
         // this is the reference time, where we can depart after or arrive earlier
@@ -397,17 +401,18 @@ class RouteScanner {
         int limitTime = limited ? previousLabel.targetTime() + timeDirection * firstTripLimit : 0;
 
         ActiveTrip possibleTrip = null;
-        for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
-            int[] currentDayStopTimes = stopTimes[dayIndex];
+        for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
+            DayStopTimes day = days[dayIndex];
+            int numberOfTrips = day.numberOfTrips(routeIdx);
             // the route does not run on the day, it has no earliest and latest trip time to add the day's offset to
-            if (currentDayStopTimes[firstStopTimeIdx] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+            if (numberOfTrips == 0) {
                 continue;
             }
 
             int dayOffset = dayIndex + startDayOffset;
             int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
-            int earliestTripTime = currentDayStopTimes[firstStopTimeIdx] + timeOffset;
-            int latestTripTime = currentDayStopTimes[firstStopTimeIdx + 1] + timeOffset;
+            int earliestTripTime = day.routeEarliest()[routeIdx] + timeOffset;
+            int latestTripTime = day.routeLatest()[routeIdx] + timeOffset;
 
             // check if the day has any trips relevant
             if ((forward ? latestTripTime < referenceTime : referenceTime < earliestTripTime)) {
@@ -420,34 +425,78 @@ class RouteScanner {
                 continue;
             }
 
-            for (int i = 0; i < numberOfTrips; i++) {
-                int tripOffset = forward ? i : numberOfTrips - 1 - i;
-                int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
-                // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
-                int relevantStopTime = currentDayStopTimes[forward ? stopTimeIndex + 1 : stopTimeIndex];
+            // the first possible trip of a day is the best of the day: the trips keep their order at every stop
+            int tripStopTimes = 2 * numberOfStops;
+            int firstTripTimeIdx = day.routeStopTimes()[routeIdx] + 2 * stopOffset + (forward ? 1 : 0);
+            int trip = findFirstPossibleTrip(day.stopTimes(), firstTripTimeIdx, tripStopTimes, numberOfTrips,
+                    referenceTime - timeOffset);
+            if (trip == NO_TRIP_FOUND) {
+                continue;
+            }
 
-                // trip is not active
-                if (relevantStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                    continue;
-                }
-
-                relevantStopTime += timeOffset;
-                if (forward ? relevantStopTime >= referenceTime : relevantStopTime <= referenceTime) {
-                    // beyond the limit, so is every later trip of the day
-                    if (limited && isBetter(limitTime, relevantStopTime)) {
-                        break;
-                    }
-                    // the first possible trip of a day is the best of the day
-                    if (possibleTrip == null || isBetter(relevantStopTime, possibleTrip.entryTime())) {
-                        possibleTrip = new ActiveTrip(tripOffset, relevantStopTime, timeOffset, previousLabel,
-                                currentDayStopTimes);
-                    }
-                    break;
-                }
+            int tripTime = day.stopTimes()[firstTripTimeIdx + trip * tripStopTimes] + timeOffset;
+            // beyond the limit, so is every later trip of the day
+            if (limited && isBetter(limitTime, tripTime)) {
+                continue;
+            }
+            if (possibleTrip == null || isBetter(tripTime, possibleTrip.entryTime())) {
+                possibleTrip = new ActiveTrip(day.tripPosition(routeIdx, trip), tripTime, timeOffset, previousLabel,
+                        day.stopTimes(), day.routeStopTimes()[routeIdx] + trip * tripStopTimes);
             }
         }
 
         return possibleTrip;
+    }
+
+    /**
+     * Finds the first trip of a route on a day that can be taken at a stop: the first leaving at or after a time, or
+     * routing backward the last arriving at or before it. The trips are read at the stop one after the other, or, if
+     * the route runs many on the day, by binary search: they keep their order at every stop.
+     *
+     * @param stopTimes        the stop times of the day.
+     * @param firstTripTimeIdx the index of the time of the route's first trip of the day at the stop: its departure, or
+     *                         routing backward its arrival.
+     * @param tripStopTimes    the number of stop times of a trip, the distance between the times of two trips.
+     * @param numberOfTrips    the number of trips of the route on the day.
+     * @param time             the time, relative to the day.
+     * @return the number of the trip among the route's trips of the day, or {@link #NO_TRIP_FOUND}.
+     */
+    private int findFirstPossibleTrip(int[] stopTimes, int firstTripTimeIdx, int tripStopTimes, int numberOfTrips,
+                                      int time) {
+        if (numberOfTrips < BINARY_SEARCH_MIN_TRIPS) {
+            if (forward) {
+                for (int trip = 0; trip < numberOfTrips; trip++) {
+                    if (stopTimes[firstTripTimeIdx + trip * tripStopTimes] >= time) {
+                        return trip;
+                    }
+                }
+            } else {
+                for (int trip = numberOfTrips - 1; trip >= 0; trip--) {
+                    if (stopTimes[firstTripTimeIdx + trip * tripStopTimes] <= time) {
+                        return trip;
+                    }
+                }
+            }
+            return NO_TRIP_FOUND;
+        }
+
+        // the number of trips before the first trip leaving at or after the time (forward), or after the last trip
+        // arriving at or before it (backward)
+        int low = 0;
+        int high = numberOfTrips;
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            int tripTime = stopTimes[firstTripTimeIdx + middle * tripStopTimes];
+            if (forward ? tripTime < time : tripTime <= time) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        if (forward) {
+            return low < numberOfTrips ? low : NO_TRIP_FOUND;
+        }
+        return low > 0 ? low - 1 : NO_TRIP_FOUND;
     }
 
     /**
@@ -473,10 +522,11 @@ class RouteScanner {
         int stopRouteEndIdx = stop.stopRouteIdx() + stop.numberOfRoutes();
         int firstOffset = forward ? 0 : 1;
         for (int stopRouteIdx = stop.stopRouteIdx(); stopRouteIdx < stopRouteEndIdx; stopRouteIdx++) {
-            Route route = routes[stopRoutes[stopRouteIdx]];
+            int routeIdx = stopRoutes[stopRouteIdx];
+            Route route = routes[routeIdx];
             for (int stopOffset = firstOffset; stopOffset < firstOffset + route.numberOfStops() - 1; stopOffset++) {
                 if (routeStops[route.firstRouteStopIdx() + stopOffset].stopIndex() == stopIdx) {
-                    addStopTimesInRange(tripTimes, route, stopOffset, minValue, maxValue);
+                    addStopTimesInRange(tripTimes, routeIdx, route.numberOfStops(), stopOffset, minValue, maxValue);
                 }
             }
         }
@@ -488,43 +538,37 @@ class RouteScanner {
      * Adds the stop times (departures, or arrivals when routing backward) at a position on a route in a time range.
      *
      * @param stopTimesInRange the stop times to add to.
-     * @param route            the route.
+     * @param routeIdx         the index of the route.
+     * @param numberOfStops    the number of stops of the route.
      * @param stopOffset       the position of the stop on the route.
      * @param minValue         the earliest time to add.
      * @param maxValue         the latest time to add.
      */
-    private void addStopTimesInRange(List<Integer> stopTimesInRange, Route route, int stopOffset, int minValue,
-                                     int maxValue) {
-        int firstStopTimeIdx = route.firstStopTimeIdx();
-        int numberOfStops = route.numberOfStops();
-        int numberOfTrips = route.numberOfTrips();
-
-        for (int dayIndex = 0; dayIndex < actualDaysToScan; dayIndex++) {
+    private void addStopTimesInRange(List<Integer> stopTimesInRange, int routeIdx, int numberOfStops, int stopOffset,
+                                     int minValue, int maxValue) {
+        for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
+            DayStopTimes day = days[dayIndex];
+            int numberOfTrips = day.numberOfTrips(routeIdx);
             // the route does not run on the day, it has no earliest and latest trip time to add the day's offset to
-            if (stopTimes[dayIndex][firstStopTimeIdx] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
+            if (numberOfTrips == 0) {
                 continue;
             }
 
             int dayOffset = dayIndex + startDayOffset;
             int timeOffset = timeDirection * dayOffset * SECONDS_IN_DAY;
-            int earliestTripTime = stopTimes[dayIndex][firstStopTimeIdx] + timeOffset;
-            int latestTripTime = stopTimes[dayIndex][firstStopTimeIdx + 1] + timeOffset;
+            int earliestTripTime = day.routeEarliest()[routeIdx] + timeOffset;
+            int latestTripTime = day.routeLatest()[routeIdx] + timeOffset;
 
             // check if the day has any trips relevant; routing backward, the days to scan run back in time
             if (latestTripTime < minValue || earliestTripTime > maxValue) {
                 continue;
             }
 
-            for (int tripOffset = 0; tripOffset < numberOfTrips; tripOffset++) {
-                int stopTimeIndex = firstStopTimeIdx + 2 * (tripOffset * numberOfStops + stopOffset) + 2;
-                // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
-                int stopTime = stopTimes[dayIndex][forward ? stopTimeIndex + 1 : stopTimeIndex];
-                // trip is not active
-                if (stopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                    continue;
-                }
-
-                stopTime += timeOffset;
+            int tripStopTimes = 2 * numberOfStops;
+            // the departure at the stop, or the arrival when routing backward
+            int firstTripTimeIdx = day.routeStopTimes()[routeIdx] + 2 * stopOffset + (forward ? 1 : 0);
+            for (int trip = 0; trip < numberOfTrips; trip++) {
+                int stopTime = day.stopTimes()[firstTripTimeIdx + trip * tripStopTimes] + timeOffset;
                 if (stopTime >= minValue && stopTime <= maxValue) {
                     stopTimesInRange.add(stopTime);
                 }
@@ -532,8 +576,18 @@ class RouteScanner {
         }
     }
 
+    /**
+     * A trip taken on a route.
+     *
+     * @param tripOffset       the position of the trip among all trips of its route, which gives its id.
+     * @param entryTime        the time the trip is boarded at (alighted from, routing backward).
+     * @param dayTimeOffset    the offset of the trip's day from the reference day, in seconds.
+     * @param previousLabel    the label the trip is boarded after.
+     * @param stopTimes        the stop times of the trip's day.
+     * @param firstStopTimeIdx the index of the trip's arrival at the first stop of its route in {@code stopTimes}.
+     */
     private record ActiveTrip(int tripOffset, int entryTime, int dayTimeOffset, QueryState.Label previousLabel,
-                              int[] stopTimes) {
+                              int[] stopTimes, int firstStopTimeIdx) {
     }
 
 }
