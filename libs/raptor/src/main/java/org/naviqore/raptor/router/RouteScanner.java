@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 
 import static org.naviqore.raptor.router.QueryState.INFINITY;
@@ -38,7 +38,7 @@ class RouteScanner {
     private final int actualDaysToScan;
     private final int startDayOffset;
 
-    private final boolean[] routesToScanMask;
+    private final BitSet routesToScanMask;
 
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
@@ -64,7 +64,7 @@ class RouteScanner {
 
         // constant configuration of scanner
         this.minTransferDuration = queryConfig.getMinimumTransferDuration();
-        this.routesToScanMask = new boolean[routes.length];
+        this.routesToScanMask = new BitSet(routes.length);
         this.forward = timeType == TimeType.DEPARTURE;
         this.timeDirection = forward ? 1 : -1;
 
@@ -147,11 +147,8 @@ class RouteScanner {
         log.debug("Scanning routes for round {}", round);
 
         // scan selected routes and mark stops with improved times
-        for (int currentRouteIdx = 0; currentRouteIdx < routesToScanMask.length; currentRouteIdx++) {
-            if (!routesToScanMask[currentRouteIdx]) {
-                continue;
-            }
-
+        for (int currentRouteIdx = routesToScanMask.nextSetBit(
+                0); currentRouteIdx >= 0; currentRouteIdx = routesToScanMask.nextSetBit(currentRouteIdx + 1)) {
             scanRoute(currentRouteIdx, round);
         }
     }
@@ -160,18 +157,15 @@ class RouteScanner {
      * Set all routes to scan from the marked stops.
      */
     private void setRoutesToScanMask() {
-        Arrays.fill(routesToScanMask, false);
-        for (int stopIdx = 0; stopIdx < stops.length; stopIdx++) {
-            if (!queryState.isMarkedThisRound(stopIdx)) {
-                continue;
-            }
-
+        routesToScanMask.clear();
+        for (int stopIdx = queryState.nextStopMarkedThisRound(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopMarkedThisRound(stopIdx + 1)) {
             Stop currentStop = stops[stopIdx];
             int stopRouteIdx = currentStop.stopRouteIdx();
             int stopRouteEndIdx = stopRouteIdx + currentStop.numberOfRoutes();
 
             while (stopRouteIdx < stopRouteEndIdx) {
-                routesToScanMask[stopRoutes[stopRouteIdx]] = true;
+                routesToScanMask.set(stopRoutes[stopRouteIdx]);
                 stopRouteIdx++;
             }
         }

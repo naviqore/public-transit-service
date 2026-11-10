@@ -39,13 +39,14 @@ final class ShortestTravelTimes {
      * @param round the round.
      */
     void collect(int round) {
-        for (int stopIdx = 0; stopIdx < passLabels.length; stopIdx++) {
-            if (queryState.isTripArrivalImproved(stopIdx)) {
-                collect(stopIdx, queryState.getTripLabel(round, stopIdx));
-            }
-            if (queryState.isMarkedNextRound(stopIdx)) {
-                collect(stopIdx, queryState.getLabel(round, stopIdx));
-            }
+        // at a stop with both, the arrival on a trip first
+        for (int stopIdx = queryState.nextStopWithTripArrivalImproved(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopWithTripArrivalImproved(stopIdx + 1)) {
+            collect(stopIdx, queryState.getTripLabel(round, stopIdx));
+        }
+        for (int stopIdx = queryState.nextStopMarkedNextRound(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopMarkedNextRound(stopIdx + 1)) {
+            collect(stopIdx, queryState.getLabel(round, stopIdx));
         }
     }
 

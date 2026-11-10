@@ -6,6 +6,7 @@ import org.naviqore.raptor.TimeType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 
 /**
@@ -24,6 +25,9 @@ import java.util.List;
  * time over all rounds would not tell: a later pass may have needed more trips for it. A query of one pass needs no
  * best times per round: its rounds only improve on the rounds before them, so the best times of its current round are
  * those of all its rounds, and all rounds share one array.
+ * <p>
+ * The marked stops are bit sets, which a round reads in the order of the stops by their set bits: a round marks few of
+ * all stops, and a range query runs many rounds.
  */
 final class QueryState {
 
@@ -44,12 +48,12 @@ final class QueryState {
     private final List<int[]> bestTimes = new ArrayList<>();
     private final List<int[]> bestTripTimes = new ArrayList<>();
     // the stops whose best arrival on a trip the current round improved, to walk on from
-    private final boolean[] tripArrivalImprovedMask;
+    private final BitSet tripArrivalImprovedMask;
     // the best time at the target per round, of the round and the rounds before it
     private int[] bestTimesAtTarget = new int[0];
     // the marked stops for route scanning and footpath relaxing
-    private boolean[] markedStopsMaskThisRound;
-    private boolean[] markedStopsMaskNextRound;
+    private BitSet markedStopsMaskThisRound;
+    private BitSet markedStopsMaskNextRound;
     @Getter
     private int round;
 
@@ -64,9 +68,9 @@ final class QueryState {
         this.unreached = timeType == TimeType.DEPARTURE ? INFINITY : -INFINITY;
         this.bestTimesPerRound = bestTimesPerRound;
 
-        markedStopsMaskThisRound = new boolean[stops.length];
-        markedStopsMaskNextRound = new boolean[stops.length];
-        tripArrivalImprovedMask = new boolean[stops.length];
+        markedStopsMaskThisRound = new BitSet(stops.length);
+        markedStopsMaskNextRound = new BitSet(stops.length);
+        tripArrivalImprovedMask = new BitSet(stops.length);
 
         startPass();
     }
@@ -76,23 +80,23 @@ final class QueryState {
      */
     void startPass() {
         round = 0;
-        Arrays.fill(markedStopsMaskThisRound, false);
-        Arrays.fill(markedStopsMaskNextRound, false);
-        Arrays.fill(tripArrivalImprovedMask, false);
+        markedStopsMaskThisRound.clear();
+        markedStopsMaskNextRound.clear();
+        tripArrivalImprovedMask.clear();
         ensureRoundExists();
     }
 
     /**
-     * Adds a new round with empty labels and reset boolean marked stop masks. With best times per round, the new
-     * round's best times become the better of its own, of the passes before, and those of the round before it.
+     * Adds a new round with empty labels and reset marked stop masks. With best times per round, the new round's best
+     * times become the better of its own, of the passes before, and those of the round before it.
      */
     void addNewRound() {
-        // reset boolean marked stop masks
-        boolean[] tmp = markedStopsMaskThisRound;
+        // reset marked stop masks
+        BitSet tmp = markedStopsMaskThisRound;
         markedStopsMaskThisRound = markedStopsMaskNextRound;
         markedStopsMaskNextRound = tmp;
-        Arrays.fill(markedStopsMaskNextRound, false);
-        Arrays.fill(tripArrivalImprovedMask, false);
+        markedStopsMaskNextRound.clear();
+        tripArrivalImprovedMask.clear();
 
         round++;
         ensureRoundExists();
@@ -178,7 +182,7 @@ final class QueryState {
     void setTripLabel(int stopIdx, Label label) {
         bestTripLabelsPerRound.get(round)[stopIdx] = label;
         bestTripTimes.get(round)[stopIdx] = label.targetTime();
-        tripArrivalImprovedMask[stopIdx] = true;
+        tripArrivalImprovedMask.set(stopIdx);
     }
 
     /**
@@ -297,7 +301,7 @@ final class QueryState {
      * @return true if the stop was marked in this round, false otherwise.
      */
     boolean isMarkedThisRound(int stopIdx) {
-        return markedStopsMaskThisRound[stopIdx];
+        return markedStopsMaskThisRound.get(stopIdx);
     }
 
     /**
@@ -307,7 +311,7 @@ final class QueryState {
      * @return true if the stop is marked for the next round, false otherwise.
      */
     boolean isMarkedNextRound(int stopIdx) {
-        return markedStopsMaskNextRound[stopIdx];
+        return markedStopsMaskNextRound.get(stopIdx);
     }
 
     /**
@@ -317,7 +321,7 @@ final class QueryState {
      * @return true if the stop was reached on a trip earlier (later, routing backward) than before.
      */
     boolean isTripArrivalImproved(int stopIdx) {
-        return tripArrivalImprovedMask[stopIdx];
+        return tripArrivalImprovedMask.get(stopIdx);
     }
 
     /**
@@ -326,7 +330,7 @@ final class QueryState {
      * @param stopIdx the index of the stop to mark.
      */
     void mark(int stopIdx) {
-        markedStopsMaskNextRound[stopIdx] = true;
+        markedStopsMaskNextRound.set(stopIdx);
     }
 
     /**
@@ -335,19 +339,44 @@ final class QueryState {
      * @param stopIdx the index of the stop to unmark.
      */
     void unmark(int stopIdx) {
-        markedStopsMaskNextRound[stopIdx] = false;
+        markedStopsMaskNextRound.clear(stopIdx);
     }
 
     /**
      * Checks if any stops have been marked for the next round.
      */
     boolean hasMarkedStops() {
-        for (int i = 0; i < stops.length; i++) {
-            if (markedStopsMaskNextRound[i]) {
-                return true;
-            }
-        }
-        return false;
+        return !markedStopsMaskNextRound.isEmpty();
+    }
+
+    /**
+     * Gets the next stop marked in the current round, in the order of the stops.
+     *
+     * @param fromStopIdx the index of the stop to look from, inclusive.
+     * @return the index of the stop, or -1 if no stop from there on is marked.
+     */
+    int nextStopMarkedThisRound(int fromStopIdx) {
+        return markedStopsMaskThisRound.nextSetBit(fromStopIdx);
+    }
+
+    /**
+     * Gets the next stop marked for the next round, in the order of the stops.
+     *
+     * @param fromStopIdx the index of the stop to look from, inclusive.
+     * @return the index of the stop, or -1 if no stop from there on is marked.
+     */
+    int nextStopMarkedNextRound(int fromStopIdx) {
+        return markedStopsMaskNextRound.nextSetBit(fromStopIdx);
+    }
+
+    /**
+     * Gets the next stop whose best arrival on a trip the current round improved, in the order of the stops.
+     *
+     * @param fromStopIdx the index of the stop to look from, inclusive.
+     * @return the index of the stop, or -1 if there is none from there on.
+     */
+    int nextStopWithTripArrivalImproved(int fromStopIdx) {
+        return tripArrivalImprovedMask.nextSetBit(fromStopIdx);
     }
 
     /**

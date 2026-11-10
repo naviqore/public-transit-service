@@ -79,7 +79,8 @@ class FootpathRelaxer {
     void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
         List<QueryState.Label> labelsToWalkFrom = new ArrayList<>();
-        for (int stopIdx = 0; stopIdx < stops.length; stopIdx++) {
+        for (int stopIdx = nextStopToWalkFrom(0, round); stopIdx >= 0; stopIdx = nextStopToWalkFrom(stopIdx + 1,
+                round)) {
             QueryState.Label label = getLabelToWalkFrom(stopIdx, round);
             if (label != null && stops[stopIdx].numberOfTransfers() > 0) {
                 labelsToWalkFrom.add(label);
@@ -89,6 +90,17 @@ class FootpathRelaxer {
         for (QueryState.Label label : labelsToWalkFrom) {
             expandFootpathsFromStop(label, round);
         }
+    }
+
+    /**
+     * Gets the next stop a round may walk on from, in the order of the stops: in later rounds a stop whose best arrival
+     * on a trip the round improved, in the first a source stop.
+     */
+    private int nextStopToWalkFrom(int fromStopIdx, int round) {
+        if (round > 0) {
+            return queryState.nextStopWithTripArrivalImproved(fromStopIdx);
+        }
+        return queryState.nextStopMarkedNextRound(fromStopIdx);
     }
 
     private QueryState.@Nullable Label getLabelToWalkFrom(int stopIdx, int round) {

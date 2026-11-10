@@ -418,18 +418,17 @@ class Query {
             return;
         }
 
-        for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
-            // an arrival on a trip of the round, which the walks of the round have been relaxed from
-            if (queryState.isTripArrivalImproved(stopIdx)) {
-                QueryState.Label tripLabel = queryState.getTripLabel(round, stopIdx);
-                if (tripLabel != null && isWorse(tripLabel.targetTime(), bestTime)) {
-                    queryState.removeTripLabel(round, stopIdx);
-                }
+        // an arrival on a trip of the round, which the walks of the round have been relaxed from
+        for (int stopIdx = queryState.nextStopWithTripArrivalImproved(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopWithTripArrivalImproved(stopIdx + 1)) {
+            QueryState.Label tripLabel = queryState.getTripLabel(round, stopIdx);
+            if (tripLabel != null && isWorse(tripLabel.targetTime(), bestTime)) {
+                queryState.removeTripLabel(round, stopIdx);
             }
+        }
 
-            if (!queryState.isMarkedNextRound(stopIdx)) {
-                continue;
-            }
+        for (int stopIdx = queryState.nextStopMarkedNextRound(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopMarkedNextRound(stopIdx + 1)) {
             QueryState.Label label = queryState.getLabel(round, stopIdx);
             if (label != null) {
                 if (isWorse(label.targetTime(), bestTime)) {
