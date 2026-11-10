@@ -195,8 +195,25 @@ class RouteScanner {
                 }
             }
 
-            activeTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
+            ActiveTrip possibleTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRoute, lastRound);
+            // a trip boarded here replaces the active trip unless it is worse: the stop's label may be in time for an
+            // earlier (later, routing backward) trip than the active one, or only for a worse one, or for none, once
+            // the transfer time is added
+            if (activeTrip == null || possibleTrip != null && !isBetter(
+                    getTripTime(activeTrip, currentRoute, stopOffset), possibleTrip.entryTime())) {
+                activeTrip = possibleTrip;
+            }
         }
+    }
+
+    /**
+     * Gets the time of a trip at a stop of its route that a trip boarded at the stop is compared by: its departure, or
+     * routing backward its arrival.
+     */
+    private int getTripTime(ActiveTrip trip, Route route, int stopOffset) {
+        int stopTimeIndex = route.firstStopTimeIdx() + 2 * (trip.tripOffset * route.numberOfStops() + stopOffset) + 2;
+        // the stopTimeIndex points to the arrival time of the stop and stopTimeIndex + 1 to the departure time
+        return trip.stopTimes[forward ? stopTimeIndex + 1 : stopTimeIndex] + trip.dayTimeOffset;
     }
 
     private boolean isRouteActiveInDaysToScan(Route route) {
