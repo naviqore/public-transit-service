@@ -70,7 +70,7 @@ class Query {
         targetStops = new int[targetStopIndices.length * 2];
         cutoffTime = determineCutoffTime();
         numStops = raptorData.getStopContext().stops().length;
-        queryState = new QueryState(raptorData.getStopContext().stops().length, timeType);
+        queryState = new QueryState(raptorData.getStopContext().stops(), timeType);
 
         // query-scoped override takes precedence over global default range
         raptorRange = config.getRaptorRange().orElse(raptorConfig.getRaptorRangeDefault());
@@ -99,7 +99,7 @@ class Query {
      *     <li>Prepare for the next round by removing suboptimal labels.</li>
      * </ul>
      */
-    List<QueryState.Label[]> run() {
+    QueryState.LabelsPerRound run() {
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         initialize();
@@ -113,7 +113,7 @@ class Query {
         } else {
             doRangeRaptor();
         }
-        return queryState.getBestLabelsPerRound();
+        return queryState.getLabelsPerRound();
     }
 
     void doRangeRaptor() {
@@ -242,7 +242,7 @@ class Query {
             QueryState.Label label = new QueryState.Label(0, targetTime, QueryState.LabelType.INITIAL,
                     QueryState.NO_INDEX, QueryState.NO_INDEX, currentStopIdx, null);
             queryState.setLabel(0, currentStopIdx, label);
-            queryState.setBestTime(currentStopIdx, targetTime);
+            queryState.setBestTime(currentStopIdx, queryState.getComparableTime(label));
             queryState.mark(currentStopIdx);
         }
     }
@@ -261,12 +261,20 @@ class Query {
         }
 
         for (int stopIdx = 0; stopIdx < numStops; stopIdx++) {
+            // an arrival on a trip of the round, which the walks of the round have been relaxed from
+            if (queryState.isTripArrivalImproved(stopIdx)) {
+                QueryState.Label tripLabel = queryState.getTripLabel(round, stopIdx);
+                if (tripLabel != null && isWorse(tripLabel.targetTime(), bestTime)) {
+                    queryState.removeTripLabel(round, stopIdx);
+                }
+            }
+
             if (!queryState.isMarkedNextRound(stopIdx)) {
                 continue;
             }
             QueryState.Label label = queryState.getLabel(round, stopIdx);
             if (label != null) {
-                if ((timeType == TimeType.DEPARTURE && label.targetTime() > bestTime) || (timeType == TimeType.ARRIVAL && label.targetTime() < bestTime)) {
+                if (isWorse(label.targetTime(), bestTime)) {
                     queryState.setLabel(round, stopIdx, null);
                     queryState.unmark(stopIdx);
                 }
@@ -275,6 +283,13 @@ class Query {
                 queryState.unmark(stopIdx);
             }
         }
+    }
+
+    /**
+     * Whether a time is worse than another for the time type: later when departing, earlier when arriving.
+     */
+    private boolean isWorse(int time, int otherTime) {
+        return timeType == TimeType.DEPARTURE ? time > otherTime : time < otherTime;
     }
 
     /**

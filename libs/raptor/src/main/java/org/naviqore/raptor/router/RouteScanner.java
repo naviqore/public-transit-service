@@ -293,7 +293,9 @@ class RouteScanner {
      * the stop is marked for the next round and the time is updated. If the time is improved it is clear that an
      * earlier or later trip (based on the TimeType) is not possible and the method returns false.</p>
      * <p>If the time was not improved, an additional check will be needed to figure out if an earlier or later trip
-     * from the stop is possible within the current round, thus the method returns true.</p>
+     * from the stop is possible within the current round, thus the method returns true. The arrival may still be the
+     * best on a trip at the stop, though a walk or the start reached the stop in time for an earlier trip: then it is
+     * kept as the arrival to walk on from, see {@link QueryState}.</p>
      *
      * @param targetTime      the stop time to check for an earlier or later trip.
      * @param activeTrip      the active trip to check for an earlier or later trip.
@@ -315,11 +317,19 @@ class RouteScanner {
             QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
                     currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
             queryState.setLabel(thisRound, stopIdx, label);
+            queryState.setTripLabel(stopIdx, label);
             queryState.mark(stopIdx);
 
             return false;
         } else {
             log.debug("Stop {} was not improved", stop.id());
+            if (isBetter(targetTime, queryState.getBestTripTime(stopIdx))) {
+                // the earliest arrival on a trip so far, which walks start from
+                queryState.setTripLabel(stopIdx,
+                        new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
+                                currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel));
+            }
+
             QueryState.Label previous = queryState.getLabel(lastRound, stopIdx);
 
             boolean isImprovedInSameRound = previous == null || (forward ? previous.targetTime() >= targetTime : previous.targetTime() <= targetTime);
