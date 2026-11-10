@@ -26,7 +26,7 @@ public class ServiceConfig {
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
     public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
 
-    public static final int DEFAULT_CACHE_SIZE = 5;
+    public static final int DEFAULT_CACHE_SIZE = 30;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
     TimetableRepository timetableRepository;

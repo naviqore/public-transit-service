@@ -192,7 +192,7 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `raptor.optimize.travel.ti
 | `transferDurationBetweenStopsMinimum` | `transfer.duration.between.stops.minimum` | –                                 | Shortest generated walk between stops; negative for none.                                 |
 | `transferDurationAccessEgress`        | `transfer.duration.access.egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                         |
 | `walkSearchRadius`                    | `walk.search.radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.         |
-| `cacheServiceDaySize`                 | `cache.service.day.size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached.                                                 |
+| `cacheServiceDaySize`                 | `cache.service.day.size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                     |
 
 ## Decisions
 
