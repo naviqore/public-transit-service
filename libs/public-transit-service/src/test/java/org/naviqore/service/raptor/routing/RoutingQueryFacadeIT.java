@@ -235,7 +235,8 @@ class RoutingQueryFacadeIT {
      * A query with a time window is a range query of the router, which reports the connections leaving in the window
      * that no other connection beats: for a given arrival time, the latest possible departure and therefore the
      * shortest travel time. Departures that are dominated by a later departure arriving at the same time are not part
-     * of the result.
+     * of the result. Without a time window, the service optimizes the travel time of a query of RAPTOR alike, unless it
+     * is configured not to.
      */
     @Nested
     class TimeWindowRange {
@@ -279,8 +280,26 @@ class RoutingQueryFacadeIT {
         }
 
         @Test
-        void shouldReportFirstDepartureWithoutTimeWindow() throws ConnectionRoutingException {
-            // without a time window, a query of RAPTOR reports the first departure arriving the earliest
+        void shouldOptimizeTravelTimeWithoutTimeWindow() throws ConnectionRoutingException {
+            // without a time window, the service refines the connection of RAPTOR, which takes the first departure
+            // arriving the earliest, with a query backward from its arrival: the express trip departs later
+            List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME, TimeType.DEPARTURE,
+                    QUERY_CONFIG, source, target);
+
+            assertThat(connections).hasSize(1);
+            assertThat(connections.getFirst().getDepartureTime()).isEqualTo(EXPRESS_DEPARTURE);
+            assertThat(connections.getFirst().getArrivalTime()).isEqualTo(ARRIVAL);
+        }
+
+        @Test
+        void shouldReportFirstDepartureWithoutTravelTimeOptimization() throws ConnectionRoutingException {
+            ServiceConfig serviceConfig = ServiceConfig.builder()
+                    .timetableRepository(new NoTimetableRepository())
+                    .walkDurationMinimum(WALK_DURATION_MINIMUM)
+                    .optimizeTravelTime(false)
+                    .build();
+            facade = buildFacade(schedule, serviceConfig);
+
             List<org.naviqore.service.Connection> connections = facade.queryConnections(DATE_TIME, TimeType.DEPARTURE,
                     QUERY_CONFIG, source, target);
 

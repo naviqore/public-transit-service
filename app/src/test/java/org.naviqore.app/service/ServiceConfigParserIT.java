@@ -41,7 +41,8 @@ public class ServiceConfigParserIT {
                 DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT, DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM,
                 DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS, DEFAULT_WALK_SEARCH_RADIUS,
                 DEFAULT_WALK_CALCULATOR_TYPE.name(), DEFAULT_WALK_SPEED, DEFAULT_WALK_DURATION_MINIMUM,
-                DEFAULT_RAPTOR_DAYS_TO_SCAN, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name());
+                DEFAULT_RAPTOR_DAYS_TO_SCAN, DEFAULT_OPTIMIZE_TRAVEL_TIME, DEFAULT_CACHE_SIZE,
+                DEFAULT_CACHE_EVICTION_STRATEGY.name());
         return parser.getServiceConfig();
     }
 
@@ -57,6 +58,7 @@ public class ServiceConfigParserIT {
         assertEquals(DEFAULT_WALK_SEARCH_RADIUS, config.getWalkSearchRadius());
         assertEquals(DEFAULT_WALK_DURATION_MINIMUM, config.getWalkDurationMinimum());
         assertEquals(DEFAULT_RAPTOR_DAYS_TO_SCAN, config.getRaptorDaysToScan());
+        assertEquals(DEFAULT_OPTIMIZE_TRAVEL_TIME, config.isOptimizeTravelTime());
         assertEquals(DEFAULT_CACHE_SIZE, config.getCacheServiceDaySize());
         assertEquals(CacheEvictionStrategy.LRU, config.getCacheEvictionStrategy());
     }
@@ -69,7 +71,7 @@ public class ServiceConfigParserIT {
                         DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM, DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT,
                         DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS, DEFAULT_WALK_SEARCH_RADIUS, "INVALID",
                         DEFAULT_WALK_SPEED, DEFAULT_WALK_DURATION_MINIMUM, DEFAULT_RAPTOR_DAYS_TO_SCAN,
-                        DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()));
+                        DEFAULT_OPTIMIZE_TRAVEL_TIME, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()));
     }
 
     @ParameterizedTest(name = "{5}")
@@ -83,8 +85,9 @@ public class ServiceConfigParserIT {
                 () -> new ServiceConfigParser(gtfs.getAbsolutePath(), DEFAULT_GTFS_STATIC_UPDATE_CRON,
                         transferDurationSameStopDefault, transferDurationBetweenStopsMinimum,
                         DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS, walkSearchRadius, walkCalculatorType.toUpperCase(),
-                        walkSpeed, DEFAULT_WALK_DURATION_MINIMUM, DEFAULT_RAPTOR_DAYS_TO_SCAN, DEFAULT_CACHE_SIZE,
-                        DEFAULT_CACHE_EVICTION_STRATEGY.name()), message);
+                        walkSpeed, DEFAULT_WALK_DURATION_MINIMUM, DEFAULT_RAPTOR_DAYS_TO_SCAN,
+                        DEFAULT_OPTIMIZE_TRAVEL_TIME, DEFAULT_CACHE_SIZE, DEFAULT_CACHE_EVICTION_STRATEGY.name()),
+                message);
     }
 
 }

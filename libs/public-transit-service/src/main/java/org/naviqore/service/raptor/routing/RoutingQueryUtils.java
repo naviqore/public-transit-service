@@ -49,7 +49,9 @@ class RoutingQueryUtils {
 
     /**
      * Routes connections in the direction of the search: from the source stops at their times to the target stops,
-     * backward in time for an arrival query. Without a time window, a query of RAPTOR; with one, a range query.
+     * backward in time for an arrival query. Without a time window, a query of RAPTOR, whose travel times are optimized
+     * if the service is configured to (see {@link TravelTimeOptimizer}); with one, a range query, which reports the
+     * latest departures (earliest arrivals) in the window anyway.
      */
     List<org.naviqore.raptor.Connection> routeConnections(Map<String, OffsetDateTime> sourceStops,
                                                           Map<String, Integer> targetStops, TimeType timeType,
@@ -62,7 +64,13 @@ class RoutingQueryUtils {
                     Duration.ofSeconds(queryConfig.getTimeWindowDuration()), config);
         }
 
-        return raptor.connectionQuery(sourceStops, targetStops, raptorTimeType, config);
+        List<org.naviqore.raptor.Connection> connections = raptor.connectionQuery(sourceStops, targetStops,
+                raptorTimeType, config);
+        if (!serviceConfig.isOptimizeTravelTime()) {
+            return connections;
+        }
+
+        return new TravelTimeOptimizer(raptor, sourceStops, targetStops, raptorTimeType, config).optimize(connections);
     }
 
     /**
