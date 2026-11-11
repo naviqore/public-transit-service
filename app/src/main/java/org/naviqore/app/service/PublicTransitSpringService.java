@@ -32,7 +32,7 @@ public class PublicTransitSpringService implements PublicTransitService {
         this.delegate = createDelegate();
     }
 
-    @Scheduled(cron = "${gtfs.static.update.cron}")
+    @Scheduled(cron = "${app.gtfs.static.update-cron}")
     public void updateStaticScheduleTask() {
         log.info("Updating public transit service with static GTFS");
         try {

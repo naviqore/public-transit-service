@@ -160,7 +160,7 @@ the connection's travel time and only routes what can improve on it.
 The query in the other direction ends at the source stops, with the time at each turned into a walk relative to the
 earliest of them (the latest, for an arrival query), so that it ranks departures from the origin as the first query
 does. A query with a time window does not need it: the range query reports the latest departures in the window anyway.
-It is switched by `ServiceConfig.optimizeTravelTime`, `raptor.optimize.travel.time` in the application.
+It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-travel-time` in the application.
 
 ## Options
 
@@ -184,15 +184,15 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `raptor.optimize.travel.ti
 
 ### Router and service
 
-| Service (`ServiceConfig`)             | Application                               | Router (`RaptorConfig`)           | Meaning                                                                                   |
-|---------------------------------------|-------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------|
-| `optimizeTravelTime`                  | `raptor.optimize.travel.time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`. |
-| `raptorDaysToScan`                    | `raptor.days.to.scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips. Default 3.            |
-| `transferDurationSameStopDefault`     | `transfer.duration.same.stop.default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                       |
-| `transferDurationBetweenStopsMinimum` | `transfer.duration.between.stops.minimum` | –                                 | Shortest generated walk between stops; negative for none.                                 |
-| `transferDurationAccessEgress`        | `transfer.duration.access.egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                         |
-| `walkSearchRadius`                    | `walk.search.radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.         |
-| `cacheServiceDaySize`                 | `cache.service.day.size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                     |
+| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                   |
+|---------------------------------------|-----------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------|
+| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`. |
+| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips. Default 3.            |
+| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                       |
+| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                 |
+| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                         |
+| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.         |
+| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                     |
 
 ## Decisions
 
