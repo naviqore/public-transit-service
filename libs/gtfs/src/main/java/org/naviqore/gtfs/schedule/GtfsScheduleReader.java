@@ -39,7 +39,8 @@ import java.util.zip.ZipFile;
  * the first line of the file names the line the block starts at.
  * <p>
  * Note: The GTFS data has to strictly follow the standard GTFS file naming and format. Non-standard files will not be
- * read.
+ * read. Of transfers.txt, only the rows for all trips are read: a transfer of the schedule applies to all trips between
+ * its stops, and a row for particular routes or trips to those alone.
  *
  * @author munterfi
  */
@@ -238,6 +239,12 @@ public class GtfsScheduleReader {
             readFromZip(file, parser);
         } else {
             throw new IllegalArgumentException("Path must be a directory or a .zip file");
+        }
+
+        // a transfer of the schedule applies to all trips between its stops
+        long transfersLeftOut = parser.transfersForParticularTrips();
+        if (transfersLeftOut > 0) {
+            log.info("Left out rows of transfers.txt for particular routes or trips: {}", transfersLeftOut);
         }
 
         return builder.build();
