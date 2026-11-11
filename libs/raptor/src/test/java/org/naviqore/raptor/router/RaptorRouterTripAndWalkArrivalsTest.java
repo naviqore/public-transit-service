@@ -75,12 +75,12 @@ class RaptorRouterTripAndWalkArrivalsTest {
     @Test
     void walkOnFromALaterTripArrival_routingBackward() {
         // the mirror image: S reaches A on foot by 08:55, and the trips S - X - A, leaving S at 08:30, are the arrival
-        // on a trip to walk on from to T; routing backward walks transfers the other way round
+        // on a trip to walk on from to T, routing backward: the walks to A and to S
         RaptorRouterBuilder builder = builder("T", "S", "X", "A");
         addTrip(builder, "R2", List.of("S", "X"), 8 * 60 + 30, 8 * 60 + 40);
         addTrip(builder, "R1", List.of("X", "A"), 8 * 60 + 50, 9 * 60);
-        builder.addTransfer("A", "S", 300);
-        builder.addTransfer("S", "T", 300);
+        builder.addTransfer("S", "A", 300);
+        builder.addTransfer("T", "S", 300);
         RaptorAlgorithm raptor = builder.build();
 
         List<Connection> connections = raptor.connectionQuery(Map.of("A", at(9, 0)), Map.of("T", 0), TimeType.ARRIVAL,

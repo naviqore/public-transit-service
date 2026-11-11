@@ -24,6 +24,9 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
  * id, route containers are ordered by their first departure and then by id, and trips with the same times by id. Of
  * routes or trips that serve a stop equally well, RAPTOR keeps the one it scans first, so the same timetable always
  * gives the same answers. A transfer added again replaces the one added before.
+ * <p>
+ * A transfer is a walk in one direction, from its source stop to its target stop, and may take another time than the
+ * walk back: a search departing follows the walks from a stop, a search arriving, routing backward, the walks to it.
  *
  * @author munterfi
  */
@@ -43,6 +46,22 @@ public class RaptorRouterBuilder {
 
     public RaptorRouterBuilder(RaptorConfig config) {
         this.config = config;
+    }
+
+    /**
+     * Adds the walks of a stop to the transfers from an index on, by the index of their target stop.
+     *
+     * @return the index after them.
+     */
+    private static int addTransfers(Transfer[] transferArr, int firstTransferIdx, Map<String, Integer> walks,
+                                    Lookup lookup) {
+        int transferIdx = firstTransferIdx;
+        for (Map.Entry<String, Integer> walk : walks.entrySet()) {
+            transferArr[transferIdx++] = new Transfer(lookup.stops().get(walk.getKey()), walk.getValue());
+        }
+        Arrays.sort(transferArr, firstTransferIdx, transferIdx, Comparator.comparingInt(Transfer::targetStopIdx));
+
+        return transferIdx;
     }
 
     public RaptorRouterBuilder addStop(String id) {
@@ -181,9 +200,17 @@ public class RaptorRouterBuilder {
                 .mapToInt(routeId -> lookup.routes().get(routeId).length)
                 .sum()];
         Transfer[] transferArr = new Transfer[transferSize];
+        Transfer[] reverseTransferArr = new Transfer[transferSize];
+
+        // the walks to each stop, from the stops they start at, which a search arriving follows backward
+        Map<String, Map<String, Integer>> reverseTransfers = new HashMap<>();
+        transfers.forEach((sourceStopId, walks) -> walks.forEach(
+                (targetStopId, duration) -> reverseTransfers.computeIfAbsent(targetStopId, _ -> new HashMap<>())
+                        .put(sourceStopId, duration)));
 
         // iterate over stops and populate arrays
         int transferIdx = 0;
+        int reverseTransferIdx = 0;
         int stopRouteIdx = 0;
         for (int stopIdx = 0; stopIdx < stopIds.length; stopIdx++) {
             String stopId = stopIds[stopIdx];
@@ -194,9 +221,11 @@ public class RaptorRouterBuilder {
                 throw new IllegalStateException("Stop " + stopId + " has no routes");
             }
 
-            // get the number of (optional) transfers
+            // get the (optional) walks from and to the stop
             Map<String, Integer> currentTransfers = transfers.getOrDefault(stopId, Map.of());
+            Map<String, Integer> currentReverseTransfers = reverseTransfers.getOrDefault(stopId, Map.of());
             int numberOfTransfers = currentTransfers.size();
+            int numberOfReverseTransfers = currentReverseTransfers.size();
 
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId,
                     config.getSameStopTransferDurationDefault());
@@ -207,14 +236,11 @@ public class RaptorRouterBuilder {
                     .sorted()
                     .toArray();
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentRouteIndices.length, sameStopTransferTime,
-                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
+                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers,
+                    numberOfReverseTransfers == 0 ? NO_INDEX : reverseTransferIdx, numberOfReverseTransfers);
 
-            // add transfer entries to transfer array if there are any, by the index of their target stop
-            int firstTransferIdx = transferIdx;
-            for (Map.Entry<String, Integer> transfer : currentTransfers.entrySet()) {
-                transferArr[transferIdx++] = new Transfer(lookup.stops().get(transfer.getKey()), transfer.getValue());
-            }
-            Arrays.sort(transferArr, firstTransferIdx, transferIdx, Comparator.comparingInt(Transfer::targetStopIdx));
+            transferIdx = addTransfers(transferArr, transferIdx, currentTransfers, lookup);
+            reverseTransferIdx = addTransfers(reverseTransferArr, reverseTransferIdx, currentReverseTransfers, lookup);
 
             // add route index entries to stop route array
             for (int routeIdx : currentRouteIndices) {
@@ -222,7 +248,7 @@ public class RaptorRouterBuilder {
             }
         }
 
-        return new StopContext(transferArr, stopArr, stopRouteArr);
+        return new StopContext(transferArr, reverseTransferArr, stopArr, stopRouteArr);
     }
 
     private RouteTraversal buildRouteTraversal(Lookup lookup, List<RouteBuilder.RouteContainer> routeContainers) {

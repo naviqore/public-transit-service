@@ -107,6 +107,9 @@ was earlier for boarding is still the arrival to walk on from: the walk cannot b
 make up for it, since they are generated within a walking radius, so a stop reached on foot from one stop is not always
 reached on foot from the stops beyond it. A stop is reported at its earliest arrival of all, on a trip or on foot.
 
+A walk between two stops takes the time the transfer gives for its direction, which may differ from the walk back:
+routing backward, the router follows the transfers to a stop, not those from it.
+
 ### Range queries (rRAPTOR)
 
 A range query runs one pass of RAPTOR per time in the window at which leaving the source stops just catches a

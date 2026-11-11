@@ -43,8 +43,8 @@ class FootpathRelaxer {
     FootpathRelaxer(QueryState queryState, RaptorData raptorData, int minimumTransferDuration, int maximumWalkDuration,
                     TimeType timeType, boolean allowSourceTransfers, boolean allowTargetTransfers,
                     int[] targetStopIndices) {
-        // constant data structures
-        this.transfers = raptorData.getStopContext().transfers();
+        // constant data structures: the walks of the direction of the search
+        this.transfers = raptorData.getStopContext().transfers(timeType);
         this.stops = raptorData.getStopContext().stops();
         // constant configuration of relaxer
         this.minTransferDuration = minimumTransferDuration;
@@ -82,7 +82,7 @@ class FootpathRelaxer {
         for (int stopIdx = nextStopToWalkFrom(0, round); stopIdx >= 0; stopIdx = nextStopToWalkFrom(stopIdx + 1,
                 round)) {
             QueryState.Label label = getLabelToWalkFrom(stopIdx, round);
-            if (label != null && stops[stopIdx].numberOfTransfers() > 0) {
+            if (label != null && stops[stopIdx].numberOfTransfers(timeType) > 0) {
                 labelsToWalkFrom.add(label);
             }
         }
@@ -117,9 +117,10 @@ class FootpathRelaxer {
     }
 
     /**
-     * Expands all transfers between stops from the stop of a label. If a transfer improves the target time at the
-     * target stop, then the target stop is marked for the next round. And the improved target time is stored in the
-     * bestTimes array and the bestLabelPerRound list (including the new transfer label).
+     * Expands all transfers between stops from the stop of a label: departing the walks from it, arriving the walks to
+     * it, which the search follows backward. If a transfer improves the target time at the target stop, then the target
+     * stop is marked for the next round. And the improved target time is stored in the bestTimes array and the
+     * bestLabelPerRound list (including the new transfer label).
      *
      * @param previousLabel the label to walk on from, at its stop.
      * @param round         the current round to relax footpaths for.
@@ -129,7 +130,8 @@ class FootpathRelaxer {
         int sourceTime = previousLabel.targetTime();
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
-        for (int i = sourceStop.transferIdx(); i < sourceStop.transferIdx() + sourceStop.numberOfTransfers(); i++) {
+        int transferEndIdx = sourceStop.transferIdx(timeType) + sourceStop.numberOfTransfers(timeType);
+        for (int i = sourceStop.transferIdx(timeType); i < transferEndIdx; i++) {
             Transfer transfer = transfers[i];
             if (!allowTargetTransfers && targetStopIndices.contains(transfer.targetStopIdx())) {
                 continue;

@@ -46,6 +46,7 @@ class Query {
     private final int timeWindow;
 
     private final Stop[] stops;
+    // the walks of the direction of the search, see StopContext
     private final Transfer[] transfers;
     private final QueryState queryState;
     private final FootpathRelaxer footpathRelaxer;
@@ -98,7 +99,7 @@ class Query {
         timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
         stops = raptorData.getStopContext().stops();
-        transfers = raptorData.getStopContext().transfers();
+        transfers = raptorData.getStopContext().transfers(timeType);
         numStops = stops.length;
         queryState = new QueryState(stops, timeType, isRangeQuery());
 
@@ -311,8 +312,8 @@ class Query {
 
             // a transfer label allows the next trip after its target time, see RouteScanner
             Stop stop = stops[stopIdx];
-            int transferEndIdx = stop.transferIdx() + stop.numberOfTransfers();
-            for (int transferIdx = stop.transferIdx(); transferIdx < transferEndIdx; transferIdx++) {
+            int transferEndIdx = stop.transferIdx(timeType) + stop.numberOfTransfers(timeType);
+            for (int transferIdx = stop.transferIdx(timeType); transferIdx < transferEndIdx; transferIdx++) {
                 Transfer transfer = transfers[transferIdx];
                 if (transfer.duration() <= config.getMaximumWalkDuration()) {
                     int walk = transfer.duration() + config.getMinimumTransferDuration();
