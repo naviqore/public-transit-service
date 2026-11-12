@@ -66,6 +66,8 @@ hold no connection worth taking, as in the example above.
 
 The isoline range query reports for each stop the **shortest travel time among the connections that leave in the
 window**. A connection leaving after the window does not count: it would take the place of the best one leaving in it.
+So where a connection walks from a source stop in the window to a trip that calls at the source stop itself only after
+the window, it keeps the walk rather than ride the trip from the source stop.
 
 ### Connections on foot alone
 

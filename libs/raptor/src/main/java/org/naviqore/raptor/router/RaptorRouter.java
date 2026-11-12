@@ -103,7 +103,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         QueryState.Label[] labels = new Query(this, sourceStopIndices, new int[]{}, refStopTimes, new int[]{}, config,
                 timeType, timeWindow, referenceDateTime, this.config).routeIsolines();
 
-        return new LabelPostprocessor(this, timeType, referenceDateTime).reconstructIsolines(labels);
+        return new LabelPostprocessor(this, timeType, referenceDateTime, sourceStopIndices, refStopTimes,
+                timeWindow).reconstructIsolines(labels);
     }
 
     /**
@@ -147,7 +148,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
         List<QueryState.Label> targetLabels = new Query(this, sourceStopIndices, targetStopIndices, sourceTimes,
                 walkDurationsToTarget, config, timeType, timeWindow, referenceDateTime, this.config).routeConnections();
 
-        return new LabelPostprocessor(this, timeType, referenceDateTime).reconstructConnections(targetLabels);
+        return new LabelPostprocessor(this, timeType, referenceDateTime, sourceStopIndices, sourceTimes,
+                timeWindow).reconstructConnections(targetLabels);
     }
 
     /**

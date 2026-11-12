@@ -23,8 +23,13 @@ class LabelPostprocessor {
     private final RouteStop[] routeStops;
 
     private final TimeType timeType;
+    private final int timeDirection;
     private final LocalDate referenceDate;
     private final ZoneId defaultZoneId;
+
+    // of a range query, the latest time a connection may leave each source stop at (the earliest it may arrive at it,
+    // routing backward): the last of the time window, see Query
+    private final Map<Integer, Integer> latestSourceTimes = new HashMap<>();
 
     /**
      * Postprocessor to convert labels into connections
@@ -32,15 +37,25 @@ class LabelPostprocessor {
      * @param raptorData        the current raptor instance for access to the data structures.
      * @param timeType          the time type (arrival or departure).
      * @param referenceDateTime the reference datetime used for timezone calculations.
+     * @param sourceStopIndices the indices of the source stops of the query.
+     * @param sourceTimes       the times at the source stops, the start of the time window of a range query.
+     * @param timeWindow        the time window of a range query in seconds, 0 for a query at the source times.
      */
-    LabelPostprocessor(RaptorData raptorData, TimeType timeType, OffsetDateTime referenceDateTime) {
+    LabelPostprocessor(RaptorData raptorData, TimeType timeType, OffsetDateTime referenceDateTime,
+                       int[] sourceStopIndices, int[] sourceTimes, int timeWindow) {
         this.stops = raptorData.getStopContext().stops();
         this.stopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
         this.timeType = timeType;
+        this.timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
         this.referenceDate = referenceDateTime.toLocalDate();
         this.defaultZoneId = referenceDateTime.getOffset();
+        if (timeWindow > 0) {
+            for (int i = 0; i < sourceStopIndices.length; i++) {
+                latestSourceTimes.put(sourceStopIndices[i], sourceTimes[i] + timeDirection * (timeWindow - 1));
+            }
+        }
     }
 
     /**
@@ -275,6 +290,10 @@ class LabelPostprocessor {
      * Route A (9:00 am) - B (9:03 am) - C (9:07 am) is 9:07 am will be identical. However, the latter connection will
      * have travel time of 7 minutes, whereas the former connection will have a travel time of 3 hours and 7 minutes and
      * is therefore less convenient.
+     * <p>
+     * Over a time window, the trip has to leave the source stop in it (arrive at it in it, routing backward), as a
+     * connection over a time window leaves in it: a search may walk from the source stop in the window to a trip that
+     * calls at the source stop only after it, and the transfer label is shifted instead.
      *
      * @param labels the list of labels to check for combination.
      */
@@ -319,9 +338,11 @@ class LabelPostprocessor {
 
         // if stopTime is null, then the trip of the route label does not call at the stop on the side of the leg it would
         // replace, if stop time is not null, then check if the temporal order of the stop time and the route label is
-        // correct (e.g. for time type departure the stop time departure must be before the route label target time)
+        // correct (e.g. for time type departure the stop time departure must be before the route label target time),
+        // and at the source stop that the trip leaves it in the time window of a range query
         if (stopTime == null || (fromTarget ? !canStopTimeBeTarget(stopTime, routeLabel, transferLabel,
-                timeType) : !canStopTimeBeSource(stopTime, routeLabel, transferLabel, timeType))) {
+                timeType) : !canStopTimeBeSource(stopTime, routeLabel, transferLabel, timeType) || !leavesInTimeWindow(
+                stopIdx, stopTime))) {
             if (!fromTarget) {
                 maybeShiftSourceTransferCloserToFirstRoute(labels, transferLabel, routeLabel, transferLabelIndex);
             }
@@ -401,6 +422,23 @@ class LabelPostprocessor {
         } else {
             return timeType == TimeType.ARRIVAL && stopTime.arrival() >= routeLabel.targetTime() && stopTime.arrival() <= transferLabel.sourceTime();
         }
+    }
+
+    /**
+     * Check if a trip leaves a source stop at a stop time in the time window of a range query (arrives at it in the
+     * window, routing backward), as every connection of a range query does; any time does for a query without one.
+     *
+     * @param sourceStopIdx the index of the source stop.
+     * @param stopTime      the stop time of the trip at the source stop.
+     * @return true if the trip leaves (arrives) in the time window or the query has none, false otherwise.
+     */
+    private boolean leavesInTimeWindow(int sourceStopIdx, StopTime stopTime) {
+        Integer latestSourceTime = latestSourceTimes.get(sourceStopIdx);
+        if (latestSourceTime == null) {
+            return true;
+        }
+        int time = timeType == TimeType.DEPARTURE ? stopTime.departure() : stopTime.arrival();
+        return timeDirection * time <= timeDirection * latestSourceTime;
     }
 
     /**
