@@ -107,4 +107,28 @@ class TravelTimeOptimizerTest {
         assertThat(connections.getFirst().getArrivalTime()).isEqualTo(EIGHT_AM.plusMinutes(26));
     }
 
+    @Test
+    void stationJoinedByTransfersOfNoTime_isLeftOnTheTrip() {
+        // the station S and its platform S:1 are joined by transfers of no time; R4 leaves S:1 at 08:00 and 08:15 and
+        // reaches B five minutes later, R5 leaves B at 08:21 and reaches I five minutes later: RAPTOR takes R4 at 08:00,
+        // and the query in the other direction, routing backward, reaches S on foot as early as S:1, which comes after S
+        RaptorRouterBuilder builder = RaptorRouter.builder(
+                RaptorConfig.builder().sameStopTransferDurationDefault(0).build());
+        List.of("B", "I", "S", "S:1").forEach(builder::addStop);
+        builder.addTransfer("S", "S:1", 0);
+        builder.addTransfer("S:1", "S", 0);
+        addRoute(builder, "R4", List.of("S:1", "B"), List.of(List.of(0, 5), List.of(15, 20)));
+        addRoute(builder, "R5", List.of("B", "I"), List.of(List.of(21, 26)));
+        RaptorAlgorithm raptor = builder.build();
+
+        List<Connection> connections = optimize(raptor, Map.of("S", EIGHT_AM, "S:1", EIGHT_AM), Map.of("I", 0),
+                TimeType.DEPARTURE);
+
+        assertThat(connections).hasSize(1);
+        assertThat(connections.getFirst().getWalkTransfers()).isEmpty();
+        assertThat(connections.getFirst().getFromStopId()).isEqualTo("S:1");
+        assertThat(connections.getFirst().getDepartureTime()).isEqualTo(EIGHT_AM.plusMinutes(15));
+        assertThat(connections.getFirst().getArrivalTime()).isEqualTo(EIGHT_AM.plusMinutes(26));
+    }
+
 }

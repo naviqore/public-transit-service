@@ -102,7 +102,9 @@ A stop is reached on a trip, on foot or at the start, and these arrivals serve d
   transfer time after an arrival on a trip. So arrivals are compared for boarding with an arrival on foot counting the
   same stop transfer time earlier.
 - **Walking** on is only possible after an arrival on a trip: a connection never walks twice in a row.
-- **Ending** at a stop, at a target stop or as an isoline, counts the arrival as it is.
+- **Ending** at a stop, at a target stop or as an isoline, counts the arrival as it is. Of target stops reached
+  equally well, a connection ends at one reached on a trip rather than walk on to another, such as from a platform to
+  its station, which a feed may join to it by a transfer of no time.
 
 So each stop keeps two best arrivals: the best for boarding and the best on a trip. A trip arriving after a walk that
 was earlier for boarding is still the arrival to walk on from: the walk cannot be continued, and the transfers do not

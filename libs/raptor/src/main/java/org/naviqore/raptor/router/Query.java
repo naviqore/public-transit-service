@@ -111,6 +111,10 @@ class Query {
                 raptorConfig.getDaysToScan());
     }
 
+    private static boolean isOnATrip(QueryState.Label label) {
+        return label.type() == QueryState.LabelType.ROUTE;
+    }
+
     private boolean isRangeQuery() {
         return timeWindow > 0;
     }
@@ -368,8 +372,9 @@ class Query {
      * all connections found with as many trips or fewer, over all passes so far.
      * <p>
      * Only the labels this round of this pass set count, since the labels of passes before, which a range query keeps,
-     * belong to their connections. Of equally good labels, the one at the first target stop is taken, and at a stop the
-     * arrival on a trip, which needs no walk at the end.
+     * belong to their connections. Of equally good labels, an arrival on a trip is taken, which needs no walk at the
+     * end: a walk to another target stop, which the feed may join to it by a transfer of no time, is a leg too many.
+     * Else the label at the first target stop is taken.
      *
      * @param round the current round.
      * @return the label of the improvement at its target stop, or null if the round did not improve the target.
@@ -388,7 +393,10 @@ class Query {
                     continue;
                 }
                 int timeAtTarget = candidate.targetTime() + timeDirection * walkDuration;
-                if (timeDirection * timeAtTarget < timeDirection * bestTime) {
+                boolean better = timeDirection * timeAtTarget < timeDirection * bestTime;
+                boolean asGoodOnATrip = bestLabel != null && timeAtTarget == bestTime && isOnATrip(
+                        candidate) && !isOnATrip(bestLabel);
+                if (better || asGoodOnATrip) {
                     bestTime = timeAtTarget;
                     bestLabel = candidate;
                 }
