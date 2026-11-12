@@ -45,6 +45,16 @@ class ServiceSubjectTest {
     }
 
     @Test
+    void logsReadingAndBuildingOfEachSubject(@TempDir Path directory) throws IOException {
+        // built after the subject of setUp(), which leaves the loggers of the libraries at WARN
+        ServiceSubject another = new ServiceSubject();
+        another.read(GtfsScheduleDataset.SAMPLE_FEED_1.getZip(directory).getPath());
+        another.build();
+
+        assertTrue(another.log().stream().anyMatch(line -> line.contains("GtfsScheduleReader")));
+    }
+
+    @Test
     void findsStopsByNameOrDrawsOne() {
         assertEquals("FUR_CREEK_RES", subject.stopByName("Furnace Creek Resort (Demo)"));
         // a name no stop has draws the same stop every time

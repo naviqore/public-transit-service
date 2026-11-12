@@ -61,6 +61,13 @@ public class ServiceSubject implements Subject {
         return (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     }
 
+    /**
+     * Sets the level of the loggers of the libraries, or with null the level configured for them.
+     */
+    private static void setLibraryLogLevel(@Nullable Level level) {
+        LIBRARY_LOGGERS.forEach(name -> ((Logger) LoggerFactory.getLogger(name)).setLevel(level));
+    }
+
     private static ConnectionQueryConfig queryConfig(String configuration) {
         ConnectionQueryConfig.ConnectionQueryConfigBuilder builder = ConnectionQueryConfig.builder();
         EnumSet<TravelMode> travelModes = EnumSet.noneOf(TravelMode.class);
@@ -131,7 +138,9 @@ public class ServiceSubject implements Subject {
 
     @Override
     public void read(String feed) {
-        // record what the libraries log while the feed is read and the service is built, see build()
+        // record what the libraries log while the feed is read and the service is built, see build(), at the level
+        // configured: a subject built before in this JVM left their loggers at WARN
+        setLibraryLogLevel(null);
         logEvents.list.clear();
         logEvents.start();
         rootLogger().addAppender(logEvents);
@@ -157,7 +166,7 @@ public class ServiceSubject implements Subject {
             // the log of the queries that follow is not of interest
             rootLogger().detachAppender(logEvents);
             logEvents.stop();
-            LIBRARY_LOGGERS.forEach(name -> ((Logger) LoggerFactory.getLogger(name)).setLevel(Level.WARN));
+            setLibraryLogLevel(Level.WARN);
         }
     }
 
