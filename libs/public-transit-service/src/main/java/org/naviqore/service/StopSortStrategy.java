@@ -1,6 +1,6 @@
 package org.naviqore.service;
 
-import org.naviqore.gtfs.schedule.model.Stop;
+import org.naviqore.timetable.model.Stop;
 
 import java.util.Comparator;
 

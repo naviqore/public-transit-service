@@ -1,0 +1,124 @@
+package org.naviqore.service.raptor.routing;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.naviqore.raptor.RaptorAlgorithm;
+import org.naviqore.service.Connection;
+import org.naviqore.service.TimeType;
+import org.naviqore.service.config.ConnectionQueryConfig;
+import org.naviqore.service.exception.ConnectionRoutingException;
+
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Template for executing a connection query between a source and a target location, encapsulating common logic and
+ * providing entry points for customization.
+ *
+ * @param <S> Type of the source location.
+ * @param <T> Type of the target location.
+ */
+@RequiredArgsConstructor
+@Slf4j
+abstract class ConnectionQueryTemplate<S, T> {
+
+    protected final OffsetDateTime time;
+    protected final TimeType timeType;
+    protected final ConnectionQueryConfig queryConfig;
+    protected final RoutingQueryUtils utils;
+
+    protected final S source;
+    protected final T target;
+
+    private final boolean allowSourceTransfers;
+    private final boolean allowTargetTransfers;
+
+    protected abstract Map<String, OffsetDateTime> prepareSourceStops(S source);
+
+    protected abstract Map<String, Integer> prepareTargetStops(T target);
+
+    /**
+     * Handle case when there are no departures from or to requested stops.
+     * <p>
+     * Note: Strategy could be to try walking to other stops first.
+     */
+    protected abstract List<Connection> handleInvalidStopException(RaptorAlgorithm.InvalidStopException exception,
+                                                                   S source,
+                                                                   T target) throws ConnectionRoutingException;
+
+    protected abstract Connection postprocessDepartureConnection(S source, org.naviqore.raptor.Connection connection,
+                                                                 T target);
+
+    protected abstract Connection postprocessArrivalConnection(S source, org.naviqore.raptor.Connection connection,
+                                                               T target);
+
+    protected abstract ConnectionQueryTemplate<T, S> swap(S source, T target);
+
+    /**
+     * Executes the routing query: at its time, or with a time window, over the window, in one range query of the router
+     * that finds all connections leaving (arriving, for an arrival query) in it.
+     * <p>
+     * For ARRIVAL queries, the source and target are swapped to route backward in time.
+     * <p>
+     * Warning: Do not call this method outside the routing facade, use the process method directly instead. Otherwise,
+     * swapping could occur twice.
+     */
+    List<Connection> run() throws ConnectionRoutingException {
+        List<Connection> connections = switch (timeType) {
+            case DEPARTURE -> process();
+            case ARRIVAL -> swap(source, target).process();
+        };
+
+        return sortConnectionsBasedOnTimeType(connections);
+    }
+
+    List<Connection> process() throws ConnectionRoutingException {
+        Map<String, OffsetDateTime> sourceStops = prepareSourceStops(source);
+        Map<String, Integer> targetStops = prepareTargetStops(target);
+
+        // no source stop or target stop is within walkable distance, and therefore no connections are available
+        if (sourceStops.isEmpty() || targetStops.isEmpty()) {
+            return List.of();
+        }
+
+        // query connection from raptor
+        List<org.naviqore.raptor.Connection> connections;
+        try {
+            connections = utils.routeConnections(sourceStops, targetStops, timeType, queryConfig, allowSourceTransfers,
+                    allowTargetTransfers);
+        } catch (RaptorAlgorithm.InvalidStopException e) {
+            log.debug("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+            return handleInvalidStopException(e, source, target);
+        } catch (IllegalArgumentException e) {
+            throw new ConnectionRoutingException(e);
+        }
+
+        // assemble connection results
+        List<Connection> result = new ArrayList<>(connections.size());
+        for (org.naviqore.raptor.Connection raptorConnection : connections) {
+
+            Connection serviceConnection = switch (timeType) {
+                case ARRIVAL -> postprocessArrivalConnection(source, raptorConnection, target);
+                case DEPARTURE -> postprocessDepartureConnection(source, raptorConnection, target);
+            };
+
+            if (utils.isBelowMaximumTravelTime(serviceConnection, queryConfig)) {
+                result.add(serviceConnection);
+            }
+        }
+
+        return result;
+    }
+
+    private List<Connection> sortConnectionsBasedOnTimeType(List<Connection> connections) {
+        return switch (timeType) {
+            case DEPARTURE -> connections.stream().sorted(Comparator.comparing(Connection::getDepartureTime)).toList();
+            case ARRIVAL ->
+                    connections.stream().sorted(Comparator.comparing(Connection::getArrivalTime).reversed()).toList();
+        };
+    }
+
+}

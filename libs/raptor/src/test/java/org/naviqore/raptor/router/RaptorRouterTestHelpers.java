@@ -19,7 +19,7 @@ class RaptorRouterTestHelpers {
 
     static Map<String, Connection> getIsoLines(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                QueryConfig config) {
-        return raptor.routeIsolines(sourceStops, TimeType.DEPARTURE, config);
+        return raptor.isolineQuery(sourceStops, TimeType.DEPARTURE, config);
     }
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
@@ -48,7 +48,7 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeEarliestArrival(RaptorAlgorithm raptor, Map<String, OffsetDateTime> sourceStops,
                                                  Map<String, Integer> targetStopIds, QueryConfig config) {
-        return raptor.routeEarliestArrival(sourceStops, targetStopIds, config);
+        return raptor.connectionQuery(sourceStops, targetStopIds, TimeType.DEPARTURE, config);
     }
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, String sourceStopId, String targetStopId,
@@ -63,7 +63,7 @@ class RaptorRouterTestHelpers {
 
     static List<Connection> routeLatestDeparture(RaptorAlgorithm raptor, Map<String, Integer> sourceStops,
                                                  Map<String, OffsetDateTime> targetStops, QueryConfig config) {
-        return raptor.routeLatestDeparture(sourceStops, targetStops, config);
+        return raptor.connectionQuery(targetStops, sourceStops, TimeType.ARRIVAL, config);
     }
 
     static void assertEarliestArrivalConnection(Connection connection, String sourceStop, String targetStop,

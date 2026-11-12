@@ -4,6 +4,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.naviqore.gtfs.schedule.type.RouteType;
+import org.naviqore.gtfs.schedule.type.RouteTypeMapper;
+import org.naviqore.timetable.type.TravelMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +14,7 @@ import java.util.Objects;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-public final class Route implements Initializable {
+public final class Route implements Initializable, org.naviqore.timetable.model.Route {
 
     private final String id;
     private final Agency agency;
@@ -23,6 +25,24 @@ public final class Route implements Initializable {
 
     void addTrip(Trip trip) {
         trips.add(trip);
+    }
+
+    @Override
+    public TravelMode getTravelMode() {
+        return switch (RouteTypeMapper.map(type)) {
+            case BUS, TROLLEYBUS -> TravelMode.BUS;
+            case TRAM, CABLE_TRAM -> TravelMode.TRAM;
+            case RAIL, MONORAIL -> TravelMode.RAIL;
+            case FERRY -> TravelMode.SHIP;
+            case SUBWAY -> TravelMode.SUBWAY;
+            case AERIAL_LIFT -> TravelMode.AERIAL_LIFT;
+            case FUNICULAR -> TravelMode.FUNICULAR;
+        };
+    }
+
+    @Override
+    public String getRouteTypeDescription() {
+        return type.getDescription();
     }
 
     @Override

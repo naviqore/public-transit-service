@@ -12,7 +12,7 @@ import java.util.*;
 @Getter
 @EqualsAndHashCode(of = "id")
 @ToString(of = {"id", "serviceDays", "startDate", "endDate"})
-public final class Calendar implements Initializable {
+public final class Calendar implements Initializable, org.naviqore.timetable.model.Calendar {
 
     private final String id;
     private final EnumSet<DayOfWeek> serviceDays;
@@ -30,6 +30,7 @@ public final class Calendar implements Initializable {
      * @param date the date to check for service availability
      * @return true if the service is operational on the given date, false otherwise
      */
+    @Override
     public boolean isServiceAvailable(LocalDate date) {
         CalendarDate exception = calendarDates.get(date);
         if (exception != null) {

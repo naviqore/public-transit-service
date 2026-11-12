@@ -10,7 +10,6 @@ import org.naviqore.raptor.Leg;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
@@ -38,8 +37,8 @@ class RaptorConnection implements Connection {
     }
 
     void initialize() {
-        // sort legs by departure time
-        Collections.sort(legs);
+        // keep the order the legs were added in, each starting where the previous one ended: sorting by time cannot
+        // order two legs of zero duration in the same minute
         // make sure that the legs are connected and times are consistent
         for (int i = 0; i < legs.size() - 1; i++) {
             Leg current = legs.get(i);

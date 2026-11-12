@@ -277,14 +277,77 @@ class RouteBuilderTest {
 
                 // build route containers
                 List<RouteBuilder.RouteContainer> containers = new ArrayList<>();
-                containers.add(builder.build());
-                containers.add(builder2.build());
+                containers.addAll(builder.build());
+                containers.addAll(builder2.build());
                 containers.sort(Comparator.naturalOrder());
 
                 // check order
                 List<String> expectedOrder = List.of(ROUTE_2, ROUTE_1);
                 List<String> actualOrder = containers.stream().map(RouteBuilder.RouteContainer::id).toList();
                 assertEquals(expectedOrder, actualOrder);
+            }
+        }
+
+        @Nested
+        class OvertakingTrips {
+
+            private static final String TRIP_2 = "trip2";
+            private static final String TRIP_3 = "trip3";
+
+            @BeforeEach
+            void setUp() {
+                builder.addTrip(TRIP_2);
+            }
+
+            private void addStopTimes(String tripId, int... times) {
+                for (int position = 0; position < times.length; position++) {
+                    builder.addStopTime(tripId, position, STOP_IDS_1.get(position),
+                            new StopTime(times[position], times[position]));
+                }
+            }
+
+            private List<List<String>> buildTripIdsPerContainer() {
+                List<RouteBuilder.RouteContainer> containers = builder.build();
+                assertTrue(containers.stream().allMatch(container -> container.id().equals(ROUTE_1)),
+                        "Route containers should keep the id of the route");
+                return containers.stream().map(container -> List.copyOf(container.trips().keySet())).toList();
+            }
+
+            @Test
+            void shouldHoldTripsInOneContainerIfInOrder() {
+                addStopTimes(TRIP_2, 200, 400, 600);
+                addStopTimes(TRIP_1, 100, 300, 500);
+
+                assertEquals(List.of(List.of(TRIP_1, TRIP_2)), buildTripIdsPerContainer());
+            }
+
+            @Test
+            void shouldHoldOvertakingTripInSeparateContainer() {
+                // trip 2 departs after trip 1, but arrives earlier at the following stops
+                addStopTimes(TRIP_1, 100, 300, 500);
+                addStopTimes(TRIP_2, 200, 250, 400);
+
+                assertEquals(List.of(List.of(TRIP_1), List.of(TRIP_2)), buildTripIdsPerContainer());
+            }
+
+            @Test
+            void shouldAddTripToFirstContainerItDoesNotOvertake() {
+                // trip 2 overtakes trip 1, trip 3 overtakes trip 1 but not trip 2
+                builder.addTrip(TRIP_3);
+                addStopTimes(TRIP_1, 100, 300, 500);
+                addStopTimes(TRIP_2, 200, 250, 450);
+                addStopTimes(TRIP_3, 300, 320, 460);
+
+                assertEquals(List.of(List.of(TRIP_1), List.of(TRIP_2, TRIP_3)), buildTripIdsPerContainer());
+            }
+
+            @Test
+            void shouldSortFasterOfTripsDepartingTogetherFirst() {
+                // both trips depart at the same time, trip 2 is faster and does not count as overtaking
+                addStopTimes(TRIP_1, 100, 300, 500);
+                addStopTimes(TRIP_2, 100, 250, 450);
+
+                assertEquals(List.of(List.of(TRIP_2, TRIP_1)), buildTripIdsPerContainer());
             }
         }
     }

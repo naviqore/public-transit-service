@@ -2,8 +2,8 @@ package org.naviqore.gtfs.schedule.model;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
-import org.naviqore.gtfs.schedule.type.BikeInformation;
+import org.naviqore.timetable.type.AccessibilityInformation;
+import org.naviqore.timetable.type.BikeInformation;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +12,7 @@ import java.util.Objects;
 
 @RequiredArgsConstructor
 @Getter
-public final class Trip implements Comparable<Trip>, Initializable {
+public final class Trip implements Comparable<Trip>, Initializable, org.naviqore.timetable.model.Trip {
 
     private final String id;
     private final Route route;

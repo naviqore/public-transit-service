@@ -22,12 +22,10 @@ public class RaptorConfig {
     @Builder.Default
     private final int stopTimeCacheSize = 5;
     @Builder.Default
-    private final int raptorRangeDefault = 1800;
-    @Builder.Default
     private final EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
 
     private RaptorConfig(RaptorTripMaskProvider maskProvider, int daysToScan, int sameStopTransferDurationDefault,
-                         int stopTimeCacheSize, int raptorRangeDefault, EvictionCache.Strategy stopTimeCacheStrategy) {
+                         int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {
 
         if (daysToScan <= 0) {
             throw new IllegalArgumentException("Days to scan must be greater than 0.");
@@ -44,7 +42,6 @@ public class RaptorConfig {
         this.daysToScan = daysToScan;
         this.sameStopTransferDurationDefault = sameStopTransferDurationDefault;
         this.stopTimeCacheSize = stopTimeCacheSize;
-        this.raptorRangeDefault = raptorRangeDefault;
         this.stopTimeCacheStrategy = stopTimeCacheStrategy;
     }
 

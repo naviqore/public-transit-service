@@ -15,8 +15,18 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
  *     <li>All stops of a route must be known before adding the route.</li>
  *     <li>All trips of a route must have the same stop sequence.</li>
  *     <li>Each stop time of a trip must have a departure time after the previous stop time's arrival time.</li>
- *     <li>All trips in the final route container must be sorted by departure time.</li>
+ *     <li>All trips in the final route containers must be sorted by departure time.</li>
+ *     <li>No trip of a route container overtakes another: the trips of a route that do are held in several route
+ *     containers, each a route of RAPTOR, which keep the id of the route.</li>
  * </ul>
+ * <p>
+ * The router does not depend on the order in which stops, routes, trips and transfers are added: stops are numbered by
+ * id, route containers are ordered by their first departure and then by id, and trips with the same times by id. Of
+ * routes or trips that serve a stop equally well, RAPTOR keeps the one it scans first, so the same timetable always
+ * gives the same answers. A transfer added again replaces the one added before.
+ * <p>
+ * A transfer is a walk in one direction, from its source stop to its target stop, and may take another time than the
+ * walk back: a search departing follows the walks from a stop, a search arriving, routing backward, the walks to it.
  *
  * @author munterfi
  */
@@ -24,9 +34,9 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
 public class RaptorRouterBuilder {
 
     private final RaptorConfig config;
-    private final Map<String, Integer> stops = new HashMap<>();
+    private final Set<String> stops = new HashSet<>();
     private final Map<String, RouteBuilder> routeBuilders = new HashMap<>();
-    private final Map<String, Map<String, Transfer>> transfers = new HashMap<>();
+    private final Map<String, Map<String, Integer>> transfers = new HashMap<>();
     private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
 
@@ -38,13 +48,29 @@ public class RaptorRouterBuilder {
         this.config = config;
     }
 
+    /**
+     * Adds the walks of a stop to the transfers from an index on, by the index of their target stop.
+     *
+     * @return the index after them.
+     */
+    private static int addTransfers(Transfer[] transferArr, int firstTransferIdx, Map<String, Integer> walks,
+                                    Lookup lookup) {
+        int transferIdx = firstTransferIdx;
+        for (Map.Entry<String, Integer> walk : walks.entrySet()) {
+            transferArr[transferIdx++] = new Transfer(lookup.stops().get(walk.getKey()), walk.getValue());
+        }
+        Arrays.sort(transferArr, firstTransferIdx, transferIdx, Comparator.comparingInt(Transfer::targetStopIdx));
+
+        return transferIdx;
+    }
+
     public RaptorRouterBuilder addStop(String id) {
-        if (stops.containsKey(id)) {
+        if (stops.contains(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
 
         log.debug("Adding stop: id={}", id);
-        stops.put(id, stops.size());
+        stops.add(id);
         stopRoutes.put(id, new HashSet<>());
 
         return this;
@@ -56,7 +82,7 @@ public class RaptorRouterBuilder {
         }
 
         for (String stopId : stopIds) {
-            if (!stops.containsKey(stopId)) {
+            if (!stops.contains(stopId)) {
                 throw new IllegalArgumentException("Stop " + stopId + " does not exist");
             }
             stopRoutes.get(stopId).add(id);
@@ -87,11 +113,11 @@ public class RaptorRouterBuilder {
         log.debug("Adding transfer: sourceStopId={}, targetStopId={}, duration={}", sourceStopId, targetStopId,
                 duration);
 
-        if (!stops.containsKey(sourceStopId)) {
+        if (!stops.contains(sourceStopId)) {
             throw new IllegalArgumentException("Source stop " + sourceStopId + " does not exist");
         }
 
-        if (!stops.containsKey(targetStopId)) {
+        if (!stops.contains(targetStopId)) {
             throw new IllegalArgumentException("Target stop " + targetStopId + " does not exist");
         }
 
@@ -100,12 +126,9 @@ public class RaptorRouterBuilder {
             return this;
         }
 
-        Map<String, Transfer> stopTransfers = transfers.computeIfAbsent(sourceStopId, _ -> new HashMap<>());
-        String transferKey = sourceStopId + "-" + targetStopId;
-        if (!stopTransfers.containsKey(transferKey)) {
+        if (transfers.computeIfAbsent(sourceStopId, _ -> new HashMap<>()).put(targetStopId, duration) == null) {
             transferSize++;
         }
-        stopTransfers.put(transferKey, new Transfer(stops.get(targetStopId), duration));
 
         return this;
     }
@@ -114,48 +137,83 @@ public class RaptorRouterBuilder {
         log.info("Initializing RAPTOR router with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
 
-        // build route containers and the raptor array-based data structures
+        // number the stops by id, build route containers and the raptor array-based data structures
+        String[] stopIds = stops.stream().sorted().toArray(String[]::new);
         List<RouteBuilder.RouteContainer> routeContainers = buildAndSortRouteContainers();
-        Lookup lookup = buildLookup(routeContainers);
-        StopContext stopContext = buildStopContext(lookup);
-        RouteTraversal routeTraversal = buildRouteTraversal(routeContainers);
+        Lookup lookup = buildLookup(stopIds, routeContainers);
+        StopContext stopContext = buildStopContext(stopIds, lookup);
+        RouteTraversal routeTraversal = buildRouteTraversal(lookup, routeContainers);
 
         return new RaptorRouter(lookup, stopContext, routeTraversal, config);
     }
 
     private List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
-        return routeBuilders.values().parallelStream().map(RouteBuilder::build).sorted().toList();
-    }
+        List<RouteBuilder.RouteContainer> routeContainers = routeBuilders.values()
+                .parallelStream()
+                .flatMap(routeBuilder -> routeBuilder.build().stream())
+                .sorted()
+                .toList();
 
-    private Lookup buildLookup(List<RouteBuilder.RouteContainer> routeContainers) {
-        log.debug("Building lookup with {} stops and {} routes", stops.size(), routeContainers.size());
-        Map<String, Integer> routes = new HashMap<>(routeContainers.size());
-        Map<String, String[]> routeTripIds = new HashMap<>();
-
-        // assign idx to routes based on sorted order
-        for (int i = 0; i < routeContainers.size(); i++) {
-            RouteBuilder.RouteContainer routeContainer = routeContainers.get(i);
-            routes.put(routeContainer.id(), i);
-            routeTripIds.put(routeContainer.id(), routeContainer.trips().keySet().toArray(new String[0]));
+        if (routeContainers.size() > routeBuilders.size()) {
+            log.info("Split routes with trips overtaking one another into {} additional routes",
+                    routeContainers.size() - routeBuilders.size());
         }
 
-        return new Lookup(Map.copyOf(stops), Map.copyOf(routes), Map.copyOf(routeTripIds));
+        return routeContainers;
     }
 
-    private StopContext buildStopContext(Lookup lookup) {
-        log.debug("Building stop context with {} stops and {} transfers", stops.size(), transferSize);
+    private Lookup buildLookup(String[] stopIds, List<RouteBuilder.RouteContainer> routeContainers) {
+        log.debug("Building lookup with {} stops and {} routes", stopIds.length, routeContainers.size());
+
+        Map<String, Integer> stopIndices = HashMap.newHashMap(stopIds.length);
+        for (int stopIdx = 0; stopIdx < stopIds.length; stopIdx++) {
+            stopIndices.put(stopIds[stopIdx], stopIdx);
+        }
+
+        // assign idx to routes based on sorted order, the route containers of a route in the same order
+        Map<String, List<Integer>> routeIndices = new HashMap<>(routeBuilders.size());
+        for (int i = 0; i < routeContainers.size(); i++) {
+            routeIndices.computeIfAbsent(routeContainers.get(i).id(), _ -> new ArrayList<>(1)).add(i);
+        }
+
+        Map<String, int[]> routes = new HashMap<>(routeIndices.size());
+        Map<String, String[]> routeTripIds = new HashMap<>(routeIndices.size());
+        for (Map.Entry<String, List<Integer>> entry : routeIndices.entrySet()) {
+            routes.put(entry.getKey(), entry.getValue().stream().mapToInt(Integer::intValue).toArray());
+            routeTripIds.put(entry.getKey(), entry.getValue()
+                    .stream()
+                    .flatMap(i -> routeContainers.get(i).trips().keySet().stream())
+                    .toArray(String[]::new));
+        }
+
+        return new Lookup(Map.copyOf(stopIndices), Map.copyOf(routes), Map.copyOf(routeTripIds));
+    }
+
+    private StopContext buildStopContext(String[] stopIds, Lookup lookup) {
+        log.debug("Building stop context with {} stops and {} transfers", stopIds.length, transferSize);
 
         // allocate arrays in needed size
-        Stop[] stopArr = new Stop[stops.size()];
-        int[] stopRouteArr = new int[stopRoutes.values().stream().mapToInt(Set::size).sum()];
+        Stop[] stopArr = new Stop[stopIds.length];
+        int[] stopRouteArr = new int[stopRoutes.values()
+                .stream()
+                .flatMap(Set::stream)
+                .mapToInt(routeId -> lookup.routes().get(routeId).length)
+                .sum()];
         Transfer[] transferArr = new Transfer[transferSize];
+        Transfer[] reverseTransferArr = new Transfer[transferSize];
+
+        // the walks to each stop, from the stops they start at, which a search arriving follows backward
+        Map<String, Map<String, Integer>> reverseTransfers = new HashMap<>();
+        transfers.forEach((sourceStopId, walks) -> walks.forEach(
+                (targetStopId, duration) -> reverseTransfers.computeIfAbsent(targetStopId, _ -> new HashMap<>())
+                        .put(sourceStopId, duration)));
 
         // iterate over stops and populate arrays
         int transferIdx = 0;
+        int reverseTransferIdx = 0;
         int stopRouteIdx = 0;
-        for (Map.Entry<String, Integer> entry : stops.entrySet()) {
-            String stopId = entry.getKey();
-            int stopIdx = entry.getValue();
+        for (int stopIdx = 0; stopIdx < stopIds.length; stopIdx++) {
+            String stopId = stopIds[stopIdx];
 
             // check if stop has no routes: Unserved stops are useless in the raptor data structure
             Set<String> currentStopRoutes = stopRoutes.get(stopId);
@@ -163,39 +221,47 @@ public class RaptorRouterBuilder {
                 throw new IllegalStateException("Stop " + stopId + " has no routes");
             }
 
-            // get the number of (optional) transfers
-            Map<String, Transfer> currentTransfersMap = transfers.get(stopId);
-            Collection<Transfer> currentTransfers = currentTransfersMap == null ? Collections.emptyList() : currentTransfersMap.values();
+            // get the (optional) walks from and to the stop
+            Map<String, Integer> currentTransfers = transfers.getOrDefault(stopId, Map.of());
+            Map<String, Integer> currentReverseTransfers = reverseTransfers.getOrDefault(stopId, Map.of());
             int numberOfTransfers = currentTransfers.size();
+            int numberOfReverseTransfers = currentReverseTransfers.size();
 
             int sameStopTransferTime = sameStopTransfers.getOrDefault(stopId,
                     config.getSameStopTransferDurationDefault());
 
-            // add stop entry to stop array
-            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentStopRoutes.size(), sameStopTransferTime,
-                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers);
+            // add stop entry to stop array, a route held in several route containers is served by each of them
+            int[] currentRouteIndices = currentStopRoutes.stream()
+                    .flatMapToInt(routeId -> Arrays.stream(lookup.routes().get(routeId)))
+                    .sorted()
+                    .toArray();
+            stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentRouteIndices.length, sameStopTransferTime,
+                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers,
+                    numberOfReverseTransfers == 0 ? NO_INDEX : reverseTransferIdx, numberOfReverseTransfers);
 
-            // add transfer entry to transfer array if there are any
-            for (Transfer transfer : currentTransfers) {
-                transferArr[transferIdx++] = transfer;
-            }
+            transferIdx = addTransfers(transferArr, transferIdx, currentTransfers, lookup);
+            reverseTransferIdx = addTransfers(reverseTransferArr, reverseTransferIdx, currentReverseTransfers, lookup);
 
             // add route index entries to stop route array
-            for (String routeId : currentStopRoutes) {
-                stopRouteArr[stopRouteIdx++] = lookup.routes().get(routeId);
+            for (int routeIdx : currentRouteIndices) {
+                stopRouteArr[stopRouteIdx++] = routeIdx;
             }
         }
 
-        return new StopContext(transferArr, stopArr, stopRouteArr);
+        return new StopContext(transferArr, reverseTransferArr, stopArr, stopRouteArr);
     }
 
-    private RouteTraversal buildRouteTraversal(List<RouteBuilder.RouteContainer> routeContainers) {
+    private RouteTraversal buildRouteTraversal(Lookup lookup, List<RouteBuilder.RouteContainer> routeContainers) {
+        // the stops of a route held in several route containers are those of each of them
+        int routeContainerStopSize = routeContainers.stream()
+                .mapToInt(routeContainer -> routeContainer.stopSequence().size())
+                .sum();
         log.debug("Building route traversal with {} routes, {} route stops, {} stop times", routeContainers.size(),
-                routeStopSize, stopTimeSize);
+                routeContainerStopSize, stopTimeSize);
 
         // allocate arrays in needed size
         Route[] routeArr = new Route[routeContainers.size()];
-        RouteStop[] routeStopArr = new RouteStop[routeStopSize];
+        RouteStop[] routeStopArr = new RouteStop[routeContainerStopSize];
         int[] stopTimeArr = new int[2 + (stopTimeSize * 2) + (routeContainers.size() * 2)];
 
         // iterate over routes and populate arrays
@@ -222,7 +288,7 @@ public class RaptorRouterBuilder {
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
             for (int position = 0; position < numberOfStops; position++) {
-                int stopIdx = stops.get(stopSequence.get(position));
+                int stopIdx = lookup.stops().get(stopSequence.get(position));
                 routeStopArr[routeStopCnt++] = new RouteStop(stopIdx, routeIdx);
             }
 

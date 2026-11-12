@@ -4,55 +4,57 @@ import org.naviqore.raptor.QueryConfig;
 import org.naviqore.utils.cache.EvictionCache;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Map;
 
 /**
- * Provider for stop time int arrays for a given date.
+ * Provider of the stop times of the trips running on a date.
  * <p>
- * This provider uses the {@link RaptorTripMaskProvider} to create stop time arrays for a given date. All stop times are
- * converted to UTC seconds relative to the service date, and the resulting arrays are cached. Since routes may span
- * multiple time zones and daylight saving time (DST) can change offsets, the cache key includes a DST fingerprint: a
- * deterministic string of all unique route zone offsets at local noon. This ensures that UTC-adjusted stop times remain
- * correct even when DST changes occur or multiple zones are involved.
+ * This provider uses the {@link RaptorTripMaskProvider} to find the trips running on a date and keeps their stop times,
+ * see {@link DayStopTimes}. All stop times are converted to UTC seconds relative to the service date, and the stop
+ * times of a date are cached. Since routes may span multiple time zones and daylight saving time (DST) can change
+ * offsets, the cache key includes a DST fingerprint: a deterministic string of all unique route zone offsets at local
+ * noon. This ensures that UTC-adjusted stop times remain correct even when DST changes occur or multiple zones are
+ * involved.
  */
 class StopTimeProvider {
 
     /**
-     * The cache for the stop times. Stop time arrays are mapped to service ids, because multiple dates may have the
-     * same service id.
+     * The cache for the stop times. The stop times of a date are mapped to its service id, because multiple dates may
+     * have the same service id.
      */
-    private final EvictionCache<String, int[]> stopTimeCache;
+    private final EvictionCache<String, DayStopTimes> stopTimeCache;
 
     private final RaptorData data;
     private final RaptorTripMaskProvider tripMaskProvider;
+
+    /**
+     * The time zones of all routes, each once: their offsets on a date are part of the date's cache key, which every
+     * query computes for each day it scans.
+     */
+    private final ZoneId[] routeZones;
 
     StopTimeProvider(RaptorData data, RaptorTripMaskProvider tripMaskProvider, int cacheSize,
                      EvictionCache.Strategy cacheStrategy) {
         this.data = data;
         this.tripMaskProvider = tripMaskProvider;
         this.stopTimeCache = new EvictionCache<>(cacheSize, cacheStrategy);
+        this.routeZones = Arrays.stream(data.getRouteTraversal().routes())
+                .map(Route::zoneId)
+                .distinct()
+                .toArray(ZoneId[]::new);
     }
 
     /**
-     * Create the stop times for a given date.
-     * <p>
-     * The stop time array is built based on the trip mask provided by the {@link RaptorTripMaskProvider} and is
-     * structured as follows:
-     * <ul>
-     *     <li>0: earliest overall stop time (in seconds relative to service date)</li>
-     *     <li>1: latest overall stop time (in seconds relative to service date)</li>
-     *     <li>n: for each route the stop times are stored in the following order:
-     *     <ul>
-     *     <li>0: earliest route stop time of day(in seconds relative to service date)</li>
-     *     <li>1: latest route stop time od day (in seconds relative to service date)</li>
-     *     <li>n: each trip of the route stored as a sequence of 2 x number of stops on trip, in following logic:
-     *     stop 1: arrival time, stop 1: departure time, stop 2 arrival time, stop 2 departure time, ...
+     * Gets the stop times of the trips running on a date, built from the trip mask the {@link RaptorTripMaskProvider}
+     * provides for it, or retrieved from the cache.
      *
-     * @param date the date for which the stop times should be created (or retrieved from cache)
-     * @return the stop times for the given date.
+     * @param date        the date.
+     * @param queryConfig the query config, which the trip mask depends on.
+     * @return the stop times of the date.
      */
-    int[] getStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
+    DayStopTimes getStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
         String stopTimesKey = getCacheKeyForStopTimes(date, queryConfig);
         return stopTimeCache.computeIfAbsent(stopTimesKey, () -> createStopTimesForDate(date, queryConfig));
     }
@@ -64,8 +66,7 @@ class StopTimeProvider {
         String serviceId = tripMaskProvider.getServiceIdForDate(date);
 
         // offsets of all unique route zones at local noon
-        String dstFingerprint = Arrays.stream(data.getRouteTraversal().routes())
-                .map(Route::zoneId)
+        String dstFingerprint = Arrays.stream(routeZones)
                 .map(zoneId -> DateTimeConverter.getLocalToUtcOffset(date, zoneId))
                 .distinct()
                 .sorted()
@@ -77,71 +78,104 @@ class StopTimeProvider {
         return serviceId + "|" + dstFingerprint + "|" + queryConfig.isWheelchairAccessible() + "|" + queryConfig.isBikeAccessible() + "|" + queryConfig.getAllowedTravelModes();
     }
 
-    private int[] createStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
+    /**
+     * Creates the stop times of the trips running on a date: the trips are counted route by route first, which places
+     * every route's in the day, and then copied there.
+     */
+    private DayStopTimes createStopTimesForDate(LocalDate date, QueryConfig queryConfig) {
         RaptorTripMaskProvider.DayTripMask mask = tripMaskProvider.getDayTripMask(date, queryConfig);
+        Route[] routes = data.getRouteTraversal().routes();
 
-        int[] originalStopTimesArray = data.getRouteTraversal().stopTimes();
-        int[] newStopTimesArray = new int[originalStopTimesArray.length];
-
-        // set the global start and end times for the day (initially set to NO_TRIP)
-        newStopTimesArray[0] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-        newStopTimesArray[1] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-
-        // set the stop times for each route
-        for (Map.Entry<String, RaptorTripMaskProvider.RouteTripMask> entry : mask.tripMask().entrySet()) {
-            String routeId = entry.getKey();
-            RaptorTripMaskProvider.RouteTripMask tripMask = entry.getValue();
-            int routeIdx = data.getLookup().routes().get(routeId);
-            Route route = data.getRouteTraversal().routes()[routeIdx];
-            int numStops = route.numberOfStops();
-            int stopTimeIndex = route.firstStopTimeIdx();
-            int utcOffset = DateTimeConverter.getLocalToUtcOffset(date, route.zoneId());
-
-            boolean[] booleanMask = tripMask.routeTripMask();
-
-            int earliestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-            int latestRouteStopTime = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-
-            int tripOffset = 0;
-            for (boolean tripActive : booleanMask) {
-                for (int stopOffset = 0; stopOffset < numStops; stopOffset++) {
-                    int arrivalIndex = stopTimeIndex + (tripOffset * numStops * 2) + stopOffset * 2 + 2;
-                    int departureIndex = arrivalIndex + 1;
-                    // arrival and departure
-                    if (tripActive) {
-                        newStopTimesArray[arrivalIndex] = utcOffset + originalStopTimesArray[arrivalIndex];
-                        newStopTimesArray[departureIndex] = utcOffset + originalStopTimesArray[departureIndex];
-                        if (earliestRouteStopTime == RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                            earliestRouteStopTime = utcOffset + originalStopTimesArray[arrivalIndex];
-                        }
-                        latestRouteStopTime = utcOffset + originalStopTimesArray[departureIndex];
-
-                    } else {
-                        newStopTimesArray[arrivalIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-                        newStopTimesArray[departureIndex] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
-                    }
-                }
-                tripOffset++;
-            }
-
-            // set the earliest and latest stop times for the route
-            newStopTimesArray[stopTimeIndex] = earliestRouteStopTime;
-            newStopTimesArray[stopTimeIndex + 1] = latestRouteStopTime;
-
-            // maybe update the global start/end times for day
-            if (earliestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP && latestRouteStopTime != RaptorTripMaskProvider.RouteTripMask.NO_TRIP) {
-                // set the global earliest stop time if not set or if the new time is earlier
-                if (newStopTimesArray[0] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || earliestRouteStopTime < newStopTimesArray[0]) {
-                    newStopTimesArray[0] = earliestRouteStopTime;
-                }
-                // set the global latest stop time if not set or if the new time is later
-                if (newStopTimesArray[1] == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || latestRouteStopTime > newStopTimesArray[1]) {
-                    newStopTimesArray[1] = latestRouteStopTime;
+        int[] runningTrips = new int[routes.length];
+        forEachRouteTripMask(mask, (routeIdx, tripMask, firstTripOfRoute) -> {
+            for (int tripOffset = 0; tripOffset < routes[routeIdx].numberOfTrips(); tripOffset++) {
+                if (tripMask[firstTripOfRoute + tripOffset]) {
+                    runningTrips[routeIdx]++;
                 }
             }
+        });
 
+        int[] routeTrips = new int[routes.length + 1];
+        int[] routeStopTimes = new int[routes.length];
+        int numberOfStopTimes = 0;
+        for (int routeIdx = 0; routeIdx < routes.length; routeIdx++) {
+            routeTrips[routeIdx + 1] = routeTrips[routeIdx] + runningTrips[routeIdx];
+            routeStopTimes[routeIdx] = numberOfStopTimes;
+            numberOfStopTimes += runningTrips[routeIdx] * 2 * routes[routeIdx].numberOfStops();
         }
 
-        return newStopTimesArray;
+        int[] stopTimes = new int[numberOfStopTimes];
+        int[] tripPositions = new int[routeTrips[routes.length]];
+        forEachRouteTripMask(mask, (routeIdx, tripMask, firstTripOfRoute) -> {
+            Route route = routes[routeIdx];
+            int[] timetableStopTimes = data.getRouteTraversal().stopTimes();
+            int tripStopTimes = 2 * route.numberOfStops();
+            int utcOffset = DateTimeConverter.getLocalToUtcOffset(date, route.zoneId());
+            int trip = routeTrips[routeIdx];
+            int stopTimeIdx = routeStopTimes[routeIdx];
+            for (int tripOffset = 0; tripOffset < route.numberOfTrips(); tripOffset++) {
+                if (!tripMask[firstTripOfRoute + tripOffset]) {
+                    continue;
+                }
+                // the stop times of all trips follow the earliest and latest stop time of their route
+                int timetableStopTimeIdx = route.firstStopTimeIdx() + 2 + tripOffset * tripStopTimes;
+                for (int i = 0; i < tripStopTimes; i++) {
+                    stopTimes[stopTimeIdx + i] = timetableStopTimes[timetableStopTimeIdx + i] + utcOffset;
+                }
+                tripPositions[trip++] = tripOffset;
+                stopTimeIdx += tripStopTimes;
+            }
+        });
+
+        // the trips of a route keep their order at every stop, so its first trip arrives first and its last leaves last
+        int[] routeEarliest = new int[routes.length];
+        int[] routeLatest = new int[routes.length];
+        int earliest = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        int latest = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+        for (int routeIdx = 0; routeIdx < routes.length; routeIdx++) {
+            if (runningTrips[routeIdx] == 0) {
+                routeEarliest[routeIdx] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+                routeLatest[routeIdx] = RaptorTripMaskProvider.RouteTripMask.NO_TRIP;
+                continue;
+            }
+            int routeStopTimesEnd = routeStopTimes[routeIdx] + runningTrips[routeIdx] * 2 * routes[routeIdx].numberOfStops();
+            routeEarliest[routeIdx] = stopTimes[routeStopTimes[routeIdx]];
+            routeLatest[routeIdx] = stopTimes[routeStopTimesEnd - 1];
+            if (earliest == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || routeEarliest[routeIdx] < earliest) {
+                earliest = routeEarliest[routeIdx];
+            }
+            if (latest == RaptorTripMaskProvider.RouteTripMask.NO_TRIP || routeLatest[routeIdx] > latest) {
+                latest = routeLatest[routeIdx];
+            }
+        }
+
+        return new DayStopTimes(stopTimes, routeStopTimes, routeTrips, tripPositions, routeEarliest, routeLatest,
+                earliest, latest);
+    }
+
+    /**
+     * Calls an action for each RAPTOR route with the trip mask of the route it belongs to: the trips of a route are
+     * those of its RAPTOR routes, one RAPTOR route after the other.
+     */
+    private void forEachRouteTripMask(RaptorTripMaskProvider.DayTripMask mask, RouteTripMaskAction action) {
+        for (Map.Entry<String, RaptorTripMaskProvider.RouteTripMask> entry : mask.tripMask().entrySet()) {
+            boolean[] tripMask = entry.getValue().routeTripMask();
+            int firstTripOfRoute = 0;
+            for (int routeIdx : data.getLookup().routes().get(entry.getKey())) {
+                action.accept(routeIdx, tripMask, firstTripOfRoute);
+                firstTripOfRoute += data.getRouteTraversal().routes()[routeIdx].numberOfTrips();
+            }
+        }
+    }
+
+    @FunctionalInterface
+    private interface RouteTripMaskAction {
+
+        /**
+         * @param routeIdx         the index of the RAPTOR route.
+         * @param tripMask         the trip mask of the route the RAPTOR route belongs to.
+         * @param firstTripOfRoute the position of the first trip of the RAPTOR route in the trip mask.
+         */
+        void accept(int routeIdx, boolean[] tripMask, int firstTripOfRoute);
     }
 }

@@ -2,7 +2,7 @@ package org.naviqore.service.config;
 
 import lombok.Builder;
 import lombok.Value;
-import org.naviqore.service.repo.GtfsScheduleRepository;
+import org.naviqore.service.repo.TimetableRepository;
 
 /**
  * Configuration to create a public transit service.
@@ -24,12 +24,12 @@ public class ServiceConfig {
     public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
 
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
-    public static final int DEFAULT_RAPTOR_RANGE = -1; // -1 means no range raptor
+    public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
 
-    public static final int DEFAULT_CACHE_SIZE = 5;
+    public static final int DEFAULT_CACHE_SIZE = 30;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
-    GtfsScheduleRepository gtfsScheduleRepository;
+    TimetableRepository timetableRepository;
 
     @Builder.Default
     String gtfsStaticUpdateCron = DEFAULT_GTFS_STATIC_UPDATE_CRON;
@@ -58,8 +58,14 @@ public class ServiceConfig {
     @Builder.Default
     int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
 
+    /**
+     * Whether a connection query without a time window optimizes the travel time of its connections: of the connections
+     * arriving as early with as many transfers, it reports the one departing latest (for an arrival query: of those
+     * departing as late, the one arriving earliest), found by a second query in the other direction. A query with a
+     * time window reports those anyway.
+     */
     @Builder.Default
-    int raptorRange = DEFAULT_RAPTOR_RANGE;
+    boolean optimizeTravelTime = DEFAULT_OPTIMIZE_TRAVEL_TIME;
 
     @Builder.Default
     int cacheServiceDaySize = DEFAULT_CACHE_SIZE;
@@ -67,12 +73,12 @@ public class ServiceConfig {
     @Builder.Default
     CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
 
-    public ServiceConfig(GtfsScheduleRepository gtfsScheduleRepository, String gtfsStaticUpdateCron,
+    public ServiceConfig(TimetableRepository timetableRepository, String gtfsStaticUpdateCron,
                          int transferDurationSameStopDefault, int transferDurationBetweenStopsMinimum,
                          int transferDurationAccessEgress, int walkSearchRadius, WalkCalculatorType walkCalculatorType,
-                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, int raptorRange,
+                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, boolean optimizeTravelTime,
                          int cacheServiceDaySize, CacheEvictionStrategy cacheEvictionStrategy) {
-        this.gtfsScheduleRepository = validateNonNull(gtfsScheduleRepository, "gtfsScheduleRepository");
+        this.timetableRepository = validateNonNull(timetableRepository, "timetableRepository");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferDurationSameStopDefault = validateNonNegative(transferDurationSameStopDefault,
                 "transferDurationSameStopDefault");
@@ -85,7 +91,7 @@ public class ServiceConfig {
         this.walkSpeed = validatePositive(walkSpeed, "walkSpeed");
         this.walkDurationMinimum = validateNonNegative(walkDurationMinimum, "walkDurationMinimum");
         this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
-        this.raptorRange = raptorRange;
+        this.optimizeTravelTime = optimizeTravelTime;
         this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }
