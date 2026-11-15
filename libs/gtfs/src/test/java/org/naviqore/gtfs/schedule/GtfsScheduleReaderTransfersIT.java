@@ -1,113 +1,167 @@
 package org.naviqore.gtfs.schedule;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
+import org.naviqore.gtfs.schedule.model.Route;
 import org.naviqore.gtfs.schedule.model.Transfer;
-import org.slf4j.LoggerFactory;
+import org.naviqore.gtfs.schedule.model.Trip;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The transfers of transfers.txt: a transfer of the schedule applies to all trips between its stops, so the rows for
- * all trips are read and the rows for particular routes or trips are left out.
+ * The transfers of transfers.txt: a row applies to all trips between its stops, or to the routes or trips it names, and
+ * a row of trips that the rider stays on board of may leave out its stops. An invalid row fails the reading.
  */
 class GtfsScheduleReaderTransfersIT {
 
     private static final GtfsScheduleDataset GTFS_SCHEDULE_DATASET = GtfsScheduleDataset.SAMPLE_FEED_1;
-    private static final String LEFT_OUT = "Left out rows of transfers.txt for particular routes or trips: ";
+    private static final String HEADER = "from_stop_id,to_stop_id,from_route_id,to_route_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time\n";
+
+    private static GtfsSchedule read(Path directory) throws IOException {
+        return new GtfsScheduleReader().read(directory.toString());
+    }
+
+    private static String describe(Transfer transfer) {
+        String description = String.format("%s:%s:%s", transfer.getToStop().getId(), transfer.getTransferType(),
+                transfer.getMinTransferTime().orElse(null));
+        if (transfer.getFromRoute().isPresent() || transfer.getToRoute().isPresent()) {
+            description += String.format(" routes %s>%s", transfer.getFromRoute().map(Route::getId).orElse(""),
+                    transfer.getToRoute().map(Route::getId).orElse(""));
+        }
+        if (transfer.getFromTrip().isPresent() || transfer.getToTrip().isPresent()) {
+            description += String.format(" trips %s>%s", transfer.getFromTrip().map(Trip::getId).orElse(""),
+                    transfer.getToTrip().map(Trip::getId).orElse(""));
+        }
+        return description;
+    }
 
     /**
-     * Reads a feed, keeping the messages the reader logged at the level info.
+     * The transfers from a stop, each as the stop it leads to, its type, its minimum time, and the routes and trips it
+     * applies to.
      */
-    private static Reading read(Path directory) throws IOException {
-        Logger logger = (Logger) LoggerFactory.getLogger(GtfsScheduleReader.class);
-        ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        appender.start();
-        logger.addAppender(appender);
-        try {
-            GtfsSchedule schedule = new GtfsScheduleReader().read(directory.toString());
-            return new Reading(schedule, appender.list.stream()
-                    .filter(event -> event.getLevel() == Level.INFO)
-                    .map(ILoggingEvent::getFormattedMessage)
-                    .toList());
-        } finally {
-            logger.detachAppender(appender);
-        }
+    private static List<String> transfers(GtfsSchedule schedule, String stopId) {
+        return schedule.getStops()
+                .get(stopId)
+                .getTransfers()
+                .stream()
+                .map(GtfsScheduleReaderTransfersIT::describe)
+                .toList();
     }
 
     @Test
-    void rowsForParticularRoutesOrTrips_areLeftOut(@TempDir Path tempDir) throws IOException {
+    void rowsForParticularRoutesOrTrips_areReadWithThem(@TempDir Path tempDir) throws IOException {
         Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
-        // EMSI to STAGECOACH: 420 s for all trips, and 300 s from trip STBA to trip CITY1 alone, the later row, which
-        // used to set the time for all trips; STAGECOACH to EMSI: 60 s from route AB to route BFC alone; BULLFROG to
-        // FUR_CREEK_RES: staying on board from trip AB1 to trip AB2
-        Files.writeString(directory.resolve("transfers.txt"), """
-                from_stop_id,to_stop_id,from_route_id,to_route_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
+        // EMSI to STAGECOACH: 420 s for all trips, and 300 s from trip CITY1 to trip STBA; STAGECOACH to EMSI: 60 s
+        // from route AB to route BFC, and a recommended transfer for all trips; BULLFROG: staying on board from trip
+        // AB1 to trip AB2
+        Files.writeString(directory.resolve("transfers.txt"), HEADER + """
                 EMSI,STAGECOACH,,,,,2,420
-                EMSI,STAGECOACH,,,STBA,CITY1,2,300
+                EMSI,STAGECOACH,,,CITY1,STBA,2,300
                 STAGECOACH,EMSI,AB,BFC,,,2,60
-                BULLFROG,FUR_CREEK_RES,,,AB1,AB2,4,
+                STAGECOACH,EMSI,,,,,,
+                BULLFROG,BULLFROG,,,AB1,AB2,4,
                 """);
 
-        Reading reading = read(directory);
+        GtfsSchedule schedule = read(directory);
 
-        assertThat(reading.transfers("EMSI")).containsExactly("STAGECOACH:MINIMUM_TIME:420");
-        assertThat(reading.transfers("STAGECOACH")).isEmpty();
-        assertThat(reading.transfers("BULLFROG")).isEmpty();
-        assertThat(reading.info()).contains(LEFT_OUT + 3);
+        assertThat(transfers(schedule, "EMSI")).containsExactly("STAGECOACH:MINIMUM_TIME:420",
+                "STAGECOACH:MINIMUM_TIME:300 trips CITY1>STBA");
+        assertThat(transfers(schedule, "STAGECOACH")).containsExactly("EMSI:MINIMUM_TIME:60 routes AB>BFC",
+                "EMSI:RECOMMENDED:null");
+        assertThat(transfers(schedule, "BULLFROG")).containsExactly("BULLFROG:IN_SEAT:null trips AB1>AB2");
     }
 
     @Test
-    void rowsForParticularTrips_areLeftOut_withoutRouteFields(@TempDir Path tempDir) throws IOException {
+    void rowsOfTripsStayingOnBoard_mayLeaveOutTheirStops(@TempDir Path tempDir) throws IOException {
         Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
-        Files.writeString(directory.resolve("transfers.txt"), """
-                from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
-                EMSI,STAGECOACH,,,2,420
-                EMSI,STAGECOACH,STBA,CITY1,2,300
+        // from the last stop of AB1 to the first stop of AB2, both BULLFROG
+        Files.writeString(directory.resolve("transfers.txt"), HEADER + ",,,,AB1,AB2,4,\n");
+
+        assertThat(transfers(read(directory), "BULLFROG")).containsExactly("BULLFROG:IN_SEAT:null trips AB1>AB2");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            // a stop, a route and a trip that do not exist, and a trip of another route than the one named
+            "EMSI,NONE,,,,,2,300                | Stop NONE does not exist",
+            "EMSI,STAGECOACH,NONE,,,,2,300      | Route NONE does not exist",
+            "EMSI,STAGECOACH,,,CITY1,NONE,2,300 | Trip NONE does not exist",
+            "EMSI,STAGECOACH,AB,,CITY1,,2,300   | Trip CITY1 does not belong to route AB",
+            // a trip that does not call at the stop of its side: STBA leaves STAGECOACH for BEATTY_AIRPORT
+            "EMSI,STAGECOACH,,,STBA,CITY1,2,300 | names trip STBA, which does not call at stop EMSI",
+            // a type that does not exist, and a minimum time without its time
+            "EMSI,STAGECOACH,,,,,6,             | No transfer type with code 6",
+            "EMSI,STAGECOACH,,,CITY1,STBA,2,    | Minimal transfer time is not present",
+            // trips staying on board that are not named, and no stop for trips that do not stay on board
+            "EMSI,STAGECOACH,,,,,4,             | does not name both trips",
+            ",STAGECOACH,,,CITY1,STBA,2,300     | does not name both stops"})
+    void anInvalidRow_failsTheReading(String row, String reason, @TempDir Path tempDir) throws IOException {
+        Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
+        Files.writeString(directory.resolve("transfers.txt"), HEADER + row + "\n");
+
+        assertThatThrownBy(() -> read(directory)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(reason);
+    }
+
+    @Test
+    void rowsOfTripsStayingOnBoard_nameStopsNotStations(@TempDir Path tempDir) throws IOException {
+        Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
+        // BULLFROG is a stop of the station BULLFROG_STATION, where the trips call
+        Files.writeString(directory.resolve("stops.txt"), """
+                stop_id,stop_name,stop_lat,stop_lon,parent_station
+                FUR_CREEK_RES,Furnace Creek Resort,36.425288,-117.133162,
+                BEATTY_AIRPORT,Nye County Airport,36.868446,-116.784582,
+                BULLFROG_STATION,Bullfrog,36.88108,-116.81797,
+                BULLFROG,Bullfrog,36.88108,-116.81797,BULLFROG_STATION
+                STAGECOACH,Stagecoach Hotel & Casino,36.915682,-116.751677,
+                NADAV,North Ave / D Ave N,36.914893,-116.76821,
+                NANAA,North Ave / N A Ave,36.914944,-116.761472,
+                DADAN,Doing Ave / D Ave N,36.909489,-116.768242,
+                EMSI,E Main St / S Irving St,36.905697,-116.76218,
+                AMV,Amargosa Valley,36.641496,-116.40094,
                 """);
 
-        Reading reading = read(directory);
+        // a row of trips at a station applies at its stops, where they call
+        Path transfers = directory.resolve("transfers.txt");
+        Files.writeString(transfers, HEADER + "BULLFROG_STATION,BULLFROG_STATION,,,AB1,BFC1,2,300\n");
+        assertThat(transfers(read(directory), "BULLFROG_STATION")).containsExactly(
+                "BULLFROG_STATION:MINIMUM_TIME:300 trips AB1>BFC1");
 
-        assertThat(reading.transfers("EMSI")).containsExactly("STAGECOACH:MINIMUM_TIME:420");
-        assertThat(reading.info()).contains(LEFT_OUT + 1);
+        Files.writeString(transfers, HEADER + "BULLFROG_STATION,BULLFROG_STATION,,,AB1,AB2,4,\n");
+        assertThatThrownBy(() -> read(directory)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("station");
+    }
+
+    @Test
+    void rowsOfTripsStayingOnBoardWithoutStops_needTheStopTimesOfTheTrips(@TempDir Path tempDir) throws IOException {
+        Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
+        // AB3 has no stop times, so it has no first stop to continue at
+        Files.writeString(directory.resolve("trips.txt"), "\nAB,FULLW,AB3,to Bullfrog,0,1,\n",
+                StandardOpenOption.APPEND);
+        Files.writeString(directory.resolve("transfers.txt"), HEADER + ",,,,AB2,AB3,4,\n");
+
+        assertThatThrownBy(() -> read(directory)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("AB3 has no stop times");
     }
 
     @Test
     void rowsWithoutRouteAndTripFields_areReadForAllTrips(@TempDir Path tempDir) throws IOException {
         // the sample feed's transfers.txt, which has no route and trip fields
-        Reading reading = read(GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath());
+        GtfsSchedule schedule = read(GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath());
 
-        assertThat(reading.transfers("EMSI")).containsExactly("STAGECOACH:MINIMUM_TIME:120");
-        assertThat(reading.transfers("STAGECOACH")).containsExactly("EMSI:MINIMUM_TIME:180");
-        assertThat(reading.transfers("FUR_CREEK_RES")).containsExactly("BULLFROG:NOT_POSSIBLE:null");
-        assertThat(reading.info()).noneMatch(message -> message.startsWith(LEFT_OUT));
+        assertThat(transfers(schedule, "EMSI")).containsExactly("STAGECOACH:MINIMUM_TIME:120");
+        assertThat(transfers(schedule, "STAGECOACH")).containsExactly("EMSI:MINIMUM_TIME:180");
+        assertThat(transfers(schedule, "FUR_CREEK_RES")).containsExactly("BULLFROG:NOT_POSSIBLE:null");
     }
 
-    /**
-     * A schedule read, and the messages the reader logged at the level info.
-     */
-    private record Reading(GtfsSchedule schedule, List<String> info) {
-
-        private static String describe(Transfer transfer) {
-            return String.format("%s:%s:%s", transfer.getToStop().getId(), transfer.getTransferType(),
-                    transfer.getMinTransferTime().orElse(null));
-        }
-
-        /**
-         * The transfers from a stop, each as the stop it leads to, its type and its minimum time.
-         */
-        List<String> transfers(String stopId) {
-            return schedule.getStops().get(stopId).getTransfers().stream().map(Reading::describe).toList();
-        }
-    }
 }

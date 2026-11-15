@@ -13,4 +13,6 @@ interface RaptorData {
 
     StopTimeProvider getStopTimeProvider();
 
+    TripTransfers getTripTransfers();
+
 }

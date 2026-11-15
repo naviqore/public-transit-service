@@ -31,14 +31,19 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final StopTimeProvider stopTimeProvider;
 
+    @Getter
+    private final TripTransfers tripTransfers;
+
     private final RaptorConfig config;
 
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, RaptorConfig config) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, TripTransfers tripTransfers,
+                 RaptorConfig config) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
+        this.tripTransfers = tripTransfers;
         this.config = config;
         config.getMaskProvider().setTripIds(lookup.routeTripIds());
         this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),

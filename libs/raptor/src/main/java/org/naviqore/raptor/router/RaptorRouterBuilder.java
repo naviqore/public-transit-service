@@ -18,6 +18,9 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
  *     <li>All trips in the final route containers must be sorted by departure time.</li>
  *     <li>No trip of a route container overtakes another: the trips of a route that do are held in several route
  *     containers, each a route of RAPTOR, which keep the id of the route.</li>
+ *     <li>The trips of a route container let passengers board and alight at the same stops: trips that do not are held
+ *     in several route containers too.</li>
+ *     <li>The routes and trips a trip transfer names exist, and a trip belongs to the route named with it.</li>
  * </ul>
  * <p>
  * The router does not depend on the order in which stops, routes, trips and transfers are added: stops are numbered by
@@ -27,6 +30,8 @@ import static org.naviqore.raptor.router.QueryState.NO_INDEX;
  * <p>
  * A transfer is a walk in one direction, from its source stop to its target stop, and may take another time than the
  * walk back: a search departing follows the walks from a stop, a search arriving, routing backward, the walks to it.
+ * Transfers can be refused, at a stop or between two stops, and apply to particular routes or trips only (see
+ * {@link TripTransfer}).
  *
  * @author munterfi
  */
@@ -39,6 +44,9 @@ public class RaptorRouterBuilder {
     private final Map<String, Map<String, Integer>> transfers = new HashMap<>();
     private final Map<String, Integer> sameStopTransfers = new HashMap<>();
     private final Map<String, Set<String>> stopRoutes = new HashMap<>();
+    private final Set<String> refusingStops = new HashSet<>();
+    private final Map<String, Set<String>> refusedWalks = new HashMap<>();
+    private final List<TripTransfer> tripTransfers = new ArrayList<>();
 
     int stopTimeSize = 0;
     int routeStopSize = 0;
@@ -62,6 +70,24 @@ public class RaptorRouterBuilder {
         Arrays.sort(transferArr, firstTransferIdx, transferIdx, Comparator.comparingInt(Transfer::targetStopIdx));
 
         return transferIdx;
+    }
+
+    /**
+     * Adds the slots of the trip transfers to the stops, each a copy of its stop.
+     */
+    private static StopContext addSlots(StopContext stopContext, TripTransfers tripTransfers) {
+        if (tripTransfers.numberOfSlots() == 0) {
+            return stopContext;
+        }
+
+        Stop[] stops = stopContext.stops();
+        Stop[] stopsAndSlots = Arrays.copyOf(stops, stops.length + tripTransfers.numberOfSlots());
+        for (int slot = stops.length; slot < stopsAndSlots.length; slot++) {
+            stopsAndSlots[slot] = stops[tripTransfers.stopOf(slot)];
+        }
+
+        return new StopContext(stopContext.transfers(), stopContext.reverseTransfers(), stopsAndSlots,
+                stopContext.stopRoutes());
     }
 
     public RaptorRouterBuilder addStop(String id) {
@@ -102,8 +128,17 @@ public class RaptorRouterBuilder {
 
     public RaptorRouterBuilder addStopTime(String routeId, String tripId, int position, String stopId, int arrival,
                                            int departure) {
+        return addStopTime(routeId, tripId, position, stopId, arrival, departure, true, true);
+    }
+
+    /**
+     * Adds a stop time of a trip, at which passengers can board or alight only if allowed: a trip that only sets down
+     * passengers at a stop cannot be boarded there.
+     */
+    public RaptorRouterBuilder addStopTime(String routeId, String tripId, int position, String stopId, int arrival,
+                                           int departure, boolean boarding, boolean alighting) {
         StopTime stopTime = new StopTime(arrival, departure);
-        getRouteBuilder(routeId).addStopTime(tripId, position, stopId, stopTime);
+        getRouteBuilder(routeId).addStopTime(tripId, position, stopId, stopTime, boarding, alighting);
         stopTimeSize++;
 
         return this;
@@ -133,6 +168,49 @@ public class RaptorRouterBuilder {
         return this;
     }
 
+    /**
+     * Refuses the transfers at a stop, or between two stops: no trip can be changed for another at the stop, and no
+     * walk leads from the one stop to the other, also one added before or after. Transfers between particular routes or
+     * trips may still allow them (see {@link TripTransfer}).
+     */
+    public RaptorRouterBuilder refuseTransfers(String sourceStopId, String targetStopId) {
+        log.debug("Refusing transfers: sourceStopId={}, targetStopId={}", sourceStopId, targetStopId);
+        checkStopExists(sourceStopId);
+        checkStopExists(targetStopId);
+
+        if (sourceStopId.equals(targetStopId)) {
+            refusingStops.add(sourceStopId);
+        } else {
+            refusedWalks.computeIfAbsent(sourceStopId, _ -> new HashSet<>()).add(targetStopId);
+        }
+
+        return this;
+    }
+
+    /**
+     * Adds a transfer between particular routes or trips, see {@link TripTransfer}. The router is built only if it has
+     * the routes and trips the transfer names, which may be added after it.
+     */
+    public RaptorRouterBuilder addTripTransfer(TripTransfer tripTransfer) {
+        log.debug("Adding trip transfer: {}", tripTransfer);
+        checkStopExists(tripTransfer.fromStopId());
+        checkStopExists(tripTransfer.toStopId());
+        boolean namesRouteOrTrip = tripTransfer.fromRouteId() != null || tripTransfer.fromTripId() != null || tripTransfer.toRouteId() != null || tripTransfer.toTripId() != null;
+        if (!namesRouteOrTrip) {
+            throw new IllegalArgumentException(
+                    "Trip transfer from stop " + tripTransfer.fromStopId() + " to stop " + tripTransfer.toStopId() + " names no route or trip");
+        }
+        tripTransfers.add(tripTransfer);
+
+        return this;
+    }
+
+    private void checkStopExists(String stopId) {
+        if (!stops.contains(stopId)) {
+            throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+        }
+    }
+
     public RaptorRouter build() {
         log.info("Initializing RAPTOR router with {} stops, {} routes, {} route stops, {} stop times, {} transfers",
                 stops.size(), routeBuilders.size(), routeStopSize, stopTimeSize, transferSize);
@@ -141,10 +219,45 @@ public class RaptorRouterBuilder {
         String[] stopIds = stops.stream().sorted().toArray(String[]::new);
         List<RouteBuilder.RouteContainer> routeContainers = buildAndSortRouteContainers();
         Lookup lookup = buildLookup(stopIds, routeContainers);
+        Map<Long, Integer> refusedWalkTimes = removeRefusedWalks(lookup);
         StopContext stopContext = buildStopContext(stopIds, lookup);
         RouteTraversal routeTraversal = buildRouteTraversal(lookup, routeContainers);
 
-        return new RaptorRouter(lookup, stopContext, routeTraversal, config);
+        // compile the trip transfers, whose slots follow the stops
+        Set<Integer> refusingStopIndices = new HashSet<>();
+        refusingStops.forEach(stopId -> refusingStopIndices.add(lookup.stops().get(stopId)));
+        TripTransfers.Builder tripTransfersBuilder = new TripTransfers.Builder(lookup, stopContext, routeTraversal,
+                refusingStopIndices, refusedWalkTimes);
+        tripTransfers.forEach(tripTransfersBuilder::add);
+        TripTransfers compiledTripTransfers = tripTransfersBuilder.build();
+        stopContext = addSlots(stopContext, compiledTripTransfers);
+
+        return new RaptorRouter(lookup, stopContext, routeTraversal, compiledTripTransfers, config);
+    }
+
+    /**
+     * Removes the walks between stops that refuse transfers.
+     *
+     * @return the time each removed walk took, by its source and target stop.
+     */
+    private Map<Long, Integer> removeRefusedWalks(Lookup lookup) {
+        Map<Long, Integer> refusedWalkTimes = new HashMap<>();
+        refusedWalks.forEach((sourceStopId, targetStopIds) -> {
+            Map<String, Integer> walks = transfers.get(sourceStopId);
+            for (String targetStopId : targetStopIds) {
+                Integer duration = walks == null ? null : walks.remove(targetStopId);
+                if (duration != null) {
+                    transferSize--;
+                    refusedWalkTimes.put(TripTransfers.Builder.walk(lookup.stops().get(sourceStopId),
+                            lookup.stops().get(targetStopId)), duration);
+                }
+            }
+        });
+        if (!refusedWalkTimes.isEmpty()) {
+            log.info("Removed {} walks between stops that refuse transfers", refusedWalkTimes.size());
+        }
+
+        return refusedWalkTimes;
     }
 
     private List<RouteBuilder.RouteContainer> buildAndSortRouteContainers() {
@@ -155,8 +268,8 @@ public class RaptorRouterBuilder {
                 .toList();
 
         if (routeContainers.size() > routeBuilders.size()) {
-            log.info("Split routes with trips overtaking one another into {} additional routes",
-                    routeContainers.size() - routeBuilders.size());
+            log.info("Split routes with trips overtaking one another, or picking up and setting down at other "
+                    + "stops, into {} additional routes", routeContainers.size() - routeBuilders.size());
         }
 
         return routeContainers;
@@ -236,7 +349,7 @@ public class RaptorRouterBuilder {
                     .sorted()
                     .toArray();
             stopArr[stopIdx] = new Stop(stopId, stopRouteIdx, currentRouteIndices.length, sameStopTransferTime,
-                    numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers,
+                    refusingStops.contains(stopId), numberOfTransfers == 0 ? NO_INDEX : transferIdx, numberOfTransfers,
                     numberOfReverseTransfers == 0 ? NO_INDEX : reverseTransferIdx, numberOfReverseTransfers);
 
             transferIdx = addTransfers(transferArr, transferIdx, currentTransfers, lookup);
@@ -289,7 +402,8 @@ public class RaptorRouterBuilder {
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
             for (int position = 0; position < numberOfStops; position++) {
                 int stopIdx = lookup.stops().get(stopSequence.get(position));
-                routeStopArr[routeStopCnt++] = new RouteStop(stopIdx, routeIdx);
+                routeStopArr[routeStopCnt++] = new RouteStop(stopIdx, routeIdx, routeContainer.boarding(position),
+                        routeContainer.alighting(position));
             }
 
             // add times to stop time array

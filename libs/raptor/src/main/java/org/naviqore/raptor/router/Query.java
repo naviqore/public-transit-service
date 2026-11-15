@@ -39,6 +39,9 @@ class Query {
     private final int[] targetStopIndices;
     private final int[] sourceTimes;
     private final int[] walkDurationsToTarget;
+    // the target stops and the slots of trip transfers at them, with the walk from each to the target
+    private final int[] targetIndices;
+    private final int[] walkDurationsFromTargetIndices;
 
     private final QueryConfig config;
     private final TimeType timeType;
@@ -48,6 +51,7 @@ class Query {
     private final Stop[] stops;
     // the walks of the direction of the search, see StopContext
     private final Transfer[] transfers;
+    private final TripTransfers tripTransfers;
     private final QueryState queryState;
     private final FootpathRelaxer footpathRelaxer;
     private final RouteScanner routeScanner;
@@ -100,8 +104,26 @@ class Query {
 
         stops = raptorData.getStopContext().stops();
         transfers = raptorData.getStopContext().transfers(timeType);
-        numStops = stops.length;
+        tripTransfers = raptorData.getTripTransfers();
+        numStops = stops.length - tripTransfers.numberOfSlots();
         queryState = new QueryState(stops, timeType, isRangeQuery());
+
+        // an arrival in a slot of trip transfers reaches the stop of the slot
+        List<Integer> indices = new ArrayList<>();
+        List<Integer> durations = new ArrayList<>();
+        for (int i = 0; i < targetStopIndices.length; i++) {
+            indices.add(targetStopIndices[i]);
+            durations.add(walkDurationsToTarget[i]);
+        }
+        for (int i = 0; i < targetStopIndices.length; i++) {
+            int[] slots = tripTransfers.slots(timeType, targetStopIndices[i]);
+            for (int slot : slots == null ? new int[0] : slots) {
+                indices.add(slot);
+                durations.add(walkDurationsToTarget[i]);
+            }
+        }
+        targetIndices = indices.stream().mapToInt(Integer::intValue).toArray();
+        walkDurationsFromTargetIndices = durations.stream().mapToInt(Integer::intValue).toArray();
 
         // set up footpath relaxer and route scanner and inject stop labels and times
         footpathRelaxer = new FootpathRelaxer(queryState, raptorData, config.getMinimumTransferDuration(),
@@ -145,10 +167,11 @@ class Query {
         if (!isRangeQuery()) {
             run(false, round -> {
             });
-            return queryState.getEarliestArrivalLabels();
+            return queryState.getEarliestArrivalLabels(numStops, tripTransfers::stopOf);
         }
 
-        ShortestTravelTimes shortestTravelTimes = new ShortestTravelTimes(queryState, numStops, timeType);
+        ShortestTravelTimes shortestTravelTimes = new ShortestTravelTimes(queryState, numStops, timeType,
+                tripTransfers::stopOf);
         run(true, new PassListener() {
             @Override
             public void afterRound(int round) {
@@ -211,6 +234,7 @@ class Query {
         offset = passOffset;
         cutoffTime = determineCutoffTime(passOffset);
         queryState.startPass();
+        routeScanner.startPass();
         initializeSourceStops(passOffset);
         routeScanner.setFirstTripLimit(firstTripLimit);
 
@@ -291,7 +315,8 @@ class Query {
     }
 
     private boolean hasNextRound() {
-        return queryState.hasMarkedStops() && queryState.getRound() <= config.getMaximumTransfers();
+        boolean improved = queryState.hasMarkedStops() || routeScanner.hasPendingBoardings();
+        return improved && queryState.getRound() <= config.getMaximumTransfers();
     }
 
     /**
@@ -382,9 +407,9 @@ class Query {
     private QueryState.@Nullable Label updateBestTimeAtTarget(int round) {
         int bestTime = queryState.getBestTimeAtTarget();
         QueryState.Label bestLabel = null;
-        for (int i = 0; i < targetStopIndices.length; i++) {
-            int stopIdx = targetStopIndices[i];
-            int walkDuration = walkDurationsToTarget[i];
+        for (int i = 0; i < targetIndices.length; i++) {
+            int stopIdx = targetIndices[i];
+            int walkDuration = walkDurationsFromTargetIndices[i];
             QueryState.Label tripLabel = queryState.isTripArrivalImproved(stopIdx) ? queryState.getTripLabel(round,
                     stopIdx) : null;
             QueryState.Label label = queryState.isMarkedNextRound(stopIdx) ? queryState.getLabel(round, stopIdx) : null;

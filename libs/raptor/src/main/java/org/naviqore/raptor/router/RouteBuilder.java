@@ -16,15 +16,22 @@ import java.util.*;
  *     <li>In the final route containers, all trips are sorted according to their departure time.</li>
  *     <li>No trip of a route container overtakes another: RAPTOR takes the first trip it can catch at a stop and stays
  *     on it, so a route whose trips overtake one another is held in several route containers.</li>
+ *     <li>The trips of a route container let passengers board and alight at the same stops, so that RAPTOR, which
+ *     takes the first trip it can catch, never takes one passengers cannot board or leave there.</li>
  * </ul>
  */
 @Slf4j
 class RouteBuilder {
 
+    static final byte BOARDING = 1;
+    static final byte ALIGHTING = 2;
+
     private final String routeId;
     private final ZoneId zoneId;
     private final Map<Integer, String> stopSequence = new HashMap<>();
     private final Map<String, StopTime[]> trips = new HashMap<>();
+    // where passengers can board and alight on the trips that restrict it, see access(int)
+    private final Map<String, byte[]> tripAccess = new HashMap<>();
 
     RouteBuilder(String routeId, ZoneId zoneId, List<String> stopIds) {
         this.routeId = routeId;
@@ -69,6 +76,19 @@ class RouteBuilder {
         return false;
     }
 
+    /**
+     * Encodes whether passengers can board and alight, in the bits {@link #BOARDING} and {@link #ALIGHTING}.
+     */
+    static byte access(boolean boarding, boolean alighting) {
+        return (byte) ((boarding ? BOARDING : 0) | (alighting ? ALIGHTING : 0));
+    }
+
+    private static byte[] allAccess(int numberOfStops) {
+        byte[] access = new byte[numberOfStops];
+        Arrays.fill(access, access(true, true));
+        return access;
+    }
+
     void addTrip(String tripId) {
         log.debug("Adding trip: id={} routeId={}", tripId, routeId);
         if (trips.containsKey(tripId)) {
@@ -78,6 +98,11 @@ class RouteBuilder {
     }
 
     void addStopTime(String tripId, int position, String stopId, StopTime stopTime) {
+        addStopTime(tripId, position, stopId, stopTime, true, true);
+    }
+
+    void addStopTime(String tripId, int position, String stopId, StopTime stopTime, boolean boarding,
+                     boolean alighting) {
         log.debug("Adding stop time: tripId={}, position={}, stopId={}, stopTime={}", tripId, position, stopId,
                 stopTime);
 
@@ -117,6 +142,14 @@ class RouteBuilder {
         }
 
         stopTimes[position] = stopTime;
+
+        // boarding at the last stop and alighting at the first never happen, so they do not set trips apart
+        boolean boardingMatters = position < stopSequence.size() - 1;
+        boolean alightingMatters = position > 0;
+        if (boardingMatters && !boarding || alightingMatters && !alighting) {
+            byte[] access = tripAccess.computeIfAbsent(tripId, _ -> allAccess(stopSequence.size()));
+            access[position] = access(boarding || !boardingMatters, alighting || !alightingMatters);
+        }
     }
 
     private void validate() {
@@ -133,9 +166,9 @@ class RouteBuilder {
     }
 
     /**
-     * Builds the route containers of the route: one, or several if trips of the route overtake one another. Each trip
-     * joins the first container whose last trip it does not overtake, so the trips of a container are in the same order
-     * at every stop.
+     * Builds the route containers of the route: one, or several if trips of the route overtake one another or let
+     * passengers board and alight at other stops. Each trip joins the first container of its boarding and alighting
+     * whose last trip it does not overtake, so the trips of a container are in the same order at every stop.
      */
     List<RouteContainer> build() {
         log.debug("Validating and building route {}", routeId);
@@ -148,11 +181,16 @@ class RouteBuilder {
                 .thenComparing(Map.Entry.comparingByKey()));
 
         // populate the trips of each container in the same order as sortedEntries, LinkedHashMap stores insertion order
+        byte[] allAccess = allAccess(stopSequence.size());
+        List<byte[]> containerAccess = new ArrayList<>();
         List<LinkedHashMap<String, StopTime[]>> containerTrips = new ArrayList<>();
         for (Map.Entry<String, StopTime[]> entry : sortedEntries) {
+            byte[] access = tripAccess.getOrDefault(entry.getKey(), allAccess);
             LinkedHashMap<String, StopTime[]> sortedTrips = null;
-            for (LinkedHashMap<String, StopTime[]> candidate : containerTrips) {
-                if (!overtakes(entry.getValue(), candidate.lastEntry().getValue())) {
+            for (int i = 0; i < containerTrips.size(); i++) {
+                LinkedHashMap<String, StopTime[]> candidate = containerTrips.get(i);
+                if (Arrays.equals(access, containerAccess.get(i)) && !overtakes(entry.getValue(),
+                        candidate.lastEntry().getValue())) {
                     sortedTrips = candidate;
                     break;
                 }
@@ -161,23 +199,36 @@ class RouteBuilder {
             if (sortedTrips == null) {
                 sortedTrips = new LinkedHashMap<>();
                 containerTrips.add(sortedTrips);
+                containerAccess.add(access);
             }
 
             sortedTrips.put(entry.getKey(), entry.getValue());
         }
 
         if (containerTrips.size() > 1) {
-            log.debug("Route {} has trips overtaking one another, split into {} route containers", routeId,
-                    containerTrips.size());
+            log.debug(
+                    "Route {} has trips overtaking one another or boarding and alighting at other stops, split into " + "{} route containers",
+                    routeId, containerTrips.size());
         }
 
-        return containerTrips.stream()
-                .map(sortedTrips -> new RouteContainer(routeId, zoneId, stopSequence, sortedTrips))
-                .toList();
+        List<RouteContainer> containers = new ArrayList<>(containerTrips.size());
+        for (int i = 0; i < containerTrips.size(); i++) {
+            containers.add(
+                    new RouteContainer(routeId, zoneId, stopSequence, containerTrips.get(i), containerAccess.get(i)));
+        }
+
+        return containers;
     }
 
+    /**
+     * The trips of a route that share a container, and where passengers can board and alight on them.
+     *
+     * @param access per stop of the route, whether passengers can board and alight there, see
+     *               {@link RouteBuilder#access(boolean, boolean)}.
+     */
     record RouteContainer(String id, ZoneId zoneId, Map<Integer, String> stopSequence,
-                          LinkedHashMap<String, StopTime[]> trips) implements Comparable<RouteContainer> {
+                          LinkedHashMap<String, StopTime[]> trips,
+                          byte[] access) implements Comparable<RouteContainer> {
 
         /**
          * Orders route containers by the departure of their first trip, then by id, and the containers of a route by
@@ -198,6 +249,14 @@ class RouteBuilder {
 
         private String firstTripId() {
             return trips.firstEntry().getKey();
+        }
+
+        boolean boarding(int position) {
+            return (access[position] & BOARDING) != 0;
+        }
+
+        boolean alighting(int position) {
+            return (access[position] & ALIGHTING) != 0;
         }
 
     }
