@@ -17,6 +17,7 @@ class FootpathRelaxer {
 
     private final Transfer[] transfers;
     private final Stop[] stops;
+    private final TripTransfers tripTransfers;
 
     private final int minTransferDuration;
     private final int maxWalkDuration;
@@ -46,6 +47,7 @@ class FootpathRelaxer {
         // constant data structures: the walks of the direction of the search
         this.transfers = raptorData.getStopContext().transfers(timeType);
         this.stops = raptorData.getStopContext().stops();
+        this.tripTransfers = raptorData.getTripTransfers();
         // constant configuration of relaxer
         this.minTransferDuration = minimumTransferDuration;
         this.maxWalkDuration = maximumWalkDuration;
@@ -126,12 +128,21 @@ class FootpathRelaxer {
      * @param round         the current round to relax footpaths for.
      */
     private void expandFootpathsFromStop(QueryState.Label previousLabel, int round) {
-        Stop sourceStop = stops[previousLabel.stopIdx()];
+        int sourceIdx = previousLabel.stopIdx();
+        Stop sourceStop = stops[sourceIdx];
         int sourceTime = previousLabel.targetTime();
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
-        int transferEndIdx = sourceStop.transferIdx(timeType) + sourceStop.numberOfTransfers(timeType);
-        for (int i = sourceStop.transferIdx(timeType); i < transferEndIdx; i++) {
+        // a slot of trip transfers has the walks of its stop: if the stop was reached on a trip as early, it has walked
+        // them, and the slot only walks to the stops its rules end at, where the walks land in slots of its own
+        int sourceStopIdx = tripTransfers.stopOf(sourceIdx);
+        int[] walks = sourceStopIdx != sourceIdx && sourceTime * timeDirection >= queryState.getBestTripTime(
+                sourceStopIdx) * timeDirection ? tripTransfers.walksToOwnSlots(sourceIdx) : null;
+
+        int numberOfWalks = walks == null ? sourceStop.numberOfTransfers(timeType) : walks.length;
+        for (int w = 0; w < numberOfWalks; w++) {
+            int walk = walks == null ? w : walks[w];
+            int i = sourceStop.transferIdx(timeType) + walk;
             Transfer transfer = transfers[i];
             if (!allowTargetTransfers && targetStopIndices.contains(transfer.targetStopIdx())) {
                 continue;
@@ -141,27 +152,30 @@ class FootpathRelaxer {
                 continue;
             }
 
+            // a walk from an arrival whose route changes to routes at the target stop along trip transfers lands in a
+            // slot, see TripTransfers
+            int targetIdx = tripTransfers.walkTarget(sourceIdx, walk, transfer.targetStopIdx());
+
             // calculate the target time for the transfer in the given time direction
             int targetTime = sourceTime + timeDirection * (transfer.duration() + minTransferDuration);
 
             // compare the walk as it allows to board a trip: right away, without the same stop transfer time a route
             // target time does not yet include
-            int comparableTargetTime = queryState.getComparableTime(transfer.targetStopIdx(), targetTime,
+            int comparableTargetTime = queryState.getComparableTime(targetIdx, targetTime,
                     QueryState.LabelType.TRANSFER);
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= queryState.getComparableBestTime(
-                    transfer.targetStopIdx()) * timeDirection) {
+            if (comparableTargetTime * timeDirection >= queryState.getComparableBestTime(targetIdx) * timeDirection) {
                 continue;
             }
 
             // update best times with comparable target time
-            queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
+            queryState.setBestTime(targetIdx, comparableTargetTime);
             // add real target time to label
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), previousLabel);
-            queryState.setLabel(round, transfer.targetStopIdx(), label);
-            queryState.mark(transfer.targetStopIdx());
+                    NO_INDEX, targetIdx, previousLabel);
+            queryState.setLabel(round, targetIdx, label);
+            queryState.mark(targetIdx);
         }
     }
 }

@@ -21,6 +21,7 @@ class LabelPostprocessor {
     private final int[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
+    private final TripTransfers tripTransfers;
 
     private final TimeType timeType;
     private final int timeDirection;
@@ -47,6 +48,7 @@ class LabelPostprocessor {
         this.stopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
+        this.tripTransfers = raptorData.getTripTransfers();
         this.timeType = timeType;
         this.timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
         this.referenceDate = referenceDateTime.toLocalDate();
@@ -66,7 +68,7 @@ class LabelPostprocessor {
      */
     Map<String, Connection> reconstructIsolines(QueryState.@Nullable Label[] labelPerStop) {
         Map<String, Connection> isolines = new HashMap<>();
-        for (int i = 0; i < stops.length; i++) {
+        for (int i = 0; i < labelPerStop.length; i++) {
             QueryState.Label label = labelPerStop[i];
             if (label != null && label.type() != QueryState.LabelType.INITIAL) {
                 isolines.put(stops[i].id(), reconstructConnectionFromLabel(label));
@@ -476,8 +478,12 @@ class LabelPostprocessor {
                                                             boolean fromTarget) {
         assert routeLabel.previous() != null;
         boolean isDeparture = timeType == TimeType.DEPARTURE;
-        int boardingStopIdx = isDeparture ? routeLabel.previous().stopIdx() : routeLabel.stopIdx();
-        int alightingStopIdx = isDeparture ? routeLabel.stopIdx() : routeLabel.previous().stopIdx();
+        // a label may be at a slot of trip transfers, which stands for its stop
+        stopIdx = tripTransfers.stopOf(stopIdx);
+        int boardingStopIdx = tripTransfers.stopOf(
+                isDeparture ? routeLabel.previous().stopIdx() : routeLabel.stopIdx());
+        int alightingStopIdx = tripTransfers.stopOf(
+                isDeparture ? routeLabel.stopIdx() : routeLabel.previous().stopIdx());
         int boardingTime = isDeparture ? routeLabel.sourceTime() : routeLabel.targetTime();
         int alightingTime = isDeparture ? routeLabel.targetTime() : routeLabel.sourceTime();
 
@@ -516,6 +522,13 @@ class LabelPostprocessor {
                     stopOffset = findStopOffset(route, stopIdx, alighting - 1, -1);
                 }
                 if (stopOffset == -1) {
+                    return null;
+                }
+
+                // the trip has to set down passengers at a stop that replaces the alighting stop, and to pick them up
+                // at one that replaces the boarding stop
+                RouteStop routeStop = routeStops[firstRouteStopIdx + stopOffset];
+                if (fromTarget == isDeparture ? !routeStop.alighting() : !routeStop.boarding()) {
                     return null;
                 }
 

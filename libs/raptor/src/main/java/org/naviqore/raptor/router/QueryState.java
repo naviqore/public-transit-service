@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import java.util.function.IntUnaryOperator;
 
 /**
  * This object stores the current best labels and times of the RAPTOR routing algorithm for a query instance.
@@ -258,19 +259,23 @@ final class QueryState {
 
     /**
      * Gets the label of the earliest arrival (latest departure) at each stop, on a trip, on foot or at the start, of
-     * all rounds. Of equally early arrivals, the one of the lowest round is kept, which takes the fewest trips, and in
-     * a round the one on a trip, which needs no walk at the end.
+     * all rounds, the arrivals in the slots of trip transfers included in their stops. Of equally early arrivals, the
+     * one of the lowest round is kept, which takes the fewest trips, and in a round the one on a trip, which needs no
+     * walk at the end.
      *
+     * @param numberOfStops the number of stops, which the slots follow.
+     * @param stopOf        the stop of a stop or slot.
      * @return the label per stop, null for a stop not reached.
      */
-    @Nullable Label[] getEarliestArrivalLabels() {
-        Label[] earliestArrivals = new Label[stops.length];
+    @Nullable Label[] getEarliestArrivalLabels(int numberOfStops, IntUnaryOperator stopOf) {
+        Label[] earliestArrivals = new Label[numberOfStops];
         for (int i = 0; i < bestLabelsPerRound.size(); i++) {
             Label[] tripLabels = bestTripLabelsPerRound.get(i);
             Label[] labels = bestLabelsPerRound.get(i);
-            for (int stopIdx = 0; stopIdx < stops.length; stopIdx++) {
-                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[stopIdx]);
-                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], labels[stopIdx]);
+            for (int idx = 0; idx < stops.length; idx++) {
+                int stopIdx = idx < numberOfStops ? idx : stopOf.applyAsInt(idx);
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[idx]);
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], labels[idx]);
             }
         }
 
