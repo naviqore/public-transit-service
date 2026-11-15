@@ -240,12 +240,13 @@ class GtfsScheduleParser {
 
     private static class Utils {
 
+        // a field may be missing from the header, or from a record that leaves out its last, empty fields
         private static String getStringFieldOrDefault(CSVRecord record, String fieldName, String defaultValue) {
-            return record.isMapped(fieldName) ? record.get(fieldName).trim() : defaultValue;
+            return record.isSet(fieldName) ? record.get(fieldName).trim() : defaultValue;
         }
 
         private static int getIntFieldOrDefault(CSVRecord record, String fieldName, int defaultValue) {
-            return record.isMapped(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
+            return record.isSet(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
         }
 
     }
