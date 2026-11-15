@@ -2,6 +2,7 @@ package org.naviqore.gtfs.schedule;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVRecord;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 import org.naviqore.gtfs.schedule.type.RouteType;
@@ -13,7 +14,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -22,9 +22,6 @@ import java.util.function.Function;
  * may do, and they are added to the builder, which the thread building the schedule does, in the order of the records.
  * A record that fails to be read fails, or is skipped with a warning, only when it is added, so that the schedule, its
  * warnings and its failures are those of reading and adding each record in turn.
- * <p>
- * A transfer of the schedule applies to all trips between its stops, so a row of transfers.txt for particular routes or
- * trips is left out: taken for all trips, it would set their transfer time to that of a particular connection.
  *
  * @author munterfi
  */
@@ -42,14 +39,8 @@ class GtfsScheduleParser {
                     GtfsScheduleFile.ROUTES, GtfsScheduleParser::readRoute, GtfsScheduleFile.TRIPS,
                     GtfsScheduleParser::readTrip, GtfsScheduleFile.STOP_TIMES, GtfsScheduleParser::readStopTime,
                     GtfsScheduleFile.TRANSFERS, GtfsScheduleParser::readTransfer));
-    private static final List<String> TRANSFER_ROUTE_AND_TRIP_FIELDS = List.of("from_route_id", "to_route_id",
-            "from_trip_id", "to_trip_id");
-    // the values of a row of transfers.txt for particular routes or trips, which is left out
-    private static final ParsedRecord TRANSFER_FOR_PARTICULAR_TRIPS = _ -> {
-    };
 
     private final GtfsScheduleBuilder builder;
-    private long transfersForParticularTrips;
 
     public GtfsScheduleParser(GtfsScheduleBuilder builder) {
         this.builder = builder;
@@ -198,36 +189,31 @@ class GtfsScheduleParser {
     }
 
     private static ParsedRecord readTransfer(CSVRecord record) {
-        // a row for particular routes or trips applies to them alone, a transfer between stops to all trips
-        if (TRANSFER_ROUTE_AND_TRIP_FIELDS.stream()
-                .anyMatch(field -> !Utils.getStringFieldOrDefault(record, field, "").isEmpty())) {
-            return TRANSFER_FOR_PARTICULAR_TRIPS;
-        }
-        String minTransferTime = record.get("min_transfer_time");
-        String from = record.get("from_stop_id");
-        String to = record.get("to_stop_id");
-        TransferType type = TransferType.parse(record.get("transfer_type"));
-        Integer minimum = minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time"));
+        String from = getIdOrNull(record, "from_stop_id");
+        String to = getIdOrNull(record, "to_stop_id");
+        String fromRoute = getIdOrNull(record, "from_route_id");
+        String toRoute = getIdOrNull(record, "to_route_id");
+        String fromTrip = getIdOrNull(record, "from_trip_id");
+        String toTrip = getIdOrNull(record, "to_trip_id");
+        // an empty transfer type is a recommended transfer point
+        String transferType = record.get("transfer_type");
+        TransferType type = transferType.isEmpty() ? TransferType.RECOMMENDED : TransferType.parse(transferType);
+        String minTransferTime = Utils.getStringFieldOrDefault(record, "min_transfer_time", "");
+        Integer minimum = minTransferTime.isEmpty() ? null : Integer.parseInt(minTransferTime);
 
-        return builder -> builder.addTransfer(from, to, type, minimum);
+        return builder -> builder.addTransfer(from, to, fromRoute, toRoute, fromTrip, toTrip, type, minimum);
+    }
+
+    private static @Nullable String getIdOrNull(CSVRecord record, String fieldName) {
+        String id = Utils.getStringFieldOrDefault(record, fieldName, "");
+        return id.isEmpty() ? null : id;
     }
 
     /**
      * Adds the values of a record to the schedule builder.
      */
     public void add(ParsedRecord record) {
-        if (record == TRANSFER_FOR_PARTICULAR_TRIPS) {
-            transfersForParticularTrips++;
-            return;
-        }
         record.addTo(builder);
-    }
-
-    /**
-     * The number of rows of transfers.txt for particular routes or trips, which were left out.
-     */
-    long transfersForParticularTrips() {
-        return transfersForParticularTrips;
     }
 
     /**
