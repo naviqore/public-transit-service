@@ -6,10 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 import org.naviqore.gtfs.schedule.type.RouteType;
-import org.naviqore.timetable.type.AccessibilityInformation;
-import org.naviqore.timetable.type.BikeInformation;
-import org.naviqore.timetable.type.ServiceDayTime;
-import org.naviqore.timetable.type.TransferType;
+import org.naviqore.timetable.type.*;
 import org.naviqore.utils.cache.ValueObjectCache;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -40,8 +37,43 @@ public class GtfsScheduleBuilder {
     private final Map<String, Route> routes = new HashMap<>();
     private final Map<String, Trip> trips = new HashMap<>();
     private final Map<String, List<Stop>> parents = new HashMap<>();
+    // the transfers between linked trips that leave out their stops, added once the stop times of the trips are sorted
+    private final List<LinkedTripsTransfer> linkedTripsTransfers = new ArrayList<>();
 
     private boolean built = false;
+
+    private static boolean linksTrips(TransferType transferType) {
+        return transferType == TransferType.IN_SEAT || transferType == TransferType.IN_SEAT_FORBIDDEN;
+    }
+
+    /**
+     * Checks the transfers from a stop, once the stations have their stops: a trip a transfer names has to call at the
+     * stop of its side, or at a stop of the station, and a transfer of the in-seat types has to name stops.
+     */
+    private static void checkTransfers(Stop stop) {
+        for (Transfer transfer : stop.getTransfers()) {
+            if (linksTrips(transfer.getTransferType()) && (isStation(transfer.getFromStop()) || isStation(
+                    transfer.getToStop()))) {
+                throw new IllegalArgumentException(transfer + " links trips at a station, not at its stops");
+            }
+            transfer.getFromTrip().ifPresent(trip -> checkCallsAt(trip, transfer.getFromStop(), transfer));
+            transfer.getToTrip().ifPresent(trip -> checkCallsAt(trip, transfer.getToStop(), transfer));
+        }
+    }
+
+    private static boolean isStation(Stop stop) {
+        return !stop.getChildren().isEmpty();
+    }
+
+    private static void checkCallsAt(Trip trip, Stop stop, Transfer transfer) {
+        for (StopTime stopTime : trip.getStopTimes()) {
+            if (stopTime.stop().equals(stop) || stopTime.stop().getParent().filter(stop::equals).isPresent()) {
+                return;
+            }
+        }
+        throw new IllegalArgumentException(
+                transfer + " names trip " + trip.getId() + ", which does not call at stop " + stop.getId());
+    }
 
     public GtfsScheduleBuilder addAgency(String id, String name, String url, ZoneId timezone) {
         checkNotBuilt();
@@ -151,6 +183,12 @@ public class GtfsScheduleBuilder {
 
     public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival,
                                            ServiceDayTime departure) {
+        return addStopTime(tripId, stopId, arrival, departure, PickupDropOffType.REGULAR, PickupDropOffType.REGULAR);
+    }
+
+    public GtfsScheduleBuilder addStopTime(String tripId, String stopId, ServiceDayTime arrival,
+                                           ServiceDayTime departure, PickupDropOffType pickupType,
+                                           PickupDropOffType dropOffType) {
         checkNotBuilt();
         Trip trip = trips.get(tripId);
         if (trip == null) {
@@ -162,7 +200,7 @@ public class GtfsScheduleBuilder {
         }
         log.debug("Adding stop time at {} to trip {} ({}-{})", stopId, tripId, arrival, departure);
         StopTime stopTime = new StopTime(stop, trip, serviceDayTimeCache.getOrAdd(arrival),
-                serviceDayTimeCache.getOrAdd(departure));
+                serviceDayTimeCache.getOrAdd(departure), pickupType, dropOffType);
         stop.addStopTime(stopTime);
         trip.addStopTime(stopTime);
         return this;
@@ -170,22 +208,101 @@ public class GtfsScheduleBuilder {
 
     public GtfsScheduleBuilder addTransfer(String fromStopId, String toStopId, TransferType transferType,
                                            @Nullable Integer minTransferTime) {
+        return addTransfer(fromStopId, toStopId, null, null, null, null, transferType, minTransferTime);
+    }
+
+    /**
+     * Adds a transfer, which may apply to particular routes or trips only, see
+     * {@link org.naviqore.timetable.model.Transfer}. A transfer of the in-seat types links two trips, which it has to
+     * name, and may leave out its stops: it is then from the last stop of the arriving trip to the first stop of the
+     * departing one.
+     * <p>
+     * Once the stations have their stops, the schedule is built only if each trip a transfer names calls at the stop of
+     * its side, or at a stop of the station, and if no transfer of the in-seat types names a station.
+     */
+    public GtfsScheduleBuilder addTransfer(@Nullable String fromStopId, @Nullable String toStopId,
+                                           @Nullable String fromRouteId, @Nullable String toRouteId,
+                                           @Nullable String fromTripId, @Nullable String toTripId,
+                                           TransferType transferType, @Nullable Integer minTransferTime) {
         checkNotBuilt();
-        Stop fromStop = stops.get(fromStopId);
-        if (fromStop == null) {
-            throw new IllegalArgumentException("Stop " + fromStopId + " does not exist");
-        }
-        Stop toStop = stops.get(toStopId);
-        if (toStop == null) {
-            throw new IllegalArgumentException("Stop " + toStopId + " does not exist");
-        }
+        Route fromRoute = fromRouteId == null ? null : getRoute(fromRouteId);
+        Route toRoute = toRouteId == null ? null : getRoute(toRouteId);
+        Trip fromTrip = fromTripId == null ? null : getTrip(fromTripId, fromRoute);
+        Trip toTrip = toTripId == null ? null : getTrip(toTripId, toRoute);
         if (transferType == TransferType.MINIMUM_TIME && minTransferTime == null) {
             throw new IllegalArgumentException(
                     "Minimal transfer time is not present for transfer of type " + transferType.name() + " from stop " + fromStopId + " to stop " + toStopId);
         }
+        boolean linksTrips = linksTrips(transferType);
+        if (linksTrips && (fromTrip == null || toTrip == null)) {
+            throw new IllegalArgumentException(
+                    "Transfer of type " + transferType.name() + " from stop " + fromStopId + " to stop " + toStopId + " does not name both trips");
+        }
+
+        if (fromStopId == null || toStopId == null) {
+            if (!linksTrips) {
+                throw new IllegalArgumentException(
+                        "Transfer of type " + transferType.name() + " does not name both stops");
+            }
+            linkedTripsTransfers.add(new LinkedTripsTransfer(fromRoute, toRoute, Objects.requireNonNull(fromTrip),
+                    Objects.requireNonNull(toTrip), transferType, minTransferTime));
+            return this;
+        }
+
+        Stop fromStop = getStop(fromStopId);
+        Stop toStop = getStop(toStopId);
         log.debug("Adding transfer {}-{} of type {} {}", fromStopId, toStopId, transferType, minTransferTime);
-        fromStop.addTransfer(new Transfer(fromStop, toStop, transferType, minTransferTime));
+        fromStop.addTransfer(
+                new Transfer(fromStop, toStop, fromRoute, toRoute, fromTrip, toTrip, transferType, minTransferTime));
         return this;
+    }
+
+    private Stop getStop(String stopId) {
+        Stop stop = stops.get(stopId);
+        if (stop == null) {
+            throw new IllegalArgumentException("Stop " + stopId + " does not exist");
+        }
+        return stop;
+    }
+
+    private Route getRoute(String routeId) {
+        Route route = routes.get(routeId);
+        if (route == null) {
+            throw new IllegalArgumentException("Route " + routeId + " does not exist");
+        }
+        return route;
+    }
+
+    private Trip getTrip(String tripId, @Nullable Route route) {
+        Trip trip = trips.get(tripId);
+        if (trip == null) {
+            throw new IllegalArgumentException("Trip " + tripId + " does not exist");
+        }
+        if (route != null && !trip.getRoute().equals(route)) {
+            throw new IllegalArgumentException("Trip " + tripId + " does not belong to route " + route.getId());
+        }
+        return trip;
+    }
+
+    /**
+     * Adds the transfers between linked trips that leave out their stops, from the last stop of the arriving trip to
+     * the first stop of the departing one, once the stop times of the trips are sorted.
+     */
+    private void addLinkedTripsTransfers() {
+        for (LinkedTripsTransfer transfer : linkedTripsTransfers) {
+            for (Trip trip : List.of(transfer.fromTrip(), transfer.toTrip())) {
+                if (trip.getStopTimes().isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Transfer from trip " + transfer.fromTrip().getId() + " to trip " + transfer.toTrip()
+                                    .getId() + " leaves out its stops, but trip " + trip.getId() + " has no stop " + "times");
+                }
+            }
+            Stop fromStop = transfer.fromTrip().getStopTimes().getLast().stop();
+            Stop toStop = transfer.toTrip().getStopTimes().getFirst().stop();
+            fromStop.addTransfer(
+                    new Transfer(fromStop, toStop, transfer.fromRoute(), transfer.toRoute(), transfer.fromTrip(),
+                            transfer.toTrip(), transfer.transferType(), transfer.minTransferTime()));
+        }
     }
 
     /**
@@ -207,8 +324,11 @@ public class GtfsScheduleBuilder {
             throw new IllegalArgumentException("At least one calendar has to be set.");
         }
 
-        // initialize: make immutable and resize arrays to capacity
+        // initialize: make immutable and resize arrays to capacity, the stops once the transfers between linked trips,
+        // which take their stops from the sorted stop times of the trips, are added, and the transfers checked
         trips.values().parallelStream().forEach(Initializable::initialize);
+        addLinkedTripsTransfers();
+        stops.values().parallelStream().forEach(GtfsScheduleBuilder::checkTransfers);
         stops.values().parallelStream().forEach(Initializable::initialize);
         routes.values().parallelStream().forEach(Initializable::initialize);
         calendars.values().parallelStream().forEach(Initializable::initialize);
@@ -253,6 +373,7 @@ public class GtfsScheduleBuilder {
         stops.clear();
         routes.clear();
         trips.clear();
+        linkedTripsTransfers.clear();
     }
 
     private void checkNotBuilt() {
@@ -260,4 +381,12 @@ public class GtfsScheduleBuilder {
             throw new IllegalStateException("Cannot modify builder after build() has been called.");
         }
     }
+
+    /**
+     * A transfer between linked trips that leaves out its stops.
+     */
+    private record LinkedTripsTransfer(@Nullable Route fromRoute, @Nullable Route toRoute, Trip fromTrip, Trip toTrip,
+                                       TransferType transferType, @Nullable Integer minTransferTime) {
+    }
+
 }

@@ -5,10 +5,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 import org.naviqore.gtfs.schedule.type.RouteType;
-import org.naviqore.timetable.type.AccessibilityInformation;
-import org.naviqore.timetable.type.BikeInformation;
-import org.naviqore.timetable.type.ServiceDayTime;
-import org.naviqore.timetable.type.TransferType;
+import org.naviqore.timetable.type.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -180,9 +177,13 @@ class GtfsScheduleParser {
             String stop = record.get("stop_id");
             ServiceDayTime arrival = ServiceDayTime.parse(record.get("arrival_time"));
             ServiceDayTime departure = ServiceDayTime.parse(record.get("departure_time"));
+            PickupDropOffType pickupType = PickupDropOffType.parse(
+                    Utils.getStringFieldOrDefault(record, "pickup_type", ""));
+            PickupDropOffType dropOffType = PickupDropOffType.parse(
+                    Utils.getStringFieldOrDefault(record, "drop_off_type", ""));
             return builder -> {
                 try {
-                    builder.addStopTime(trip, stop, arrival, departure);
+                    builder.addStopTime(trip, stop, arrival, departure, pickupType, dropOffType);
                 } catch (IllegalArgumentException e) {
                     warnStopTime(trip, stop, e);
                 }
