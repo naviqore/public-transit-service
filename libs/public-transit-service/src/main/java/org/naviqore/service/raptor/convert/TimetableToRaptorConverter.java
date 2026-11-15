@@ -1,9 +1,11 @@
 package org.naviqore.service.raptor.convert;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.router.RaptorConfig;
 import org.naviqore.raptor.router.RaptorRouter;
 import org.naviqore.raptor.router.RaptorRouterBuilder;
+import org.naviqore.raptor.router.TripTransfer;
 import org.naviqore.timetable.RoutePartitioner;
 import org.naviqore.timetable.model.*;
 import org.naviqore.timetable.type.TransferType;
@@ -14,10 +16,12 @@ import java.util.stream.Collectors;
 /**
  * Maps timetable to RAPTOR
  * <p>
- * For each sub-route in a timetable route a route in RAPTOR is created. Only the "minimum time" transfers between
- * different stops are considered as RAPTOR transfers. In the RAPTOR model, transfers are treated exclusively as
- * pedestrian paths between stops, reflecting necessary walking connections. Thus, other types of transfers are omitted
- * from the mapping process to align with RAPTOR's conceptual model.
+ * For each sub-route in a timetable route a route in RAPTOR is created, whose trips are boarded and left only where
+ * they pick up and set down passengers. The transfers of the timetable for all trips become the walks between their
+ * stops, or the same stop transfer time of their stop: a minimum time transfer takes its time, a timed transfer none,
+ * and a transfer that is not possible refuses them. The transfers for particular routes or trips become trip transfers
+ * of RAPTOR between the sub-routes of their routes (see {@link TripTransfer}). A transfer for a station applies to its
+ * stops, unless one for the stops themselves does.
  *
  * @author munterfi
  */
@@ -43,6 +47,41 @@ public class TimetableToRaptorConverter {
         this.builder = RaptorRouter.builder(config);
     }
 
+    /**
+     * Gets the time a transfer for all trips gives the walk between its stops, or the change at its stop: its minimum
+     * time, or none for a timed transfer, whose departing trip waits for the arriving one. Empty for the other types.
+     */
+    private static Optional<Integer> getStopTransferTime(Transfer transfer) {
+        if (!isForAllTrips(transfer)) {
+            return Optional.empty();
+        }
+        return switch (transfer.getTransferType()) {
+            case MINIMUM_TIME -> transfer.getMinTransferTime();
+            case TIMED -> Optional.of(0);
+            default -> Optional.empty();
+        };
+    }
+
+    /**
+     * Whether a transfer for all trips is defined between two stops themselves, not derived from their stations.
+     */
+    private static boolean hasStopTransfer(Stop fromStop, Stop toStop) {
+        for (Transfer transfer : fromStop.getTransfers()) {
+            if (transfer.getToStop().equals(toStop) && isForAllTrips(transfer)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a transfer applies to all trips between its stops, not to particular routes or trips.
+     */
+    private static boolean isForAllTrips(Transfer transfer) {
+        return transfer.getFromRoute().isEmpty() && transfer.getToRoute().isEmpty() && transfer.getFromTrip()
+                .isEmpty() && transfer.getToTrip().isEmpty();
+    }
+
     public RaptorRouter run() {
         log.info("Converting {} trips from timetable to RAPTOR data model", schedule.getTrips().size());
 
@@ -53,6 +92,8 @@ public class TimetableToRaptorConverter {
         }
 
         processAllTransfers();
+        refuseTransfers();
+        addTripTransfers();
 
         return builder.build();
     }
@@ -79,7 +120,8 @@ public class TimetableToRaptorConverter {
             for (int i = 0; i < stopTimes.size(); i++) {
                 StopTime stopTime = stopTimes.get(i);
                 builder.addStopTime(subRoute.getId(), trip.getId(), i, stopTime.stop().getId(),
-                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds());
+                        stopTime.arrival().getTotalSeconds(), stopTime.departure().getTotalSeconds(),
+                        stopTime.pickupType().isPossible(), stopTime.dropOffType().isPossible());
             }
         }
     }
@@ -189,13 +231,13 @@ public class TimetableToRaptorConverter {
      */
     private void addToStopChildrenTransfers(Stop stop) {
         for (Transfer stopTransfer : stop.getTransfers()) {
-            if (stopTransfer.getTransferType() == TransferType.MINIMUM_TIME && stopTransfer.getMinTransferTime()
-                    .isPresent()) {
+            Optional<Integer> duration = getStopTransferTime(stopTransfer);
+            if (duration.isPresent()) {
                 for (Stop toChildStop : stopTransfer.getToStop().getChildren()) {
                     // only add new transfers if the to stop also has departures, else the raptor router does not care
                     // about this stop and the builder will throw an exception.
                     if (addedStops.contains(toChildStop)) {
-                        builder.addTransfer(stop.getId(), toChildStop.getId(), stopTransfer.getMinTransferTime().get());
+                        builder.addTransfer(stop.getId(), toChildStop.getId(), duration.get());
                     }
                 }
             }
@@ -208,12 +250,11 @@ public class TimetableToRaptorConverter {
     private void addTimetableTransfersWithPrecedence() {
         for (Stop stop : addedStops) {
             for (Transfer transfer : stop.getTransfers()) {
+                Optional<Integer> duration = getStopTransferTime(transfer);
                 // only add new transfers if the to stop also has departures, else the raptor router does not care about
                 // this stop and the builder will throw an exception.
-                if (transfer.getTransferType() == TransferType.MINIMUM_TIME && transfer.getMinTransferTime()
-                        .isPresent() && addedStops.contains(transfer.getToStop())) {
-                    builder.addTransfer(stop.getId(), transfer.getToStop().getId(),
-                            transfer.getMinTransferTime().get());
+                if (duration.isPresent() && addedStops.contains(transfer.getToStop())) {
+                    builder.addTransfer(stop.getId(), transfer.getToStop().getId(), duration.get());
                 }
             }
         }
@@ -237,19 +278,19 @@ public class TimetableToRaptorConverter {
         List<TransferGenerator.Transfer> otherTransfers = new ArrayList<>();
 
         for (Transfer transfer : stop.getTransfers()) {
-            if (transfer.getTransferType() != TransferType.MINIMUM_TIME || transfer.getMinTransferTime().isEmpty()) {
+            Optional<Integer> duration = getStopTransferTime(transfer);
+            if (duration.isEmpty()) {
                 continue;
             }
             Stop toStop = transfer.getToStop();
             // only add new transfers if the to stop also has departures, else the raptor router does not care about
             // this stop and the builder will throw an exception.
             if (addedStops.contains(toStop)) {
-                otherTransfers.add(new TransferGenerator.Transfer(stop, toStop, transfer.getMinTransferTime().get()));
+                otherTransfers.add(new TransferGenerator.Transfer(stop, toStop, duration.get()));
             }
             for (Stop childToStop : toStop.getChildren()) {
                 if (addedStops.contains(childToStop)) {
-                    parentTransfers.put(childToStop,
-                            new TransferGenerator.Transfer(stop, childToStop, transfer.getMinTransferTime().get()));
+                    parentTransfers.put(childToStop, new TransferGenerator.Transfer(stop, childToStop, duration.get()));
                 }
             }
         }
@@ -260,6 +301,117 @@ public class TimetableToRaptorConverter {
         }
 
         return parentTransfers.values();
+    }
+
+    /**
+     * Gets the stops in RAPTOR a stop of a transfer stands for: the stop, and the stops of a station.
+     */
+    private List<Stop> getRaptorStops(Stop stop) {
+        List<Stop> stops = new ArrayList<>();
+        if (addedStops.contains(stop)) {
+            stops.add(stop);
+        }
+        for (Stop child : stop.getChildren()) {
+            if (addedStops.contains(child)) {
+                stops.add(child);
+            }
+        }
+        return stops;
+    }
+
+    /**
+     * Refuses the transfers that a transfer for all trips does not allow: at its stop, or between its two stops. One
+     * for a station refuses them between its stops, except where a transfer for the stops themselves is defined.
+     */
+    private void refuseTransfers() {
+        for (Stop stop : schedule.getStops().values()) {
+            for (Transfer transfer : stop.getTransfers()) {
+                if (!isForAllTrips(transfer) || transfer.getTransferType() != TransferType.NOT_POSSIBLE) {
+                    continue;
+                }
+                for (Stop fromStop : getRaptorStops(transfer.getFromStop())) {
+                    for (Stop toStop : getRaptorStops(transfer.getToStop())) {
+                        boolean derived = !fromStop.equals(transfer.getFromStop()) || !toStop.equals(
+                                transfer.getToStop());
+                        if (!derived || !hasStopTransfer(fromStop, toStop)) {
+                            builder.refuseTransfers(fromStop.getId(), toStop.getId());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Adds the transfers for particular routes or trips as trip transfers of RAPTOR. Those derived from stations are
+     * added first, so that a transfer for the stops themselves overrides them.
+     */
+    private void addTripTransfers() {
+        int count = addTripTransfers(true) + addTripTransfers(false);
+        if (count > 0) {
+            log.info("Added {} trip transfers for particular routes or trips", count);
+        }
+    }
+
+    /**
+     * Adds the trip transfers derived from stations, or those between the stops of the transfers themselves.
+     *
+     * @return the number of trip transfers added.
+     */
+    private int addTripTransfers(boolean derivedFromStations) {
+        int count = 0;
+        for (Stop stop : schedule.getStops().values()) {
+            for (Transfer transfer : stop.getTransfers()) {
+                if (isForAllTrips(transfer)) {
+                    continue;
+                }
+                TripTransfer.Type type = switch (transfer.getTransferType()) {
+                    case MINIMUM_TIME, TIMED -> TripTransfer.Type.MINIMUM_TIME;
+                    case NOT_POSSIBLE -> TripTransfer.Type.NOT_POSSIBLE;
+                    case IN_SEAT -> TripTransfer.Type.IN_SEAT;
+                    case RECOMMENDED, IN_SEAT_FORBIDDEN -> TripTransfer.Type.STOP_TIME;
+                };
+                // a timed transfer takes no time: the departing trip waits for the arriving one
+                int duration = transfer.getTransferType() == TransferType.MINIMUM_TIME ? transfer.getMinTransferTime()
+                        .orElseThrow() : 0;
+                String fromTripId = transfer.getFromTrip().map(Trip::getId).orElse(null);
+                String toTripId = transfer.getToTrip().map(Trip::getId).orElse(null);
+                for (Stop fromStop : getRaptorStops(transfer.getFromStop())) {
+                    for (Stop toStop : getRaptorStops(transfer.getToStop())) {
+                        boolean derived = !fromStop.equals(transfer.getFromStop()) || !toStop.equals(
+                                transfer.getToStop());
+                        if (derived != derivedFromStations) {
+                            continue;
+                        }
+                        for (String fromRouteId : getRaptorRouteIds(transfer.getFromRoute(), fromTripId, fromStop)) {
+                            for (String toRouteId : getRaptorRouteIds(transfer.getToRoute(), toTripId, toStop)) {
+                                builder.addTripTransfer(
+                                        new TripTransfer(fromStop.getId(), fromRouteId, fromTripId, toStop.getId(),
+                                                toRouteId, toTripId, type, duration));
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Gets the routes in RAPTOR a side of a transfer names at a stop: none for a trip, whose route RAPTOR knows, or for
+     * no route; else the sub-routes of the route that call at the stop.
+     */
+    private List<@Nullable String> getRaptorRouteIds(Optional<? extends Route> route, @Nullable String tripId,
+                                                     Stop stop) {
+        if (tripId != null || route.isEmpty()) {
+            return Collections.singletonList(null);
+        }
+        return partitioner.getSubRoutes(route.get())
+                .stream()
+                .filter(subRoute -> subRoute.getStopsSequence().contains(stop))
+                .map(RoutePartitioner.SubRoute::getId)
+                .toList();
     }
 
 }
