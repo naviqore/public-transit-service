@@ -32,6 +32,9 @@ class LabelPostprocessor {
     // routing backward): the last of the time window, see Query
     private final Map<Integer, Integer> latestSourceTimes = new HashMap<>();
 
+    // the leg of each ride by its label: the connections of an isoline share most of their rides
+    private final Map<QueryState.Label, RaptorLeg> rideLegs = new IdentityHashMap<>();
+
     /**
      * Postprocessor to convert labels into connections
      *
@@ -152,13 +155,29 @@ class LabelPostprocessor {
 
     /**
      * Creates a single leg from the list of chronological labels at the given index. Handles timezone resolution logic
-     * by looking at adjacent route legs.
+     * by looking at adjacent route legs. The leg of a ride depends on its label alone, so the connections that share
+     * the label share the leg.
      *
      * @param chronologicalLabels the list of labels in chronological order.
      * @param index               the index of the current label to convert.
      * @return the constructed RaptorLeg.
      */
     private RaptorLeg createLeg(List<QueryState.Label> chronologicalLabels, int index) {
+        QueryState.Label currentLabel = chronologicalLabels.get(index);
+        if (currentLabel.type() != QueryState.LabelType.ROUTE) {
+            return createLegOfLabel(chronologicalLabels, index);
+        }
+
+        RaptorLeg leg = rideLegs.get(currentLabel);
+        if (leg == null) {
+            leg = createLegOfLabel(chronologicalLabels, index);
+            rideLegs.put(currentLabel, leg);
+        }
+
+        return leg;
+    }
+
+    private RaptorLeg createLegOfLabel(List<QueryState.Label> chronologicalLabels, int index) {
         QueryState.Label currentLabel = chronologicalLabels.get(index);
         LegContext context = extractLegContext(currentLabel);
 
