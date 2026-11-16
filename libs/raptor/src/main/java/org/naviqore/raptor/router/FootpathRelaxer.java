@@ -28,6 +28,9 @@ class FootpathRelaxer {
 
     private final QueryState queryState;
 
+    // the time beyond which a label is of no use, see setTimeLimit
+    private int timeLimit;
+
     /**
      * @param queryState              the query state with the best time per stop and label per stop and round.
      * @param raptorData              the current raptor data structures.
@@ -57,6 +60,18 @@ class FootpathRelaxer {
         this.allowSourceTransfers = allowSourceTransfers;
         this.allowTargetTransfers = allowTargetTransfers;
         this.targetStopIndices = IntStream.of(targetStopIndices).boxed().collect(Collectors.toSet());
+        this.timeLimit = timeType == TimeType.DEPARTURE ? QueryState.INFINITY : -QueryState.INFINITY;
+    }
+
+    /**
+     * Sets the time beyond which a walk sets no label: later than it, or routing backward earlier. A label beyond the
+     * best time at the target or the cut-off time of the query is removed when its round ends, and nothing that follows
+     * from it is of use.
+     *
+     * @param timeLimit the time limit, or infinity (routing backward: minus infinity) for none.
+     */
+    void setTimeLimit(int timeLimit) {
+        this.timeLimit = timeLimit;
     }
 
     /**
@@ -158,6 +173,9 @@ class FootpathRelaxer {
 
             // calculate the target time for the transfer in the given time direction
             int targetTime = sourceTime + timeDirection * (transfer.duration() + minTransferDuration);
+            if (targetTime * timeDirection > timeLimit * timeDirection) {
+                continue;
+            }
 
             // compare the walk as it allows to board a trip: right away, without the same stop transfer time a route
             // target time does not yet include

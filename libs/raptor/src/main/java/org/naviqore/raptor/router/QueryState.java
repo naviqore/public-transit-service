@@ -23,9 +23,11 @@ import java.util.function.IntUnaryOperator;
  * best times are kept per round, as in the RAPTOR paper: the best time of a round is the best of that round and the
  * rounds before it, over all passes so far, and each round starts from the best times of the round before it in the
  * same pass. A label is then only better if no connection with as many trips or fewer was as good, which a single best
- * time over all rounds would not tell: a later pass may have needed more trips for it. A query of one pass needs no
- * best times per round: its rounds only improve on the rounds before them, so the best times of its current round are
- * those of all its rounds, and all rounds share one array.
+ * time over all rounds would not tell: a later pass may have needed more trips for it. A round takes over the best
+ * times of the round before it only at the stops where these changed since it last did, so that a pass costs what it
+ * improves, not the number of stops. A query of one pass needs no best times per round: its rounds only improve on the
+ * rounds before them, so the best times of its current round are those of all its rounds, and all rounds share one
+ * array.
  * <p>
  * The marked stops are bit sets, which a round reads in the order of the stops by their set bits: a round marks few of
  * all stops, and a range query runs many rounds.
@@ -48,6 +50,8 @@ final class QueryState {
     // arrivals on a trip
     private final List<int[]> bestTimes = new ArrayList<>();
     private final List<int[]> bestTripTimes = new ArrayList<>();
+    // with best times per round: per round, the stops whose best times changed since the next round took them over
+    private final List<BitSet> changedStopsPerRound = new ArrayList<>();
     // the stops whose best arrival on a trip the current round improved, to walk on from
     private final BitSet tripArrivalImprovedMask;
     // the best time at the target per round, of the round and the rounds before it
@@ -103,8 +107,7 @@ final class QueryState {
         ensureRoundExists();
 
         if (bestTimesPerRound) {
-            takeBetter(bestTimes.get(round), bestTimes.get(round - 1));
-            takeBetter(bestTripTimes.get(round), bestTripTimes.get(round - 1));
+            takeBetterOfRoundBefore();
         }
         bestTimesAtTarget[round] = better(bestTimesAtTarget[round], bestTimesAtTarget[round - 1]);
     }
@@ -116,13 +119,21 @@ final class QueryState {
 
         bestLabelsPerRound.add(new Label[stops.length]);
         bestTripLabelsPerRound.add(new Label[stops.length]);
-        if (bestTimesPerRound || round == 0) {
+        if (round == 0) {
             bestTimes.add(unreachedTimes());
             bestTripTimes.add(unreachedTimes());
+        } else if (bestTimesPerRound) {
+            // a new round starts from the best times of the round before it, at every stop
+            bestTimes.add(bestTimes.get(round - 1).clone());
+            bestTripTimes.add(bestTripTimes.get(round - 1).clone());
+            changedStopsPerRound.get(round - 1).clear();
         } else {
             // a query of one pass: the rounds share the best times, see the class comment
             bestTimes.add(bestTimes.getFirst());
             bestTripTimes.add(bestTripTimes.getFirst());
+        }
+        if (bestTimesPerRound) {
+            changedStopsPerRound.add(new BitSet(stops.length));
         }
         bestTimesAtTarget = Arrays.copyOf(bestTimesAtTarget, round + 1);
         bestTimesAtTarget[round] = unreached;
@@ -134,10 +145,29 @@ final class QueryState {
         return times;
     }
 
-    private void takeBetter(int[] times, int[] otherTimes) {
-        for (int stopIdx = 0; stopIdx < times.length; stopIdx++) {
-            times[stopIdx] = better(times[stopIdx], otherTimes[stopIdx]);
+    /**
+     * Takes over the best times of the round before the current one where they are better. They can only be better at
+     * the stops where they changed since the current round last took them over: at every other stop, the current round
+     * was as good then, and its best times only improve.
+     */
+    private void takeBetterOfRoundBefore() {
+        int[] times = bestTimes.get(round);
+        int[] timesBefore = bestTimes.get(round - 1);
+        int[] tripTimes = bestTripTimes.get(round);
+        int[] tripTimesBefore = bestTripTimes.get(round - 1);
+        BitSet changedStops = changedStopsPerRound.get(round);
+        BitSet changedStopsBefore = changedStopsPerRound.get(round - 1);
+        for (int stopIdx = changedStopsBefore.nextSetBit(0); stopIdx >= 0; stopIdx = changedStopsBefore.nextSetBit(
+                stopIdx + 1)) {
+            int time = better(times[stopIdx], timesBefore[stopIdx]);
+            int tripTime = better(tripTimes[stopIdx], tripTimesBefore[stopIdx]);
+            if (time != times[stopIdx] || tripTime != tripTimes[stopIdx]) {
+                times[stopIdx] = time;
+                tripTimes[stopIdx] = tripTime;
+                changedStops.set(stopIdx);
+            }
         }
+        changedStopsBefore.clear();
     }
 
     private int better(int time, int otherTime) {
@@ -184,6 +214,9 @@ final class QueryState {
         bestTripLabelsPerRound.get(round)[stopIdx] = label;
         bestTripTimes.get(round)[stopIdx] = label.targetTime();
         tripArrivalImprovedMask.set(stopIdx);
+        if (bestTimesPerRound) {
+            changedStopsPerRound.get(round).set(stopIdx);
+        }
     }
 
     /**
@@ -207,6 +240,9 @@ final class QueryState {
      */
     void setBestTime(int stopIdx, int time) {
         bestTimes.get(round)[stopIdx] = time;
+        if (bestTimesPerRound) {
+            changedStopsPerRound.get(round).set(stopIdx);
+        }
     }
 
     /**

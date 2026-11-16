@@ -84,7 +84,9 @@ RAPTOR works in rounds. Round 0 walks from the source stops. Each round _k_ then
 improved in round _k − 1_, rides their trips to the following stops, and walks from the stops it reached on a trip.
 For every stop and round it keeps a label: how the stop was reached, and when. A stop is improved if it is reached
 earlier (later, routing backward) than in any round before; only improved stops continue in the next round. Labels
-that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped.
+that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped: a round sets
+no label beyond the best arrival at the target as it is when the round starts, boards no trip that leaves after it,
+and drops the labels that its own arrival at the target beats when it ends.
 
 A trip boarded at a stop is ridden until a stop reached in the round before allows boarding a better trip there,
 which then replaces it. The trip boarded must be better: a label that comes in time for the trip ridden may, once the
@@ -145,7 +147,9 @@ the trips of such rules apart:
   finds the trips that each rule lets the rider board, and boards them in the next round, between two stops after the
   walk the rule gives. As one trip may refuse a transfer that a later one allows, it also looks at the later trips of
   the route that could be boarded where the trip was, on every day it scans; after a trip boarded by a rule, at those
-  that rule allows too. A trip no rule applies to changes as the stop allows.
+  that rule allows too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board
+  depends on the timetable and the options of the query alone, so a range query finds it once and keeps it for its
+  passes.
 
 Any other rule, staying on board or taking no longer than the stop, hides nothing: its arrivals stay at the stop, and
 the rule only adds the faster change. A target stop or an isoline takes the best arrival at the stop or in its slots.
@@ -160,7 +164,8 @@ continues from what it reaches earlier than the passes before. Only the first pa
 
 The best times are kept per round, as in the paper: the best time of a round is the best of that round and the rounds
 before it, over all passes so far. A single best time over all rounds would let a later departure with more rides prune
-an earlier one with fewer, which is a connection of its own.
+an earlier one with fewer, which is a connection of its own. A round takes over the best times of the round before it
+only at the stops where they changed since it last did, so a pass costs what it improves, not the number of stops.
 
 - For **connections**, a first pass leaves at the end of the window: it finds the best connections leaving after the
   window, which bound the passes in the window but are not reported. Each pass then records where it reaches the
@@ -191,6 +196,9 @@ The time window chooses the query of the router:
 |---------------|----------------------------------------------------------------|------------------------|
 | Connections   | `connectionQuery`, then optimized travel times (on by default) | `connectionRangeQuery` |
 | Isolines      | `isolineQuery`                                                 | `isolineRangeQuery`    |
+
+The connections of an isoline share the rides they have in common: a ride is one leg, which the router reconstructs and
+the service maps once, for all the connections that take it.
 
 ### Transfers of the timetable
 

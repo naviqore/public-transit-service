@@ -57,6 +57,7 @@ final class TripTransfers {
     private static final int[] NO_SLOTS = new int[0];
 
     private final int numberOfStops;
+    private final int numberOfGroups;
     // per slot: the stop it is at, the routes a group of its arrival ends at there, sorted, and those groups
     private final int[] slotStops;
     private final int[][] governedRoutes;
@@ -74,10 +75,12 @@ final class TripTransfers {
     private final boolean[][] routesWithTransfers;
     private final BitSet[] routeStopsWithTransfers;
 
-    private TripTransfers(int numberOfStops, int[] slotStops, int[][] governedRoutes, Group[][] governingGroups,
-                          int[][] walkTargets, int[][] walksToOwnSlots, int[][] arrivalSlots, Group[][][] groups,
-                          int[][][] stopSlots, boolean[][] routesWithTransfers, BitSet[] routeStopsWithTransfers) {
+    private TripTransfers(int numberOfStops, int numberOfGroups, int[] slotStops, int[][] governedRoutes,
+                          Group[][] governingGroups, int[][] walkTargets, int[][] walksToOwnSlots, int[][] arrivalSlots,
+                          Group[][][] groups, int[][][] stopSlots, boolean[][] routesWithTransfers,
+                          BitSet[] routeStopsWithTransfers) {
         this.numberOfStops = numberOfStops;
+        this.numberOfGroups = numberOfGroups;
         this.slotStops = slotStops;
         this.governedRoutes = governedRoutes;
         this.governingGroups = governingGroups;
@@ -94,7 +97,7 @@ final class TripTransfers {
      * Without any trip transfer.
      */
     static TripTransfers none(int numberOfStops, int numberOfRouteStops, int numberOfRoutes) {
-        return new TripTransfers(numberOfStops, NO_SLOTS, new int[0][], new Group[0][], new int[0][], new int[0][],
+        return new TripTransfers(numberOfStops, 0, NO_SLOTS, new int[0][], new Group[0][], new int[0][], new int[0][],
                 new int[][]{filled(numberOfRouteStops), filled(numberOfRouteStops)}, new Group[2][][], new int[2][][],
                 new boolean[][]{new boolean[numberOfRoutes], new boolean[numberOfRoutes]},
                 new BitSet[]{new BitSet(), new BitSet()});
@@ -108,6 +111,13 @@ final class TripTransfers {
 
     private static int direction(TimeType timeType) {
         return timeType == TimeType.DEPARTURE ? FORWARD : BACKWARD;
+    }
+
+    /**
+     * The number of groups, each with an {@link Group#index} below it.
+     */
+    int numberOfGroups() {
+        return numberOfGroups;
     }
 
     /**
@@ -233,6 +243,8 @@ final class TripTransfers {
         private final Map<Integer, Integer> toTripRules = new HashMap<>();
         private final Map<Integer, Integer> fromTripAnyRules = new HashMap<>();
         private final Map<Integer, Integer> toTripAnyRules = new HashMap<>();
+        // the number of the group among the groups of the router
+        int index = NO_INDEX;
         // where the search boards the route the group ends at (routing backward: starts from), or NO_INDEX
         int toOffset = NO_INDEX;
         int fromOffset = NO_INDEX;
@@ -581,7 +593,9 @@ final class TripTransfers {
                 return none(numberOfStops, numberOfRouteStops, numberOfRoutes);
             }
 
+            int numberOfGroups = 0;
             for (Group group : groups.values()) {
+                group.index = numberOfGroups++;
                 group.toOffset = findOffset(group.toRouteIdx, group.toStopIdx, true);
                 group.fromOffset = findOffset(group.fromRouteIdx, group.fromStopIdx, false);
                 if (group.isAtOneStop()) {
@@ -755,9 +769,10 @@ final class TripTransfers {
             log.info("Compiled {} groups of trip transfers from {} and to {} routes at stops, into {} slots",
                     groups.size(), forwardOrigins.size(), backwardOrigins.size(), slotStops.size());
 
-            return new TripTransfers(numberOfStops, slotStops.stream().mapToInt(Integer::intValue).toArray(),
-                    governedRoutes, governingGroups, walkTargets, walksToOwnSlots, arrivalSlots, routeStopGroups,
-                    stopSlots, routesWithTransfers, routeStopsWithTransfers);
+            return new TripTransfers(numberOfStops, numberOfGroups,
+                    slotStops.stream().mapToInt(Integer::intValue).toArray(), governedRoutes, governingGroups,
+                    walkTargets, walksToOwnSlots, arrivalSlots, routeStopGroups, stopSlots, routesWithTransfers,
+                    routeStopsWithTransfers);
         }
     }
 }
