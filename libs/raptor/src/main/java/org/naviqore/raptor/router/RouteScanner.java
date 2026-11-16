@@ -23,6 +23,7 @@ class RouteScanner {
     private static final int NO_LIMIT = -1;
     private static final int NO_TRIP_FOUND = -1;
     private static final int NOT_POSSIBLE = -1;
+    private static final int NOT_READ = Integer.MIN_VALUE;
 
     /**
      * The number of trips a route runs on a day from which the trip to take at a stop is found by binary search, not by
@@ -51,6 +52,8 @@ class RouteScanner {
 
     private final BitSet routesToScanMask;
 
+    // the furthest trip time of each route on the days to scan, read from the days when the route is first scanned
+    private final int[] furthestTripTimes;
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
 
@@ -132,6 +135,9 @@ class RouteScanner {
                 days[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
             }
         }
+
+        furthestTripTimes = new int[routes.length];
+        Arrays.fill(furthestTripTimes, NOT_READ);
     }
 
     /**
@@ -221,7 +227,9 @@ class RouteScanner {
      */
     private void scanRoute(int currentRouteIdx, int round) {
         Route currentRoute = routes[currentRouteIdx];
-        if (!isRouteActiveInDaysToScan(currentRouteIdx)) {
+        // without a trip on the days to scan, the route has no furthest trip time
+        int furthestTripTime = getFurthestTripTimeOfRoute(currentRouteIdx);
+        if (furthestTripTime == (forward ? -INFINITY : INFINITY)) {
             return;
         }
 
@@ -254,7 +262,7 @@ class RouteScanner {
 
             // find first marked stop in route
             if (activeTrip == null) {
-                if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, currentRouteIdx, numberOfStops)) {
+                if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, furthestTripTime, numberOfStops)) {
                     continue;
                 }
             } else if (canArrive(routeStop)) {
@@ -268,7 +276,7 @@ class RouteScanner {
                         lastRound, currentRouteIdx)) {
                     continue;
                 }
-            } else if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, currentRouteIdx, numberOfStops)) {
+            } else if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, furthestTripTime, numberOfStops)) {
                 // the trip does not set down passengers at the stop (pick them up, routing backward), but a label of
                 // the round before may still catch an earlier trip there
                 continue;
@@ -726,36 +734,26 @@ class RouteScanner {
         return trip.stopTimes[forward ? stopTimeIndex + 1 : stopTimeIndex] + trip.dayTimeOffset;
     }
 
-    private boolean isRouteActiveInDaysToScan(int routeIdx) {
-        for (DayStopTimes day : days) {
-            if (day.numberOfTrips(routeIdx) > 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * This method checks if a trip can be entered at the stop in the current round. A trip can be entered if the stop
      * was reached in a previous round, and is not the first (targetTime) / last (sourceTime) stop of a trip or (for
      * performance reasons) assuming that this check is only run when not traveling with an active trip, the stop was
      * not marked in a previous round (i.e., the lasts round trip query would be repeated).
      *
-     * @param stopTime      the time at the stop.
-     * @param stopIdx       the index of the stop to check if a trip can be entered.
-     * @param stopOffset    the offset of the stop in the route.
-     * @param routeIdx      the index of the current route.
-     * @param numberOfStops the number of stops of the current route.
+     * @param stopTime         the time at the stop.
+     * @param stopIdx          the index of the stop to check if a trip can be entered.
+     * @param stopOffset       the offset of the stop in the route.
+     * @param furthestTripTime the furthest trip time of the current route, see {@link #getFurthestTripTimeOfRoute}.
+     * @param numberOfStops    the number of stops of the current route.
      */
-    private boolean canEnterAtStop(int stopTime, int stopIdx, int stopOffset, int routeIdx, int numberOfStops) {
+    private boolean canEnterAtStop(int stopTime, int stopIdx, int stopOffset, int furthestTripTime, int numberOfStops) {
         int unreachableValue = forward ? INFINITY : -INFINITY;
         if (stopTime == unreachableValue) {
             return false;
         }
 
         // no trip of the route departs after the time at the stop (arrives before it, routing backward)
-        if (isBetter(getFurthestTripTimeOfRoute(routeIdx), stopTime)) {
+        if (isBetter(furthestTripTime, stopTime)) {
             return false;
         }
 
@@ -780,12 +778,23 @@ class RouteScanner {
      * Get the latest possible stop time for a route on all days to scan (for time type DEPARTURE) or the earliest
      * possible stop time for a route on all days to scan (for time type ARRIVAL).
      * <p>
-     * Returns -INFINITY for DEPARTURE and INFINITY for ARRIVAL if no trip is possible.
+     * Returns -INFINITY for DEPARTURE and INFINITY for ARRIVAL if no trip is possible. The time is the same at every
+     * stop of the route and in every round of the query, so it is read from the days once per route.
      *
      * @param routeIdx the index of the route to get the furthest trip time from.
      * @return the furthest trip time of the route.
      */
     private int getFurthestTripTimeOfRoute(int routeIdx) {
+        int furthestTripTime = furthestTripTimes[routeIdx];
+        if (furthestTripTime == NOT_READ) {
+            furthestTripTime = readFurthestTripTimeOfRoute(routeIdx);
+            furthestTripTimes[routeIdx] = furthestTripTime;
+        }
+
+        return furthestTripTime;
+    }
+
+    private int readFurthestTripTimeOfRoute(int routeIdx) {
         // every day counts, since trips of one service day can run after trips of the next (e.g. after midnight)
         int furthestTripTime = forward ? -INFINITY : INFINITY;
         for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
