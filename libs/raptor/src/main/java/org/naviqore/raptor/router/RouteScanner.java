@@ -54,6 +54,8 @@ class RouteScanner {
 
     // the furthest trip time of each route on the days to scan, read from the days when the route is first scanned
     private final int[] furthestTripTimes;
+    // of a query of several passes: the trips the groups of trip transfers allow changing to, by the index of the group
+    private final KnownTargets @Nullable [] knownTargets;
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
 
@@ -68,9 +70,10 @@ class RouteScanner {
      * @param timeType          the time type (arrival or departure).
      * @param referenceDateTime the reference date time for the query.
      * @param maxDaysToScan     the maximum number of days to scan.
+     * @param severalPasses     whether the query runs several passes, which find the same trip transfers again.
      */
     RouteScanner(QueryState queryState, RaptorData raptorData, QueryConfig queryConfig, TimeType timeType,
-                 OffsetDateTime referenceDateTime, int maxDaysToScan) {
+                 OffsetDateTime referenceDateTime, int maxDaysToScan, boolean severalPasses) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -138,6 +141,7 @@ class RouteScanner {
 
         furthestTripTimes = new int[routes.length];
         Arrays.fill(furthestTripTimes, NOT_READ);
+        knownTargets = severalPasses ? new KnownTargets[tripTransfers.numberOfGroups()] : null;
     }
 
     /**
@@ -540,7 +544,7 @@ class RouteScanner {
                         continue;
                     }
                     // whether a later trip can be boarded where the active trip was is asked of the few that do better
-                    TransferTarget target = findTripTransferTarget(group, position, time);
+                    TransferTarget target = findTripTransferTarget(group, position, time, dayIndex, trip);
                     if (target != null && (best == null || isBetter(target.entryTime(),
                             best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position,
                             entryTime))) {
@@ -603,6 +607,45 @@ class RouteScanner {
             }
         }
         boardings.add(new PendingBoarding(stopOffset, trip));
+    }
+
+    /**
+     * Finds the trip a group of trip transfers allows changing to from a trip of a day to scan, see
+     * {@link #findTripTransferTarget(TripTransfers.Group, int, int)}. The trip found depends on the timetable and the
+     * configuration of the query alone, so a query of several passes, which finds the same changes pass after pass,
+     * keeps it.
+     *
+     * @param knownDayIndex the index of the day of the known trip among the days to scan.
+     * @param knownTrip     the number of the known trip among the trips of its route on that day.
+     */
+    private @Nullable TransferTarget findTripTransferTarget(TripTransfers.Group group, int knownPosition, int time,
+                                                            int knownDayIndex, int knownTrip) {
+        if (knownTargets == null) {
+            return findTripTransferTarget(group, knownPosition, time);
+        }
+
+        int knownRouteIdx = forward ? group.fromRouteIdx : group.toRouteIdx;
+        KnownTargets known = knownTargets[group.index];
+        if (known == null) {
+            int numberOfTrips = 0;
+            for (DayStopTimes day : days) {
+                numberOfTrips += day.numberOfTrips(knownRouteIdx);
+            }
+            known = new KnownTargets(numberOfTrips);
+            knownTargets[group.index] = known;
+        }
+
+        int trip = knownTrip;
+        for (int dayIndex = 0; dayIndex < knownDayIndex; dayIndex++) {
+            trip += days[dayIndex].numberOfTrips(knownRouteIdx);
+        }
+        // a route that calls at the stop of the group twice reaches it at two times
+        if (known.times[trip] != time) {
+            known.times[trip] = time;
+            known.targets[trip] = findTripTransferTarget(group, knownPosition, time);
+        }
+
+        return known.targets[trip];
     }
 
     /**
@@ -1112,6 +1155,23 @@ class RouteScanner {
      * @param trip       the trip, boarded after the labels of the trip transfer.
      */
     private record PendingBoarding(int stopOffset, ActiveTrip trip) {
+    }
+
+    /**
+     * The trips a group of trip transfers allows changing to from the trips of the route it starts from (routing
+     * backward: ends at) on the days to scan, one day after the other: for each trip, the time it reaches its stop at
+     * that the trip was found for, and the trip found, null for none.
+     */
+    private static final class KnownTargets {
+
+        private final int[] times;
+        private final @Nullable TransferTarget[] targets;
+
+        KnownTargets(int numberOfTrips) {
+            times = new int[numberOfTrips];
+            Arrays.fill(times, NOT_READ);
+            targets = new TransferTarget[numberOfTrips];
+        }
     }
 
     /**

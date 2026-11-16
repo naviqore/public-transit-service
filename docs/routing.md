@@ -145,7 +145,9 @@ the trips of such rules apart:
   finds the trips that each rule lets the rider board, and boards them in the next round, between two stops after the
   walk the rule gives. As one trip may refuse a transfer that a later one allows, it also looks at the later trips of
   the route that could be boarded where the trip was, on every day it scans; after a trip boarded by a rule, at those
-  that rule allows too. A trip no rule applies to changes as the stop allows.
+  that rule allows too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board
+  depends on the timetable and the options of the query alone, so a range query finds it once and keeps it for its
+  passes.
 
 Any other rule, staying on board or taking no longer than the stop, hides nothing: its arrivals stay at the stop, and
 the rule only adds the faster change. A target stop or an isoline takes the best arrival at the stop or in its slots.

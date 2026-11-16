@@ -102,6 +102,23 @@ class RaptorRouterTripTransferTest {
         return builder.build();
     }
 
+    /**
+     * F runs S - A at 07:40 and 07:45, reaching A after 10; L runs A - C - B - C - D at 08:00, calling at C at 08:10
+     * and again at 08:30; Y runs C - E at 08:15 and 08:35, reaching E after 10. C refuses transfers, except from L to
+     * the trips of Y the trip transfers name.
+     */
+    private static RaptorAlgorithm routeCallingTwiceWhereItChanges(String... tripsOfY) {
+        RaptorRouterBuilder builder = builder("S", "A", "B", "C", "D", "E");
+        addRoute(builder, "F", List.of("S", "A"), new int[]{0, 10}, 7 * 60 + 40, 7 * 60 + 45);
+        addRoute(builder, "L", List.of("A", "C", "B", "C", "D"), new int[]{0, 10, 20, 30, 40}, 8 * 60);
+        addRoute(builder, "Y", List.of("C", "E"), new int[]{0, 10}, 8 * 60 + 15, 8 * 60 + 35);
+        builder.refuseTransfers("C", "C");
+        for (String trip : tripsOfY) {
+            builder.addTripTransfer(trips("C", "L-0", "C", trip, TripTransfer.Type.MINIMUM_TIME, 0));
+        }
+        return builder.build();
+    }
+
     @Test
     void onlyTheTripsATripTransferNames_change() {
         RaptorAlgorithm raptor = everyOtherTripChanges();
@@ -138,6 +155,44 @@ class RaptorRouterTripTransferTest {
                 QueryConfig.defaults());
         assertEquals(at(8, 50), isolines.get("D").getArrivalTime());
         assertEquals(at(8, 10), isolines.get("C").getArrivalTime());
+    }
+
+    @Test
+    void aRouteCallingTwiceWhereItChanges_changesAtItsFirstCall_inEveryPassOfATimeWindow() {
+        RaptorAlgorithm raptor = routeCallingTwiceWhereItChanges("Y-0", "Y-1");
+
+        // a pass for each trip of F: both ride the same trip of L past C twice
+        List<Connection> connections = raptor.connectionRangeQuery(Map.of("S", at(7, 40)), Map.of("E", 0),
+                TimeType.DEPARTURE, Duration.ofMinutes(10), QueryConfig.defaults());
+        assertEquals(1, connections.size());
+        assertEquals(List.of("F-1", "L-0", "Y-0"), tripsOf(connections.getFirst()));
+        assertEquals(at(7, 45), connections.getFirst().getDepartureTime());
+        assertEquals(at(8, 25), connections.getFirst().getArrivalTime());
+
+        Map<String, Connection> isolines = raptor.isolineRangeQuery(Map.of("S", at(7, 40)), TimeType.DEPARTURE,
+                Duration.ofMinutes(10), QueryConfig.defaults());
+        assertEquals(List.of("F-1", "L-0", "Y-0"), tripsOf(isolines.get("E")));
+        assertEquals(at(8, 25), isolines.get("E").getArrivalTime());
+    }
+
+    @Test
+    void aRouteCallingTwiceWhereItChanges_changesToTheTripItsTripTransferNames_inEveryPassOfATimeWindow() {
+        RaptorAlgorithm raptor = routeCallingTwiceWhereItChanges("Y-1");
+
+        List<Connection> connections = raptor.connectionRangeQuery(Map.of("S", at(7, 40)), Map.of("E", 0),
+                TimeType.DEPARTURE, Duration.ofMinutes(10), QueryConfig.defaults());
+        assertEquals(1, connections.size());
+        assertEquals(List.of("F-1", "L-0", "Y-1"), tripsOf(connections.getFirst()));
+        assertEquals(at(7, 45), connections.getFirst().getDepartureTime());
+        assertEquals(at(8, 45), connections.getFirst().getArrivalTime());
+
+        // as the query at each departure of the window answers
+        for (int minute : new int[]{40, 45}) {
+            List<Connection> atDeparture = route(raptor, Map.of("S", at(7, minute)), "E", QueryConfig.defaults());
+            assertEquals(1, atDeparture.size());
+            assertEquals(List.of(minute == 40 ? "F-0" : "F-1", "L-0", "Y-1"), tripsOf(atDeparture.getFirst()));
+            assertEquals(at(8, 45), atDeparture.getFirst().getArrivalTime());
+        }
     }
 
     @Test
