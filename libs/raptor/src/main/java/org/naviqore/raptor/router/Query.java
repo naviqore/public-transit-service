@@ -237,6 +237,7 @@ class Query {
         routeScanner.startPass();
         initializeSourceStops(passOffset);
         routeScanner.setFirstTripLimit(firstTripLimit);
+        setTimeLimit();
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
         footpathRelaxer.relaxInitial();
@@ -245,6 +246,7 @@ class Query {
         while (hasNextRound()) {
             // add label layer for new round
             queryState.addNewRound();
+            setTimeLimit();
 
             // scan all routs and mark stops that have improved
             routeScanner.scan(queryState.getRound());
@@ -443,11 +445,7 @@ class Query {
      * @param round the round to remove suboptimal labels for.
      */
     private void removeSuboptimalLabelsForRound(int round) {
-        int bestTime = cutoffTime;
-        if (timeDirection * queryState.getBestTimeAtTarget() < timeDirection * bestTime) {
-            bestTime = queryState.getBestTimeAtTarget();
-        }
-
+        int bestTime = getTimeLimit();
         if (bestTime == INFINITY || bestTime == -INFINITY) {
             return;
         }
@@ -474,6 +472,30 @@ class Query {
                 queryState.unmark(stopIdx);
             }
         }
+    }
+
+    /**
+     * Gets the time beyond which a label of the current round is of no use: the best time at the target, or the cut-off
+     * time if that is better.
+     */
+    private int getTimeLimit() {
+        int bestTime = cutoffTime;
+        if (timeDirection * queryState.getBestTimeAtTarget() < timeDirection * bestTime) {
+            bestTime = queryState.getBestTimeAtTarget();
+        }
+
+        return bestTime;
+    }
+
+    /**
+     * Sets the time limit of the current round for its route scan and its walks, as it is when the round starts: a
+     * label beyond it would be removed once the round ends, see {@link #removeSuboptimalLabelsForRound}, and so would
+     * every label that follows from it, so the round does not set it in the first place.
+     */
+    private void setTimeLimit() {
+        int timeLimit = getTimeLimit();
+        routeScanner.setTimeLimit(timeLimit);
+        footpathRelaxer.setTimeLimit(timeLimit);
     }
 
     /**

@@ -58,7 +58,8 @@ class RouteScanner {
     private final KnownTargets @Nullable [] knownTargets;
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
-
+    // the time beyond which a label is of no use, see setTimeLimit
+    private int timeLimit;
     // the boardings found along trip transfers, by route: those to board in the round scanned, and in the next
     private @Nullable Map<Integer, List<PendingBoarding>> pendingBoardings;
     private @Nullable Map<Integer, List<PendingBoarding>> nextPendingBoardings;
@@ -141,6 +142,7 @@ class RouteScanner {
 
         furthestTripTimes = new int[routes.length];
         Arrays.fill(furthestTripTimes, NOT_READ);
+        timeLimit = forward ? INFINITY : -INFINITY;
         knownTargets = severalPasses ? new KnownTargets[tripTransfers.numberOfGroups()] : null;
     }
 
@@ -164,6 +166,25 @@ class RouteScanner {
      */
     void setFirstTripLimit(int duration) {
         firstTripLimit = duration;
+    }
+
+    /**
+     * Sets the time beyond which the scan sets no label and boards no trip: later than it, or routing backward earlier.
+     * A label beyond the best time at the target or the cut-off time of the query is removed when its round ends, and
+     * every label that follows from it is beyond that time too: a trip boarded after it, a walk from it, and a trip
+     * transfer from an arrival beyond it.
+     *
+     * @param timeLimit the time limit, or infinity (routing backward: minus infinity) for none.
+     */
+    void setTimeLimit(int timeLimit) {
+        this.timeLimit = timeLimit;
+    }
+
+    /**
+     * Whether a time is beyond the time limit, see {@link #setTimeLimit}.
+     */
+    private boolean isBeyondTimeLimit(int time) {
+        return forward ? time > timeLimit : time < timeLimit;
     }
 
     /**
@@ -338,7 +359,7 @@ class RouteScanner {
         int activeTime = 0;
         if (activeTrip != null) {
             activeTime = getArrivalTime(activeTrip, stopOffset);
-            if (canArrive(routeStop)) {
+            if (canArrive(routeStop) && !isBeyondTimeLimit(activeTime)) {
                 int arrivalIdx = tripTransfers.arrivalIndex(timeType, routeStopIdx, stopIdx);
                 boolean boardsAfterArrival = updateArrival(activeTime, activeTrip, arrivalIdx, round, routeIdx);
                 TripTransfers.Group[] groups = tripTransfers.groups(timeType, routeStopIdx);
@@ -523,7 +544,7 @@ class RouteScanner {
                 for (int trip = firstTrip; trip != NO_TRIP_FOUND && trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
                     // when the trip reaches the stop, and when it is boarded where the active trip was
                     int time = stopTimes[routeStopTimes + trip * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
-                    if (best != null && !isBetter(time, best.entryTime())) {
+                    if (best != null && !isBetter(time, best.entryTime()) || isBeyondTimeLimit(time)) {
                         break;
                     }
                     if (stopTransferTime != NOT_POSSIBLE && !isBetter(time, changedByStops)) {
@@ -555,7 +576,7 @@ class RouteScanner {
                     }
                 }
             }
-            if (best == null) {
+            if (best == null || isBeyondTimeLimit(best.entryTime())) {
                 continue;
             }
 
@@ -875,8 +896,10 @@ class RouteScanner {
                                                         int currentRouteIdx) {
         // at a stop that refuses transfers, an arrival on a trip boards no other trip, so it is not one for boarding
         boolean isImproved = !stops[stopIdx].refusesTransfers() && (forward ? targetTime < bestStopTime : targetTime > bestStopTime);
+        // an arrival beyond the time limit sets no label: an earlier trip may still be boarded at the stop
+        boolean isInTime = !isBeyondTimeLimit(targetTime);
 
-        if (isImproved) {
+        if (isImproved && isInTime) {
             queryState.setBestTime(stopIdx, targetTime);
 
             QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
@@ -887,7 +910,7 @@ class RouteScanner {
 
             return false;
         } else {
-            if (isBetter(targetTime, queryState.getBestTripTime(stopIdx))) {
+            if (isInTime && isBetter(targetTime, queryState.getBestTripTime(stopIdx))) {
                 // the earliest arrival on a trip so far, which walks start from
                 queryState.setTripLabel(stopIdx,
                         new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
@@ -981,7 +1004,7 @@ class RouteScanner {
 
             int tripTime = day.stopTimes()[firstTripTimeIdx + trip * tripStopTimes] + timeOffset;
             // beyond the limit, so is every later trip of the day
-            if (limited && isBetter(limitTime, tripTime)) {
+            if (limited && isBetter(limitTime, tripTime) || isBeyondTimeLimit(tripTime)) {
                 continue;
             }
             if (possibleTrip == null || isBetter(tripTime, possibleTrip.entryTime())) {

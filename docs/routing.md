@@ -84,7 +84,9 @@ RAPTOR works in rounds. Round 0 walks from the source stops. Each round _k_ then
 improved in round _k − 1_, rides their trips to the following stops, and walks from the stops it reached on a trip.
 For every stop and round it keeps a label: how the stop was reached, and when. A stop is improved if it is reached
 earlier (later, routing backward) than in any round before; only improved stops continue in the next round. Labels
-that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped.
+that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped: a round sets
+no label beyond the best arrival at the target as it is when the round starts, boards no trip that leaves after it,
+and drops the labels that its own arrival at the target beats when it ends.
 
 A trip boarded at a stop is ridden until a stop reached in the round before allows boarding a better trip there,
 which then replaces it. The trip boarded must be better: a label that comes in time for the trip ridden may, once the
