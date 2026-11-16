@@ -108,6 +108,21 @@ public final class TypeMapper {
     }
 
     private static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
+        // a ride the router reports in several connections, as in those of an isoline, is mapped once
+        if (leg.getType() != org.naviqore.raptor.Leg.Type.ROUTE) {
+            return mapLeg(leg, schedule, trips);
+        }
+
+        Leg ride = trips.rides.get(leg);
+        if (ride == null) {
+            ride = mapLeg(leg, schedule, trips);
+            trips.rides.put(leg, ride);
+        }
+
+        return ride;
+    }
+
+    private static Leg mapLeg(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
         Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
         Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
@@ -232,11 +247,12 @@ public final class TypeMapper {
 
     /**
      * Trips mapped for one query, each once per service day, since the many rides of an isoline's connections run on
-     * few trips.
+     * few trips; and the rides mapped for it, each once, since the connections share most of them.
      */
     public static final class Trips {
 
         private final Map<TripOfServiceDay, Trip> trips = new HashMap<>();
+        private final Map<org.naviqore.raptor.Leg, Leg> rides = new IdentityHashMap<>();
 
         private Trip get(org.naviqore.timetable.model.Trip trip, LocalDate serviceDay) {
             return trips.computeIfAbsent(new TripOfServiceDay(trip.getId(), serviceDay), _ -> map(trip, serviceDay));

@@ -195,6 +195,9 @@ The time window chooses the query of the router:
 | Connections   | `connectionQuery`, then optimized travel times (on by default) | `connectionRangeQuery` |
 | Isolines      | `isolineQuery`                                                 | `isolineRangeQuery`    |
 
+The connections of an isoline share the rides they have in common: a ride is one leg, which the router reconstructs and
+the service maps once, for all the connections that take it.
+
 ### Transfers of the timetable
 
 The service hands the transfers of the timetable (GTFS `transfers.txt`) to the router: a transfer for all trips as a
