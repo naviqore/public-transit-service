@@ -268,8 +268,9 @@ public class RaptorRouterBuilder {
                 .toList();
 
         if (routeContainers.size() > routeBuilders.size()) {
-            log.info("Split routes with trips overtaking one another, or picking up and setting down at other "
-                    + "stops, into {} additional routes", routeContainers.size() - routeBuilders.size());
+            log.info(
+                    "Split routes with trips overtaking one another, or picking up and setting down at other " + "stops, into {} additional routes",
+                    routeContainers.size() - routeBuilders.size());
         }
 
         return routeContainers;

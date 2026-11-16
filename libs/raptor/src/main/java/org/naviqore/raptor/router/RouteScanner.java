@@ -499,8 +499,9 @@ class RouteScanner {
                     // in time, and if one of its trips is boarded after the active trip (before it, routing backward)
                     int dayTime = stopTimes[routeStopTimes + (forward ? 0 : numberOfTrips - 1) * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
                     int furthestTime = (forward ? day.routeLatest()[routeIdx] : day.routeEarliest()[routeIdx]) + timeOffset;
-                    if (best != null && !isBetter(dayTime, best.entryTime()) || stopTransferTime != NOT_POSSIBLE && !isBetter(
-                            dayTime, changedByStops) || isBetter(furthestTime, activeTrip.entryTime)) {
+                    if (best != null && !isBetter(dayTime,
+                            best.entryTime()) || stopTransferTime != NOT_POSSIBLE && !isBetter(dayTime,
+                            changedByStops) || isBetter(furthestTime, activeTrip.entryTime)) {
                         continue;
                     }
                     firstTrip = findFirstPossibleTrip(stopTimes, entryTimeIdx, tripStopTimes, numberOfTrips,
@@ -533,7 +534,8 @@ class RouteScanner {
                     // whether a later trip can be boarded where the active trip was is asked of the few that do better
                     TransferTarget target = findTripTransferTarget(group, position, time);
                     if (target != null && (best == null || isBetter(target.entryTime(),
-                            best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position, entryTime))) {
+                            best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position,
+                            entryTime))) {
                         best = target;
                         bestPosition = position;
                         bestTime = time;
