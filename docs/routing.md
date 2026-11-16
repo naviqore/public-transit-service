@@ -160,7 +160,8 @@ continues from what it reaches earlier than the passes before. Only the first pa
 
 The best times are kept per round, as in the paper: the best time of a round is the best of that round and the rounds
 before it, over all passes so far. A single best time over all rounds would let a later departure with more rides prune
-an earlier one with fewer, which is a connection of its own.
+an earlier one with fewer, which is a connection of its own. A round takes over the best times of the round before it
+only at the stops where they changed since it last did, so a pass costs what it improves, not the number of stops.
 
 - For **connections**, a first pass leaves at the end of the window: it finds the best connections leaving after the
   window, which bound the passes in the window but are not reported. Each pass then records where it reaches the
