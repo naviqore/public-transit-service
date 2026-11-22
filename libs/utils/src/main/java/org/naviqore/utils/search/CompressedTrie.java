@@ -1,6 +1,7 @@
 package org.naviqore.utils.search;
 
 import lombok.ToString;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -144,7 +145,7 @@ public class CompressedTrie<T> implements Trie<T> {
         private List<V> values;
         private String segment;
 
-        Node(V value, String segment) {
+        Node(@Nullable V value, String segment) {
             this.children = new HashMap<>();
             this.values = new ArrayList<>();
             if (value != null) {
@@ -157,7 +158,7 @@ public class CompressedTrie<T> implements Trie<T> {
             children.put(child.segment.charAt(0), child);
         }
 
-        Node<V> getChildStartingWith(String segment) {
+        @Nullable Node<V> getChildStartingWith(String segment) {
             return children.get(segment.charAt(0));
         }
 

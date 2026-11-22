@@ -78,16 +78,15 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
 
     @Override
     public int compareTo(GeoCoordinate other) {
+        // coordinates closer than the tolerance on both axes are equal
         double epsilon = 1e-5;
 
-        double diffLatitude = this.latitude - other.latitude();
-        if (Math.abs(diffLatitude) > epsilon) {
-            return diffLatitude > 0 ? 1 : -1;
+        if (Math.abs(this.latitude - other.latitude()) > epsilon) {
+            return Double.compare(this.latitude, other.latitude());
         }
 
-        double diffLongitude = this.longitude - other.longitude();
-        if (Math.abs(diffLongitude) > epsilon) {
-            return diffLongitude > 0 ? 1 : -1;
+        if (Math.abs(this.longitude - other.longitude()) > epsilon) {
+            return Double.compare(this.longitude, other.longitude());
         }
 
         return 0;

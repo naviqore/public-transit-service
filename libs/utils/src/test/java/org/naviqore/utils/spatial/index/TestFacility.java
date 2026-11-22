@@ -4,6 +4,8 @@ import lombok.Getter;
 import org.naviqore.utils.spatial.CartesianCoordinate;
 import org.naviqore.utils.spatial.Location;
 
+import java.util.Objects;
+
 @Getter
 public class TestFacility implements Location<CartesianCoordinate> {
     private final String name;
@@ -27,6 +29,11 @@ public class TestFacility implements Location<CartesianCoordinate> {
         }
         var that = (TestFacility) obj;
         return this.name.equals(that.name) && this.coordinate.equals(that.coordinate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, coordinate);
     }
 
     @Override
