@@ -47,7 +47,7 @@ public final class Trip implements Comparable<Trip>, Initializable, org.naviqore
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hashCode(id);
     }
 
     @Override

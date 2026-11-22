@@ -225,6 +225,8 @@ class GtfsScheduleParser {
         void addTo(GtfsScheduleBuilder builder);
     }
 
+    // general helpers, whatever default the fields read so far happen to share
+    @SuppressWarnings("SameParameterValue")
     private static class Utils {
 
         // a field may be missing from the header, or from a record that leaves out its last, empty fields

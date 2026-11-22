@@ -1,6 +1,7 @@
 package org.naviqore.gtfs.schedule;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NullMarked;
 import org.naviqore.utils.network.FileDownloader;
 
 import java.io.File;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+@NullMarked
 @Slf4j
 class RemoteProvider implements DataProvider {
 

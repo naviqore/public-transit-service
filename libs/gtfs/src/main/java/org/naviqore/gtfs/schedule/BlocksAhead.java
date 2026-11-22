@@ -39,6 +39,7 @@ final class BlocksAhead implements AutoCloseable {
             }
         } catch (InterruptedException e) {
             // closed before the end of the file
+            Thread.currentThread().interrupt();
             return;
         } catch (IOException | RuntimeException | Error e) {
             // handed to the thread that takes the blocks, which would otherwise wait for the end forever
@@ -48,6 +49,7 @@ final class BlocksAhead implements AutoCloseable {
             blocks.put(END);
         } catch (InterruptedException e) {
             // closed
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -56,10 +58,13 @@ final class BlocksAhead implements AutoCloseable {
      *
      * @throws UncheckedIOException if the file cannot be read, and any other failure of the reading thread as it is
      */
+    @SuppressWarnings("ReferenceEquality")
+    // END is a sentinel, compared by identity
     Stream<byte[]> stream() {
         return Stream.iterate(take(), block -> block != END, _ -> take());
     }
 
+    @SuppressWarnings("ReferenceEquality") // END is a sentinel, compared by identity
     private byte[] take() {
         byte[] block;
         try {
@@ -85,6 +90,7 @@ final class BlocksAhead implements AutoCloseable {
      * Stops reading, and waits until the reading thread has ended, after which the input may be closed.
      */
     @Override
+    @SuppressWarnings("java:S2142") // the interrupt is restored once the reading thread has ended
     public void close() {
         reader.interrupt();
         boolean interrupted = false;

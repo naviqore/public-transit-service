@@ -51,6 +51,8 @@ class BlocksAheadTest {
     }
 
     @Test
+    @SuppressWarnings("InputStreamSlowMultibyteRead")
+        // read byte by byte to fail midway
     void failureToRead_isThrownWhereTheBlocksAreTaken() {
         InputStream failing = new InputStream() {
             private final InputStream records = new ByteArrayInputStream(RECORDS.getBytes(UTF_8));
@@ -71,6 +73,7 @@ class BlocksAheadTest {
         }
     }
 
+    @SuppressWarnings("InputStreamSlowMultibyteRead") // fails on the first read anyway
     @Test
     @Timeout(10)
     void failureOtherThanToRead_isThrownWhereTheBlocksAreTaken() {

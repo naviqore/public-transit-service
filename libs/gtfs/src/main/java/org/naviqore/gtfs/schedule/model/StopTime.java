@@ -26,6 +26,7 @@ public record StopTime(Stop stop, Trip trip, ServiceDayTime arrival, ServiceDayT
         this(stop, trip, arrival, departure, encode(pickupType, dropOffType));
     }
 
+    @SuppressWarnings("EnumOrdinal") // packed into a byte to keep the many stop times small
     private static byte encode(PickupDropOffType pickupType, PickupDropOffType dropOffType) {
         return (byte) (pickupType.ordinal() | dropOffType.ordinal() << 2);
     }

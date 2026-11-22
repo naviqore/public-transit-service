@@ -198,7 +198,7 @@ public class GtfsScheduleReader {
         InOrder inOrder = new InOrder(recordParser, fileType);
 
         List<String> header = List.of();
-        byte @Nullable [] block;
+        byte[] block;
         while (header.isEmpty() && (block = blocks.next()) != null) {
             try (CSVParser csvParser = FORMAT.parse(new StringReader(decode(block)))) {
                 header = csvParser.getHeaderNames();

@@ -1,5 +1,7 @@
 package org.naviqore.gtfs.schedule;
 
+import org.jspecify.annotations.NullMarked;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -8,6 +10,7 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@NullMarked
 interface DataProvider {
 
     File getZip(Path dir, String name) throws IOException;
