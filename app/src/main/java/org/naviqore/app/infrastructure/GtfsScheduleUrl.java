@@ -18,6 +18,8 @@ public class GtfsScheduleUrl implements TimetableRepository {
 
     private final String url;
 
+    // the temp directory is readable by its owner only and gets a random name
+    @SuppressWarnings("java:S5443")
     @Override
     public GtfsSchedule get() throws IOException, InterruptedException {
         Path tempDir = Files.createTempDirectory(TMP_DIRECTORY_PREFIX);
