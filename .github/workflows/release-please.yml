@@ -7,10 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
   group: release-please
@@ -23,12 +20,16 @@ env:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       version: ${{ steps.release.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           release-type: maven
@@ -78,7 +79,7 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           server-id: central
           server-username: SONATYPE_USERNAME
-          server-password: SONATYPE_TOKEN
+          server-password: SONATYPE_TOKEN # NOSONAR the name of the variable that holds the token
       - name: Publish Maven package
         run: ./mvnw --batch-mode --projects '!app,!benchmark' -DTEST_LOG_LEVEL=INFO deploy
         env:
@@ -89,6 +90,9 @@ jobs:
   docker-release:
     needs: [ release-please, verify-release ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -96,7 +100,7 @@ jobs:
           persist-credentials: false
 
       - name: Log in to ghcr
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -104,7 +108,7 @@ jobs:
 
       - name: Extract metadata for image tag
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           context: git
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -113,7 +117,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: true
