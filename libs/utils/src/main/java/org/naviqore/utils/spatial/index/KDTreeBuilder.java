@@ -18,6 +18,8 @@ public class KDTreeBuilder<T extends Location<?>> {
 
     private ArrayList<T> locations = new ArrayList<>();
 
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public KDTreeBuilder<T> addLocation(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location must not be null");
@@ -27,6 +29,8 @@ public class KDTreeBuilder<T extends Location<?>> {
         return this;
     }
 
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public KDTreeBuilder<T> addLocations(Collection<? extends T> locations) {
         if (locations == null) {
             throw new IllegalArgumentException("locations must not be null");

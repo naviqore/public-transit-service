@@ -44,6 +44,8 @@ public class KDTree<T extends Location<?>> {
                 coordinate.secondComponent());
     }
 
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     void insert(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location cannot be null");
@@ -78,6 +80,8 @@ public class KDTree<T extends Location<?>> {
      * @param location The location to find the nearest neighbor for.
      * @return The nearest neighbor to the given location.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public T nearestNeighbor(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location cannot be null");
@@ -91,6 +95,8 @@ public class KDTree<T extends Location<?>> {
      * @param coordinate The coordinate to find the nearest neighbor for.
      * @return The nearest neighbor to the given coordinate.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public T nearestNeighbor(Coordinate coordinate) {
         if (coordinate == null) {
             throw new IllegalArgumentException("Coordinate cannot be null");
@@ -149,6 +155,8 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public List<T> rangeSearch(T center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center location cannot be null");
@@ -163,6 +171,8 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public List<T> rangeSearch(Coordinate center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center coordinate cannot be null");

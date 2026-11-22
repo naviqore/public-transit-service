@@ -2,6 +2,7 @@ package org.naviqore.service.config;
 
 import lombok.Builder;
 import lombok.Value;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.service.repo.TimetableRepository;
 
 /**
@@ -96,7 +97,7 @@ public class ServiceConfig {
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }
 
-    private static <T> T validateNonNull(T value, String name) {
+    private static <T> T validateNonNull(@Nullable T value, String name) {
         if (value == null) {
             throw new IllegalArgumentException(name + " must not be null.");
         }

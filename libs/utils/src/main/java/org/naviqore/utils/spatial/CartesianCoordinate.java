@@ -1,5 +1,7 @@
 package org.naviqore.utils.spatial;
 
+import org.jspecify.annotations.Nullable;
+
 public class CartesianCoordinate implements Coordinate {
     private final double x;
     private final double y;
@@ -16,7 +18,7 @@ public class CartesianCoordinate implements Coordinate {
         }
     }
 
-    private void isOfSameType(Coordinate other) {
+    private void isOfSameType(@Nullable Coordinate other) {
         if (other == null) {
             throw new IllegalArgumentException("Other coordinate must not be null");
         }

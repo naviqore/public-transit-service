@@ -185,7 +185,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             return (int) timeWindow.toSeconds();
         }
 
-        private static void checkNonNullOrEmptyStops(Map<String, ?> stops, String labelSource) {
+        private static void checkNonNullOrEmptyStops(@Nullable Map<String, ?> stops, String labelSource) {
             if (stops == null) {
                 throw new InvalidStopException(String.format("%s stops must not be null.", labelSource));
             }

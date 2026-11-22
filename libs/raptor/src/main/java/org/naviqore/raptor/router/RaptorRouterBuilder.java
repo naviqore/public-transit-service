@@ -76,6 +76,8 @@ public class RaptorRouterBuilder {
     /**
      * Adds the slots of the trip transfers to the stops, each a copy of its stop.
      */
+    // the stop of a slot is an index of the stops without slots
+    @SuppressWarnings("javabugs:S6466")
     private static StopContext addSlots(StopContext stopContext, TripTransfers tripTransfers) {
         if (tripTransfers.numberOfSlots() == 0) {
             return stopContext;
