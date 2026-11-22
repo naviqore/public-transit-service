@@ -65,7 +65,8 @@ public class RaptorRouterBuilder {
                                     Lookup lookup) {
         int transferIdx = firstTransferIdx;
         for (Map.Entry<String, Integer> walk : walks.entrySet()) {
-            transferArr[transferIdx++] = new Transfer(lookup.stops().get(walk.getKey()), walk.getValue());
+            transferArr[transferIdx++] = new Transfer(Objects.requireNonNull(lookup.stops().get(walk.getKey())),
+                    walk.getValue());
         }
         Arrays.sort(transferArr, firstTransferIdx, transferIdx, Comparator.comparingInt(Transfer::targetStopIdx));
 
@@ -111,7 +112,7 @@ public class RaptorRouterBuilder {
             if (!stops.contains(stopId)) {
                 throw new IllegalArgumentException("Stop " + stopId + " does not exist");
             }
-            stopRoutes.get(stopId).add(id);
+            Objects.requireNonNull(stopRoutes.get(stopId)).add(id);
         }
 
         log.debug("Adding route: id={}, stopSequence={}", id, stopIds);
@@ -248,8 +249,9 @@ public class RaptorRouterBuilder {
                 Integer duration = walks == null ? null : walks.remove(targetStopId);
                 if (duration != null) {
                     transferSize--;
-                    refusedWalkTimes.put(TripTransfers.Builder.walk(lookup.stops().get(sourceStopId),
-                            lookup.stops().get(targetStopId)), duration);
+                    refusedWalkTimes.put(
+                            TripTransfers.Builder.walk(Objects.requireNonNull(lookup.stops().get(sourceStopId)),
+                                    Objects.requireNonNull(lookup.stops().get(targetStopId))), duration);
                 }
             }
         });
@@ -311,7 +313,7 @@ public class RaptorRouterBuilder {
         int[] stopRouteArr = new int[stopRoutes.values()
                 .stream()
                 .flatMap(Set::stream)
-                .mapToInt(routeId -> lookup.routes().get(routeId).length)
+                .mapToInt(routeId -> Objects.requireNonNull(lookup.routes().get(routeId)).length)
                 .sum()];
         Transfer[] transferArr = new Transfer[transferSize];
         Transfer[] reverseTransferArr = new Transfer[transferSize];
@@ -402,7 +404,7 @@ public class RaptorRouterBuilder {
             // add stops to route stop array
             Map<Integer, String> stopSequence = routeContainer.stopSequence();
             for (int position = 0; position < numberOfStops; position++) {
-                int stopIdx = lookup.stops().get(stopSequence.get(position));
+                int stopIdx = Objects.requireNonNull(lookup.stops().get(stopSequence.get(position)));
                 routeStopArr[routeStopCnt++] = new RouteStop(stopIdx, routeIdx, routeContainer.boarding(position),
                         routeContainer.alighting(position));
             }

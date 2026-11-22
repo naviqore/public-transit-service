@@ -33,7 +33,7 @@ class LabelPostprocessor {
     private final Map<Integer, Integer> latestSourceTimes = new HashMap<>();
 
     // the leg of each ride by its label: the connections of an isoline share most of their rides
-    private final Map<QueryState.Label, RaptorLeg> rideLegs = new IdentityHashMap<>();
+    private final IdentityHashMap<QueryState.Label, RaptorLeg> rideLegs = new IdentityHashMap<>();
 
     /**
      * Postprocessor to convert labels into connections
@@ -107,7 +107,7 @@ class LabelPostprocessor {
      */
     private @Nullable Connection reconstructConnectionFromLabel(QueryState.Label finalLabel) {
         // collect labels by backtracking via linked labels from target to source
-        ArrayList<QueryState.Label> labels = collectLabels(finalLabel);
+        List<QueryState.Label> labels = collectLabels(finalLabel);
 
         // combine labels where possible to merge adjacent transfers and routes into optimized route legs
         maybeCombineFirstTwoLabels(labels);
@@ -142,7 +142,7 @@ class LabelPostprocessor {
      * @param label the starting label, the target stop.
      * @return an ordered list of labels from target to source.
      */
-    private ArrayList<QueryState.Label> collectLabels(QueryState.Label label) {
+    private List<QueryState.Label> collectLabels(QueryState.Label label) {
         ArrayList<QueryState.Label> labels = new ArrayList<>();
         while (label.type() != QueryState.LabelType.INITIAL) {
             assert label.previous() != null;
@@ -290,7 +290,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineFirstTwoLabels(ArrayList<QueryState.Label> labels) {
+    private void maybeCombineFirstTwoLabels(List<QueryState.Label> labels) {
         maybeCombineLabels(labels, true);
     }
 
@@ -318,7 +318,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineLastTwoLabels(ArrayList<QueryState.Label> labels) {
+    private void maybeCombineLastTwoLabels(List<QueryState.Label> labels) {
         maybeCombineLabels(labels, false);
     }
 
@@ -330,7 +330,7 @@ class LabelPostprocessor {
      * @param fromTarget if true, the first two labels are checked, if false, the last two labels (first two legs of
      *                   connection) are checked. Note the first two labels are the two labels closest to the target!
      */
-    private void maybeCombineLabels(ArrayList<QueryState.Label> labels, boolean fromTarget) {
+    private void maybeCombineLabels(List<QueryState.Label> labels, boolean fromTarget) {
         if (labels.size() < 2) {
             return;
         }
@@ -411,7 +411,7 @@ class LabelPostprocessor {
      * @param routeLabel         the following route label
      * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
      */
-    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<QueryState.Label> labels,
+    private void maybeShiftSourceTransferCloserToFirstRoute(List<QueryState.Label> labels,
                                                             QueryState.Label transferLabel, QueryState.Label routeLabel,
                                                             int transferLabelIndex) {
         // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can

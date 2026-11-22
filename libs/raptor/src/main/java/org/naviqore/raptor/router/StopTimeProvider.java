@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Provider of the stop times of the trips running on a date.
@@ -161,7 +162,7 @@ class StopTimeProvider {
         for (Map.Entry<String, RaptorTripMaskProvider.RouteTripMask> entry : mask.tripMask().entrySet()) {
             boolean[] tripMask = entry.getValue().routeTripMask();
             int firstTripOfRoute = 0;
-            for (int routeIdx : data.getLookup().routes().get(entry.getKey())) {
+            for (int routeIdx : Objects.requireNonNull(data.getLookup().routes().get(entry.getKey()))) {
                 action.accept(routeIdx, tripMask, firstTripOfRoute);
                 firstTripOfRoute += data.getRouteTraversal().routes()[routeIdx].numberOfTrips();
             }

@@ -36,9 +36,7 @@ class Query {
     private static final int NO_LIMIT = -1;
 
     private final int[] sourceStopIndices;
-    private final int[] targetStopIndices;
     private final int[] sourceTimes;
-    private final int[] walkDurationsToTarget;
     // the target stops and the slots of trip transfers at them, with the walk from each to the target
     private final int[] targetIndices;
     private final int[] walkDurationsFromTargetIndices;
@@ -94,9 +92,7 @@ class Query {
         }
 
         this.sourceStopIndices = sourceStopIndices;
-        this.targetStopIndices = targetStopIndices;
         this.sourceTimes = sourceTimes;
-        this.walkDurationsToTarget = walkDurationsToTarget;
         this.config = config;
         this.timeType = timeType;
         this.timeWindow = timeWindow;
@@ -545,7 +541,7 @@ class Query {
          *
          * @param passOffset the offset of the pass into the time window, in seconds.
          */
-        default void afterPass(int passOffset) {
+        default void afterPass(@SuppressWarnings("unused") int passOffset) {
         }
     }
 

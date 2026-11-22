@@ -10,8 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A trip is boarded only where it picks up passengers and left only where it sets them down, and a stop or a pair of
@@ -149,7 +148,7 @@ class RaptorRouterBoardingAndRefusalTest {
         Map<String, Connection> isolines = raptor.isolineQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
                 QueryConfig.defaults());
         assertEquals(at(8, 10), isolines.get("S").getArrivalTime());
-        assertTrue(!isolines.containsKey("T"));
+        assertFalse(isolines.containsKey("T"));
     }
 
     @Test

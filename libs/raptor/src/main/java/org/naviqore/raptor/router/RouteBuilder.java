@@ -17,7 +17,7 @@ import java.util.*;
  *     <li>No trip of a route container overtakes another: RAPTOR takes the first trip it can catch at a stop and stays
  *     on it, so a route whose trips overtake one another is held in several route containers.</li>
  *     <li>The trips of a route container let passengers board and alight at the same stops, so that RAPTOR, which
- *     takes the first trip it can catch, never takes one passengers cannot board or leave there.</li>
+ *     takes the first trip it can catch, never takes one that passengers cannot board or leave there.</li>
  * </ul>
  */
 @Slf4j
@@ -116,7 +116,7 @@ class RouteBuilder {
             throw new IllegalArgumentException("Trip " + tripId + " does not exist.");
         }
 
-        if (!stopSequence.get(position).equals(stopId)) {
+        if (!stopId.equals(stopSequence.get(position))) {
             throw new IllegalArgumentException("Stop " + stopId + " does not match stop " + stopSequence.get(
                     position) + " at position " + position + ".");
         }
@@ -146,7 +146,7 @@ class RouteBuilder {
         // boarding at the last stop and alighting at the first never happen, so they do not set trips apart
         boolean boardingMatters = position < stopSequence.size() - 1;
         boolean alightingMatters = position > 0;
-        if (boardingMatters && !boarding || alightingMatters && !alighting) {
+        if ((boardingMatters && !boarding) || (alightingMatters && !alighting)) {
             byte[] access = tripAccess.computeIfAbsent(tripId, _ -> allAccess(stopSequence.size()));
             access[position] = access(boarding || !boardingMatters, alighting || !alightingMatters);
         }

@@ -261,7 +261,7 @@ public class RaptorRouterTestBuilder {
     private record Route(String id, List<String> stops, ZoneId zoneId, int firstDepartureOffset, int headWayTime,
                          int travelTimeBetweenStops, int dwellTimeAtSTop) {
 
-        public Route(String id, List<String> stops) {
+        Route(String id, List<String> stops) {
             this(id, stops, DEFAULT_ZONE_ID, DEFAULT_OFFSET, DEFAULT_HEADWAY_TIME, DEFAULT_TIME_BETWEEN_STOPS,
                     DEFAULT_DWELL_TIME);
         }

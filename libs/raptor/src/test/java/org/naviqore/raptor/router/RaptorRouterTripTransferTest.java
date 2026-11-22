@@ -39,7 +39,7 @@ class RaptorRouterTripTransferTest {
 
     /**
      * Adds a route with a trip at each start time, in minutes after the start of the day, each reaching the following
-     * stops after the given minutes; trip i is named route-i.
+     * stops after the given minutes; trip {@code i} is named route-{@code i}.
      */
     private static void addRoute(RaptorRouterBuilder builder, String routeId, List<String> stops, int[] travel,
                                  int... starts) {
@@ -146,7 +146,7 @@ class RaptorRouterTripTransferTest {
         RaptorAlgorithm raptor = everyOtherTripChanges();
 
         List<Connection> connections = raptor.connectionRangeQuery(Map.of("A", at(8, 0)), Map.of("D", 0),
-                TimeType.DEPARTURE, Duration.ofMinutes(120), QueryConfig.defaults());
+                TimeType.DEPARTURE, Duration.ofHours(2), QueryConfig.defaults());
         assertEquals(2, connections.size());
         assertEquals(List.of("X-1", "Y-0"), tripsOf(connections.get(0)));
         assertEquals(List.of("X-3", "Y-1"), tripsOf(connections.get(1)));
@@ -315,7 +315,7 @@ class RaptorRouterTripTransferTest {
 
     @Test
     void aWalkFromAnArrivalWithTripTransfers_boardsOtherRoutesAsTheWalkAllows() {
-        // from a at P4, the trip transfer to R at P5 takes an hour, but the walk to P5 still boards R2 after 240 s
+        // from trip a at P4, the trip transfer to R at P5 takes an hour, but the walk to P5 still boards R2 after 240 s
         RaptorRouterBuilder builder = builder("A", "P4", "P5", "T", "U");
         addRoute(builder, "Q", List.of("A", "P4"), new int[]{0, 5}, 9 * 60);
         addRoute(builder, "R", List.of("P5", "T"), new int[]{0, 10}, 9 * 60 + 10);
@@ -331,7 +331,7 @@ class RaptorRouterTripTransferTest {
 
     @Test
     void anInSeatTransfer_takesNoTimeAndNoMinimumTransferDuration() {
-        // a ends at S at 09:00, where b starts at 09:00; S takes 120 s to change, and the query asks for 300 s
+        // trip a ends at S at 09:00, where trip b starts at 09:00; S takes 120 s to change, and the query asks for 300 s
         RaptorRouterBuilder builder = builder("A", "S", "T");
         addRoute(builder, "Q", List.of("A", "S"), new int[]{0, 10}, 8 * 60 + 50);
         addRoute(builder, "R", List.of("S", "T"), new int[]{0, 10}, 9 * 60, 10 * 60);
@@ -346,7 +346,7 @@ class RaptorRouterTripTransferTest {
 
     @Test
     void aTripTransferThatIsNotPossible_takesTheNextTrip() {
-        // from a, the R of 08:05 is refused; the stop allows the R of 08:20
+        // from trip a, the R of 08:05 is refused; the stop allows the R of 08:20
         RaptorRouterBuilder builder = builder("A", "S", "T");
         addRoute(builder, "Q", List.of("A", "S"), new int[]{0, 10}, 7 * 60 + 50);
         addRoute(builder, "R", List.of("S", "T"), new int[]{0, 10}, 8 * 60 + 5, 8 * 60 + 20);

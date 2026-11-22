@@ -36,7 +36,6 @@ class RouteScanner {
     private final int[] stopRoutes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
-    private final Transfer[] walks;
     private final TripTransfers tripTransfers;
     private final QueryState queryState;
 
@@ -80,7 +79,6 @@ class RouteScanner {
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
-        this.walks = raptorData.getStopContext().transfers();
         this.tripTransfers = raptorData.getTripTransfers();
 
         // note: will also change outside of scanner, due to footpath relaxation
@@ -115,7 +113,7 @@ class RouteScanner {
                         .getStopTimesForDate(previousDay, queryConfig);
 
                 int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(ZoneOffset.UTC),
-                        referenceDateTime).getSeconds();
+                        referenceDateTime).toSeconds();
 
                 // if latest stop time of previous day is after / equal the departure time, we need to include the
                 // previous day to scanning
@@ -155,6 +153,11 @@ class RouteScanner {
             return previous != null && previous.type() == QueryState.LabelType.INITIAL;
         }
         return label.type() == QueryState.LabelType.INITIAL;
+    }
+
+    private static QueryState.Label routeLabel(ActiveTrip activeTrip, int targetTime, int routeIdx, int stopIdx) {
+        return new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE, routeIdx,
+                activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
     }
 
     /**
@@ -316,8 +319,8 @@ class RouteScanner {
             // a trip boarded here replaces the active trip unless it is worse: the stop's label may be in time for an
             // earlier (later, routing backward) trip than the active one, or only for a worse one, or for none, once
             // the transfer time is added
-            if (activeTrip == null || possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
-                    possibleTrip.entryTime())) {
+            if (activeTrip == null || (possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
+                    possibleTrip.entryTime()))) {
                 activeTrip = possibleTrip;
             }
         }
@@ -362,7 +365,7 @@ class RouteScanner {
             if (canArrive(routeStop) && !isBeyondTimeLimit(activeTime)) {
                 int arrivalIdx = tripTransfers.arrivalIndex(timeType, routeStopIdx, stopIdx);
                 boolean boardsAfterArrival = updateArrival(activeTime, activeTrip, arrivalIdx, round, routeIdx);
-                TripTransfers.Group[] groups = tripTransfers.groups(timeType, routeStopIdx);
+                TripTransfers.Group @Nullable [] groups = tripTransfers.groups(timeType, routeStopIdx);
                 if (groups != null) {
                     addPendingBoardings(groups, activeTrip, activeTime, stopOffset, arrivalIdx, routeIdx,
                             boardsAfterArrival);
@@ -398,8 +401,8 @@ class RouteScanner {
         }
 
         // as in scanRoute, a trip boarded here replaces the active trip unless it is worse
-        if (activeTrip == null || possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
-                possibleTrip.entryTime())) {
+        if (activeTrip == null || (possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
+                possibleTrip.entryTime()))) {
             return possibleTrip;
         }
         return activeTrip;
@@ -504,7 +507,7 @@ class RouteScanner {
             }
 
             boolean activeHasRules = group.hasRules(activeTrip.tripOffset, forward);
-            boolean changesByStops = !group.restrictive || boardsAfterArrival && !activeHasRules;
+            boolean changesByStops = !group.restrictive || (boardsAfterArrival && !activeHasRules);
             int stopTransferTime = changesByStops ? transferTime(group, TripTransfers.DEFAULT) : NOT_POSSIBLE;
             int changedByStops = activeTime + timeDirection * stopTransferTime;
 
@@ -532,19 +535,19 @@ class RouteScanner {
                     // in time, and if one of its trips is boarded after the active trip (before it, routing backward)
                     int dayTime = stopTimes[routeStopTimes + (forward ? 0 : numberOfTrips - 1) * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
                     int furthestTime = (forward ? day.routeLatest()[routeIdx] : day.routeEarliest()[routeIdx]) + timeOffset;
-                    if (best != null && !isBetter(dayTime,
-                            best.entryTime()) || stopTransferTime != NOT_POSSIBLE && !isBetter(dayTime,
-                            changedByStops) || isBetter(furthestTime, activeTrip.entryTime)) {
+                    if ((best != null && !isBetter(dayTime,
+                            best.entryTime())) || (stopTransferTime != NOT_POSSIBLE && !isBetter(dayTime,
+                            changedByStops)) || isBetter(furthestTime, activeTrip.entryTime)) {
                         continue;
                     }
                     firstTrip = findFirstPossibleTrip(stopTimes, entryTimeIdx, tripStopTimes, numberOfTrips,
                             activeTrip.entryTime - timeOffset);
                 }
 
-                for (int trip = firstTrip; trip != NO_TRIP_FOUND && trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
+                for (int trip = firstTrip; trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
                     // when the trip reaches the stop, and when it is boarded where the active trip was
                     int time = stopTimes[routeStopTimes + trip * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
-                    if (best != null && !isBetter(time, best.entryTime()) || isBeyondTimeLimit(time)) {
+                    if ((best != null && !isBetter(time, best.entryTime())) || isBeyondTimeLimit(time)) {
                         break;
                     }
                     if (stopTransferTime != NOT_POSSIBLE && !isBetter(time, changedByStops)) {
@@ -670,12 +673,12 @@ class RouteScanner {
     }
 
     /**
-     * Finds the trip a group of trip transfers allows changing to from a trip that reaches the stop the group starts at
-     * at a time: the first trip of the route the group ends at that leaves its stop once the transfer of the pair of
-     * trips has taken its time, on the days to scan. Routing backward, the trip known is the one the group ends at,
-     * leaving at the time, and the trip found the last of the route the group starts from arriving in time for it. The
-     * trips are read in their order until one is possible: a trip transfer may refuse a trip and allow a later one, or
-     * allow a change in no time to a trip leaving much later.
+     * Finds the trip a group of trip transfers allows changing to from a trip reaching the stop the group starts at, at
+     * a time: the first trip of the route the group ends at that leaves its stop once the transfer of the pair of trips
+     * has taken its time, on the days to scan. Routing backward, the trip known is the one the group ends at, leaving
+     * at the time, and the trip found the last of the route the group starts from arriving in time for it. The trips
+     * are read in their order until one is possible: a trip transfer may refuse a trip and allow a later one, or allow
+     * a change in no time to a trip leaving much later.
      *
      * @param group         the group.
      * @param knownPosition the position of the known trip on its route.
@@ -699,7 +702,7 @@ class RouteScanner {
             int firstTripTimeIdx = day.routeStopTimes()[routeIdx] + 2 * offset + (forward ? 1 : 0);
             int trip = findFirstPossibleTrip(day.stopTimes(), firstTripTimeIdx, tripStopTimes, numberOfTrips,
                     time - timeOffset);
-            for (; trip != NO_TRIP_FOUND && trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
+            for (; trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
                 int tripTime = day.stopTimes()[firstTripTimeIdx + trip * tripStopTimes] + timeOffset;
                 if (best != null && !isBetter(tripTime, best.entryTime())) {
                     break;
@@ -826,16 +829,8 @@ class RouteScanner {
             return false;
         }
 
-        if (forward && (stopOffset + 1 == numberOfStops)) {
-            // last stop in route, does not make sense to check for trip to enter
-            return false;
-        } else if (!forward && (stopOffset == 0)) {
-            // first stop in route, does not make sense to check for trip to enter
-            return false;
-        }
-
-        // got first marked stop in the route
-        return true;
+        // the last stop in the route (the first, routing backward) has no trip to enter; else a marked stop is found
+        return forward ? stopOffset + 1 != numberOfStops : stopOffset != 0;
     }
 
     /**
@@ -902,8 +897,7 @@ class RouteScanner {
         if (isImproved && isInTime) {
             queryState.setBestTime(stopIdx, targetTime);
 
-            QueryState.Label label = new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
-                    currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel);
+            QueryState.Label label = routeLabel(activeTrip, targetTime, currentRouteIdx, stopIdx);
             queryState.setLabel(thisRound, stopIdx, label);
             queryState.setTripLabel(stopIdx, label);
             queryState.mark(stopIdx);
@@ -912,9 +906,7 @@ class RouteScanner {
         } else {
             if (isInTime && isBetter(targetTime, queryState.getBestTripTime(stopIdx))) {
                 // the earliest arrival on a trip so far, which walks start from
-                queryState.setTripLabel(stopIdx,
-                        new QueryState.Label(activeTrip.entryTime, targetTime, QueryState.LabelType.ROUTE,
-                                currentRouteIdx, activeTrip.tripOffset, stopIdx, activeTrip.previousLabel));
+                queryState.setTripLabel(stopIdx, routeLabel(activeTrip, targetTime, currentRouteIdx, stopIdx));
             }
 
             // a stop not reached in the last round of this pass has no label to board an earlier trip from: a label of
@@ -969,6 +961,8 @@ class RouteScanner {
         int limitTime = limited ? previousLabel.targetTime() + timeDirection * firstTripLimit : 0;
 
         ActiveTrip possibleTrip = null;
+        // the day loop of addStopTimesInRange, kept inline on the hot path
+        //noinspection DuplicatedCode
         for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
             DayStopTimes day = days[dayIndex];
             int numberOfTrips = day.numberOfTrips(routeIdx);
@@ -1004,7 +998,7 @@ class RouteScanner {
 
             int tripTime = day.stopTimes()[firstTripTimeIdx + trip * tripStopTimes] + timeOffset;
             // beyond the limit, so is every later trip of the day
-            if (limited && isBetter(limitTime, tripTime) || isBeyondTimeLimit(tripTime)) {
+            if ((limited && isBetter(limitTime, tripTime)) || isBeyondTimeLimit(tripTime)) {
                 continue;
             }
             if (possibleTrip == null || isBetter(tripTime, possibleTrip.entryTime())) {
@@ -1116,6 +1110,8 @@ class RouteScanner {
      */
     private void addStopTimesInRange(List<Integer> stopTimesInRange, int routeIdx, int numberOfStops, int stopOffset,
                                      int minValue, int maxValue) {
+        // the day loop of findPossibleTrip, kept inline on the hot path
+        //noinspection DuplicatedCode
         for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
             DayStopTimes day = days[dayIndex];
             int numberOfTrips = day.numberOfTrips(routeIdx);
@@ -1198,7 +1194,7 @@ class RouteScanner {
     }
 
     /**
-     * A trip a trip transfer allows changing to, see {@link #findTripTransferTarget}.
+     * A trip that a trip transfer allows changing to, see {@link #findTripTransferTarget}.
      *
      * @param transferTime the time the trip transfer takes.
      */

@@ -71,7 +71,7 @@ class RaptorConnection implements Connection {
 
     @Override
     public int getDurationInSeconds() {
-        return (int) Duration.between(getDepartureTime(), getArrivalTime()).getSeconds();
+        return (int) Duration.between(getDepartureTime(), getArrivalTime()).toSeconds();
     }
 
     @Override

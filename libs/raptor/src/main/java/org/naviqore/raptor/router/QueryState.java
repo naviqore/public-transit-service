@@ -44,8 +44,8 @@ final class QueryState {
 
     // the labels per round and stop of the best arrival for boarding and of the best arrival on a trip, set in the
     // round that improved them
-    private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-    private final List<Label[]> bestTripLabelsPerRound = new ArrayList<>();
+    private final List<@Nullable Label[]> bestLabelsPerRound = new ArrayList<>();
+    private final List<@Nullable Label[]> bestTripLabelsPerRound = new ArrayList<>();
     // the best times per round and stop, of the round and the rounds before it: comparable for boarding, and of
     // arrivals on a trip
     private final List<int[]> bestTimes = new ArrayList<>();
@@ -304,10 +304,10 @@ final class QueryState {
      * @return the label per stop, null for a stop not reached.
      */
     @Nullable Label[] getEarliestArrivalLabels(int numberOfStops, IntUnaryOperator stopOf) {
-        Label[] earliestArrivals = new Label[numberOfStops];
+        @Nullable Label[] earliestArrivals = new Label[numberOfStops];
         for (int i = 0; i < bestLabelsPerRound.size(); i++) {
-            Label[] tripLabels = bestTripLabelsPerRound.get(i);
-            Label[] labels = bestLabelsPerRound.get(i);
+            @Nullable Label[] tripLabels = bestTripLabelsPerRound.get(i);
+            @Nullable Label[] labels = bestLabelsPerRound.get(i);
             for (int idx = 0; idx < stops.length; idx++) {
                 int stopIdx = idx < numberOfStops ? idx : stopOf.applyAsInt(idx);
                 earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[idx]);

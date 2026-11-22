@@ -5,7 +5,6 @@ import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.TimeType;
 
 import java.util.*;
-import java.util.function.BinaryOperator;
 import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -162,7 +161,7 @@ final class TripTransfers {
     /**
      * The groups a route stop starts: those from the route at the stop, or routing backward, those to it.
      */
-    @Nullable Group[] groups(TimeType timeType, int routeStopIdx) {
+    Group @Nullable [] groups(TimeType timeType, int routeStopIdx) {
         Group[][] directionGroups = groups[direction(timeType)];
         return directionGroups == null ? null : directionGroups[routeStopIdx];
     }
@@ -204,23 +203,6 @@ final class TripTransfers {
     int[] walksToOwnSlots(int slot) {
         int[] walks = walksToOwnSlots[slot - numberOfStops];
         return walks == null ? NO_SLOTS : walks;
-    }
-
-    /**
-     * Folds the labels of the slots into their stops: the earlier label, or of equally early ones the one of the stop.
-     *
-     * @param labels  the labels of the stops and slots.
-     * @param earlier of two labels, the earlier one, or the first of equally early ones.
-     * @return the labels of the stops.
-     */
-    QueryState.@Nullable Label[] foldSlots(QueryState.@Nullable Label[] labels,
-                                           BinaryOperator<QueryState.@Nullable Label> earlier) {
-        QueryState.Label[] stopLabels = Arrays.copyOf(labels, numberOfStops);
-        for (int slot = numberOfStops; slot < labels.length; slot++) {
-            int stopIdx = slotStops[slot - numberOfStops];
-            stopLabels[stopIdx] = earlier.apply(stopLabels[stopIdx], labels[slot]);
-        }
-        return stopLabels;
     }
 
     /**
@@ -271,7 +253,7 @@ final class TripTransfers {
         }
 
         private static long pair(int fromPosition, int toPosition) {
-            return (long) fromPosition << 32 | toPosition & 0xFFFFFFFFL;
+            return (long) fromPosition << 32 | (toPosition & 0xFFFFFFFFL);
         }
 
         // the maps are mostly empty: then a look-up neither boxes nor hashes the position
@@ -406,7 +388,7 @@ final class TripTransfers {
             pairs = pairMap.keySet().stream().mapToLong(Long::longValue).sorted().toArray();
             pairRules = new int[pairs.length];
             for (int i = 0; i < pairs.length; i++) {
-                pairRules[i] = pairMap.get(pairs[i]);
+                pairRules[i] = Objects.requireNonNull(pairMap.get(pairs[i]));
             }
             pairMap.clear();
             fromPositions = IntStream.concat(Arrays.stream(pairs).mapToInt(pair -> (int) (pair >>> 32)),
@@ -463,7 +445,7 @@ final class TripTransfers {
         }
 
         static long walk(int sourceStopIdx, int targetStopIdx) {
-            return (long) sourceStopIdx << 32 | targetStopIdx & 0xFFFFFFFFL;
+            return (long) sourceStopIdx << 32 | (targetStopIdx & 0xFFFFFFFFL);
         }
 
         private static int encode(TripTransfer transfer) {
@@ -476,8 +458,8 @@ final class TripTransfers {
         }
 
         void add(TripTransfer transfer) {
-            int fromStopIdx = lookup.stops().get(transfer.fromStopId());
-            int toStopIdx = lookup.stops().get(transfer.toStopId());
+            int fromStopIdx = Objects.requireNonNull(lookup.stops().get(transfer.fromStopId()));
+            int toStopIdx = Objects.requireNonNull(lookup.stops().get(transfer.toStopId()));
             List<int[]> from = resolve(transfer.fromRouteId(), transfer.fromTripId(), fromStopIdx);
             List<int[]> to = resolve(transfer.toRouteId(), transfer.toTripId(), toStopIdx);
             boolean fromTrip = transfer.fromTripId() != null;
@@ -487,7 +469,7 @@ final class TripTransfers {
             int specificity;
             if (fromTrip && toTrip) {
                 specificity = 1;
-            } else if (fromTrip && toRoute || toTrip && fromRoute) {
+            } else if ((fromTrip && toRoute) || (toTrip && fromRoute)) {
                 specificity = 2;
             } else if (fromTrip || toTrip) {
                 specificity = 3;
@@ -522,7 +504,7 @@ final class TripTransfers {
                 if (routeId != null && !routeTraversal.routes()[trip[0]].id().equals(routeId)) {
                     throw new IllegalArgumentException("Trip " + tripId + " does not belong to route " + routeId);
                 }
-                return List.<int[]>of(trip);
+                return List.of(trip);
             }
 
             List<int[]> routes = new ArrayList<>();
@@ -612,8 +594,6 @@ final class TripTransfers {
             }
 
             // the origins of the groups: forward the route at the stop a group starts at, backward the one it ends at
-            List<List<Integer>> forwardOrigins = new ArrayList<>();
-            List<List<Integer>> backwardOrigins = new ArrayList<>();
             Map<List<Integer>, List<Group>> forwardGroups = new LinkedHashMap<>();
             Map<List<Integer>, List<Group>> backwardGroups = new LinkedHashMap<>();
             for (Group group : groups.values()) {
@@ -622,8 +602,8 @@ final class TripTransfers {
                 forwardGroups.computeIfAbsent(forwardOrigin, _ -> new ArrayList<>()).add(group);
                 backwardGroups.computeIfAbsent(backwardOrigin, _ -> new ArrayList<>()).add(group);
             }
-            forwardOrigins.addAll(forwardGroups.keySet());
-            backwardOrigins.addAll(backwardGroups.keySet());
+            List<List<Integer>> forwardOrigins = new ArrayList<>(forwardGroups.keySet());
+            List<List<Integer>> backwardOrigins = new ArrayList<>(backwardGroups.keySet());
             forwardOrigins.sort(Builder::compareKeys);
             backwardOrigins.sort(Builder::compareKeys);
 
@@ -649,7 +629,7 @@ final class TripTransfers {
                 for (List<Integer> origin : forward ? forwardOrigins : backwardOrigins) {
                     int stopIdx = origin.get(0);
                     int routeIdx = origin.get(1);
-                    List<Group> originGroupList = originGroups.get(origin);
+                    List<Group> originGroupList = Objects.requireNonNull(originGroups.get(origin));
                     Route route = routeTraversal.routes()[routeIdx];
 
                     // the route stops of the origin start its groups

@@ -25,7 +25,7 @@ class RaptorRouterIsolineLegsTest {
 
     /**
      * Adds a route with a trip at each start time, in minutes after the start of the day, each reaching the following
-     * stops after the given minutes; trip i is named route-i.
+     * stops after the given minutes; trip {@code i} is named route-{@code i}.
      */
     private static void addRoute(RaptorRouterBuilder builder, String routeId, List<String> stops, int[] travel,
                                  int... starts) {

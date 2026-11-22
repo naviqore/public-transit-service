@@ -2,6 +2,7 @@ package org.naviqore.raptor.router;
 
 import lombok.Builder;
 import lombok.Getter;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.utils.cache.EvictionCache;
 
@@ -50,7 +51,7 @@ public class RaptorConfig {
     }
 
     public static class NoMaskProvider implements RaptorTripMaskProvider {
-        private Map<String, String[]> tripIds;
+        private @Nullable Map<String, String[]> tripIds;
 
         @Override
         public void setTripIds(Map<String, String[]> tripIds) {

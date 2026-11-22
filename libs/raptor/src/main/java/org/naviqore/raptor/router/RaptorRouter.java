@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
@@ -105,8 +106,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        QueryState.Label[] labels = new Query(this, sourceStopIndices, new int[]{}, refStopTimes, new int[]{}, config,
-                timeType, timeWindow, referenceDateTime, this.config).routeIsolines();
+        QueryState.@Nullable Label[] labels = new Query(this, sourceStopIndices, new int[]{}, refStopTimes, new int[]{},
+                config, timeType, timeWindow, referenceDateTime, this.config).routeIsolines();
 
         return new LabelPostprocessor(this, timeType, referenceDateTime, sourceStopIndices, refStopTimes,
                 timeWindow).reconstructIsolines(labels);
@@ -202,7 +203,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             // get min and max values
             OffsetDateTime min = sourceStops.values().stream().min(OffsetDateTime::compareTo).orElseThrow();
             OffsetDateTime max = sourceStops.values().stream().max(OffsetDateTime::compareTo).orElseThrow();
-            if (Duration.between(min, max).getSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
+            if (Duration.between(min, max).toSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
                 throw new InvalidTimeException("Difference between source stop times must be less than 24 hours.");
             }
         }
