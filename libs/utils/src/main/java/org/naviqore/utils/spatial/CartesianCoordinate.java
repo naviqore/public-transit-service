@@ -56,7 +56,12 @@ public class CartesianCoordinate implements Coordinate {
             return false;
         }
         var that = (CartesianCoordinate) obj;
-        return this.x == that.x && this.y == that.y;
+        return Double.compare(this.x, that.x) == 0 && Double.compare(this.y, that.y) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Double.hashCode(x) + Double.hashCode(y);
     }
 
     @Override
