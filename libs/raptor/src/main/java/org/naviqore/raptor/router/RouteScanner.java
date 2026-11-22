@@ -936,7 +936,9 @@ class RouteScanner {
      */
     private @Nullable ActiveTrip findPossibleTrip(int stopIdx, Stop stop, int stopOffset, int routeIdx,
                                                   int numberOfStops, int lastRound) {
-        return findPossibleTrip(queryState.getLabel(lastRound, stopIdx), stop, stopOffset, routeIdx, numberOfStops);
+        QueryState.Label label = queryState.getLabel(lastRound, stopIdx);
+        assert label != null : "a stop to board at has a label of the last round";
+        return findPossibleTrip(label, stop, stopOffset, routeIdx, numberOfStops);
     }
 
     /**

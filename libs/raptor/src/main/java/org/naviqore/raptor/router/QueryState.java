@@ -95,6 +95,8 @@ final class QueryState {
      * Adds a new round with empty labels and reset marked stop masks. With best times per round, the new round's best
      * times become the better of its own, of the passes before, and those of the round before it.
      */
+    // round starts at 0 and only grows, so the round before the new one exists
+    @SuppressWarnings("javabugs:S6466")
     void addNewRound() {
         // reset marked stop masks
         BitSet tmp = markedStopsMaskThisRound;
@@ -181,7 +183,7 @@ final class QueryState {
      * @param stopIdx the index of the stop to retrieve the label for.
      * @return the label for the stop in the specified round, or null if not present.
      */
-    Label getLabel(int round, int stopIdx) {
+    @Nullable Label getLabel(int round, int stopIdx) {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
 
