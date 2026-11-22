@@ -12,10 +12,7 @@ import org.naviqore.benchmark.workload.Query;
 import org.naviqore.benchmark.workload.Workload;
 import org.naviqore.benchmark.workload.Workloads;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,8 +56,8 @@ public class AnswerComparison {
         // outcomes in the order of their kind, each with its number of queries and a few examples
         Map<Outcome, Integer> counts = new TreeMap<>();
         Map<Outcome, List<String>> examples = new TreeMap<>();
-        try (CSVPrinter csv = BenchmarkUtils.openCsv(arguments.output(), feed.name(), LocalDateTime.now(), "compare",
-                "workload", "query", "outcome", "difference")) {
+        try (CSVPrinter csv = BenchmarkUtils.openCsv(arguments.output(), feed.name(),
+                LocalDateTime.now(ZoneId.systemDefault()), "compare", "workload", "query", "outcome", "difference")) {
             for (String name : arguments.workloads(List.of(Workloads.ANSWERS))) {
                 // the queries are drawn from the baseline, so that a candidate drawing other stops changes nothing
                 Workload workload = Workloads.of(name, baseline.subject());
@@ -117,6 +114,7 @@ public class AnswerComparison {
                     firstDifference);
         }
         if (failureAfter == null) {
+            assert failureBefore != null; // both answered is compared above
             return new Comparison(new Outcome(Outcome.Kind.FIXED, type(failureBefore)),
                     after.size() + " answers instead of " + cut(failureBefore));
         }

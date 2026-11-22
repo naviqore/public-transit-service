@@ -15,6 +15,7 @@ import org.naviqore.benchmark.workload.Workloads;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -45,7 +46,7 @@ public class Profiling {
                 .toList();
         int rounds = arguments.number("rounds", DEFAULT_ROUNDS);
 
-        LocalDateTime timestamp = LocalDateTime.now();
+        LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
         for (Workload workload : workloads) {
             log.info("Profiling workload {}: {} queries, {} rounds after one to warm up", workload.name(),
                     workload.queries().size(), rounds);

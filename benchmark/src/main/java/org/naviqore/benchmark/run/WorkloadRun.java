@@ -12,6 +12,7 @@ import org.naviqore.benchmark.workload.Workload;
 import org.naviqore.benchmark.workload.Workloads;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.LongSummaryStatistics;
 
@@ -42,7 +43,7 @@ public class WorkloadRun {
         version.build(feed.path());
         int runs = arguments.number("runs", DEFAULT_RUNS);
 
-        LocalDateTime timestamp = LocalDateTime.now();
+        LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
         try (CSVPrinter results = BenchmarkUtils.openCsv(arguments.output(), feed.name(), timestamp, "run_results",
                 RESULT_HEADERS);
              CSVPrinter summary = BenchmarkUtils.openCsv(arguments.output(), feed.name(), timestamp, "run_summary",

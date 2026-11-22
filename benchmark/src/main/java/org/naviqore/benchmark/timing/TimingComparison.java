@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -63,7 +64,7 @@ public class TimingComparison {
             return;
         }
 
-        LocalDateTime timestamp = LocalDateTime.now().withNano(0);
+        LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault()).withNano(0);
         for (LoadOrder loadOrder : LoadOrder.values()) {
             measureInNewJvm(arguments, loadOrder, timestamp);
         }
@@ -102,6 +103,7 @@ public class TimingComparison {
 
         int rounds = arguments.number("rounds", DEFAULT_ROUNDS);
         int warmups = arguments.number("warmups", DEFAULT_WARMUPS);
+        @SuppressWarnings("EnumOrdinal") // a distinct, reproducible seed per load order
         Random random = new Random(SEED + loadOrder.ordinal());
         OperatingSystemMXBean system = ManagementFactory.getOperatingSystemMXBean();
 

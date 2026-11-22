@@ -14,6 +14,7 @@ import org.naviqore.benchmark.version.Version;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -38,7 +39,7 @@ public class LoadTimeline {
     public static void run(Arguments arguments) throws Exception {
         Feed feed = arguments.feed();
         Version version = arguments.version(0);
-        LocalDateTime timestamp = LocalDateTime.now();
+        LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
         Path file = BenchmarkUtils.outputPath(arguments.output(), feed.name(), timestamp, "load.jfr");
 
         long heapBefore = BenchmarkUtils.heapAfterGarbageCollection();
