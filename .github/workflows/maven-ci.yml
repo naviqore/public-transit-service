@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -12,9 +11,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # the analysis needs the history to tell new code from old
+          fetch-depth: 0
       - name: Setup
         uses: actions/setup-java@v6
         with:
@@ -25,3 +29,8 @@ jobs:
       - name: Build
         # use 'verify' instead of package to include integration tests
         run: ./mvnw --batch-mode --file pom.xml -DTEST_LOG_LEVEL=INFO verify
+
+      - name: Analyze
+        # pull requests from forks and Dependabot get no secrets
+        if: env.SONAR_TOKEN != ''
+        run: ./mvnw --batch-mode --file pom.xml sonar:sonar
