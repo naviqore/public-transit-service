@@ -38,7 +38,7 @@ public class GtfsScheduleS3 implements TimetableRepository {
     private final String s3Uri;
 
     @Override
-    public GtfsSchedule get() throws IOException, InterruptedException {
+    public GtfsSchedule get() throws IOException {
         URI uri = URI.create(s3Uri);
         String bucket = uri.getHost();
         String key = uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();

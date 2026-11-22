@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.app.exception.*;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.service.exception.NotFoundException;
@@ -21,6 +22,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -155,7 +157,7 @@ public class GlobalExceptionHandler {
                 "stop-not-found", request);
         problemDetail.setProperty("stopId", ex.getStopId());
         if (ex.getStopType().isPresent()) {
-            problemDetail.setProperty("stopType", ex.getStopType().get().name().toLowerCase());
+            problemDetail.setProperty("stopType", ex.getStopType().get().name().toLowerCase(Locale.ROOT));
         }
         return problemDetail;
     }
@@ -186,8 +188,8 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please try again later.", "internal-server-error", request);
     }
 
-    private ProblemDetail createProblemDetail(HttpStatus status, String title, String detail, String problemType,
-                                              HttpServletRequest request) {
+    private ProblemDetail createProblemDetail(HttpStatus status, String title, @Nullable String detail,
+                                              String problemType, HttpServletRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, detail);
         problemDetail.setTitle(title);
         problemDetail.setType(URI.create(PROBLEM_TYPE_BASE + problemType));

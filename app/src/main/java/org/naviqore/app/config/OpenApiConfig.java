@@ -2,6 +2,7 @@ package org.naviqore.app.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
@@ -11,8 +12,8 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     private final String name;
-    private final String version;
-    private final String description;
+    private final @Nullable String version;
+    private final @Nullable String description;
 
     @Autowired
     public OpenApiConfig(BuildProperties buildProperties) {

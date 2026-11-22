@@ -14,9 +14,11 @@ import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
+import java.util.Locale;
 
 /**
  * Validator for all REST API request parameters and business rules.
@@ -49,7 +51,12 @@ final class RequestValidator {
     static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId, @Nullable Double latitude,
                                                             @Nullable Double longitude, StopType stopType) {
         validateStopParametersMutualExclusivity(stopId, latitude, longitude, stopType);
-        return stopId == null ? createCoordinate(latitude, longitude) : null;
+        if (stopId != null) {
+            return null;
+        }
+        // validated: without a stop ID, both coordinates are given
+        assert latitude != null && longitude != null;
+        return createCoordinate(latitude, longitude);
     }
 
     /**
@@ -72,7 +79,7 @@ final class RequestValidator {
      */
     static OffsetDateTime validateAndSetDefaultDateTime(@Nullable OffsetDateTime dateTime,
                                                         ScheduleInformationService service) {
-        dateTime = (dateTime == null) ? OffsetDateTime.now() : dateTime;
+        dateTime = (dateTime == null) ? OffsetDateTime.now(ZoneId.systemDefault()) : dateTime;
 
         if (service.getValidity().isWithin(dateTime.toLocalDate())) {
             return dateTime;
@@ -187,7 +194,7 @@ final class RequestValidator {
      */
     private static void validateStopParametersMutualExclusivity(@Nullable String stopId, @Nullable Double latitude,
                                                                 @Nullable Double longitude, StopType stopType) {
-        String stopTypeLabel = stopType.name().toLowerCase();
+        String stopTypeLabel = stopType.name().toLowerCase(Locale.ROOT);
         if (stopId == null) {
             if (latitude == null || longitude == null) {
                 throw new InvalidParametersException(

@@ -42,7 +42,7 @@ class FakePublicTransitService implements PublicTransitService {
     private static final RouteData ROUTE_3 = new RouteData(
             new Models.Route("3", "Route 3", "R3", TravelMode.BUS, "BUS", "Agency 3"),
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
-    static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
+    private static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
     private boolean supportsMaxWalkDuration = true;
     private boolean supportsMinTransferDuration = true;
@@ -153,7 +153,7 @@ class FakePublicTransitService implements PublicTransitService {
                                              ConnectionQueryConfig config) {
         Map<Stop, Connection> connections = new HashMap<>();
         for (Stop stop : STOPS) {
-            if (source == stop) {
+            if (source.equals(stop)) {
                 continue;
             }
             try {
@@ -238,7 +238,7 @@ class FakePublicTransitService implements PublicTransitService {
 
         static Models.Connection getSimpleConnection(Stop startStop, Stop endStop, OffsetDateTime date,
                                                      TimeType timeType) {
-            if (startStop == endStop) {
+            if (startStop.equals(endStop)) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
             } else if (endStop == STOP_H) {
                 // downcast start stop to DummyServiceModels.Stop
@@ -251,7 +251,7 @@ class FakePublicTransitService implements PublicTransitService {
 
         static Models.Connection getConnectionWithSameStopTransfer(Stop startStop, Stop endStop, OffsetDateTime date,
                                                                    TimeType timeType) {
-            if (startStop == endStop) {
+            if (startStop.equals(endStop)) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
             } else if (startStop == STOP_D || endStop == STOP_D) {
                 throw new IllegalArgumentException("Stop D cannot be used for same stop transfer.");
@@ -277,7 +277,7 @@ class FakePublicTransitService implements PublicTransitService {
 
         static Models.Connection getConnectionWithFinalWalkTransfer(Models.Stop startStop, Models.Stop endStop,
                                                                     OffsetDateTime date, TimeType timeType) {
-            if (startStop == endStop) {
+            if (startStop.equals(endStop)) {
                 throw new IllegalArgumentException("Start and end stop must be different.");
             }
             int endStopIndex = STOPS.indexOf(endStop);

@@ -47,8 +47,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     private PublicTransitService createDelegate() {
         try {
             return new PublicTransitServiceFactory(config).create();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new IllegalStateException("Failed to create public transit service", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while creating public transit service", e);
         }
     }
 

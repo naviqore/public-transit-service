@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 
 /**
  * Builds the configuration of the public transit service from the properties of the app, which it validates.
@@ -74,7 +75,7 @@ public class ServiceConfigParser {
         try {
             URI parsedUri = new URI(uri);
             String scheme = parsedUri.getScheme();
-            return UriScheme.valueOf(scheme.toUpperCase());
+            return UriScheme.valueOf(scheme.toUpperCase(Locale.ROOT));
         } catch (URISyntaxException e) {
             log.error("Error parsing URI: {}. Exception: {}", uri, e.getMessage(), e);
             throw new IllegalArgumentException("Invalid URI format: " + uri, e);

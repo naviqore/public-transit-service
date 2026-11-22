@@ -142,6 +142,7 @@ public class DtoMapper {
             return legDto;
         }
 
+        assert legDto.getToStop() != null; // a ride ends at a stop
         int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getToStop(), legDto.getArrivalTime(),
                 org.naviqore.service.TimeType.ARRIVAL);
 
@@ -164,6 +165,7 @@ public class DtoMapper {
             return legDto;
         }
 
+        assert legDto.getFromStop() != null; // a ride starts at a stop
         int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getFromStop(), legDto.getDepartureTime(),
                 org.naviqore.service.TimeType.DEPARTURE);
 

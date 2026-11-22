@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -160,7 +161,7 @@ public class RoutingControllerTest {
                     () -> getConnections(invalidStopId, null, null, targetStopId, null, null, OffsetDateTime.now()));
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getMessage());
             assertEquals("invalidStopId", exception.getStopId());
-            assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase());
+            assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase(Locale.ROOT));
         }
 
         @Test
@@ -508,7 +509,7 @@ public class RoutingControllerTest {
 
             assertEquals("The requested source stop with ID 'invalidStopId' was not found.", exception.getMessage());
             assertEquals("invalidStopId", exception.getStopId());
-            assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase());
+            assertEquals("source", exception.getStopType().orElseThrow().name().toLowerCase(Locale.ROOT));
         }
 
         @Test

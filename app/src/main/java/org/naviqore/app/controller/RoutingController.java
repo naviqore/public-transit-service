@@ -52,9 +52,9 @@ public class RoutingController {
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of connections between the specified stops.")
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema))
+    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema))
+    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema))
     @GetMapping("/connections")
     public List<Connection> getConnections(@RequestParam(required = false) String sourceStopId,
                                            @RequestParam(required = false) Double sourceLatitude,
@@ -92,11 +92,13 @@ public class RoutingController {
             RequestValidator.validateStopsAreDifferent(sourceStopId, targetStopId);
             return map(service.getConnections(sourceStop, targetStop, dateTime, map(timeType), config));
         } else if (sourceStop != null) {
+            assert targetCoordinate != null; // validated
             return map(service.getConnections(sourceStop, targetCoordinate, dateTime, map(timeType), config));
         } else if (targetStop != null) {
+            assert sourceCoordinate != null; // validated
             return map(service.getConnections(sourceCoordinate, targetStop, dateTime, map(timeType), config));
         } else {
-            assert sourceCoordinate != null; // never happens
+            assert sourceCoordinate != null && targetCoordinate != null; // validated
             RequestValidator.validateCoordinatesAreDifferent(sourceCoordinate, targetCoordinate);
             return map(service.getConnections(sourceCoordinate, targetCoordinate, dateTime, map(timeType), config));
         }
@@ -104,9 +106,9 @@ public class RoutingController {
 
     @Operation(summary = "Request a list of fastest connections to each reachable stop", description = "Request a list of fastest connections to each reachable stop from a specified stop or location at a given departure / arrival datetime.")
     @ApiResponse(responseCode = "200", description = "A list of stop and fastest connection pairs for each reachable stop.")
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema()))
-    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema()))
+    @ApiResponse(responseCode = "400", description = "Invalid input parameters (invalid-parameters, invalid-coordinates, invalid-datetime, unsupported-routing-feature, constraint-violation, type-mismatch, missing-request-parameter, malformed-request-body)", content = @Content(schema = @Schema))
+    @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema))
+    @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema))
     @GetMapping("/isolines")
     public List<StopConnection> getIsolines(@RequestParam(required = false) String sourceStopId,
                                             @RequestParam(required = false) Double sourceLatitude,
@@ -137,6 +139,7 @@ public class RoutingController {
         if (sourceStop != null) {
             return map(service.getIsolines(sourceStop, dateTime, map(timeType), config), timeType, detailed);
         } else {
+            assert sourceCoordinate != null; // validated
             return map(service.getIsolines(sourceCoordinate, dateTime, map(timeType), config), timeType, detailed);
         }
     }

@@ -18,8 +18,8 @@ public class Leg {
     private final LegType type;
     private final GeoCoordinate from;
     private final GeoCoordinate to;
-    private final Stop fromStop;
-    private final Stop toStop;
+    private final @Nullable Stop fromStop;
+    private final @Nullable Stop toStop;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private final OffsetDateTime departureTime;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
