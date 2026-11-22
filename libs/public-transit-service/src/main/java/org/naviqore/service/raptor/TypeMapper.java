@@ -22,10 +22,6 @@ public final class TypeMapper {
     private static final ServiceDayTime START_OF_SERVICE_DAY = new ServiceDayTime(0);
 
     public static Stop map(org.naviqore.timetable.model.Stop stop) {
-        if (stop == null) {
-            return null;
-        }
-
         return new RaptorServiceStop(stop.getId(), stop.getName(), stop.getCoordinate());
     }
 
@@ -124,8 +120,8 @@ public final class TypeMapper {
 
     private static Leg mapLeg(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
-        Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
-        Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
+        Stop sourceStop = map(Objects.requireNonNull(schedule.getStops().get(leg.getFromStopId())));
+        Stop targetStop = map(Objects.requireNonNull(schedule.getStops().get(leg.getToStopId())));
         int distance = (int) Math.round(sourceStop.getCoordinate().distanceTo(targetStop.getCoordinate()));
 
         return switch (leg.getType()) {
@@ -198,7 +194,8 @@ public final class TypeMapper {
 
     private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, Timetable schedule,
                                                            int distance, Trips trips) {
-        org.naviqore.timetable.model.Trip timetableTrip = schedule.getTrips().get(leg.getTripId());
+        org.naviqore.timetable.model.Trip timetableTrip = Objects.requireNonNull(
+                schedule.getTrips().get(leg.getTripId()));
         List<? extends org.naviqore.timetable.model.StopTime> stopTimes = timetableTrip.getStopTimes();
         ZoneId zoneId = timetableTrip.getRoute().getAgency().timezone();
         Instant departureTime = leg.getDepartureTime().toInstant();
@@ -252,7 +249,7 @@ public final class TypeMapper {
     public static final class Trips {
 
         private final Map<TripOfServiceDay, Trip> trips = new HashMap<>();
-        private final Map<org.naviqore.raptor.Leg, Leg> rides = new IdentityHashMap<>();
+        private final IdentityHashMap<org.naviqore.raptor.Leg, Leg> rides = new IdentityHashMap<>();
 
         private Trip get(org.naviqore.timetable.model.Trip trip, LocalDate serviceDay) {
             return trips.computeIfAbsent(new TripOfServiceDay(trip.getId(), serviceDay), _ -> map(trip, serviceDay));

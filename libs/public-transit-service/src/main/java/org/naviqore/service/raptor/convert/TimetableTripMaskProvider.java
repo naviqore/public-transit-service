@@ -83,7 +83,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
             byte[] tripFlags = hasTripFlags ? new byte[tripIds.length] : null;
 
             for (int i = 0; i < tripIds.length; i++) {
-                Trip trip = schedule.getTrips().get(tripIds[i]);
+                Trip trip = Objects.requireNonNull(schedule.getTrips().get(tripIds[i]));
                 if (i == 0) {
                     travelMode = trip.getRoute().getTravelMode();
                 }
@@ -176,7 +176,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     private record RouteTrips(String id, @Nullable TravelMode travelMode, int[] calendars, byte @Nullable [] flags) {
 
         boolean hasFlags(int trip, int requiredFlags) {
-            return requiredFlags == 0 || flags != null && (flags[trip] & requiredFlags) == requiredFlags;
+            return requiredFlags == 0 || (flags != null && (flags[trip] & requiredFlags) == requiredFlags);
         }
     }
 
@@ -194,7 +194,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
             activeServices = new EvictionCache<>(Math.min(365, cacheSize * 20), strategy);
         }
 
-        public String getActiveServices(LocalDate date) {
+        String getActiveServices(LocalDate date) {
             return activeServices.computeIfAbsent(date, () -> getActiveServicesFromSchedule(date));
         }
 

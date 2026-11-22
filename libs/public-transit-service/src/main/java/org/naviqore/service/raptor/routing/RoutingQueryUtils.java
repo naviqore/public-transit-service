@@ -16,10 +16,7 @@ import org.naviqore.utils.spatial.index.KDTree;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -122,7 +119,7 @@ class RoutingQueryUtils {
     }
 
     Stop getStopById(String stopId) {
-        return TypeMapper.map(schedule.getStops().get(stopId));
+        return TypeMapper.map(Objects.requireNonNull(schedule.getStops().get(stopId)));
     }
 
     Map<String, OffsetDateTime> getAllChildStopsFromStop(Stop stop, OffsetDateTime time) {
@@ -146,7 +143,7 @@ class RoutingQueryUtils {
     }
 
     @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
-        org.naviqore.timetable.model.Stop firstStop = schedule.getStops().get(firstStopId);
+        org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
         int duration = firstWalk.duration();
 
@@ -163,7 +160,7 @@ class RoutingQueryUtils {
 
     @Nullable
     public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
-        org.naviqore.timetable.model.Stop firstStop = schedule.getStops().get(firstStopId);
+        org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));
         WalkCalculator.Walk firstWalkTransfer = walkCalculator.calculateWalk(sourceStop.getCoordinate(),
                 firstStop.getCoordinate());
         int duration = firstWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
@@ -177,7 +174,7 @@ class RoutingQueryUtils {
     }
 
     @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, OffsetDateTime arrivalTime) {
-        org.naviqore.timetable.model.Stop lastStop = schedule.getStops().get(lastStopId);
+        org.naviqore.timetable.model.Stop lastStop = Objects.requireNonNull(schedule.getStops().get(lastStopId));
         WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastStop.getCoordinate());
         int duration = lastWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
 
@@ -191,7 +188,7 @@ class RoutingQueryUtils {
 
     @Nullable
     public Transfer createLastWalkTransfer(Stop target, String lastStopId, OffsetDateTime arrivalTime) {
-        org.naviqore.timetable.model.Stop lastStop = schedule.getStops().get(lastStopId);
+        org.naviqore.timetable.model.Stop lastStop = Objects.requireNonNull(schedule.getStops().get(lastStopId));
         WalkCalculator.Walk lastWalkTransfer = walkCalculator.calculateWalk(target.getCoordinate(),
                 lastStop.getCoordinate());
         int duration = lastWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
@@ -215,15 +212,16 @@ class RoutingQueryUtils {
         return TypeMapper.map(connection, null, null, schedule);
     }
 
-    Connection composeConnection(Leg firstMile, org.naviqore.raptor.Connection connection) {
+    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection) {
         return TypeMapper.map(connection, firstMile, null, schedule);
     }
 
-    Connection composeConnection(org.naviqore.raptor.Connection connection, Leg lastMile) {
+    Connection composeConnection(org.naviqore.raptor.Connection connection, @Nullable Leg lastMile) {
         return TypeMapper.map(connection, null, lastMile, schedule);
     }
 
-    Connection composeConnection(Leg firstMile, org.naviqore.raptor.Connection connection, Leg lastMile) {
+    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection,
+                                 @Nullable Leg lastMile) {
         return TypeMapper.map(connection, firstMile, lastMile, schedule);
     }
 
@@ -231,11 +229,13 @@ class RoutingQueryUtils {
         return TypeMapper.map(connection, null, null, schedule, trips);
     }
 
-    Connection composeConnection(Leg firstMile, org.naviqore.raptor.Connection connection, TypeMapper.Trips trips) {
+    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection,
+                                 TypeMapper.Trips trips) {
         return TypeMapper.map(connection, firstMile, null, schedule, trips);
     }
 
-    Connection composeConnection(org.naviqore.raptor.Connection connection, Leg lastMile, TypeMapper.Trips trips) {
+    Connection composeConnection(org.naviqore.raptor.Connection connection, @Nullable Leg lastMile,
+                                 TypeMapper.Trips trips) {
         return TypeMapper.map(connection, null, lastMile, schedule, trips);
     }
 
@@ -243,6 +243,6 @@ class RoutingQueryUtils {
     // that exceed the maximum travel time
     boolean isBelowMaximumTravelTime(Connection serviceConnection, ConnectionQueryConfig queryConfig) {
         return Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
-                .getSeconds() <= queryConfig.getMaximumTravelDuration();
+                .toSeconds() <= queryConfig.getMaximumTravelDuration();
     }
 }

@@ -81,7 +81,7 @@ class RoutingQueryFacadeIT {
     private GeoCoordinate targetCoordinate;
 
     private static int toSecondsInt(Duration duration) {
-        return Math.toIntExact(duration.getSeconds());
+        return Math.toIntExact(duration.toSeconds());
     }
 
     @BeforeEach
@@ -253,8 +253,8 @@ class RoutingQueryFacadeIT {
 
         private static final int WINDOW_DURATION = 1800;
 
-        // headway is 60 seconds and the second trip runs at 6/7 of the regular travel time, so it departs at A 42
-        // seconds after the first trip but still arrives at D2 at the very same time
+        // headway is 60 seconds and the second trip runs at 6/7 of the regular travel time, so it departs from A
+        // 42 seconds after the first trip but still arrives at D2 at the very same time
         private static final int HEADWAY = 60;
         private static final double EXPRESS_SPEED_FACTOR = 6.0 / 7.0;
         private static final OffsetDateTime DOMINATED_DEPARTURE = DATE_TIME.plusSeconds(120);

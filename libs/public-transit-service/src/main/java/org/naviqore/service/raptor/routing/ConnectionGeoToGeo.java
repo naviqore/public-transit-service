@@ -96,15 +96,15 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
         return getConnection(source, connection, target, targetStop, sourceStop);
     }
 
-    private Connection getConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
-                                     GeoCoordinate target, Stop targetStop, Stop sourceStop) {
+    private Connection getConnection(GeoCoordinate end, org.naviqore.raptor.Connection connection, GeoCoordinate start,
+                                     @Nullable Stop startStop, @Nullable Stop endStop) {
         OffsetDateTime departureTime = connection.getDepartureTime();
-        Leg firstMile = targetStop == null ? utils.createFirstWalk(target, connection.getFromStopId(),
-                departureTime) : utils.createFirstWalkTransfer(targetStop, connection.getFromStopId(), departureTime);
+        Leg firstMile = startStop == null ? utils.createFirstWalk(start, connection.getFromStopId(),
+                departureTime) : utils.createFirstWalkTransfer(startStop, connection.getFromStopId(), departureTime);
 
         OffsetDateTime arrivalTime = connection.getArrivalTime();
-        Leg lastMile = sourceStop == null ? utils.createLastWalk(source, connection.getToStopId(),
-                arrivalTime) : utils.createLastWalkTransfer(sourceStop, connection.getToStopId(), arrivalTime);
+        Leg lastMile = endStop == null ? utils.createLastWalk(end, connection.getToStopId(),
+                arrivalTime) : utils.createLastWalkTransfer(endStop, connection.getToStopId(), arrivalTime);
 
         return utils.composeConnection(firstMile, connection, lastMile);
     }

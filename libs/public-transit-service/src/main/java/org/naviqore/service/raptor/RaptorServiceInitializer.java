@@ -22,6 +22,7 @@ import org.naviqore.utils.spatial.index.KDTreeBuilder;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -60,7 +61,7 @@ public class RaptorServiceInitializer {
         // only add parent stops and stops without a parent
         for (org.naviqore.timetable.model.Stop stop : schedule.getStops().values()) {
             if (stop.getParent().isEmpty()) {
-                builder.add(stop.getName().toLowerCase(), stop);
+                builder.add(stop.getName().toLowerCase(Locale.ROOT), stop);
             }
         }
 

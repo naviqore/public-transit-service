@@ -209,10 +209,6 @@ class TimetableToRaptorConverterIT {
             List<String> betweenStopTransferIds;
             List<String> sameStopTransferKeys;
 
-            int stopTimeSize;
-            int routeStopSize;
-            int transferSize;
-
             RaptorBuilderData(
                     TimetableToRaptorConverter converter) throws NoSuchFieldException, IllegalAccessException {
                 RaptorRouterBuilder raptorBuilder = getPrivateField(converter, "builder");
@@ -222,10 +218,6 @@ class TimetableToRaptorConverterIT {
 
                 betweenStopTransferIds = getBetweenStopTransferIds(raptorBuilder);
                 sameStopTransferKeys = getSameStopTransferKeys(raptorBuilder);
-
-                stopTimeSize = getPrivateField(raptorBuilder, "stopTimeSize");
-                routeStopSize = getPrivateField(raptorBuilder, "routeStopSize");
-                transferSize = getPrivateField(raptorBuilder, "transferSize");
             }
 
             private static List<String> getSameStopTransferKeys(
@@ -263,7 +255,7 @@ class TimetableToRaptorConverterIT {
              * @throws NoSuchFieldException   If the field does not exist.
              * @throws IllegalAccessException If the field is not accessible.
              */
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"}) // cast to what the caller expects
             private static <T> T getPrivateField(Object object,
                                                  String fieldName) throws NoSuchFieldException, IllegalAccessException {
                 // Get the class of the object
@@ -306,7 +298,7 @@ class TimetableToRaptorConverterIT {
 
         }
 
-        class SimpleTransferGenerator implements TransferGenerator {
+        static class SimpleTransferGenerator implements TransferGenerator {
 
             private final List<ManualSchedule.Transfer> transfers;
 

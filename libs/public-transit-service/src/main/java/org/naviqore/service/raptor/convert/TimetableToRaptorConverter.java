@@ -383,8 +383,10 @@ public class TimetableToRaptorConverter {
                         if (derived != derivedFromStations) {
                             continue;
                         }
-                        for (String fromRouteId : getRaptorRouteIds(transfer.getFromRoute(), fromTripId, fromStop)) {
-                            for (String toRouteId : getRaptorRouteIds(transfer.getToRoute(), toTripId, toStop)) {
+                        for (String fromRouteId : getRaptorRouteIds(transfer.getFromRoute().orElse(null), fromTripId,
+                                fromStop)) {
+                            for (String toRouteId : getRaptorRouteIds(transfer.getToRoute().orElse(null), toTripId,
+                                    toStop)) {
                                 builder.addTripTransfer(
                                         new TripTransfer(fromStop.getId(), fromRouteId, fromTripId, toStop.getId(),
                                                 toRouteId, toTripId, type, duration));
@@ -402,15 +404,14 @@ public class TimetableToRaptorConverter {
      * Gets the routes in RAPTOR a side of a transfer names at a stop: none for a trip, whose route RAPTOR knows, or for
      * no route; else the sub-routes of the route that call at the stop.
      */
-    private List<@Nullable String> getRaptorRouteIds(Optional<? extends Route> route, @Nullable String tripId,
-                                                     Stop stop) {
-        if (tripId != null || route.isEmpty()) {
+    private List<@Nullable String> getRaptorRouteIds(@Nullable Route route, @Nullable String tripId, Stop stop) {
+        if (tripId != null || route == null) {
             return Collections.singletonList(null);
         }
-        return partitioner.getSubRoutes(route.get())
+        return partitioner.getSubRoutes(route)
                 .stream()
                 .filter(subRoute -> subRoute.getStopsSequence().contains(stop))
-                .map(RoutePartitioner.SubRoute::getId)
+                .<@Nullable String>map(RoutePartitioner.SubRoute::getId)
                 .toList();
     }
 

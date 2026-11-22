@@ -73,7 +73,7 @@ public class RaptorService implements PublicTransitService {
         log.info("Searching for stops matching '{}', with search type '{}' and sort strategy '{}'", like, searchType,
                 stopSortStrategy);
 
-        return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
+        return stopSearchIndex.search(like.toLowerCase(Locale.ROOT), TypeMapper.map(searchType))
                 .stream()
                 .sorted(stopSortStrategy.getComparator(like))
                 .map(TypeMapper::map)
@@ -92,7 +92,7 @@ public class RaptorService implements PublicTransitService {
             stop = stop.getParent().get();
         }
 
-        return Optional.ofNullable(TypeMapper.map(stop));
+        return Optional.ofNullable(stop).map(TypeMapper::map);
     }
 
     @Override
