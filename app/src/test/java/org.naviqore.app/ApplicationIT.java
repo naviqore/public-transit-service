@@ -93,12 +93,14 @@ class ApplicationIT {
         @Test
         void departureAtStop_invalidStopId_shouldReturn404() {
             ResponseEntity<String> response = request.setPort(port)
-                    .setEndpoint("/schedule/stops/NOT_EXISTING/departures")
-                    .addQueryParameter("departureDateTime", "2010-01-01T01:10:01Z")
+                    .setEndpoint("/schedule/stops/NOT_EXISTING/times")
+                    .addQueryParameter("from", "2010-01-01T01:10:01Z")
                     .addQueryParameter("limit", "3")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            // the stop is unknown, not the endpoint
+            assertThat(response.getBody()).contains("stop-not-found");
         }
 
         @Test
