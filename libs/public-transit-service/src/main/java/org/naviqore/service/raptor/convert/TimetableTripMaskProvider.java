@@ -34,7 +34,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     private RouteTrips @Nullable [] routes = null;
 
     public TimetableTripMaskProvider(Timetable schedule) {
-        this(schedule, ServiceConfig.DEFAULT_CACHE_SIZE,
+        this(schedule, ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE,
                 EvictionCache.Strategy.valueOf(ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY.name()));
     }
 

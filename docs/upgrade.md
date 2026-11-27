@@ -9,27 +9,30 @@ or notice when they upgrade from 4.x. How the router and the service answer is d
 
 ### Properties
 
-The properties moved under `app`, in kebab case. The environment variables keep their names, so a deployment that
-sets only them needs no change, except for `RAPTOR_RANGE`, which no longer has an effect. A deployment that sets the
-properties themselves, in an `application.properties` of its own or as `-D` options, sets them under their new names.
+The properties moved under `app`, in kebab case, and each is set from the environment variable named after it without
+`app`. The environment variables keep their names, so a deployment that sets only them needs no change, except for
+`APP_HOME_PAGE_ENABLED`, which is `HOME_PAGE_ENABLED`, and `RAPTOR_RANGE`, which no longer has an effect. A deployment
+that sets the properties themselves, in an `application.properties` of its own or as `-D` options, sets them under
+their new names.
 
-| 4.x                                       | 5.0                                           | Environment variable                      |
-|-------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `gtfs.static.uri`                         | `app.gtfs.static.uri`                         | `GTFS_STATIC_URI`                         |
-| `gtfs.static.update.cron`                 | `app.gtfs.static.update-cron`                 | `GTFS_STATIC_UPDATE_CRON`                 |
-| `transfer.duration.same.stop.default`     | `app.transfer.duration.same-stop-default`     | `TRANSFER_DURATION_SAME_STOP_DEFAULT`     |
-| `transfer.duration.between.stops.minimum` | `app.transfer.duration.between-stops-minimum` | `TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM` |
-| `transfer.duration.access.egress`         | `app.transfer.duration.access-egress`         | `TRANSFER_DURATION_ACCESS_EGRESS`         |
-| `walk.search.radius`                      | `app.walk.search-radius`                      | `WALK_SEARCH_RADIUS`                      |
-| `walk.calculator.type`                    | `app.walk.calculator-type`                    | `WALK_CALCULATOR_TYPE`                    |
-| `walk.speed`                              | `app.walk.speed`                              | `WALK_SPEED`                              |
-| `walk.duration.minimum`                   | `app.walk.duration-minimum`                   | `WALK_DURATION_MINIMUM`                   |
-| `raptor.days.to.scan`                     | `app.raptor.days-to-scan`                     | `RAPTOR_DAYS_TO_SCAN`                     |
-| `raptor.range`                            | removed                                       | `RAPTOR_RANGE`, no effect                 |
-| –                                         | `app.raptor.optimize-travel-time`             | `RAPTOR_OPTIMIZE_TRAVEL_TIME`             |
-| `cache.service.day.size`                  | `app.cache.service-day-size`                  | `CACHE_SERVICE_DAY_SIZE`                  |
-| `cache.eviction.strategy`                 | `app.cache.eviction-strategy`                 | `CACHE_EVICTION_STRATEGY`                 |
-| –                                         | `app.routing.time-window-duration-maximum`    | `ROUTING_TIME_WINDOW_DURATION_MAXIMUM`    |
+| 4.x                                       | 5.0                                           | Environment variable                                |
+|-------------------------------------------|-----------------------------------------------|-----------------------------------------------------|
+| `gtfs.static.uri`                         | `app.gtfs.static.uri`                         | `GTFS_STATIC_URI`                                   |
+| `gtfs.static.update.cron`                 | `app.gtfs.static.update-cron`                 | `GTFS_STATIC_UPDATE_CRON`                           |
+| `transfer.duration.same.stop.default`     | `app.transfer.duration.same-stop-default`     | `TRANSFER_DURATION_SAME_STOP_DEFAULT`               |
+| `transfer.duration.between.stops.minimum` | `app.transfer.duration.between-stops-minimum` | `TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM`           |
+| `transfer.duration.access.egress`         | `app.transfer.duration.access-egress`         | `TRANSFER_DURATION_ACCESS_EGRESS`                   |
+| `walk.search.radius`                      | `app.walk.search-radius`                      | `WALK_SEARCH_RADIUS`                                |
+| `walk.calculator.type`                    | `app.walk.calculator-type`                    | `WALK_CALCULATOR_TYPE`                              |
+| `walk.speed`                              | `app.walk.speed`                              | `WALK_SPEED`                                        |
+| `walk.duration.minimum`                   | `app.walk.duration-minimum`                   | `WALK_DURATION_MINIMUM`                             |
+| `raptor.days.to.scan`                     | `app.raptor.days-to-scan`                     | `RAPTOR_DAYS_TO_SCAN`                               |
+| `raptor.range`                            | removed                                       | `RAPTOR_RANGE`, no effect                           |
+| –                                         | `app.raptor.optimize-travel-time`             | `RAPTOR_OPTIMIZE_TRAVEL_TIME`                       |
+| –                                         | `app.raptor.time-window-duration-maximum`     | `RAPTOR_TIME_WINDOW_DURATION_MAXIMUM`               |
+| `cache.service.day.size`                  | `app.cache.service-day-size`                  | `CACHE_SERVICE_DAY_SIZE`                            |
+| `cache.eviction.strategy`                 | `app.cache.eviction-strategy`                 | `CACHE_EVICTION_STRATEGY`                           |
+| `app.home-page.enabled`                   | `app.home-page.enabled`                       | `HOME_PAGE_ENABLED`, before `APP_HOME_PAGE_ENABLED` |
 
 ### Defaults and resources
 
@@ -41,7 +44,7 @@ properties themselves, in an `application.properties` of its own or as `-D` opti
   the trips running on it only, 26 MB instead of 293 MB on the Swiss feed, so 30 days take less heap than 5 did.
 - **Time windows.** A request with a time window longer than a day is refused with status 400 (`invalid-parameters`).
   A query over a time window runs a search for each departure in it and reads the stop times of every day it reaches,
-  so a long window takes much time and memory. `app.routing.time-window-duration-maximum` sets the limit in seconds;
+  so a long window takes much time and memory. `app.raptor.time-window-duration-maximum` sets the limit in seconds;
   4.x had none.
 - **Startup.** The rows of `transfers.txt` for particular routes and trips are read and applied, 966 934 of them on the
   Swiss feed, which take about 160 MB of heap once the service is built. A row that cannot be applied, invalid or
@@ -86,7 +89,8 @@ the interfaces of `naviqore-timetable` instead.
 | `ServiceConfig.builder().gtfsScheduleRepository(...)`                       | `ServiceConfig.builder().timetableRepository(...)`            |
 | `org.naviqore.service.repo.GtfsScheduleRepository`                          | `org.naviqore.service.repo.TimetableRepository`               |
 | `ServiceConfig.raptorRange`                                                 | removed; a query with a time window is a range query          |
-| –                                                                           | `ServiceConfig.optimizeTravelTime`, `true` by default         |
+| –                                                                           | `ServiceConfig.raptorOptimizeTravelTime`, `true` by default   |
+| `ServiceConfig.DEFAULT_CACHE_SIZE`                                          | `ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE`                |
 | package `org.naviqore.service.gtfs.raptor`                                  | package `org.naviqore.service.raptor`                         |
 | `GtfsRaptorService`, `GtfsRaptorServiceInitializer`, `GtfsRaptor…`          | `RaptorService`, `RaptorServiceInitializer`, `RaptorService…` |
 | `GtfsToRaptorConverter`, `GtfsTripMaskProvider`                             | `TimetableToRaptorConverter`, `TimetableTripMaskProvider`     |

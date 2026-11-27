@@ -25,9 +25,9 @@ public class ServiceConfig {
     public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
 
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
-    public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
+    public static final boolean DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME = true;
 
-    public static final int DEFAULT_CACHE_SIZE = 30;
+    public static final int DEFAULT_CACHE_SERVICE_DAY_SIZE = 30;
     public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
 
     TimetableRepository timetableRepository;
@@ -66,10 +66,10 @@ public class ServiceConfig {
      * time window reports those anyway.
      */
     @Builder.Default
-    boolean optimizeTravelTime = DEFAULT_OPTIMIZE_TRAVEL_TIME;
+    boolean raptorOptimizeTravelTime = DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME;
 
     @Builder.Default
-    int cacheServiceDaySize = DEFAULT_CACHE_SIZE;
+    int cacheServiceDaySize = DEFAULT_CACHE_SERVICE_DAY_SIZE;
 
     @Builder.Default
     CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
@@ -77,8 +77,9 @@ public class ServiceConfig {
     public ServiceConfig(TimetableRepository timetableRepository, String gtfsStaticUpdateCron,
                          int transferDurationSameStopDefault, int transferDurationBetweenStopsMinimum,
                          int transferDurationAccessEgress, int walkSearchRadius, WalkCalculatorType walkCalculatorType,
-                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan, boolean optimizeTravelTime,
-                         int cacheServiceDaySize, CacheEvictionStrategy cacheEvictionStrategy) {
+                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan,
+                         boolean raptorOptimizeTravelTime, int cacheServiceDaySize,
+                         CacheEvictionStrategy cacheEvictionStrategy) {
         this.timetableRepository = validateNonNull(timetableRepository, "timetableRepository");
         this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
         this.transferDurationSameStopDefault = validateNonNegative(transferDurationSameStopDefault,
@@ -92,7 +93,7 @@ public class ServiceConfig {
         this.walkSpeed = validatePositive(walkSpeed, "walkSpeed");
         this.walkDurationMinimum = validateNonNegative(walkDurationMinimum, "walkDurationMinimum");
         this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
-        this.optimizeTravelTime = optimizeTravelTime;
+        this.raptorOptimizeTravelTime = raptorOptimizeTravelTime;
         this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
         this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
     }

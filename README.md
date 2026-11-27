@@ -113,8 +113,8 @@ docker run -p 8080:8080 -e GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public
 ```
 
 For more configuration options, refer to the [application.properties](app/src/main/resources/application.properties)
-file. Version 5.0 moved the properties under `app`, while the environment variables keep their names, see
-[docs/upgrade.md](docs/upgrade.md).
+file. Version 5.0 moved the properties under `app`; each is set from the environment variable named after it without
+`app`, and the variables of 4.x keep their names but one, see [docs/upgrade.md](docs/upgrade.md).
 
 Access the service at http://localhost:8080 to explore schedules and query transit connections.
 

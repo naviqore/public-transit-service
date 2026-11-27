@@ -306,7 +306,7 @@ class RoutingQueryFacadeIT {
             ServiceConfig serviceConfig = ServiceConfig.builder()
                     .timetableRepository(new NoTimetableRepository())
                     .walkDurationMinimum(WALK_DURATION_MINIMUM)
-                    .optimizeTravelTime(false)
+                    .raptorOptimizeTravelTime(false)
                     .build();
             facade = buildFacade(schedule, serviceConfig);
 

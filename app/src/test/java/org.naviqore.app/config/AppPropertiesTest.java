@@ -14,14 +14,18 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * The properties under {@code app} bind to {@link AppProperties}: those of {@code application.properties} each to a
- * property, with the defaults of the app, and a property not set keeps the default of the service.
+ * property, with the defaults of the app, and a property not set keeps the default of the service. Each property of
+ * {@code application.properties} is set from the environment variable named after it.
  */
 class AppPropertiesTest {
 
@@ -54,7 +58,21 @@ class AppPropertiesTest {
                 appProperties.getGtfs().getStaticFeed().getUri());
         assertEquals(-1, appProperties.getTransfer().getDuration().getBetweenStopsMinimum());
         assertEquals(60, appProperties.getWalk().getDurationMinimum());
-        assertEquals(24 * 60 * 60, appProperties.getRouting().getTimeWindowDurationMaximum());
+        assertEquals(24 * 60 * 60, appProperties.getRaptor().getTimeWindowDurationMaximum());
+    }
+
+    @Test
+    void applicationProperties_nameTheirEnvironmentVariablesAfterThemselves() throws IOException {
+        // e.g. app.raptor.days-to-scan from RAPTOR_DAYS_TO_SCAN, and logging.level.root from LOGGING_LEVEL_ROOT
+        Pattern variable = Pattern.compile("\\$\\{([^:}]+)");
+        Properties properties = PropertiesLoaderUtils.loadProperties(new ClassPathResource("application.properties"));
+        for (String name : properties.stringPropertyNames()) {
+            Matcher matcher = variable.matcher(properties.getProperty(name));
+            if (matcher.lookingAt()) {
+                String expected = name.replaceFirst("^app\\.", "").replaceAll("[.-]", "_").toUpperCase(Locale.ROOT);
+                assertEquals(expected, matcher.group(1), name);
+            }
+        }
     }
 
     @Test
@@ -68,8 +86,8 @@ class AppPropertiesTest {
         assertEquals(ServiceConfig.DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM,
                 properties.getTransfer().getDuration().getBetweenStopsMinimum());
         assertEquals(ServiceConfig.DEFAULT_WALK_DURATION_MINIMUM, properties.getWalk().getDurationMinimum());
-        assertEquals(ServiceConfig.DEFAULT_OPTIMIZE_TRAVEL_TIME, properties.getRaptor().isOptimizeTravelTime());
-        assertEquals(ServiceConfig.DEFAULT_CACHE_SIZE, properties.getCache().getServiceDaySize());
+        assertEquals(ServiceConfig.DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME, properties.getRaptor().isOptimizeTravelTime());
+        assertEquals(ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE, properties.getCache().getServiceDaySize());
     }
 
     @Test
@@ -88,9 +106,9 @@ class AppPropertiesTest {
 
     @Test
     void timeWindowDurationMaximum_mayBeZeroButNotNegative() {
-        AppProperties properties = bind(Map.of("app.routing.time-window-duration-maximum", "0"));
+        AppProperties properties = bind(Map.of("app.raptor.time-window-duration-maximum", "0"));
 
-        assertEquals(0, properties.getRouting().getTimeWindowDurationMaximum());
-        assertThrows(BindException.class, () -> bind(Map.of("app.routing.time-window-duration-maximum", "-1")));
+        assertEquals(0, properties.getRaptor().getTimeWindowDurationMaximum());
+        assertThrows(BindException.class, () -> bind(Map.of("app.raptor.time-window-duration-maximum", "-1")));
     }
 }

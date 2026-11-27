@@ -53,8 +53,8 @@ public class ServiceConfigParserIT {
         assertEquals(DEFAULT_WALK_SEARCH_RADIUS, config.getWalkSearchRadius());
         assertEquals(DEFAULT_WALK_DURATION_MINIMUM, config.getWalkDurationMinimum());
         assertEquals(DEFAULT_RAPTOR_DAYS_TO_SCAN, config.getRaptorDaysToScan());
-        assertEquals(DEFAULT_OPTIMIZE_TRAVEL_TIME, config.isOptimizeTravelTime());
-        assertEquals(DEFAULT_CACHE_SIZE, config.getCacheServiceDaySize());
+        assertEquals(DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME, config.isRaptorOptimizeTravelTime());
+        assertEquals(DEFAULT_CACHE_SERVICE_DAY_SIZE, config.getCacheServiceDaySize());
         assertEquals(CacheEvictionStrategy.LRU, config.getCacheEvictionStrategy());
     }
 

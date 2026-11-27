@@ -47,7 +47,7 @@ public class ServiceConfigParser {
                 .walkSpeed(walk.getSpeed())
                 .walkDurationMinimum(walk.getDurationMinimum())
                 .raptorDaysToScan(raptor.getDaysToScan())
-                .optimizeTravelTime(raptor.isOptimizeTravelTime())
+                .raptorOptimizeTravelTime(raptor.isOptimizeTravelTime())
                 .cacheServiceDaySize(cache.getServiceDaySize())
                 .cacheEvictionStrategy(cache.getEvictionStrategy())
                 .build();

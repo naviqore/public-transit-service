@@ -88,7 +88,7 @@ public class RoutingController {
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
                 maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service,
-                properties.getRouting());
+                properties.getRaptor());
 
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
@@ -137,7 +137,7 @@ public class RoutingController {
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
                 maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service,
-                properties.getRouting());
+                properties.getRaptor());
 
         // determine routing case and get isolines
         if (sourceStop != null) {
@@ -156,9 +156,9 @@ public class RoutingController {
                                                           Integer minTransferDuration, boolean wheelchairAccessible,
                                                           boolean bikeAllowed,
                                                           @Nullable EnumSet<TravelMode> travelModes,
-                                                          PublicTransitService service, AppProperties.Routing routing) {
+                                                          PublicTransitService service, AppProperties.Raptor raptor) {
 
-            RequestValidator.validateTimeWindowDuration(timeWindowDuration, routing.getTimeWindowDurationMaximum());
+            RequestValidator.validateTimeWindowDuration(timeWindowDuration, raptor.getTimeWindowDurationMaximum());
 
             // replace null values with default value
             int finalMaxWalkDuration = java.util.Optional.ofNullable(maxWalkDuration).orElse(Integer.MAX_VALUE);

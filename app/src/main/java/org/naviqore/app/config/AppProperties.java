@@ -11,9 +11,9 @@ import org.springframework.boot.context.properties.bind.Name;
 
 /**
  * The configuration of the public transit service and of its routing requests, bound from the properties under
- * {@code app}: the GTFS feed, transfers, walks, the router, its cache and the routing requests, each a group of its
- * own. A property of the service that is not set takes the default of {@link ServiceConfig};
- * {@code application.properties} sets each one from an environment variable, with the defaults of the app.
+ * {@code app}: the GTFS feed, transfers, walks, the router and its cache, each a group of its own. A property of the
+ * service that is not set takes the default of {@link ServiceConfig}; {@code application.properties} sets each one from
+ * the environment variable named after the property without {@code app}, with the defaults of the app.
  */
 @ConfigurationProperties(prefix = "app")
 @Getter
@@ -24,7 +24,6 @@ public class AppProperties {
     private final Walk walk = new Walk();
     private final Raptor raptor = new Raptor();
     private final Cache cache = new Cache();
-    private final Routing routing = new Routing();
 
     /**
      * The GTFS feed.
@@ -118,11 +117,16 @@ public class AppProperties {
     }
 
     /**
-     * The router.
+     * The router, and the time windows of the routing requests.
      */
     @Getter
     @Setter
     public static class Raptor {
+
+        /**
+         * One day, in seconds.
+         */
+        public static final int DEFAULT_TIME_WINDOW_DURATION_MAXIMUM = 24 * 60 * 60;
 
         /**
          * Service days around the date of a query that are scanned for trips.
@@ -132,37 +136,7 @@ public class AppProperties {
         /**
          * Whether a connection query without a time window optimizes the travel time of its connections.
          */
-        private boolean optimizeTravelTime = ServiceConfig.DEFAULT_OPTIMIZE_TRAVEL_TIME;
-    }
-
-    /**
-     * The cache of the service days' stop times.
-     */
-    @Getter
-    @Setter
-    public static class Cache {
-
-        /**
-         * Service days whose stop times are cached.
-         */
-        private int serviceDaySize = ServiceConfig.DEFAULT_CACHE_SIZE;
-
-        /**
-         * Which service day is evicted from a full cache.
-         */
-        private CacheEvictionStrategy evictionStrategy = ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY;
-    }
-
-    /**
-     * The routing requests of the REST API.
-     */
-    @Getter
-    public static class Routing {
-
-        /**
-         * One day, in seconds.
-         */
-        public static final int DEFAULT_TIME_WINDOW_DURATION_MAXIMUM = 24 * 60 * 60;
+        private boolean optimizeTravelTime = ServiceConfig.DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME;
 
         /**
          * Longest time window of a request, in seconds. A query over a time window runs a search for each departure in
@@ -176,5 +150,23 @@ public class AppProperties {
             }
             this.timeWindowDurationMaximum = timeWindowDurationMaximum;
         }
+    }
+
+    /**
+     * The cache of the service days' stop times.
+     */
+    @Getter
+    @Setter
+    public static class Cache {
+
+        /**
+         * Service days whose stop times are cached.
+         */
+        private int serviceDaySize = ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE;
+
+        /**
+         * Which service day is evicted from a full cache.
+         */
+        private CacheEvictionStrategy evictionStrategy = ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY;
     }
 }
