@@ -75,30 +75,41 @@ class FootpathRelaxer {
     }
 
     /**
-     * Relax all footpaths from all initial source stops.
+     * Relaxes the footpaths from the source stops at the start of a pass, if transfers from them are allowed: from each
+     * source stop's own label, also where a pass reached the stop earlier on foot from another source stop, since a
+     * stop reached on foot cannot be walked on from.
+     *
+     * @param sourceLabels the labels of the source stops at the start of the pass.
      */
-    void relaxInitial() {
+    void relaxInitial(QueryState.Label[] sourceLabels) {
         log.debug("Initial relaxing of footpaths for source stops");
-        relax(0);
+        if (!allowSourceTransfers) {
+            return;
+        }
+
+        for (QueryState.Label label : sourceLabels) {
+            if (stops[label.stopIdx()].numberOfTransfers(timeType) > 0) {
+                expandFootpathsFromStop(label, 0);
+            }
+        }
     }
 
     /**
-     * Relax all footpaths from the stops reached in a round that a connection may walk on from: in the first round (0),
-     * the source stops at the start of the query, if transfers from them are allowed; in later rounds, the stops whose
-     * best arrival on a trip the round improved. A walk never continues another walk, and walks from a stop reached on
-     * foot earlier still start at the stop's arrival on a trip, see {@link QueryState}.
+     * Relax all footpaths from the stops whose best arrival on a trip a round improved. A walk never continues another
+     * walk, and walks from a stop reached on foot earlier still start at the stop's arrival on a trip, see
+     * {@link QueryState}.
      * <p>
      * The labels to walk from are taken before any walk of the round sets a label, so that the walks do not depend on
      * the order of the stops.
      *
-     * @param round the current round.
+     * @param round the current round, after the first.
      */
     void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
         List<QueryState.Label> labelsToWalkFrom = new ArrayList<>();
-        for (int stopIdx = nextStopToWalkFrom(0, round); stopIdx >= 0; stopIdx = nextStopToWalkFrom(stopIdx + 1,
-                round)) {
-            QueryState.Label label = getLabelToWalkFrom(stopIdx, round);
+        for (int stopIdx = queryState.nextStopWithTripArrivalImproved(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopWithTripArrivalImproved(stopIdx + 1)) {
+            QueryState.Label label = queryState.getTripLabel(round, stopIdx);
             if (label != null && stops[stopIdx].numberOfTransfers(timeType) > 0) {
                 labelsToWalkFrom.add(label);
             }
@@ -107,30 +118,6 @@ class FootpathRelaxer {
         for (QueryState.Label label : labelsToWalkFrom) {
             expandFootpathsFromStop(label, round);
         }
-    }
-
-    /**
-     * Gets the next stop a round may walk on from, in the order of the stops: in later rounds a stop whose best arrival
-     * on a trip the round improved, in the first a source stop.
-     */
-    private int nextStopToWalkFrom(int fromStopIdx, int round) {
-        if (round > 0) {
-            return queryState.nextStopWithTripArrivalImproved(fromStopIdx);
-        }
-        return queryState.nextStopMarkedNextRound(fromStopIdx);
-    }
-
-    private QueryState.@Nullable Label getLabelToWalkFrom(int stopIdx, int round) {
-        if (round > 0) {
-            return queryState.isTripArrivalImproved(stopIdx) ? queryState.getTripLabel(round, stopIdx) : null;
-        }
-
-        // in round 0 all labels are those of the source stops at the start of the query
-        if (!allowSourceTransfers || !queryState.isMarkedNextRound(stopIdx)) {
-            return null;
-        }
-        QueryState.Label label = queryState.getLabel(0, stopIdx);
-        return label != null && label.type() == QueryState.LabelType.INITIAL ? label : null;
     }
 
     /**

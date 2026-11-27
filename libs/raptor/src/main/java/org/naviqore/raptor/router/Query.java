@@ -37,6 +37,8 @@ class Query {
 
     private final int[] sourceStopIndices;
     private final int[] sourceTimes;
+    // the labels of the source stops at the start of the current pass
+    private final QueryState.Label[] sourceLabels;
     // the target stops and the slots of trip transfers at them, with the walk from each to the target
     private final int[] targetIndices;
     private final int[] walkDurationsFromTargetIndices;
@@ -93,6 +95,7 @@ class Query {
 
         this.sourceStopIndices = sourceStopIndices;
         this.sourceTimes = sourceTimes;
+        sourceLabels = new QueryState.Label[sourceStopIndices.length];
         this.config = config;
         this.timeType = timeType;
         this.timeWindow = timeWindow;
@@ -127,6 +130,7 @@ class Query {
                 config.isAllowTargetTransfer(), targetStopIndices);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDateTime,
                 raptorConfig.getDaysToScan(), timeWindow, isRangeQuery());
+        routeScanner.setSourceLabels(sourceStopIndices, sourceLabels);
     }
 
     private static boolean isOnATrip(QueryState.Label label) {
@@ -236,7 +240,7 @@ class Query {
         setTimeLimit();
 
         // initially relax all source stops and add the newly improved stops by relaxation to the marked stops
-        footpathRelaxer.relaxInitial();
+        footpathRelaxer.relaxInitial(sourceLabels);
         endRound(0, listener);
 
         while (hasNextRound()) {
@@ -370,7 +374,8 @@ class Query {
     /**
      * Sets the initial labels of the source stops at their times shifted by an offset into a time window, and marks
      * them. A source stop that a pass before reached earlier for boarding, on foot from another source stop, keeps that
-     * label.
+     * label, but still walks on and boards its first trip from its own label, see {@link FootpathRelaxer#relaxInitial}
+     * and {@link RouteScanner#setSourceLabels}.
      *
      * @param passOffset the offset into the window, 0 for a query without one.
      */
@@ -381,6 +386,7 @@ class Query {
 
             QueryState.Label label = new QueryState.Label(0, targetTime, QueryState.LabelType.INITIAL,
                     QueryState.NO_INDEX, QueryState.NO_INDEX, stopIdx, null);
+            sourceLabels[i] = label;
             int comparableTime = queryState.getComparableTime(label);
             if (timeDirection * comparableTime < timeDirection * queryState.getComparableBestTime(stopIdx)) {
                 queryState.setLabel(0, stopIdx, label);

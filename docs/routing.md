@@ -187,6 +187,11 @@ only at the stops where they changed since it last did, so a pass costs what it 
   improved takes its arrival there less the start of the pass as travel time, if that is no longer than the stop's
   shortest so far.
 
+A source stop that a walk from another source stop reaches earlier, in its pass or in one before, keeps its own start
+next to the walk: it walks on from its start, since a walk does not continue a walk, and for isolines its first ride may
+leave until its own window ends, later than the walk's. Only source stops are concerned, and only where the source
+times differ by more than the walks between them.
+
 A query without a window is a range query of one pass: its best times need not be kept per round, since its rounds
 only improve on the ones before them.
 

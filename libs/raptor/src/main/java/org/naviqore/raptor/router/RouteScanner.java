@@ -60,6 +60,9 @@ class RouteScanner {
     private final boolean severalPasses;
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
+    // the source stops and their labels at the start of the current pass, see setSourceLabels
+    private int[] sourceStopIndices = new int[0];
+    private QueryState.Label[] sourceLabels = new QueryState.Label[0];
     // the time beyond which a label is of no use, see setTimeLimit
     private int timeLimit;
     // the boardings found along trip transfers, by route: those to board in the round scanned, and in the next
@@ -180,6 +183,19 @@ class RouteScanner {
      */
     void setFirstTripLimit(int duration) {
         firstTripLimit = duration;
+    }
+
+    /**
+     * Sets the source stops and the array their labels at the start of each pass are in. A source stop that another
+     * one reaches earlier on foot boards from that walk, but under a limit of the first trip (see
+     * {@link #setFirstTripLimit}) also from its own label, whose limit is later.
+     *
+     * @param stopIndices the indices of the source stops.
+     * @param labels      the labels of the source stops, in the order of their indices, updated by each pass.
+     */
+    void setSourceLabels(int[] stopIndices, QueryState.Label[] labels) {
+        sourceStopIndices = stopIndices;
+        sourceLabels = labels;
     }
 
     /**
@@ -608,7 +624,7 @@ class RouteScanner {
                 queryState.getComparableBestTime(labelIdx))) {
             return null;
         }
-        return findPossibleTrip(label, stop, stopOffset, routeIdx, numberOfStops);
+        return findPossibleTripAfter(label, stop, stopOffset, routeIdx, numberOfStops);
     }
 
     /**
@@ -1123,7 +1139,27 @@ class RouteScanner {
                                                   int numberOfStops, int lastRound) {
         QueryState.Label label = queryState.getLabel(lastRound, stopIdx);
         assert label != null : "a stop to board at has a label of the last round";
-        return findPossibleTrip(label, stop, stopOffset, routeIdx, numberOfStops);
+        return findPossibleTripAfter(label, stop, stopOffset, routeIdx, numberOfStops);
+    }
+
+    /**
+     * Finds the possible trip on a route after a label at a stop, or where a walk from a source stop reached another
+     * one under a limit of the first trip, after either the walk or the source stop's own label: the later label may
+     * be in time for a trip beyond the limit of the walk, and of equally good trips, the one without the walk is taken.
+     */
+    private @Nullable ActiveTrip findPossibleTripAfter(QueryState.Label label, Stop stop, int stopOffset, int routeIdx,
+                                                       int numberOfStops) {
+        ActiveTrip trip = findPossibleTrip(label, stop, stopOffset, routeIdx, numberOfStops);
+        if (firstTripLimit == NO_LIMIT || label.type() != QueryState.LabelType.TRANSFER || !isStartOfJourney(label)) {
+            return trip;
+        }
+
+        for (int i = 0; i < sourceStopIndices.length; i++) {
+            if (sourceStopIndices[i] == label.stopIdx()) {
+                return better(findPossibleTrip(sourceLabels[i], stop, stopOffset, routeIdx, numberOfStops), trip);
+            }
+        }
+        return trip;
     }
 
     /**
