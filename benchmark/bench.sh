@@ -10,6 +10,8 @@ JAVA=${JAVA_HOME:+$JAVA_HOME/bin/}java
 HEAP=${BENCHMARK_HEAP:-14g}
 MAIN=org.naviqore.benchmark.Benchmark
 SUBJECT=benchmark/src/main/java/org/naviqore/benchmark/subject/ServiceSubject.java
+# the subject of the versions before naviqore-timetable (4.x), whose service reads its feed as a GTFS schedule
+LEGACY_SUBJECT=benchmark/legacy/ServiceSubject.java
 
 usage() {
     cat >&2 <<'EOF'
@@ -40,17 +42,19 @@ build_working_tree() {
 }
 
 # builds a git reference in a worktree of its own, once per commit, and prints the path of its jar; a commit from
-# before the benchmark gets the subject and the benchmark module of the working tree
+# before the benchmark gets the subject and the benchmark module of the working tree, and one from before
+# naviqore-timetable the legacy subject
 build_reference() {
-    local commit jar worktree version
+    local commit hash jar worktree version
     commit=$(git -C "$ROOT" rev-parse --verify --quiet "$1^{commit}") || {
         echo "No such git reference: $1" >&2
         exit 1
     }
     jar=$VERSIONS/${commit:0:12}.jar
     if ! git -C "$ROOT" cat-file -e "$commit:$SUBJECT" 2>/dev/null; then
-        jar=$VERSIONS/${commit:0:12}-$(cd "$ROOT" && find benchmark/pom.xml benchmark/src/main -type f | sort |
-            xargs cat | shasum | cut -c1-8).jar
+        hash=$(cd "$ROOT" && find benchmark/pom.xml benchmark/src/main "$LEGACY_SUBJECT" -type f | sort | xargs cat |
+            shasum | cut -c1-8)
+        jar=$VERSIONS/${commit:0:12}-$hash.jar
     fi
     if [[ -f $jar ]]; then
         echo "$jar"
@@ -63,6 +67,9 @@ build_reference() {
     if [[ ! -f $worktree/$SUBJECT ]]; then
         rm -rf "$worktree/benchmark/src"
         cp -R "$ROOT/benchmark/src" "$ROOT/benchmark/pom.xml" "$worktree/benchmark/"
+        if [[ ! -d $worktree/libs/timetable ]]; then
+            cp "$ROOT/$LEGACY_SUBJECT" "$worktree/$SUBJECT"
+        fi
         version=$(cd "$worktree" && ./mvnw -q -N help:evaluate -Dexpression=project.version -DforceStdout)
         perl -0pi -e "s{(<parent>.*?<version>)[^<]*(</version>)}{\${1}$version\${2}}s" "$worktree/benchmark/pom.xml"
     fi
