@@ -62,6 +62,8 @@ class RouteScanner {
     // the boardings found along trip transfers, by route: those to board in the round scanned, and in the next
     private @Nullable Map<Integer, List<PendingBoarding>> pendingBoardings;
     private @Nullable Map<Integer, List<PendingBoarding>> nextPendingBoardings;
+    // the boardings along trip transfers made in the pass: made again, one would only repeat its work in a later round
+    private final Set<BoardingKey> madeBoardings = new HashSet<>();
 
     /**
      * @param queryState        the query state with the best time per stop and label per stop and round.
@@ -198,6 +200,10 @@ class RouteScanner {
     void scan(int round) {
         pendingBoardings = nextPendingBoardings;
         nextPendingBoardings = null;
+        if (pendingBoardings != null) {
+            pendingBoardings.values()
+                    .forEach(boardings -> boardings.forEach(boarding -> madeBoardings.add(boarding.key())));
+        }
         setRoutesToScanMask();
         log.debug("Scanning routes for round {}", round);
 
@@ -240,9 +246,11 @@ class RouteScanner {
     }
 
     /**
-     * Starts a pass of a query: the boardings found along trip transfers in a pass before are dropped.
+     * Starts a pass of a query: the boardings found along trip transfers in a pass before are dropped, and those made
+     * in it are forgotten, since a pass routes from other times.
      */
     void startPass() {
+        madeBoardings.clear();
         pendingBoardings = null;
         nextPendingBoardings = null;
     }
@@ -613,10 +621,14 @@ class RouteScanner {
     }
 
     /**
-     * Adds a boarding found along a trip transfer for the next round, unless one at the same stop of the route is as
-     * good.
+     * Adds a boarding found along a trip transfer for the next round, unless the pass has made it already, or one at
+     * the same stop of the route is as good.
      */
     private void addPendingBoarding(int routeIdx, int stopOffset, ActiveTrip trip) {
+        PendingBoarding pendingBoarding = new PendingBoarding(stopOffset, trip);
+        if (madeBoardings.contains(pendingBoarding.key())) {
+            return;
+        }
         if (nextPendingBoardings == null) {
             nextPendingBoardings = new HashMap<>();
         }
@@ -625,12 +637,12 @@ class RouteScanner {
             PendingBoarding boarding = boardings.get(i);
             if (boarding.stopOffset() == stopOffset) {
                 if (isBetter(trip.entryTime(), boarding.trip().entryTime())) {
-                    boardings.set(i, new PendingBoarding(stopOffset, trip));
+                    boardings.set(i, pendingBoarding);
                 }
                 return;
             }
         }
-        boardings.add(new PendingBoarding(stopOffset, trip));
+        boardings.add(pendingBoarding);
     }
 
     /**
@@ -1176,6 +1188,23 @@ class RouteScanner {
      * @param trip       the trip, boarded after the labels of the trip transfer.
      */
     private record PendingBoarding(int stopOffset, ActiveTrip trip) {
+
+        /**
+         * What the boarding is made of: the trip, where it is boarded, and the trip transfer with the trip changed from
+         * and its time, which tell the later trips it leads to.
+         */
+        BoardingKey key() {
+            BoardingByRule byRule = Objects.requireNonNull(trip.byRule());
+            return new BoardingKey(byRule.group().index, stopOffset, trip.dayIndex(), trip.tripOffset(),
+                    byRule.knownPosition(), byRule.knownTime());
+        }
+    }
+
+    /**
+     * A boarding along a trip transfer, see {@link PendingBoarding#key()}.
+     */
+    private record BoardingKey(int group, int stopOffset, int dayIndex, int tripOffset, int knownPosition,
+                               int knownTime) {
     }
 
     /**

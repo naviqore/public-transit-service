@@ -150,6 +150,10 @@ the trips of such rules apart:
   that rule allows too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board
   depends on the timetable and the options of the query alone, so a range query finds it once and keeps it for its
   passes.
+- **When a search ends.** A boarding by rule runs the next round, also if the arrival it follows improved no stop. A
+  pass makes each boarding by rule once: the same trip, boarded at the same stop by the same rule from the same trip
+  at the same time. Made again in a later round, it would only ride the same trip with more transfers. So a search
+  ends when no stop improves and no new boarding by rule waits, also where rules lead in a circle in no time.
 
 Any other rule, staying on board or taking no longer than the stop, hides nothing: its arrivals stay at the stop, and
 the rule only adds the faster change. A target stop or an isoline takes the best arrival at the stop or in its slots.

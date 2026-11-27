@@ -1,12 +1,20 @@
 package org.naviqore.raptor.router;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.naviqore.raptor.*;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Transfers between particular routes or trips: the most specific one applies to a pair of trips, the stops' walks and
  * same stop transfer times where none does, and a trip transfer that refuses a change or takes longer than the stop
  * never hides another arrival at the stop. A later trip that a trip transfer allows to change is found on another
- * service day too, and a trip boarded along a trip transfer leads to no later trip that transfer refuses.
+ * service day too, and a trip boarded along a trip transfer leads to no later trip that transfer refuses. A search
+ * ends where trip transfers lead in a circle.
  */
 class RaptorRouterTripTransferTest {
 
@@ -117,6 +126,73 @@ class RaptorRouterTripTransferTest {
             builder.addTripTransfer(trips("C", "L-0", "C", trip, TripTransfer.Type.MINIMUM_TIME, 0));
         }
         return builder.build();
+    }
+
+    /**
+     * X runs A - B and Z runs B - A, both at 08:00 at both stops, and Y runs B - T at 08:30, reaching T after 10. Trip
+     * transfers of the type given let X change to Z at B and Z to X at A in no time: the trips board each other.
+     */
+    private static RaptorAlgorithm changesInACircle(TripTransfer.@Nullable Type type) {
+        RaptorRouterBuilder builder = builder("A", "B", "T");
+        addRoute(builder, "X", List.of("A", "B"), new int[]{0, 0}, 8 * 60);
+        addRoute(builder, "Z", List.of("B", "A"), new int[]{0, 0}, 8 * 60);
+        addRoute(builder, "Y", List.of("B", "T"), new int[]{0, 10}, 8 * 60 + 30);
+        if (type != null) {
+            builder.addTripTransfer(trips("B", "X-0", "B", "Z-0", type, 0));
+            builder.addTripTransfer(trips("A", "Z-0", "A", "X-0", type, 0));
+        }
+        return builder.build();
+    }
+
+    /**
+     * The queries of every kind on {@link #changesInACircle}, each giving when it reaches T (leaves A, routing
+     * backward), with no limit to the transfers.
+     */
+    private static List<Function<RaptorAlgorithm, OffsetDateTime>> queriesInACircle() {
+        QueryConfig config = QueryConfig.defaults();
+        Duration window = Duration.ofMinutes(10);
+        return List.of(raptor -> route(raptor, Map.of("A", at(8, 0)), "T", config).getFirst().getArrivalTime(),
+                raptor -> raptor.connectionRangeQuery(Map.of("A", at(8, 0)), Map.of("T", 0), TimeType.DEPARTURE,
+                        window, config).getFirst().getArrivalTime(),
+                raptor -> raptor.isolineQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE, config)
+                        .get("T")
+                        .getArrivalTime(),
+                raptor -> raptor.isolineRangeQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE, window, config)
+                        .get("T")
+                        .getArrivalTime(),
+                raptor -> raptor.connectionQuery(Map.of("T", at(8, 40)), Map.of("A", 0), TimeType.ARRIVAL, config)
+                        .getFirst()
+                        .getDepartureTime(),
+                raptor -> raptor.isolineQuery(Map.of("T", at(8, 40)), TimeType.ARRIVAL, config)
+                        .get("A")
+                        .getDepartureTime());
+    }
+
+    @Test
+    void changesInACircle_endAsWithoutTheTripTransfers() {
+        for (TripTransfer.Type type : new TripTransfer.Type[]{TripTransfer.Type.MINIMUM_TIME,
+                TripTransfer.Type.IN_SEAT}) {
+            RaptorAlgorithm withoutTripTransfers = changesInACircle(null);
+            RaptorAlgorithm withTripTransfers = changesInACircle(type);
+            List<Function<RaptorAlgorithm, OffsetDateTime>> queries = queriesInACircle();
+            for (int i = 0; i < queries.size(); i++) {
+                Function<RaptorAlgorithm, OffsetDateTime> query = queries.get(i);
+                List<Integer> rounds = new ArrayList<>();
+                List<OffsetDateTime> times = new ArrayList<>();
+                assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+                    try (RoundCounter counter = new RoundCounter()) {
+                        times.add(query.apply(withoutTripTransfers));
+                        rounds.add(counter.take());
+                        times.add(query.apply(withTripTransfers));
+                        rounds.add(counter.take());
+                    }
+                });
+                String message = type + ", query " + i;
+                assertEquals(times.getFirst(), times.getLast(), message);
+                // routing backward, the boarding by rule of X at B is made once, after the stop has boarded it
+                assertEquals(rounds.getFirst() + (i < 4 ? 0 : 1), rounds.getLast(), message);
+            }
+        }
     }
 
     @Test
@@ -385,6 +461,39 @@ class RaptorRouterTripTransferTest {
             builder.addTripTransfer(tripTransfer);
 
             assertThrows(IllegalArgumentException.class, builder::build, tripTransfer::toString);
+        }
+    }
+
+    /**
+     * Counts the rounds of the searches while it is open, by the message the route scanner logs for each.
+     */
+    private static final class RoundCounter implements AutoCloseable {
+
+        private final Logger logger = (Logger) LoggerFactory.getLogger(RouteScanner.class);
+        private final ListAppender<ILoggingEvent> events = new ListAppender<>();
+        private final @Nullable Level level = logger.getLevel();
+
+        RoundCounter() {
+            logger.setLevel(Level.DEBUG);
+            events.start();
+            logger.addAppender(events);
+        }
+
+        /**
+         * The rounds counted since the last call.
+         */
+        int take() {
+            int rounds = (int) events.list.stream()
+                    .filter(event -> event.getFormattedMessage().startsWith("Scanning routes for round"))
+                    .count();
+            events.list.clear();
+            return rounds;
+        }
+
+        @Override
+        public void close() {
+            logger.detachAppender(events);
+            logger.setLevel(level);
         }
     }
 
