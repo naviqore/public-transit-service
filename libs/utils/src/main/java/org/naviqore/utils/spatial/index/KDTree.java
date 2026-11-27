@@ -155,9 +155,10 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
-    // guards callers that do not check nullness at compile time
-    @SuppressWarnings("java:S2583")
-    public List<T> rangeSearch(T center, double radius) {
+    // guards callers that do not check nullness at compile time; the return type is that of 4.x, which compiled callers
+    // link against
+    @SuppressWarnings({"java:S2583", "NonApiType"})
+    public ArrayList<T> rangeSearch(T center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center location cannot be null");
         }
@@ -171,9 +172,10 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
-    // guards callers that do not check nullness at compile time
-    @SuppressWarnings("java:S2583")
-    public List<T> rangeSearch(Coordinate center, double radius) {
+    // guards callers that do not check nullness at compile time; the return type is that of 4.x, which compiled callers
+    // link against
+    @SuppressWarnings({"java:S2583", "NonApiType"})
+    public ArrayList<T> rangeSearch(Coordinate center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center coordinate cannot be null");
         }
@@ -189,7 +191,9 @@ public class KDTree<T extends Location<?>> {
      * @param radius          The radius within which to search.
      * @return A list of all locations within the radius of the specified center coordinate.
      */
-    public List<T> rangeSearch(double firstComponent, double secondComponent, double radius) {
+    // the return type is that of 4.x, which compiled callers link against
+    @SuppressWarnings("NonApiType")
+    public ArrayList<T> rangeSearch(double firstComponent, double secondComponent, double radius) {
         if (root == null) {
             throw new IllegalStateException("Tree is empty");
         }
