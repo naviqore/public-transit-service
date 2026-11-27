@@ -223,6 +223,9 @@ public class GtfsScheduleReader {
         }
 
         validateCsvFileIsNotEmpty(fileType, inOrder.records());
+        if (inOrder.skipped() > 0) {
+            log.warn("Skipped {} of {} records of {}", inOrder.skipped(), inOrder.records(), fileType.getFileName());
+        }
     }
 
     public GtfsSchedule read(String path) throws IOException {
@@ -252,7 +255,7 @@ public class GtfsScheduleReader {
 
     /**
      * Adds the values read from the blocks of a file to the schedule, block after block in the order of the file, and
-     * counts the records and the lines they were read from.
+     * counts the records, those skipped, and the lines they were read from.
      */
     @RequiredArgsConstructor
     private static final class InOrder {
@@ -260,6 +263,7 @@ public class GtfsScheduleReader {
         private final GtfsScheduleParser recordParser;
         private final GtfsScheduleFile fileType;
         private long records;
+        private long skipped;
         private long lines;
 
         /**
@@ -269,7 +273,9 @@ public class GtfsScheduleReader {
          */
         void add(ReadBlock block) {
             for (ParsedRecord record : block.records()) {
-                recordParser.add(record);
+                if (!recordParser.add(record)) {
+                    skipped++;
+                }
             }
             records += block.records().size();
 
@@ -287,6 +293,10 @@ public class GtfsScheduleReader {
 
         long records() {
             return records;
+        }
+
+        long skipped() {
+            return skipped;
         }
     }
 }

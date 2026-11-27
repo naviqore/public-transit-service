@@ -240,6 +240,11 @@ The query's minimum transfer duration applies to all but staying on board. A tri
 is not 1 and left where its `drop_off_type` is not 1: a pickup or drop-off arranged by phone or with the driver is
 possible.
 
+The GTFS reader skips a row of `transfers.txt` it cannot apply with a warning, as it skips invalid rows of the other
+files, and logs how many it skipped: a row that is invalid as GTFS defines it, such as one of the in-seat types at a
+station (`location_type` 1) or one at a boarding area, and a row that names a call the schedule does not have, such as
+a trip at a stop whose stop time has no times and is skipped. The other rows still apply.
+
 ### Optimized travel time
 
 A connection of `connectionQuery` takes the first trip it can catch, so it may leave earlier than its arrival needs.

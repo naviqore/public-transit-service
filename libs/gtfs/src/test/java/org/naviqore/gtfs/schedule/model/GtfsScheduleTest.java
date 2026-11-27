@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
 import org.naviqore.timetable.type.ServiceDayTime;
 import org.naviqore.timetable.type.TimeType;
+import org.naviqore.timetable.type.TransferType;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,6 +41,16 @@ class GtfsScheduleTest {
     void shouldPreventMultipleBuildCalls() {
         builder.build();
         assertThatThrownBy(() -> builder.build()).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldRefuseTransferLeavingOutTheStopOfTripWithoutStopTimes() {
+        builder.addTrip("empty", "route1", "weekdays", "");
+
+        assertThatThrownBy(
+                () -> builder.addTransfer(null, null, null, null, "route1_wd_f_1", "empty", TransferType.IN_SEAT,
+                        null)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Transfer of type IN_SEAT leaves out the stop of trip empty, which has no stop times");
     }
 
     @Test
