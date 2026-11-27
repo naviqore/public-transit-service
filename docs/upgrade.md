@@ -57,6 +57,11 @@ them under their new names.
   reader logs how many records of each file it skipped. A station is a stop of `location_type` 1, so a platform with
   boarding areas stays a stop.
 
+### Home page
+
+The home page no longer shows the build time, and the build information, which `/actuator/info` shows, has none
+either: Maven fixes it at 1980-02-01 for reproducible builds.
+
 ## REST API
 
 The endpoints and their parameters are those of 4.x. A connection also has its `departureTime` and `arrivalTime`, as

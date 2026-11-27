@@ -152,6 +152,8 @@
                             <goal>build-info</goal>
                         </goals>
                         <configuration>
+                            <!-- would be the fixed project.build.outputTimestamp of the reproducible build -->
+                            <time>off</time>
                             <additionalProperties>
                                 <description>${project.description}</description>
                             </additionalProperties>
