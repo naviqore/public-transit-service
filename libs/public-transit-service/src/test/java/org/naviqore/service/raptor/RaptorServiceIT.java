@@ -412,8 +412,8 @@ class RaptorServiceIT {
          * Starts the service on the feed, with T2 leaving from a stop, and the drop-off type of T1 and the pickup type
          * of T2 there.
          */
-        private void start(String toStop, String dropOffType, String pickupType)
-                throws IOException, InterruptedException {
+        private void start(String toStop, String dropOffType,
+                           String pickupType) throws IOException, InterruptedException {
             Files.writeString(directory.resolve("agency.txt"),
                     "agency_id,agency_name,agency_url,agency_timezone\nA,Agency,https://a.example,Europe/Zurich\n");
             Files.writeString(directory.resolve("calendar.txt"), """
@@ -451,11 +451,10 @@ class RaptorServiceIT {
         /**
          * The legs of each connection from a stop to another, departing at 07:55 or arriving by 08:25.
          */
-        private List<List<String>> route(String from, String to, TimeType timeType)
-                throws StopNotFoundException, ConnectionRoutingException {
+        private List<List<String>> route(String from, String to,
+                                         TimeType timeType) throws StopNotFoundException, ConnectionRoutingException {
             return service.getConnections(service.getStopById(from), service.getStopById(to),
-                            timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType,
-                            ConnectionQueryConfig.defaults())
+                            timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType, ConnectionQueryConfig.defaults())
                     .stream()
                     .map(connection -> connection.getLegs().stream().map(StayingOnBoard::describe).toList())
                     .toList();
@@ -477,9 +476,8 @@ class RaptorServiceIT {
         void betweenTwoStops_isNoWalk(TimeType timeType) throws Exception {
             start("P2", "", "");
 
-            List<Connection> connections = service.getConnections(service.getStopById("S"),
-                    service.getStopById("Z"), timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType,
-                    ConnectionQueryConfig.defaults());
+            List<Connection> connections = service.getConnections(service.getStopById("S"), service.getStopById("Z"),
+                    timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType, ConnectionQueryConfig.defaults());
             assertEquals(1, connections.size());
             List<Leg> legs = connections.getFirst().getLegs();
             assertEquals(List.of("T1", "T2"), legs.stream().map(StayingOnBoard::describe).toList());

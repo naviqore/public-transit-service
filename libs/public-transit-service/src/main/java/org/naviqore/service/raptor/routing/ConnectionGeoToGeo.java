@@ -98,9 +98,8 @@ class ConnectionGeoToGeo extends ConnectionQueryTemplate<GeoCoordinate, GeoCoord
     private Connection getConnection(GeoCoordinate end, org.naviqore.raptor.Connection connection, GeoCoordinate start,
                                      @Nullable Stop startStop, @Nullable Stop endStop) {
         OffsetDateTime departureTime = connection.getDepartureTime();
-        RoutingQueryUtils.Mile firstMile = startStop == null ? utils.createFirstWalk(start,
-                connection.getFromStopId(), departureTime) : utils.createFirstWalkTransfer(startStop,
-                connection.getFromStopId(), departureTime);
+        RoutingQueryUtils.Mile firstMile = startStop == null ? utils.createFirstWalk(start, connection.getFromStopId(),
+                departureTime) : utils.createFirstWalkTransfer(startStop, connection.getFromStopId(), departureTime);
 
         OffsetDateTime arrivalTime = connection.getArrivalTime();
         RoutingQueryUtils.Mile lastMile = endStop == null ? utils.createLastWalk(end, connection.getToStopId(),

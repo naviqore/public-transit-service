@@ -164,8 +164,8 @@ class RoutingQueryUtils {
     }
 
     /**
-     * The first mile from a stop without departures to the first stop of a connection, before it leaves the stop at
-     * the given time.
+     * The first mile from a stop without departures to the first stop of a connection, before it leaves the stop at the
+     * given time.
      */
     Mile createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));

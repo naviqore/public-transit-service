@@ -417,21 +417,7 @@ public class RaptorRouterMultiDayTest {
 
         private final DateRecordingMasker masker = new DateRecordingMasker();
 
-        private RaptorAlgorithm build(int daysToScan) {
-            RaptorRouterBuilder builder = RaptorRouter.builder(
-                    RaptorConfig.builder().daysToScan(daysToScan).maskProvider(masker).stopTimeCacheSize(20).build());
-            builder.addStop(STOP_A).addStop(STOP_B).addStop(STOP_C);
-            addTrip(builder, "daily", STOP_B, 8 * 60, 30);
-            addTrip(builder, "fast", STOP_B, 9 * 60, 10);
-            addTrip(builder, "night", STOP_C, 30, 10);
-            builder.addTrip("night-1", "night");
-            builder.addStopTime("night", "night-1", 0, STOP_A, (23 * 60 + 30) * 60, (23 * 60 + 30) * 60);
-            builder.addStopTime("night", "night-1", 1, STOP_C, (23 * 60 + 40) * 60, (23 * 60 + 40) * 60);
-            return builder.build();
-        }
-
-        private static void addTrip(RaptorRouterBuilder builder, String routeId, String to, int minute,
-                                    int minutes) {
+        private static void addTrip(RaptorRouterBuilder builder, String routeId, String to, int minute, int minutes) {
             builder.addRoute(routeId, RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(STOP_A, to));
             builder.addTrip(routeId + "-0", routeId);
             builder.addStopTime(routeId, routeId + "-0", 0, STOP_A, minute * 60, minute * 60);
@@ -461,6 +447,19 @@ public class RaptorRouterMultiDayTest {
                 }
             }
             return departures;
+        }
+
+        private RaptorAlgorithm build(int daysToScan) {
+            RaptorRouterBuilder builder = RaptorRouter.builder(
+                    RaptorConfig.builder().daysToScan(daysToScan).maskProvider(masker).stopTimeCacheSize(20).build());
+            builder.addStop(STOP_A).addStop(STOP_B).addStop(STOP_C);
+            addTrip(builder, "daily", STOP_B, 8 * 60, 30);
+            addTrip(builder, "fast", STOP_B, 9 * 60, 10);
+            addTrip(builder, "night", STOP_C, 30, 10);
+            builder.addTrip("night-1", "night");
+            builder.addStopTime("night", "night-1", 0, STOP_A, (23 * 60 + 30) * 60, (23 * 60 + 30) * 60);
+            builder.addStopTime("night", "night-1", 1, STOP_C, (23 * 60 + 40) * 60, (23 * 60 + 40) * 60);
+            return builder.build();
         }
 
         @ParameterizedTest
@@ -502,8 +501,7 @@ public class RaptorRouterMultiDayTest {
         void windowAcrossMidnight_withOneDayToScan() {
             RaptorAlgorithm raptor = build(1);
             LocalDate nextDay = REFERENCE_DAY.toLocalDate().plusDays(1);
-            List<LocalDateTime> expected = List.of(REFERENCE_DAY.toLocalDate().atTime(23, 30),
-                    nextDay.atTime(0, 30));
+            List<LocalDateTime> expected = List.of(REFERENCE_DAY.toLocalDate().atTime(23, 30), nextDay.atTime(0, 30));
 
             List<Connection> departing = raptor.connectionRangeQuery(Map.of(STOP_A, REFERENCE_DAY.plusHours(23)),
                     Map.of(STOP_C, 0), TimeType.DEPARTURE, Duration.ofHours(3), QueryConfig.defaults());
@@ -525,9 +523,11 @@ public class RaptorRouterMultiDayTest {
                 OffsetDateTime middle = departure ? start.plus(halfAWeek) : start.minus(halfAWeek);
                 List<Connection> halves = new ArrayList<>();
                 for (OffsetDateTime time : List.of(start, middle)) {
-                    halves.addAll(departure ? raptor.connectionRangeQuery(Map.of(STOP_A, time), Map.of(STOP_B, 0),
-                            timeType, halfAWeek, QueryConfig.defaults()) : raptor.connectionRangeQuery(
-                            Map.of(STOP_B, time), Map.of(STOP_A, 0), timeType, halfAWeek, QueryConfig.defaults()));
+                    halves.addAll(
+                            departure ? raptor.connectionRangeQuery(Map.of(STOP_A, time), Map.of(STOP_B, 0), timeType,
+                                    halfAWeek, QueryConfig.defaults()) : raptor.connectionRangeQuery(
+                                    Map.of(STOP_B, time), Map.of(STOP_A, 0), timeType, halfAWeek,
+                                    QueryConfig.defaults()));
                 }
 
                 assertEquals(departuresOfTheWeek(), departures(halves), timeType.name());

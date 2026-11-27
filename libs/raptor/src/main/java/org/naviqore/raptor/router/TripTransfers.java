@@ -468,6 +468,13 @@ final class TripTransfers {
             };
         }
 
+        /**
+         * Whether a call of a route can be boarded at for a change, or for the route a group starts from, left.
+         */
+        private static boolean isRegular(RouteStop routeStop, boolean to) {
+            return to ? routeStop.boarding() : routeStop.alighting();
+        }
+
         void add(TripTransfer transfer) {
             int fromStopIdx = Objects.requireNonNull(lookup.stops().get(transfer.fromStopId()));
             int toStopIdx = Objects.requireNonNull(lookup.stops().get(transfer.toStopId()));
@@ -543,8 +550,8 @@ final class TripTransfers {
 
         /**
          * Finds where a route calls at a stop: the positions it picks up passengers at, but not at its end, or for the
-         * route a group starts from, those it sets them down at, but not at its start. A group that lets the rider
-         * stay on board takes every call but the end (start), as staying on board is neither.
+         * route a group starts from, those it sets them down at, but not at its start. A group that lets the rider stay
+         * on board takes every call but the end (start), as staying on board is neither.
          *
          * @param to whether the route is the one the group ends at.
          */
@@ -556,13 +563,6 @@ final class TripTransfers {
                 RouteStop routeStop = routeTraversal.routeStops()[route.firstRouteStopIdx() + offset];
                 return routeStop.stopIndex() == stopIdx && (group.inSeat || isRegular(routeStop, to));
             }).toArray();
-        }
-
-        /**
-         * Whether a call of a route can be boarded at for a change, or for the route a group starts from, left.
-         */
-        private static boolean isRegular(RouteStop routeStop, boolean to) {
-            return to ? routeStop.boarding() : routeStop.alighting();
         }
 
         private boolean[] findRegularCalls(Group group, int[] offsets, boolean to) {

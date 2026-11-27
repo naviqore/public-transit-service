@@ -9,11 +9,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.naviqore.gtfs.schedule.model.GtfsSchedule;
-import org.naviqore.gtfs.schedule.model.Route;
-import org.naviqore.gtfs.schedule.model.Stop;
-import org.naviqore.gtfs.schedule.model.Transfer;
-import org.naviqore.gtfs.schedule.model.Trip;
+import org.naviqore.gtfs.schedule.model.*;
 import org.naviqore.gtfs.schedule.type.LocationType;
 import org.slf4j.LoggerFactory;
 
@@ -161,8 +157,7 @@ class GtfsScheduleReaderTransfersIT {
             // trips staying on board that are not named, and no stop for trips that do not stay on board
             "EMSI,STAGECOACH,,,,,4,             | does not name both trips",
             "EMSI,,,,,,0,                       | does not name both stops",
-            ",STAGECOACH,,,CITY1,STBA,2,300     | [to_stop_id=STAGECOACH, from_trip_id=CITY1, to_trip_id=STBA]: "
-                    + "Transfer of type MINIMUM_TIME does not name both stops"})
+            ",STAGECOACH,,,CITY1,STBA,2,300     | [to_stop_id=STAGECOACH, from_trip_id=CITY1, to_trip_id=STBA]: " + "Transfer of type MINIMUM_TIME does not name both stops"})
     void anInvalidRow_isSkippedWithAWarning(String row, String reason, @TempDir Path tempDir) throws IOException {
         Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
         Files.writeString(directory.resolve("transfers.txt"), HEADER + row + "\nEMSI,STAGECOACH,,,,,2,420\n");
@@ -191,8 +186,7 @@ class GtfsScheduleReaderTransfersIT {
                 stopTime -> stopTime.stop().getId()).containsExactly("STAGECOACH", "BEATTY_AIRPORT");
         assertThat(transfers(reading.schedule(), "NANAA")).isEmpty();
         assertThat(reading.warnings()).contains(
-                "Skipping invalid transfer [from_stop_id=NANAA, to_stop_id=NANAA, from_trip_id=STBA, "
-                        + "to_trip_id=CITY2]: Trip STBA does not call at stop NANAA",
+                "Skipping invalid transfer [from_stop_id=NANAA, to_stop_id=NANAA, from_trip_id=STBA, " + "to_trip_id=CITY2]: Trip STBA does not call at stop NANAA",
                 "Skipped 1 of 1 records of transfers.txt");
     }
 
@@ -209,18 +203,14 @@ class GtfsScheduleReaderTransfersIT {
 
         // a row of trips staying on board at a station, and one at a boarding area, are skipped
         writeStopsOfBullfrogStation(directory, "BULLFROG_FRONT,Bullfrog front,36.88108,-116.81797,4,BULLFROG\n");
-        Files.writeString(transfers, HEADER + "BULLFROG_STATION,BULLFROG_STATION,,,AB1,AB2,4,\n"
-                + "BULLFROG_FRONT,BULLFROG_FRONT,,,AB1,BFC1,2,300\n");
+        Files.writeString(transfers,
+                HEADER + "BULLFROG_STATION,BULLFROG_STATION,,,AB1,AB2,4,\n" + "BULLFROG_FRONT,BULLFROG_FRONT,,,AB1,BFC1,2,300\n");
         Reading reading = readWarning(directory);
         assertThat(transfers(reading.schedule(), "BULLFROG_STATION")).isEmpty();
         assertThat(transfers(reading.schedule(), "BULLFROG_FRONT")).isEmpty();
         assertThat(reading.warnings()).containsExactly(
-                "Skipping invalid transfer [from_stop_id=BULLFROG_STATION, to_stop_id=BULLFROG_STATION, "
-                        + "from_trip_id=AB1, to_trip_id=AB2]: Transfer of type IN_SEAT links trips at station "
-                        + "BULLFROG_STATION, not at its stops",
-                "Skipping invalid transfer [from_stop_id=BULLFROG_FRONT, to_stop_id=BULLFROG_FRONT, "
-                        + "from_trip_id=AB1, to_trip_id=BFC1]: Transfer names stop BULLFROG_FRONT of location type "
-                        + "BOARDING_AREA, which is neither a stop nor a station",
+                "Skipping invalid transfer [from_stop_id=BULLFROG_STATION, to_stop_id=BULLFROG_STATION, " + "from_trip_id=AB1, to_trip_id=AB2]: Transfer of type IN_SEAT links trips at station " + "BULLFROG_STATION, not at its stops",
+                "Skipping invalid transfer [from_stop_id=BULLFROG_FRONT, to_stop_id=BULLFROG_FRONT, " + "from_trip_id=AB1, to_trip_id=BFC1]: Transfer names stop BULLFROG_FRONT of location type " + "BOARDING_AREA, which is neither a stop nor a station",
                 "Skipped 2 of 2 records of transfers.txt");
     }
 

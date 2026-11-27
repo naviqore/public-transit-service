@@ -1,7 +1,9 @@
 package org.naviqore.service.raptor.routing;
 
 import org.naviqore.raptor.RaptorAlgorithm;
-import org.naviqore.service.*;
+import org.naviqore.service.Connection;
+import org.naviqore.service.Stop;
+import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.utils.spatial.GeoCoordinate;

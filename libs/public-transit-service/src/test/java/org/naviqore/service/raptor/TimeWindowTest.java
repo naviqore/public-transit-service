@@ -26,9 +26,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Connections and isolines over time windows of the service: a window of several days finds the departures of every
- * day in it, and a connection leaves a location and reaches one at the times its window applies to, also where the
- * walk is too short to be a leg of its own.
+ * Connections and isolines over time windows of the service: a window of several days finds the departures of every day
+ * in it, and a connection leaves a location and reaches one at the times its window applies to, also where the walk is
+ * too short to be a leg of its own.
  */
 class TimeWindowTest {
 
@@ -140,8 +140,7 @@ class TimeWindowTest {
 
     @ParameterizedTest
     @ValueSource(doubles = {0, 0.0005, 0.0015})
-    void windowOfASecond_leavesALocationInIt(double offset) throws StopNotFoundException,
-            ConnectionRoutingException {
+    void windowOfASecond_leavesALocationInIt(double offset) throws StopNotFoundException, ConnectionRoutingException {
         // leaving the location at the start of the window just catches the trip at 08:00
         GeoCoordinate origin = near(STOP_A, offset);
         OffsetDateTime start = at(MONDAY, 8, 0).minusSeconds(mile(origin, STOP_A));
@@ -156,8 +155,7 @@ class TimeWindowTest {
 
     @ParameterizedTest
     @ValueSource(doubles = {0, 0.0005, 0.0015})
-    void windowOfASecond_reachesALocationInIt(double offset) throws StopNotFoundException,
-            ConnectionRoutingException {
+    void windowOfASecond_reachesALocationInIt(double offset) throws StopNotFoundException, ConnectionRoutingException {
         // the trip reaching B at 08:30 reaches the location just at the end of the window
         GeoCoordinate destination = near(STOP_B, offset);
         OffsetDateTime end = at(MONDAY, 8, 30).plusSeconds(mile(destination, STOP_B));
@@ -180,8 +178,7 @@ class TimeWindowTest {
         OffsetDateTime arrival = at(MONDAY, 8, 30).plusSeconds(mile(destination, STOP_B));
         ConnectionQueryConfig config = ConnectionQueryConfig.builder().timeWindowDuration(window).build();
 
-        List<Connection> departing = service.getConnections(origin, destination, departure, TimeType.DEPARTURE,
-                config);
+        List<Connection> departing = service.getConnections(origin, destination, departure, TimeType.DEPARTURE, config);
         List<Connection> arriving = service.getConnections(origin, destination, arrival, TimeType.ARRIVAL, config);
 
         for (List<Connection> connections : List.of(departing, arriving)) {
@@ -212,8 +209,7 @@ class TimeWindowTest {
     }
 
     @Test
-    void isolinesOverAWindowOfASecond_leaveAndReachTheLocationInIt() throws StopNotFoundException,
-            ConnectionRoutingException {
+    void isolinesOverAWindowOfASecond_leaveAndReachTheLocationInIt() throws StopNotFoundException, ConnectionRoutingException {
         GeoCoordinate origin = near(STOP_A, 0.0005);
         GeoCoordinate destination = near(STOP_B, 0.0005);
         OffsetDateTime start = at(MONDAY, 8, 0).minusSeconds(mile(origin, STOP_A));

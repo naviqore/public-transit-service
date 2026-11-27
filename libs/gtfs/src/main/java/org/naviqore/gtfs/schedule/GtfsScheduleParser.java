@@ -131,8 +131,8 @@ class GtfsScheduleParser {
                 Utils.getIntFieldOrDefault(record, "wheelchair_boarding", 0));
         LocationType locationType = LocationType.parse(Utils.getStringFieldOrDefault(record, "location_type", ""));
 
-        return added(builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding,
-                locationType));
+        return added(
+                builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding, locationType));
     }
 
     private static ParsedRecord readRoute(CSVRecord record) {

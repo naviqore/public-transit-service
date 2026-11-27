@@ -39,8 +39,8 @@ class RaptorServiceInitializerIT {
     }
 
     @Test
-    void shouldInitializeServiceWithRowsOfTransfersThatCannotBeApplied(@TempDir Path tempDir)
-            throws IOException, InterruptedException, StopNotFoundException {
+    void shouldInitializeServiceWithRowsOfTransfersThatCannotBeApplied(
+            @TempDir Path tempDir) throws IOException, InterruptedException, StopNotFoundException {
         // rows the reader skips, a rule for a route that does not call at its stops, and a trip continued in seat
         Path directory = GtfsScheduleDataset.SAMPLE_FEED_1.getUnzipped(tempDir).toPath();
         Files.writeString(directory.resolve("transfers.txt"), """

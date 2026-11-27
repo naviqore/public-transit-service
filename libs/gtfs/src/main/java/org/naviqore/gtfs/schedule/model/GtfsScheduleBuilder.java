@@ -268,8 +268,8 @@ public class GtfsScheduleBuilder {
         // a transfer linking trips that leaves out a stop has both trips
         Stop fromStop = fromStopId == null ? getTerminalStop(Objects.requireNonNull(fromTrip), true,
                 transferType) : getStop(fromStopId);
-        Stop toStop = toStopId == null ? getTerminalStop(Objects.requireNonNull(toTrip), false,
-                transferType) : getStop(toStopId);
+        Stop toStop = toStopId == null ? getTerminalStop(Objects.requireNonNull(toTrip), false, transferType) : getStop(
+                toStopId);
         checkLocationType(fromStop, transferType);
         checkLocationType(toStop, transferType);
         if (fromTrip != null) {

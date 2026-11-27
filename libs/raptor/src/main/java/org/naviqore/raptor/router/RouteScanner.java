@@ -58,6 +58,11 @@ class RouteScanner {
     private final KnownTargets @Nullable [] knownTargets;
     // whether the query runs several passes, whose labels are kept for the next, see boardsAtStop
     private final boolean severalPasses;
+    // the boardings along trip transfers made in the pass: made again, one would only repeat its work in a later round
+    private final Set<BoardingKey> madeBoardings = new HashSet<>();
+    // on a route with trip transfers, the trips ridden besides the active trip, which is the earliest: later trips
+    // that may change to trips the active trip may not, see covers
+    private final List<ActiveTrip> otherTrips = new ArrayList<>();
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
     // the source stops and their labels at the start of the current pass, see setSourceLabels
@@ -68,11 +73,6 @@ class RouteScanner {
     // the boardings found along trip transfers, by route: those to board in the round scanned, and in the next
     private @Nullable Map<Integer, List<PendingBoarding>> pendingBoardings;
     private @Nullable Map<Integer, List<PendingBoarding>> nextPendingBoardings;
-    // the boardings along trip transfers made in the pass: made again, one would only repeat its work in a later round
-    private final Set<BoardingKey> madeBoardings = new HashSet<>();
-    // on a route with trip transfers, the trips ridden besides the active trip, which is the earliest: later trips
-    // that may change to trips the active trip may not, see covers
-    private final List<ActiveTrip> otherTrips = new ArrayList<>();
 
     /**
      * @param queryState        the query state with the best time per stop and label per stop and round.
@@ -186,8 +186,8 @@ class RouteScanner {
     }
 
     /**
-     * Sets the source stops and the array their labels at the start of each pass are in. A source stop that another
-     * one reaches earlier on foot boards from that walk, but under a limit of the first trip (see
+     * Sets the source stops and the array their labels at the start of each pass are in. A source stop that another one
+     * reaches earlier on foot boards from that walk, but under a limit of the first trip (see
      * {@link #setFirstTripLimit}) also from its own label, whose limit is later.
      *
      * @param stopIndices the indices of the source stops.
@@ -335,8 +335,8 @@ class RouteScanner {
                 targetTime += activeTrip.dayTimeOffset;
 
                 if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, bestStopTime, stopIdx, round,
-                        lastRound, currentRouteIdx) && !(withTransfers && boardsBesides(activeTrip, stopIdx,
-                        stopOffset, lastRound))) {
+                        lastRound, currentRouteIdx) && !(withTransfers && boardsBesides(activeTrip, stopIdx, stopOffset,
+                        lastRound))) {
                     continue;
                 }
             } else if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, furthestTripTime, numberOfStops)) {
@@ -559,8 +559,8 @@ class RouteScanner {
                 // few slots were reached in the round before
                 if (queryState.isMarkedThisRound(slot) && !changesByRule(slot, routeIdx, round - 1)) {
                     possibleTrip = better(possibleTrip,
-                            boardAfter(slot, stop, stopOffset, routeIdx, numberOfStops, round - 1,
-                                    coveringTrip != null, coveredTime));
+                            boardAfter(slot, stop, stopOffset, routeIdx, numberOfStops, round - 1, coveringTrip != null,
+                                    coveredTime));
                 }
             }
         }
@@ -772,8 +772,7 @@ class RouteScanner {
                 TransferTarget target = inSeat ? findTripTransferTarget(group, targetOffset, position, time,
                         true) : findTripTransferTarget(group, call, targetOffset, position, time, dayIndex, trip);
                 if (target != null && (best == null || isBetter(target.entryTime(),
-                        best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position,
-                        entryTime))) {
+                        best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position, entryTime))) {
                     best = target;
                     bestPosition = position;
                     bestTime = time;
@@ -799,8 +798,7 @@ class RouteScanner {
         if (!group.isAtOneStop()) {
             int rule = forward ? group.rule(bestPosition, best.tripOffset()) : group.rule(best.tripOffset(),
                     bestPosition);
-            QueryState.LabelType type = rule == TripTransfers.IN_SEAT ? QueryState.LabelType.IN_SEAT :
-                    QueryState.LabelType.TRANSFER;
+            QueryState.LabelType type = rule == TripTransfers.IN_SEAT ? QueryState.LabelType.IN_SEAT : QueryState.LabelType.TRANSFER;
             previousLabel = new QueryState.Label(bestTime, bestTime + timeDirection * best.transferTime(), type,
                     QueryState.NO_INDEX, QueryState.NO_INDEX, forward ? group.toStopIdx : group.fromStopIdx,
                     previousLabel);
@@ -1182,8 +1180,8 @@ class RouteScanner {
 
     /**
      * Finds the possible trip on a route after a label at a stop, or where a walk from a source stop reached another
-     * one under a limit of the first trip, after either the walk or the source stop's own label: the later label may
-     * be in time for a trip beyond the limit of the walk, and of equally good trips, the one without the walk is taken.
+     * one under a limit of the first trip, after either the walk or the source stop's own label: the later label may be
+     * in time for a trip beyond the limit of the walk, and of equally good trips, the one without the walk is taken.
      */
     private @Nullable ActiveTrip findPossibleTripAfter(QueryState.Label label, Stop stop, int stopOffset, int routeIdx,
                                                        int numberOfStops) {

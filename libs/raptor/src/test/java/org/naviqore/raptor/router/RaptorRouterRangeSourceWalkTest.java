@@ -133,6 +133,7 @@ class RaptorRouterRangeSourceWalkTest {
         assertTrue(arriving().connectionRangeQuery(Map.of("S", at(9, 0)), Map.of("X", 0), TimeType.ARRIVAL, HOUR,
                 QueryConfig.defaults()).isEmpty());
     }
+
     /**
      * Source stops at different times: A at 08:00 and B at 08:05, two minutes' walk apart, so that the walk from A
      * reaches B earlier than B's own time (routing backward: B at 07:55 and A at 08:00, the walk from A reaching B
@@ -144,16 +145,14 @@ class RaptorRouterRangeSourceWalkTest {
 
         private static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
         private static final Map<String, OffsetDateTime> DEPARTING_FROM_B = Map.of("B", at(8, 5));
-        private static final Map<String, OffsetDateTime> DEPARTING_FROM_A_AND_B = Map.of("A", at(8, 0), "B",
-                at(8, 5));
+        private static final Map<String, OffsetDateTime> DEPARTING_FROM_A_AND_B = Map.of("A", at(8, 0), "B", at(8, 5));
         private static final Map<String, OffsetDateTime> ARRIVING_AT_B = Map.of("B", at(7, 55));
-        private static final Map<String, OffsetDateTime> ARRIVING_AT_A_AND_B = Map.of("A", at(8, 0), "B",
-                at(7, 55));
+        private static final Map<String, OffsetDateTime> ARRIVING_AT_A_AND_B = Map.of("A", at(8, 0), "B", at(7, 55));
 
         /**
          * A, B and C two minutes' walk apart in a row, a trip from C at 08:10 to T at 08:20, one from T at 07:40 to C
-         * at 07:50, and with a faster route, one from C at 08:08 to T at 08:12. T is reached from B by walking to C
-         * and riding, not from A, which would walk twice.
+         * at 07:50, and with a faster route, one from C at 08:08 to T at 08:12. T is reached from B by walking to C and
+         * riding, not from A, which would walk twice.
          */
         private static RaptorAlgorithm walkingOn(boolean withFasterRoute) {
             RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
@@ -180,8 +179,8 @@ class RaptorRouterRangeSourceWalkTest {
             return builder.build();
         }
 
-        private static void addTrip(RaptorRouterBuilder builder, String routeId, String from, int departure,
-                                    String to, int arrival) {
+        private static void addTrip(RaptorRouterBuilder builder, String routeId, String from, int departure, String to,
+                                    int arrival) {
             builder.addRoute(routeId, RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(from, to));
             builder.addTrip(routeId + "-0", routeId);
             builder.addStopTime(routeId, routeId + "-0", 0, from, departure * 60, departure * 60);
@@ -193,8 +192,8 @@ class RaptorRouterRangeSourceWalkTest {
             RaptorAlgorithm raptor = walkingOn(false);
 
             for (Map<String, OffsetDateTime> sources : List.of(DEPARTING_FROM_B, DEPARTING_FROM_A_AND_B)) {
-                List<Connection> connections = raptor.connectionRangeQuery(sources, Map.of("T", 0),
-                        TimeType.DEPARTURE, FIVE_MINUTES, QueryConfig.defaults());
+                List<Connection> connections = raptor.connectionRangeQuery(sources, Map.of("T", 0), TimeType.DEPARTURE,
+                        FIVE_MINUTES, QueryConfig.defaults());
 
                 assertEquals(1, connections.size());
                 List<Leg> legs = connections.getFirst().getLegs();

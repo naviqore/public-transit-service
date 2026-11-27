@@ -12,7 +12,8 @@ public interface Connection {
 
     /**
      * The time the connection leaves its origin: at a location, before the walk to the first stop and the access time,
-     * also where the walk is too short to be a leg of its own. Its time window and maximum travel duration apply to it.
+     * also where the walk is too short to be a leg of its own. Its time window and maximum travel duration apply to
+     * it.
      */
     OffsetDateTime getDepartureTime();
 

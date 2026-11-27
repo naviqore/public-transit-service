@@ -25,9 +25,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The subject of the versions before {@code naviqore-timetable} (4.x), whose service reads its feed as a GTFS
- * schedule: {@code bench.sh} builds such a version with this subject in place of {@code ServiceSubject} of the working
- * tree, which it equals but for reading the feed and building the service on it. The API of these versions no longer
+ * The subject of the versions before {@code naviqore-timetable} (4.x), whose service reads its feed as a GTFS schedule:
+ * {@code bench.sh} builds such a version with this subject in place of {@code ServiceSubject} of the working tree,
+ * which it equals but for reading the feed and building the service on it. The API of these versions no longer
  * changes.
  * <p>
  * Reads a GTFS feed with {@link GtfsScheduleReader}, builds the public transit service on it with

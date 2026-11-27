@@ -8,8 +8,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * A connection with the time it leaves the origin and reaches the destination, which include the access and egress
- * time and a first or last walk too short to be a leg of its own.
+ * A connection with the time it leaves the origin and reaches the destination, which include the access and egress time
+ * and a first or last walk too short to be a leg of its own.
  */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
