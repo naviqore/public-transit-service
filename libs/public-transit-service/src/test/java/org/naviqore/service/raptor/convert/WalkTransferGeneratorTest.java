@@ -34,7 +34,8 @@ public class WalkTransferGeneratorTest {
             new StopData("stop3", "Zürich, Kunsthaus", 47.370160, 8.548749));
     private static final WalkCalculator DEFAULT_CALCULATOR = new BeeLineWalkCalculator(
             ServiceConfig.DEFAULT_WALK_SPEED);
-    private static final int DEFAULT_MINIMUM_TRANSFER_TIME = 120;
+    // shorter than the walks between the stops, which take their own time
+    private static final int MINIMUM_TRANSFER_TIME = 120;
     private static final int DEFAULT_ACCESS_EGRESS_TIME = 15;
     private static final int DEFAULT_SEARCH_RADIUS = 500;
 
@@ -60,8 +61,7 @@ public class WalkTransferGeneratorTest {
 
     private static void assertTransfersGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
                                                  String toStopId) {
-        assertTransfersGenerated(transfers, fromStopId, toStopId,
-                WalkTransferGeneratorTest.DEFAULT_MINIMUM_TRANSFER_TIME, false);
+        assertTransfersGenerated(transfers, fromStopId, toStopId, MINIMUM_TRANSFER_TIME, false);
     }
 
     private static void assertTransferNotGenerated(List<TransferGenerator.Transfer> transfers, String fromStopId,
@@ -99,7 +99,7 @@ public class WalkTransferGeneratorTest {
         builder.addCalendar("ALWAYS", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
         schedule = builder.build();
         spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
-        generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+        generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
                 DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, spatialIndex);
     }
 
@@ -111,19 +111,19 @@ public class WalkTransferGeneratorTest {
 
         @Test
         void simpleTransferGenerator() {
-            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
                     DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
 
         @Test
         void nullWalkCalculator_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(null, DEFAULT_MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME,
+                    () -> new WalkTransferGenerator(null, MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME,
                             DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
 
         @Test
-        void negativeSameStopTransferTime_shouldThrowException() {
+        void negativeMinimumTransferTime_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
                     () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, -1, DEFAULT_ACCESS_EGRESS_TIME,
                             DEFAULT_SEARCH_RADIUS, spatialIndex));
@@ -132,40 +132,40 @@ public class WalkTransferGeneratorTest {
         @Test
         void negativeAccessEgressTime_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME, -1,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME, -1,
                             DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
 
         @Test
-        void zeroSameStopTransferTime_shouldNotThrowException() {
+        void zeroMinimumTransferTime_shouldNotThrowException() {
             assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, 0, DEFAULT_ACCESS_EGRESS_TIME,
                     DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
 
         @Test
-        void zeroSameAccessEgressTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME, 0,
+        void zeroAccessEgressTime_shouldNotThrowException() {
+            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME, 0,
                     DEFAULT_SEARCH_RADIUS, spatialIndex));
         }
 
         @Test
         void negativeSearchRadius_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
                             DEFAULT_ACCESS_EGRESS_TIME, -1, spatialIndex));
         }
 
         @Test
         void zeroSearchRadius_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
                             DEFAULT_ACCESS_EGRESS_TIME, 0, spatialIndex));
         }
 
         @Test
         void nullSpatialIndex_shouldThrowException() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, DEFAULT_MINIMUM_TRANSFER_TIME,
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
                             DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, null));
         }
 
@@ -193,7 +193,7 @@ public class WalkTransferGeneratorTest {
         @Test
         void expectedBehavior_withIncreasedSearchRadius() {
             WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
-                    DEFAULT_MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
+                    MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(stops);
             assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");

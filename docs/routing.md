@@ -205,7 +205,7 @@ The service answers connection and isoline queries between stops and locations, 
 
 - **First and last mile.** For a location, the stops within the walk search radius, each with the walk to it and the
   access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections,
-  except a walk no longer than the shortest walk leg (`walkDurationMinimum`).
+  except a walk that takes no longer than `walkDurationMinimum`, without the access or egress time.
 - **Times of a connection.** A connection leaves the origin and reaches the destination at the times its time window
   and its maximum travel duration apply to: at a location, its first ride's departure less the walk and the access
   time, and its last ride's arrival plus the egress time and the walk, also where the walk is no leg of its own.
@@ -288,20 +288,23 @@ whether the service supports it: `supportsMaximumWalkDuration()` of `RoutingFeat
 
 ### Router and service
 
-| Property                                                   | Service (`ServiceConfig`)               | Router (`RaptorConfig`)           | Meaning                                                                                                          |
-|------------------------------------------------------------|-----------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------|
-| `naviqore.service.transfer.duration.between-stops-minimum` | `transferDurationBetweenStopsMinimum`   | –                                 | Shortest generated walk between stops; negative for none.                                                        |
-| `naviqore.service.transfer.duration.access-egress`         | `transferDurationAccessEgress`          | –                                 | Time to get on and off a vehicle, added to walks.                                                                |
-| `naviqore.service.walk.search-radius`                      | `walkSearchRadius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.                                |
-| `naviqore.service.walk.calculator-type`                    | `walkCalculatorType`                    | –                                 | How walking durations are calculated: `BEE_LINE_DISTANCE`.                                                       |
-| `naviqore.service.walk.speed`                              | `walkSpeed`                             | –                                 | Walking speed in meters per second.                                                                              |
-| `naviqore.service.walk.duration-minimum`                   | `walkDurationMinimum`                   | –                                 | Longest walk to or from a location that is no leg of its own, in seconds.                                        |
-| `naviqore.service.optimize-travel-time`                    | `optimizeTravelTime`                    | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`.                        |
-| `naviqore.raptor.days-to-scan`                             | `raptorDaysToScan`                      | `daysToScan`                      | Service days around the date of a query that are scanned for trips, and those its window reaches. Default 3.     |
-| `naviqore.raptor.same-stop-transfer-duration-default`      | `raptorSameStopTransferDurationDefault` | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                                              |
-| `naviqore.raptor.stop-time-cache-size`                     | `raptorStopTimeCacheSize`               | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                                            |
-| `naviqore.raptor.stop-time-cache-strategy`                 | `raptorStopTimeCacheStrategy`           | `stopTimeCacheStrategy`           | Which service day a full cache evicts: `LRU` or `MRU`.                                                           |
-| `naviqore.routing.time-window-duration-maximum`            | –                                       | –                                 | Longest time window of a request to the application, in seconds; a longer one is refused. Default 86 400, a day. |
+The application, the service and the router have the same defaults; a setting of the service starting with `raptor`
+is passed to the router.
+
+| Property                                                   | Service (`ServiceConfig`)               | Router (`RaptorConfig`)           | Default             | Meaning                                                                                                      |
+|------------------------------------------------------------|-----------------------------------------|-----------------------------------|---------------------|--------------------------------------------------------------------------------------------------------------|
+| `naviqore.service.transfer.duration.between-stops-minimum` | `transferDurationBetweenStopsMinimum`   | –                                 | 180                 | Shortest generated walk between stops, in seconds; negative for none.                                        |
+| `naviqore.service.transfer.duration.access-egress`         | `transferDurationAccessEgress`          | –                                 | 15                  | Time to get on and off a vehicle, added to walks, in seconds.                                                |
+| `naviqore.service.walk.search-radius`                      | `walkSearchRadius`                      | –                                 | 500                 | Radius in meters for stops near a location and for generated walks between stops.                            |
+| `naviqore.service.walk.calculator-type`                    | `walkCalculatorType`                    | –                                 | `BEE_LINE_DISTANCE` | How walking durations are calculated.                                                                        |
+| `naviqore.service.walk.speed`                              | `walkSpeed`                             | –                                 | 1.4                 | Walking speed in meters per second.                                                                          |
+| `naviqore.service.walk.duration-minimum`                   | `walkDurationMinimum`                   | –                                 | 60                  | Longest walk to or from a location that is no leg of its own, in seconds, without the access or egress time. |
+| `naviqore.service.optimize-travel-time`                    | `optimizeTravelTime`                    | –                                 | `true`              | Optimize the travel time of connections without a time window, see above.                                    |
+| `naviqore.raptor.days-to-scan`                             | `raptorDaysToScan`                      | `daysToScan`                      | 3                   | Service days around the date of a query that are scanned for trips, and those its window reaches.            |
+| `naviqore.raptor.same-stop-transfer-duration-default`      | `raptorSameStopTransferDurationDefault` | `sameStopTransferDurationDefault` | 120                 | Same stop transfer time where the timetable gives none, in seconds.                                          |
+| `naviqore.raptor.stop-time-cache-size`                     | `raptorStopTimeCacheSize`               | `stopTimeCacheSize`               | 30                  | Service days whose stop times are cached.                                                                    |
+| `naviqore.raptor.stop-time-cache-strategy`                 | `raptorStopTimeCacheStrategy`           | `stopTimeCacheStrategy`           | `LRU`               | Which service day a full cache evicts: `LRU` or `MRU`.                                                       |
+| `naviqore.routing.time-window-duration-maximum`            | –                                       | –                                 | 86 400, a day       | Longest time window of a request to the application, in seconds; a longer one is refused.                    |
 
 ## Decisions
 

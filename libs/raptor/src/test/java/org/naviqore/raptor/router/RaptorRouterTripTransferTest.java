@@ -35,8 +35,11 @@ class RaptorRouterTripTransferTest {
         return START_OF_DAY.plusHours(hour).plusMinutes(minute);
     }
 
+    /**
+     * A router that scans the day of a query only, so that no trip of another day is found where none of the day is.
+     */
     private static RaptorRouterBuilder builder(String... stops) {
-        return builder(RaptorConfig.defaults(), stops);
+        return builder(RaptorConfig.builder().daysToScan(1).build(), stops);
     }
 
     private static RaptorRouterBuilder builder(RaptorConfig config, String... stops) {

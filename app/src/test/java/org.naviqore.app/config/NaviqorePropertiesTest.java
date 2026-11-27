@@ -16,11 +16,12 @@ import org.springframework.core.io.support.PropertiesLoaderUtils;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The properties under {@code naviqore} bind to {@link NaviqoreProperties}: those of {@code application.properties}
- * each to a property, with the defaults of the app, and a property not set keeps the default of the service.
+ * The properties under {@code naviqore} bind to {@link NaviqoreProperties}. {@code application.properties} sets each of
+ * its properties to the default, and a property not set keeps the default of the service.
  */
 class NaviqorePropertiesTest {
 
@@ -37,18 +38,18 @@ class NaviqorePropertiesTest {
     }
 
     @Test
-    void applicationProperties_bindEachPropertyUnderNaviqore() throws IOException {
-        // fails on a property under naviqore that sets nothing, a misspelled one for example
+    void applicationProperties_setTheDefaults() throws IOException {
+        // fails on a property under naviqore that binds to nothing, a misspelled one for example
         NaviqoreProperties properties = bind(
                 PropertiesLoaderUtils.loadProperties(new ClassPathResource("application.properties")),
                 new NoUnboundElementsBindHandler(BindHandler.DEFAULT));
 
-        // without environment variables, the defaults of the app, here those that differ from the service's
-        assertEquals("libs/gtfs-sample/src/main/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip",
-                properties.getGtfs().getStaticFeed().getUri());
-        assertEquals(-1, properties.getService().getTransfer().getDuration().getBetweenStopsMinimum());
-        assertEquals(60, properties.getService().getWalk().getDurationMinimum());
-        assertEquals(24 * 60 * 60, properties.getRouting().getTimeWindowDurationMaximum());
+        // the feed has no default, the file sets the sample feed for development
+        NaviqoreProperties defaults = new NaviqoreProperties();
+        defaults.getGtfs()
+                .getStaticFeed()
+                .setUri("libs/gtfs-sample/src/main/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip");
+        assertThat(properties).usingRecursiveComparison().isEqualTo(defaults);
     }
 
     @Test

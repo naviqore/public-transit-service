@@ -3,31 +3,33 @@ package org.naviqore.service.config;
 import lombok.Builder;
 import lombok.Value;
 import org.jspecify.annotations.Nullable;
+import org.naviqore.raptor.router.RaptorConfig;
 import org.naviqore.service.repo.TimetableRepository;
 
 /**
  * Configuration to create a public transit service. The settings starting with {@code raptor} are those of the router,
- * see {@link org.naviqore.raptor.router.RaptorConfig}.
+ * see {@link RaptorConfig}, whose defaults they take.
  */
 @Builder
 @Value
 public class ServiceConfig {
 
-    // note: The defaults should match the default values in the application.properties file.
     public static final int DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM = 180;
     public static final int DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS = 15;
 
     public static final int DEFAULT_WALK_SEARCH_RADIUS = 500;
     public static final WalkCalculatorType DEFAULT_WALK_CALCULATOR_TYPE = WalkCalculatorType.BEE_LINE_DISTANCE;
     public static final double DEFAULT_WALK_SPEED = 1.4;
-    public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
+    public static final int DEFAULT_WALK_DURATION_MINIMUM = 60;
 
     public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
 
-    public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
-    public static final int DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT = 120;
-    public static final int DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE = 30;
-    public static final CacheEvictionStrategy DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY = CacheEvictionStrategy.LRU;
+    public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = RaptorConfig.DEFAULT_DAYS_TO_SCAN;
+    public static final int DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT =
+            RaptorConfig.DEFAULT_SAME_STOP_TRANSFER_DURATION_DEFAULT;
+    public static final int DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE = RaptorConfig.DEFAULT_STOP_TIME_CACHE_SIZE;
+    public static final CacheEvictionStrategy DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY = CacheEvictionStrategy.valueOf(
+            RaptorConfig.DEFAULT_STOP_TIME_CACHE_STRATEGY.name());
 
     TimetableRepository timetableRepository;
 
@@ -46,6 +48,10 @@ public class ServiceConfig {
     @Builder.Default
     double walkSpeed = DEFAULT_WALK_SPEED;
 
+    /**
+     * Longest walk in seconds at either end of a connection, without the access or egress time, that is no leg of its
+     * own. The times of the connection include the walk either way.
+     */
     @Builder.Default
     int walkDurationMinimum = DEFAULT_WALK_DURATION_MINIMUM;
 

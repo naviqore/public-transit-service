@@ -14,16 +14,21 @@ import java.util.Map;
 @Builder(toBuilder = true)
 public class RaptorConfig {
 
+    public static final int DEFAULT_DAYS_TO_SCAN = 3;
+    public static final int DEFAULT_SAME_STOP_TRANSFER_DURATION_DEFAULT = 120;
+    public static final int DEFAULT_STOP_TIME_CACHE_SIZE = 30;
+    public static final EvictionCache.Strategy DEFAULT_STOP_TIME_CACHE_STRATEGY = EvictionCache.Strategy.LRU;
+
     @Builder.Default
     private final RaptorTripMaskProvider maskProvider = new NoMaskProvider();
     @Builder.Default
-    private final int daysToScan = 1;
+    private final int daysToScan = DEFAULT_DAYS_TO_SCAN;
     @Builder.Default
-    private final int sameStopTransferDurationDefault = 120;
+    private final int sameStopTransferDurationDefault = DEFAULT_SAME_STOP_TRANSFER_DURATION_DEFAULT;
     @Builder.Default
-    private final int stopTimeCacheSize = 5;
+    private final int stopTimeCacheSize = DEFAULT_STOP_TIME_CACHE_SIZE;
     @Builder.Default
-    private final EvictionCache.Strategy stopTimeCacheStrategy = EvictionCache.Strategy.LRU;
+    private final EvictionCache.Strategy stopTimeCacheStrategy = DEFAULT_STOP_TIME_CACHE_STRATEGY;
 
     private RaptorConfig(RaptorTripMaskProvider maskProvider, int daysToScan, int sameStopTransferDurationDefault,
                          int stopTimeCacheSize, EvictionCache.Strategy stopTimeCacheStrategy) {

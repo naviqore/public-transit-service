@@ -122,7 +122,7 @@ public class NaviqoreProperties {
             private double speed = ServiceConfig.DEFAULT_WALK_SPEED;
 
             /**
-             * Shortest walk in seconds to or from a location that a connection includes.
+             * Longest walk in seconds, without the access or egress time, that is no leg of its own.
              */
             private int durationMinimum = ServiceConfig.DEFAULT_WALK_DURATION_MINIMUM;
         }

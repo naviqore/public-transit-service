@@ -44,9 +44,25 @@ them under their new names.
   router a second time for each connection, backward from its arrival, which takes about as long as the first query
   (`naviqore.service.optimize-travel-time`, on by default). `raptor.range` did this in 4.x for a range of its own, and
   was off by default. Turned off, a connection takes the first trip it can catch, as in 4.x by default.
+- **Walks between stops.** The application generates walks between the stops within the walk search radius by default,
+  as the library of the service always did: `naviqore.service.transfer.duration.between-stops-minimum` is 180 seconds
+  instead of -1. So the benchmark, which builds the service with the defaults of the library, measures what the
+  application runs. On the Swiss feed, for 300 random pairs of stops on a Tuesday at 08:00, the router has 636 914
+  transfers instead of 95 245: the service builds in 6.8–8.0 s instead of 6.3–6.7 s and takes 664 instead of 635 MB of
+  heap, a connection query takes 72–74 ms instead of 59–61 ms (+17–25 %), and an isoline takes 236 instead of 252 ms and
+  reaches 47 444 instead of 38 349 stops. Of the 232 pairs with a connection, 139 get a better one and none a worse one:
+  29 are connected only by the generated walks, and 110 arrive earlier, by 30 minutes in the median. -1 generates no
+  walks, as the application did in 4.x.
+- **Walk legs.** In the libraries too, a walk from or to a location is a leg of its own if it takes longer than 60
+  seconds, instead of 120 (`ServiceConfig.walkDurationMinimum`). The times of a connection include the first and the
+  last mile anyway, so the setting only decides whether a walk is a leg. It counts no access or egress time at either
+  end, as its property documents: 4.x counted it for the last mile and for the walks from and to a stop without
+  departures or arrivals, but not for the first mile.
 - **Cache.** 30 service days are cached instead of 5 (`naviqore.raptor.stop-time-cache-size`). A day now holds the
   stop times of the trips running on it only, 26 MB instead of 293 MB on the Swiss feed, so 30 days take less heap
   than 5 did.
+- **Router.** `RaptorConfig` has the defaults of the service, in its constants `DEFAULT_*`, to which those of
+  `ServiceConfig` for the router refer: 3 days to scan instead of 1 and 30 cached service days instead of 5.
 - **Time windows.** A request with a time window longer than a day is refused with status 400 (`invalid-parameters`).
   A query over a time window runs a search for each departure in it and reads the stop times of every day it reaches,
   so a long window takes much time and memory. `naviqore.routing.time-window-duration-maximum` sets the limit in

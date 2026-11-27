@@ -43,7 +43,7 @@ public class RaptorServiceInitializer {
         this.stopSearchIndex = createStopSearchIndex(schedule);
         this.spatialStopIndex = createSpatialStopIndex(schedule);
 
-        // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
+        // generate walks between stops unless their minimum duration is negative
         List<TransferGenerator> transferGenerators = config.getTransferDurationBetweenStopsMinimum() >= 0 ? createTransferGenerators(
                 config, walkCalculator, spatialStopIndex) : Collections.emptyList();
         this.raptorRouter = createRaptorRouter(config, schedule, transferGenerators);

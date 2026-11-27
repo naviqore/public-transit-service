@@ -152,7 +152,7 @@ class RoutingQueryUtils {
         int durationWithAccess = duration + serviceConfig.getTransferDurationAccessEgress();
 
         Walk walk = null;
-        if (shouldCreateWalk(duration, firstWalk)) {
+        if (shouldCreateWalk(firstWalk)) {
             walk = TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
                     // shift walk time backwards to account access and egress time at the stop
                     departureTime.minusSeconds(durationWithAccess),
@@ -174,7 +174,7 @@ class RoutingQueryUtils {
         int duration = firstWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         Transfer transfer = null;
-        if (shouldCreateWalk(duration, firstWalkTransfer)) {
+        if (shouldCreateWalk(firstWalkTransfer)) {
             transfer = TypeMapper.createTransfer(firstWalkTransfer.distance(), duration,
                     departureTime.minusSeconds(duration), departureTime, sourceStop, TypeMapper.map(firstStop));
         }
@@ -191,7 +191,7 @@ class RoutingQueryUtils {
         int duration = lastWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         Walk walk = null;
-        if (shouldCreateWalk(duration, lastWalk)) {
+        if (shouldCreateWalk(lastWalk)) {
             walk = TypeMapper.createWalk(lastWalk.distance(), duration, WalkType.LAST_MILE, arrivalTime,
                     arrivalTime.plusSeconds(duration), lastStop.getCoordinate(), target, TypeMapper.map(lastStop));
         }
@@ -209,7 +209,7 @@ class RoutingQueryUtils {
         int duration = lastWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
         Transfer transfer = null;
-        if (shouldCreateWalk(duration, lastWalkTransfer)) {
+        if (shouldCreateWalk(lastWalkTransfer)) {
             transfer = TypeMapper.createTransfer(lastWalkTransfer.distance(), duration, arrivalTime,
                     arrivalTime.plusSeconds(duration), TypeMapper.map(lastStop), target);
         }
@@ -217,11 +217,10 @@ class RoutingQueryUtils {
         return new Mile(transfer, duration);
     }
 
-    // Only map the walk to the service level if it is longer than the walking duration minimum defined in the service,
-    // and it is not a walk from the same location to the same location (this is a fallback; in most cases,
-    // this will be filtered out by the first condition).
-    private boolean shouldCreateWalk(int duration, WalkCalculator.Walk walk) {
-        return duration > serviceConfig.getWalkDurationMinimum() && walk.duration() > 0;
+    // a walk is a leg of its own only if it is longer than the walk duration minimum, without the access or egress
+    // time; so a walk of no time, from a location to itself, never is
+    private boolean shouldCreateWalk(WalkCalculator.Walk walk) {
+        return walk.duration() > serviceConfig.getWalkDurationMinimum();
     }
 
     Connection composeConnection(org.naviqore.raptor.Connection connection) {

@@ -41,8 +41,8 @@ import static org.assertj.core.api.Assertions.within;
 class RoutingQueryFacadeIT {
 
     public static final double EPSILON = 1e-6;
-    // Walking legs below the default threshold (120 seconds) would be excluded from the results.
-    // Set this to 0 to ensure that no walking legs are filtered out based on duration.
+    // Walks no longer than the default minimum (60 seconds) would be no legs of their own.
+    // Set this to 0 to ensure that no walk legs are left out based on duration.
     private static final int WALK_DURATION_MINIMUM = 0;
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
