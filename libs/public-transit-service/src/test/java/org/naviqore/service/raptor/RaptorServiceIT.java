@@ -23,10 +23,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RaptorServiceIT {
@@ -182,6 +184,17 @@ class RaptorServiceIT {
                             Integer.MAX_VALUE);
                     assertFalse(stops.isEmpty(), "Expected to find nearest stops.");
                     assertTrue(stops.size() > 1, "Expected to find more than one stop.");
+                }
+
+                @Test
+                void shouldOrderNearestStopsByDistance() {
+                    GeoCoordinate location = new GeoCoordinate(36.425288, -117.133162);
+
+                    List<Stop> stops = service.getNearestStops(location, Integer.MAX_VALUE);
+
+                    assertThat(stops).hasSizeGreaterThan(2)
+                            .isSortedAccordingTo(
+                                    Comparator.comparingDouble(stop -> stop.getCoordinate().distanceTo(location)));
                 }
             }
 

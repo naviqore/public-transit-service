@@ -60,14 +60,14 @@ public class ScheduleController {
         return service.getStops(query, map(searchType), map(sortBy)).stream().map(DtoMapper::map).limit(limit).toList();
     }
 
-    @Operation(summary = "Get nearest stops", description = "Retrieves a list of stops within a specified distance from a given location.")
+    @Operation(summary = "Get nearest stops", description = "Retrieves the stops within a specified distance from a given location, nearest first.")
     @ApiResponse(responseCode = "200", description = "A list of nearest stops", content = @Content(schema = @Schema(implementation = DistanceToStop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/nearest")
     public List<DistanceToStop> getNearestStops(@RequestParam @Parameter(description = "Latitude of the location, in WGS84 degrees from -90 to 90.") double latitude,
                                                 @RequestParam @Parameter(description = "Longitude of the location, in WGS84 degrees from -180 to 180.") double longitude,
                                                 @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters, at least 1.") @Min(1) int maxDistance,
-                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
+                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops, the nearest.") @Min(1) int limit) {
 
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);
 

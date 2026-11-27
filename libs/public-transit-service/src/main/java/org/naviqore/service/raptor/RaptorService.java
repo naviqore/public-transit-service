@@ -100,21 +100,22 @@ public class RaptorService implements PublicTransitService {
         log.info("Searching for nearest stops to location '({}, {})', within radius '{} m'",
                 location.getFirstComponent(), location.getSecondComponent(), radius);
 
-        List<org.naviqore.timetable.model.Stop> stops = new ArrayList<>();
-
+        // a set holds each parent stop once
+        Set<org.naviqore.timetable.model.Stop> stops = new LinkedHashSet<>();
         for (org.naviqore.timetable.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
             // if nearest stop is a child stop, return parent stop
             if (stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
                 stop = stop.getParent().get();
             }
-            // avoid adding same parent stop multiple times
-            if (!stops.contains(stop)) {
-                stops.add(stop);
-            }
-
+            stops.add(stop);
         }
 
-        return stops.stream().map(TypeMapper::map).toList();
+        return stops.stream()
+                .sorted(Comparator.<org.naviqore.timetable.model.Stop>comparingDouble(
+                        stop -> stop.getCoordinate().distanceTo(location)).thenComparing(
+                        org.naviqore.timetable.model.Stop::getId))
+                .map(TypeMapper::map)
+                .toList();
     }
 
     @Override

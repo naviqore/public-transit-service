@@ -62,11 +62,12 @@ public interface ScheduleInformationService {
     Optional<Stop> getNearestStop(GeoCoordinate location);
 
     /**
-     * Retrieves the nearest stops to a given location within a specified radius.
+     * Retrieves the stops within a specified radius of a given location, nearest first. A child stop within the radius
+     * is given as its parent stop, once.
      *
      * @param location the location to search around
-     * @param radius   the radius to search within, in meters
-     * @return a list of the nearest stops to the specified location within the given radius
+     * @param radius   the radius to search within, in meters, greater than 0
+     * @return the stops within the radius, ordered by their distance to the location
      */
     List<Stop> getNearestStops(GeoCoordinate location, int radius);
 
