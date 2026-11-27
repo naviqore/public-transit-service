@@ -55,6 +55,8 @@ class RouteScanner {
     private final int[] furthestTripTimes;
     // of a query of several passes: the trips the groups of trip transfers allow changing to, by the index of the group
     private final KnownTargets @Nullable [] knownTargets;
+    // whether the query runs several passes, whose labels are kept for the next, see boardsAtStop
+    private final boolean severalPasses;
     // how long after the start of a journey its first trip may leave at the latest, see setFirstTripLimit
     private int firstTripLimit = NO_LIMIT;
     // the time beyond which a label is of no use, see setTimeLimit
@@ -64,6 +66,9 @@ class RouteScanner {
     private @Nullable Map<Integer, List<PendingBoarding>> nextPendingBoardings;
     // the boardings along trip transfers made in the pass: made again, one would only repeat its work in a later round
     private final Set<BoardingKey> madeBoardings = new HashSet<>();
+    // on a route with trip transfers, the trips ridden besides the active trip, which is the earliest: later trips
+    // that may change to trips the active trip may not, see covers
+    private final List<ActiveTrip> otherTrips = new ArrayList<>();
 
     /**
      * @param queryState        the query state with the best time per stop and label per stop and round.
@@ -144,6 +149,7 @@ class RouteScanner {
         Arrays.fill(furthestTripTimes, NOT_READ);
         timeLimit = forward ? INFINITY : -INFINITY;
         knownTargets = severalPasses ? new KnownTargets[tripTransfers.numberOfGroups()] : null;
+        this.severalPasses = severalPasses;
     }
 
     /**
@@ -281,6 +287,7 @@ class RouteScanner {
         // the stops with trip transfers are scanned by scanStopWithTransfers, the others as follows
         List<PendingBoarding> pending = pendingBoardings == null ? null : pendingBoardings.get(currentRouteIdx);
         boolean withTransfers = pending != null || tripTransfers.hasTransfers(timeType, currentRouteIdx);
+        otherTrips.clear();
 
         for (int stopOffset = startOffset; stopOffset != endOffset; stopOffset += timeDirection) {
             int routeStopIdx = firstRouteStopIdx + stopOffset;
@@ -309,7 +316,8 @@ class RouteScanner {
                 targetTime += activeTrip.dayTimeOffset;
 
                 if (!checkIfTripIsPossibleAndUpdateMarks(targetTime, activeTrip, bestStopTime, stopIdx, round,
-                        lastRound, currentRouteIdx)) {
+                        lastRound, currentRouteIdx) && !(withTransfers && boardsBesides(activeTrip, stopIdx,
+                        stopOffset, lastRound))) {
                     continue;
                 }
             } else if (!canEnterAtStop(bestStopTime, stopIdx, stopOffset, furthestTripTime, numberOfStops)) {
@@ -324,14 +332,133 @@ class RouteScanner {
 
             ActiveTrip possibleTrip = findPossibleTrip(stopIdx, stop, stopOffset, currentRouteIdx, numberOfStops,
                     lastRound);
-            // a trip boarded here replaces the active trip unless it is worse: the stop's label may be in time for an
-            // earlier (later, routing backward) trip than the active one, or only for a worse one, or for none, once
-            // the transfer time is added
-            if (activeTrip == null || (possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
+            if (withTransfers) {
+                activeTrip = board(activeTrip, possibleTrip, stopOffset);
+            } else if (activeTrip == null || (possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
                     possibleTrip.entryTime()))) {
+                // a trip boarded here replaces the active trip unless it is worse: the stop's label may be in time for
+                // an earlier (later, routing backward) trip than the active one, or only for a worse one, or for none,
+                // once the transfer time is added
                 activeTrip = possibleTrip;
             }
         }
+    }
+
+    /**
+     * Whether a trip may be boarded at a stop after its label of the round before, which is no earlier (later, routing
+     * backward) than the active trip there: if the active trip and the other trips ridden that may change to every
+     * later trip reach the stop later still, or there are none, see {@link #covers}.
+     */
+    private boolean boardsBesides(ActiveTrip activeTrip, int stopIdx, int stopOffset, int lastRound) {
+        if (coversAll(activeTrip) || !queryState.isMarkedThisRound(stopIdx)) {
+            return false;
+        }
+        QueryState.Label label = queryState.getLabel(lastRound, stopIdx);
+        ActiveTrip coveringTrip = tripCoveringAll(activeTrip);
+        return label != null && (coveringTrip == null || isBetter(label.targetTime(),
+                getArrivalTime(coveringTrip, stopOffset)));
+    }
+
+    /**
+     * Boards a trip at a stop of a route with trip transfers: it replaces the active trip unless it is worse, as in
+     * {@link #scanRoute}, and either trip is ridden on besides it unless the other covers it.
+     *
+     * @return the active trip, the earliest (latest, routing backward) ridden.
+     */
+    private @Nullable ActiveTrip board(@Nullable ActiveTrip activeTrip, @Nullable ActiveTrip trip, int stopOffset) {
+        if (trip == null) {
+            return activeTrip;
+        }
+        if (activeTrip == null) {
+            return trip;
+        }
+        if (isBetter(getTripTime(activeTrip, stopOffset), trip.entryTime())) {
+            if (!covers(activeTrip, trip, stopOffset) && otherTrips.stream()
+                    .noneMatch(other -> covers(other, trip, stopOffset))) {
+                otherTrips.removeIf(other -> covers(trip, other, stopOffset));
+                otherTrips.add(trip);
+            }
+            return activeTrip;
+        }
+        otherTrips.removeIf(other -> covers(trip, other, stopOffset));
+        if (!covers(trip, activeTrip, stopOffset)) {
+            otherTrips.add(activeTrip);
+        }
+        return trip;
+    }
+
+    /**
+     * Whether a trip ridden on a route covers another at a stop: everything the other leads to from there, the first
+     * leads to as well, no later (earlier, routing backward). It does if it is no later and may change to every trip
+     * the other may change to: the other itself and the later trips of the route, see {@link #addPendingBoardings}. A
+     * trip boarded at a stop may change to every later trip (see {@link #coversAll}), one boarded along a trip transfer
+     * to those the transfer allows: so it covers only a trip boarded at the same stop along the same group of trip
+     * transfers, from the same trip, reaching the stop no later (leaving it no earlier, routing backward).
+     */
+    private boolean covers(ActiveTrip trip, ActiveTrip other, int stopOffset) {
+        if (isAfter(trip, other, stopOffset)) {
+            return false;
+        }
+        BoardingByRule byRule = trip.byRule;
+        if (byRule == null) {
+            return !isLimited(trip) || coversWithinLimit(trip, other);
+        }
+        BoardingByRule otherByRule = other.byRule;
+        boolean sameStop = trip.entryOffset == other.entryOffset;
+        return otherByRule != null && sameStop && byRule.isFromSameTrip(otherByRule) && !isBetter(
+                otherByRule.knownTime(), byRule.knownTime());
+    }
+
+    /**
+     * Whether the first trip of a journey of a range query, which changes only to the later trips leaving within a
+     * limit where it was boarded, covers another trip: a first trip too, boarded where it was or later on the route
+     * (earlier, routing backward), with a limit no later (earlier, routing backward).
+     */
+    private boolean coversWithinLimit(ActiveTrip trip, ActiveTrip other) {
+        boolean boardedBefore = timeDirection * trip.entryOffset <= timeDirection * other.entryOffset;
+        return other.byRule == null && isLimited(other) && boardedBefore && !isBetter(trip.previousLabel.targetTime(),
+                other.previousLabel.targetTime());
+    }
+
+    /**
+     * Whether a trip ridden on a route may change to every later trip of it, see {@link #addPendingBoardings}.
+     */
+    private boolean coversAll(ActiveTrip trip) {
+        return trip.byRule == null && !isLimited(trip);
+    }
+
+    /**
+     * The earliest (latest, routing backward) trip ridden that may change to every later trip, or null.
+     */
+    private @Nullable ActiveTrip tripCoveringAll(@Nullable ActiveTrip activeTrip) {
+        if (activeTrip == null || coversAll(activeTrip)) {
+            return activeTrip;
+        }
+        for (ActiveTrip other : otherTrips) {
+            if (coversAll(other)) {
+                return other;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Whether the first trip of a journey may only lead to later trips leaving within a limit, see
+     * {@link #setFirstTripLimit}.
+     */
+    private boolean isLimited(ActiveTrip trip) {
+        return firstTripLimit != NO_LIMIT && isStartOfJourney(trip.previousLabel);
+    }
+
+    /**
+     * Whether a trip of a route is after another (before it, routing backward): on the same day by their order, which
+     * the trips keep at every stop, else by their times at the stop.
+     */
+    private boolean isAfter(ActiveTrip trip, ActiveTrip other, int stopOffset) {
+        if (trip.dayIndex == other.dayIndex) {
+            return timeDirection * trip.firstStopTimeIdx > timeDirection * other.firstStopTimeIdx;
+        }
+        return isBetter(getTripTime(other, stopOffset), getTripTime(trip, stopOffset));
     }
 
     /**
@@ -367,16 +494,23 @@ class RouteScanner {
                                                        int numberOfStops, int round,
                                                        @Nullable List<PendingBoarding> pending) {
         int stopIdx = routeStop.stopIndex();
-        int activeTime = 0;
-        if (activeTrip != null) {
-            activeTime = getArrivalTime(activeTrip, stopOffset);
-            if (canArrive(routeStop) && !isBeyondTimeLimit(activeTime)) {
-                int arrivalIdx = tripTransfers.arrivalIndex(timeType, routeStopIdx, stopIdx);
+        if (activeTrip != null && canArrive(routeStop)) {
+            int arrivalIdx = tripTransfers.arrivalIndex(timeType, routeStopIdx, stopIdx);
+            TripTransfers.Group @Nullable [] groups = tripTransfers.groups(timeType, routeStopIdx);
+            int activeTime = getArrivalTime(activeTrip, stopOffset);
+            if (!isBeyondTimeLimit(activeTime)) {
                 boolean boardsAfterArrival = updateArrival(activeTime, activeTrip, arrivalIdx, round, routeIdx);
-                TripTransfers.Group @Nullable [] groups = tripTransfers.groups(timeType, routeStopIdx);
                 if (groups != null) {
                     addPendingBoardings(groups, activeTrip, activeTime, stopOffset, arrivalIdx, routeIdx,
                             boardsAfterArrival);
+                }
+            }
+            // the other trips reach the stop later than the active trip: only their trip transfers can do more
+            otherTrips.removeIf(other -> isBeyondTimeLimit(getArrivalTime(other, stopOffset)));
+            if (groups != null) {
+                for (ActiveTrip other : otherTrips) {
+                    addPendingBoardings(groups, other, getArrivalTime(other, stopOffset), stopOffset, arrivalIdx,
+                            routeIdx, false);
                 }
             }
         }
@@ -386,32 +520,31 @@ class RouteScanner {
             return activeTrip;
         }
 
+        // a label no earlier (later, routing backward) than a trip ridden that covers all reaches nothing it does not
         Stop stop = stops[stopIdx];
-        boolean onTrip = activeTrip != null;
-        ActiveTrip possibleTrip = boardAfter(stopIdx, stop, stopOffset, routeIdx, numberOfStops, round - 1, onTrip,
-                activeTime);
+        ActiveTrip coveringTrip = tripCoveringAll(activeTrip);
+        int coveredTime = coveringTrip == null ? 0 : getArrivalTime(coveringTrip, stopOffset);
+        ActiveTrip possibleTrip = boardAfter(stopIdx, stop, stopOffset, routeIdx, numberOfStops, round - 1,
+                coveringTrip != null, coveredTime);
         int[] slots = tripTransfers.slots(timeType, stopIdx);
         if (slots != null) {
             for (int slot : slots) {
                 // few slots were reached in the round before
                 if (queryState.isMarkedThisRound(slot) && !changesByRule(slot, routeIdx, round - 1)) {
                     possibleTrip = better(possibleTrip,
-                            boardAfter(slot, stop, stopOffset, routeIdx, numberOfStops, round - 1, onTrip, activeTime));
-                }
-            }
-        }
-        if (pending != null) {
-            for (PendingBoarding boarding : pending) {
-                if (boarding.stopOffset() == stopOffset) {
-                    possibleTrip = better(possibleTrip, boarding.trip());
+                            boardAfter(slot, stop, stopOffset, routeIdx, numberOfStops, round - 1,
+                                    coveringTrip != null, coveredTime));
                 }
             }
         }
 
-        // as in scanRoute, a trip boarded here replaces the active trip unless it is worse
-        if (activeTrip == null || (possibleTrip != null && !isBetter(getTripTime(activeTrip, stopOffset),
-                possibleTrip.entryTime()))) {
-            return possibleTrip;
+        activeTrip = board(activeTrip, possibleTrip, stopOffset);
+        if (pending != null) {
+            for (PendingBoarding boarding : pending) {
+                if (boarding.stopOffset() == stopOffset) {
+                    activeTrip = board(activeTrip, boarding.trip(), stopOffset);
+                }
+            }
         }
         return activeTrip;
     }
@@ -452,12 +585,15 @@ class RouteScanner {
 
     /**
      * Finds the trip to board at a stop after the label of the round before at the stop or one of its slots, if that
-     * round improved it: with an active trip only if the label is earlier (later, routing backward) than the active
-     * trip at the stop, since only then it can catch an earlier trip, as {@link #checkIfTripIsPossibleAndUpdateMarks}
-     * tells; and without one, as {@link #canEnterAtStop} tells.
+     * round improved it: with a trip ridden that covers all only if the label is earlier (later, routing backward) than
+     * that trip at the stop, since only then it can catch a trip that trip does not cover, as
+     * {@link #checkIfTripIsPossibleAndUpdateMarks} tells; and without one, as {@link #canEnterAtStop} tells.
+     *
+     * @param covered     whether a trip ridden covers all, see {@link #tripCoveringAll}.
+     * @param coveredTime the time that trip reaches the stop at.
      */
     private @Nullable ActiveTrip boardAfter(int labelIdx, Stop stop, int stopOffset, int routeIdx, int numberOfStops,
-                                            int lastRound, boolean onTrip, int activeTime) {
+                                            int lastRound, boolean covered, int coveredTime) {
         if (!queryState.isMarkedThisRound(labelIdx)) {
             return null;
         }
@@ -465,7 +601,7 @@ class RouteScanner {
         if (label == null) {
             return null;
         }
-        if (onTrip ? !isBetter(label.targetTime(), activeTime) : isBetter(getFurthestTripTimeOfRoute(routeIdx),
+        if (covered ? !isBetter(label.targetTime(), coveredTime) : isBetter(getFurthestTripTimeOfRoute(routeIdx),
                 queryState.getComparableBestTime(labelIdx))) {
             return null;
         }
@@ -590,6 +726,10 @@ class RouteScanner {
             if (best == null || isBeyondTimeLimit(best.entryTime())) {
                 continue;
             }
+            // the labels of a query of several passes may be of a pass before, which boarded after them
+            if (!severalPasses && boardsAtStop(forward ? group.toStopIdx : group.fromStopIdx, best.entryTime())) {
+                continue;
+            }
 
             // the labels the boarding follows: the trip of this route, and between two stops, the transfer as a walk
             QueryState.Label previousLabel = new QueryState.Label(bestEntryTime, bestTime, QueryState.LabelType.ROUTE,
@@ -604,6 +744,20 @@ class RouteScanner {
                             best.stopTimes(), best.firstStopTimeIdx(), best.dayIndex(), best.entryOffset(),
                             new BoardingByRule(group, bestPosition, bestTime)));
         }
+    }
+
+    /**
+     * Whether the labels at a stop let the scan board a trip leaving at a time (arriving, routing backward), as it does
+     * in the round after them: that trip or an earlier one is then boarded at the stop with every later trip, so it
+     * covers a boarding of that trip along a trip transfer (see {@link #covers}), with as many transfers or fewer.
+     */
+    private boolean boardsAtStop(int stopIdx, int time) {
+        int bestTime = queryState.getComparableBestTime(stopIdx);
+        if (bestTime == (forward ? INFINITY : -INFINITY)) {
+            return false;
+        }
+        int transferTime = Math.max(stops[stopIdx].sameStopTransferTime(), minTransferDuration);
+        return !isBetter(time, bestTime + timeDirection * transferTime);
     }
 
     /**
@@ -622,7 +776,8 @@ class RouteScanner {
 
     /**
      * Adds a boarding found along a trip transfer for the next round, unless the pass has made it already, or one at
-     * the same stop of the route is as good.
+     * the same stop of the route covers it (see {@link #covers}); it replaces those it covers. An earlier trip alone
+     * does not cover a later one: the later one may change to trips the earlier one may not.
      */
     private void addPendingBoarding(int routeIdx, int stopOffset, ActiveTrip trip) {
         PendingBoarding pendingBoarding = new PendingBoarding(stopOffset, trip);
@@ -633,15 +788,13 @@ class RouteScanner {
             nextPendingBoardings = new HashMap<>();
         }
         List<PendingBoarding> boardings = nextPendingBoardings.computeIfAbsent(routeIdx, _ -> new ArrayList<>(1));
-        for (int i = 0; i < boardings.size(); i++) {
-            PendingBoarding boarding = boardings.get(i);
-            if (boarding.stopOffset() == stopOffset) {
-                if (isBetter(trip.entryTime(), boarding.trip().entryTime())) {
-                    boardings.set(i, pendingBoarding);
-                }
+        for (PendingBoarding boarding : boardings) {
+            if (boarding.stopOffset() == stopOffset && covers(boarding.trip(), trip, stopOffset)) {
                 return;
             }
         }
+        boardings.removeIf(
+                boarding -> boarding.stopOffset() == stopOffset && covers(trip, boarding.trip(), stopOffset));
         boardings.add(pendingBoarding);
     }
 
@@ -1179,6 +1332,13 @@ class RouteScanner {
      * (routing backward: the trip changed to, with the time it leaves).
      */
     private record BoardingByRule(TripTransfers.Group group, int knownPosition, int knownTime) {
+
+        /**
+         * Whether another boarding is along the same group of trip transfers from the same trip, at any time.
+         */
+        boolean isFromSameTrip(BoardingByRule other) {
+            return group == other.group && knownPosition == other.knownPosition;
+        }
     }
 
     /**

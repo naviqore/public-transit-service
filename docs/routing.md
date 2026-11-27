@@ -150,6 +150,11 @@ the trips of such rules apart:
   that rule allows too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board
   depends on the timetable and the options of the query alone, so a range query finds it once and keeps it for its
   passes.
+- **Which boardings are kept.** A trip boarded at a stop may change to every later trip of its route, a trip boarded
+  by a rule only to those the rule allows. So an earlier trip is only as good as a later one if it may change to every
+  trip the later one may: if it was boarded at a stop, or by the same rule from the same trip at the same stop. Else
+  the scan of the route rides both on, whether boarded by rule or at a stop, and finds the changes of each. A query of
+  one pass boards no trip by rule where the labels at the stop already board it or an earlier one.
 - **When a search ends.** A boarding by rule runs the next round, also if the arrival it follows improved no stop. A
   pass makes each boarding by rule once: the same trip, boarded at the same stop by the same rule from the same trip
   at the same time. Made again in a later round, it would only ride the same trip with more transfers. So a search

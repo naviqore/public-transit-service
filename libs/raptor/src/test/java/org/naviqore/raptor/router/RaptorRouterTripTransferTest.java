@@ -129,6 +129,34 @@ class RaptorRouterTripTransferTest {
     }
 
     /**
+     * P and Q run S - C, reaching C at 08:00; X runs C - D at 08:05 and 08:10, reaching D after 10, and Y runs D - E at
+     * 08:30. P may change to the X of 08:05 only, Q to the X of 08:10 only, and only the X of 08:10 may change to Y.
+     *
+     * @param refusals whether trip transfers refuse the other changes, or take too long for them.
+     */
+    private static RaptorAlgorithm feedersOfDifferentTrips(boolean refusals) {
+        RaptorRouterBuilder builder = builder("S", "C", "D", "E");
+        addRoute(builder, "P", List.of("S", "C"), new int[]{0, 10}, 7 * 60 + 50);
+        addRoute(builder, "Q", List.of("S", "C"), new int[]{0, 10}, 7 * 60 + 50);
+        addRoute(builder, "X", List.of("C", "D"), new int[]{0, 10}, 8 * 60 + 5, 8 * 60 + 10);
+        addRoute(builder, "Y", List.of("D", "E"), new int[]{0, 10}, 8 * 60 + 30);
+        builder.addTripTransfer(trips("C", "P-0", "C", "X-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        builder.addTripTransfer(trips("C", "Q-0", "C", "X-1", TripTransfer.Type.MINIMUM_TIME, 0));
+        builder.addTripTransfer(trips("D", "X-1", "D", "Y-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        if (refusals) {
+            builder.addTripTransfer(trips("C", "P-0", "C", "X-1", TripTransfer.Type.NOT_POSSIBLE, 0));
+            builder.addTripTransfer(trips("C", "Q-0", "C", "X-0", TripTransfer.Type.NOT_POSSIBLE, 0));
+            builder.addTripTransfer(trips("D", "X-0", "D", "Y-0", TripTransfer.Type.NOT_POSSIBLE, 0));
+        } else {
+            // P misses the X of 08:10 by 5 minutes, Q the X of 08:05 by 5, and the X of 08:05 misses Y by 15
+            builder.addTripTransfer(trips("C", "P-0", "C", "X-1", TripTransfer.Type.MINIMUM_TIME, 900));
+            builder.addTripTransfer(trips("C", "Q-0", "C", "X-0", TripTransfer.Type.MINIMUM_TIME, 600));
+            builder.addTripTransfer(trips("D", "X-0", "D", "Y-0", TripTransfer.Type.MINIMUM_TIME, 1800));
+        }
+        return builder.build();
+    }
+
+    /**
      * X runs A - B and Z runs B - A, both at 08:00 at both stops, and Y runs B - T at 08:30, reaching T after 10. Trip
      * transfers of the type given let X change to Z at B and Z to X at A in no time: the trips board each other.
      */
@@ -189,10 +217,138 @@ class RaptorRouterTripTransferTest {
                 });
                 String message = type + ", query " + i;
                 assertEquals(times.getFirst(), times.getLast(), message);
-                // routing backward, the boarding by rule of X at B is made once, after the stop has boarded it
-                assertEquals(rounds.getFirst() + (i < 4 ? 0 : 1), rounds.getLast(), message);
+                assertEquals(rounds.getFirst(), rounds.getLast(), message);
             }
         }
+    }
+
+    @Test
+    void feedersOfDifferentTrips_changeEachToItsTrip() {
+        for (boolean refusals : new boolean[]{true, false}) {
+            RaptorAlgorithm raptor = feedersOfDifferentTrips(refusals);
+            String message = refusals ? "refusals" : "minimum times";
+            Duration window = Duration.ofMinutes(30);
+            QueryConfig config = QueryConfig.defaults();
+
+            List<Connection> connections = route(raptor, Map.of("S", at(7, 50)), "E", config);
+            assertEquals(1, connections.size(), message);
+            assertEquals(List.of("Q-0", "X-1", "Y-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(8, 40), connections.getFirst().getArrivalTime(), message);
+            connections = raptor.connectionRangeQuery(Map.of("S", at(7, 30)), Map.of("E", 0), TimeType.DEPARTURE,
+                    window, config);
+            assertEquals(List.of("Q-0", "X-1", "Y-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(8, 40), raptor.isolineQuery(Map.of("S", at(7, 50)), TimeType.DEPARTURE, config)
+                    .get("E")
+                    .getArrivalTime(), message);
+            assertEquals(at(8, 40),
+                    raptor.isolineRangeQuery(Map.of("S", at(7, 30)), TimeType.DEPARTURE, window, config)
+                            .get("E")
+                            .getArrivalTime(), message);
+
+            connections = raptor.connectionQuery(Map.of("E", at(9, 0)), Map.of("S", 0), TimeType.ARRIVAL, config);
+            assertEquals(List.of("Q-0", "X-1", "Y-0"), tripsOf(connections.getFirst()), message);
+            connections = raptor.connectionRangeQuery(Map.of("E", at(9, 0)), Map.of("S", 0), TimeType.ARRIVAL, window,
+                    config);
+            assertEquals(List.of("Q-0", "X-1", "Y-0"), tripsOf(connections.getFirst()), message);
+        }
+    }
+
+    @Test
+    void feedersOfDifferentTrips_changeEachToItsTrip_routingBackward() {
+        // the mirror: Y runs S - D at 08:00, reaching D after 10; X runs D - C at 08:30 and 08:45, reaching C after 10;
+        // P and Q run C - E at 09:00. Only the X of 08:30 may change to Q and be changed to from Y, only that of 08:45
+        // to P
+        RaptorRouterBuilder builder = builder("S", "D", "C", "E");
+        addRoute(builder, "Y", List.of("S", "D"), new int[]{0, 10}, 8 * 60);
+        addRoute(builder, "X", List.of("D", "C"), new int[]{0, 10}, 8 * 60 + 30, 8 * 60 + 45);
+        addRoute(builder, "P", List.of("C", "E"), new int[]{0, 10}, 9 * 60);
+        addRoute(builder, "Q", List.of("C", "E"), new int[]{0, 10}, 9 * 60);
+        builder.refuseTransfers("C", "C");
+        builder.refuseTransfers("D", "D");
+        builder.addTripTransfer(trips("C", "X-1", "C", "P-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        builder.addTripTransfer(trips("C", "X-0", "C", "Q-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        builder.addTripTransfer(trips("D", "Y-0", "D", "X-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        RaptorAlgorithm raptor = builder.build();
+
+        List<Connection> connections = raptor.connectionQuery(Map.of("E", at(9, 10)), Map.of("S", 0),
+                TimeType.ARRIVAL, QueryConfig.defaults());
+        assertEquals(1, connections.size());
+        assertEquals(List.of("Y-0", "X-0", "Q-0"), tripsOf(connections.getFirst()));
+        assertEquals(at(8, 0), raptor.isolineQuery(Map.of("E", at(9, 10)), TimeType.ARRIVAL, QueryConfig.defaults())
+                .get("S")
+                .getDepartureTime());
+        connections = route(raptor, Map.of("S", at(8, 0)), "E", QueryConfig.defaults());
+        assertEquals(List.of("Y-0", "X-0", "Q-0"), tripsOf(connections.getFirst()));
+    }
+
+    /**
+     * P runs S - C at 07:50, reaching C at 08:00; X runs C - B - D at 08:05 and 08:10, reaching B after 3 and D after
+     * 10, and Y runs D - E at 08:30. C and D refuse transfers, except from P to the X of 08:05 and from the X of 08:10
+     * to Y: the X of 08:05 is ahead at B, but only that of 08:10 changes to Y.
+     */
+    private static RaptorRouterBuilder laterTripBoardedOnTheRoute(String... stops) {
+        RaptorRouterBuilder builder = builder(stops);
+        addRoute(builder, "P", List.of("S", "C"), new int[]{0, 10}, 7 * 60 + 50);
+        addRoute(builder, "X", List.of("C", "B", "D"), new int[]{0, 3, 10}, 8 * 60 + 5, 8 * 60 + 10);
+        addRoute(builder, "Y", List.of("D", "E"), new int[]{0, 10}, 8 * 60 + 30);
+        builder.refuseTransfers("C", "C");
+        builder.refuseTransfers("D", "D");
+        builder.addTripTransfer(trips("C", "P-0", "C", "X-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        builder.addTripTransfer(trips("D", "X-1", "D", "Y-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        return builder;
+    }
+
+    @Test
+    void aLaterTripBoardedAlongATripTransferOnTheRoute_changesAsItMay() {
+        // F runs S - B, reaching B at 08:06, before the X of 08:05 passes, but B refuses transfers, except from F to
+        // the X of 08:10
+        RaptorRouterBuilder builder = laterTripBoardedOnTheRoute("S", "C", "B", "D", "E");
+        addRoute(builder, "F", List.of("S", "B"), new int[]{0, 16}, 7 * 60 + 50);
+        builder.refuseTransfers("B", "B");
+        builder.addTripTransfer(trips("B", "F-0", "B", "X-1", TripTransfer.Type.MINIMUM_TIME, 0));
+        RaptorAlgorithm raptor = builder.build();
+
+        List<Connection> connections = route(raptor, Map.of("S", at(7, 50)), "E", QueryConfig.defaults());
+        assertEquals(1, connections.size());
+        assertEquals(List.of("F-0", "X-1", "Y-0"), tripsOf(connections.getFirst()));
+        assertEquals(at(8, 40), connections.getFirst().getArrivalTime());
+    }
+
+    @Test
+    void aLaterTripBoardedAtAStopOfTheRoute_changesAsItMay() {
+        // F runs S - A, reaching A at 08:05, and walks to B in 240 s, after the X of 08:05 passes at 08:08 and in time
+        // for the X of 08:10; at B, the X of 08:05 cannot change to it in 330 s
+        RaptorRouterBuilder builder = laterTripBoardedOnTheRoute("S", "A", "C", "B", "D", "E");
+        addRoute(builder, "F", List.of("S", "A"), new int[]{0, 15}, 7 * 60 + 50);
+        builder.addTransfer("A", "B", 240);
+        builder.addTransfer("B", "B", 330);
+        RaptorAlgorithm raptor = builder.build();
+
+        List<Connection> connections = route(raptor, Map.of("S", at(7, 50)), "E", QueryConfig.defaults());
+        assertEquals(1, connections.size());
+        assertEquals(List.of("F-0", "X-1", "Y-0"), tripsOf(connections.getFirst()));
+        assertEquals(at(8, 40), raptor.isolineQuery(Map.of("S", at(7, 50)), TimeType.DEPARTURE, QueryConfig.defaults())
+                .get("E")
+                .getArrivalTime());
+    }
+
+    @Test
+    void aFirstTripBoardedAfterAWalk_changesAsItMay_overATimeWindow() {
+        // X runs A - B - C at 08:00 and 08:10, reaching B after 2 and C after 10; Y runs C - D at 08:25, reaching D
+        // after 10; C refuses transfers, except from the X of 08:10 to Y. From A at 08:00, the X of 08:00 leaves in a
+        // window of 5 minutes, and the X of 08:10 at B after walking there in 8, but not that of 08:10 at A
+        RaptorRouterBuilder builder = builder("A", "B", "C", "D");
+        addRoute(builder, "X", List.of("A", "B", "C"), new int[]{0, 2, 10}, 8 * 60, 8 * 60 + 10);
+        addRoute(builder, "Y", List.of("C", "D"), new int[]{0, 10}, 8 * 60 + 25);
+        builder.addTransfer("A", "B", 480);
+        builder.refuseTransfers("C", "C");
+        builder.addTripTransfer(trips("C", "X-1", "C", "Y-0", TripTransfer.Type.MINIMUM_TIME, 0));
+        RaptorAlgorithm raptor = builder.build();
+
+        Connection isoline = raptor.isolineRangeQuery(Map.of("A", at(8, 0)), TimeType.DEPARTURE,
+                Duration.ofMinutes(5), QueryConfig.defaults()).get("D");
+        assertEquals(List.of("X-1", "Y-0"), tripsOf(isoline));
+        assertEquals(at(8, 35), isoline.getArrivalTime());
     }
 
     @Test
