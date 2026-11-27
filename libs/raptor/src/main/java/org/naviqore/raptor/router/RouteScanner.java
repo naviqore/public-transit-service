@@ -792,13 +792,18 @@ class RouteScanner {
             return;
         }
 
-        // the labels the boarding follows: the trip of this route, and between two stops, the transfer as a walk
+        // the labels the boarding follows: the trip of this route, and between two stops, the transfer as a walk, or
+        // staying on board, which is no walk but tells the stop the next trip leaves from (routing backward: reaches)
         QueryState.Label previousLabel = new QueryState.Label(bestEntryTime, bestTime, QueryState.LabelType.ROUTE,
                 routeIdx, bestPosition, arrivalIdx, activeTrip.previousLabel);
         if (!group.isAtOneStop()) {
-            previousLabel = new QueryState.Label(bestTime, bestTime + timeDirection * best.transferTime(),
-                    QueryState.LabelType.TRANSFER, QueryState.NO_INDEX, QueryState.NO_INDEX,
-                    forward ? group.toStopIdx : group.fromStopIdx, previousLabel);
+            int rule = forward ? group.rule(bestPosition, best.tripOffset()) : group.rule(best.tripOffset(),
+                    bestPosition);
+            QueryState.LabelType type = rule == TripTransfers.IN_SEAT ? QueryState.LabelType.IN_SEAT :
+                    QueryState.LabelType.TRANSFER;
+            previousLabel = new QueryState.Label(bestTime, bestTime + timeDirection * best.transferTime(), type,
+                    QueryState.NO_INDEX, QueryState.NO_INDEX, forward ? group.toStopIdx : group.fromStopIdx,
+                    previousLabel);
         }
         addPendingBoarding(forward ? group.toRouteIdx : group.fromRouteIdx, targetOffset,
                 new ActiveTrip(best.tripOffset(), best.entryTime(), best.dayTimeOffset(), previousLabel,

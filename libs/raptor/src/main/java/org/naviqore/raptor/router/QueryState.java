@@ -438,7 +438,12 @@ final class QueryState {
         /**
          * Uses a transfer between stops (not a same stop transfer).
          */
-        TRANSFER
+        TRANSFER,
+        /**
+         * Stays on board between two stops, as the vehicle continues as another trip from a stop of its own: no leg,
+         * but the stop the next trip leaves from.
+         */
+        IN_SEAT
 
     }
 
@@ -447,7 +452,7 @@ final class QueryState {
      *
      * @param sourceTime         the source time of the label in seconds after midnight.
      * @param targetTime         the target time of the label in seconds after midnight.
-     * @param type               the type of the label, can be INITIAL, ROUTE or TRANSFER.
+     * @param type               the type of the label, can be INITIAL, ROUTE, TRANSFER or IN_SEAT.
      * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
      * @param tripOffset         the trip offset on the current route (or NO_INDEX).
      * @param stopIdx            the target stop of the label.

@@ -137,7 +137,9 @@ same stop transfer time, at least the minimum transfer duration of the query; be
 longer than the longest walk of the query, to which that duration is added. Staying on board takes no time and no
 minimum, but is a ride of its own, so a transfer. It needs no pickup or drop-off where the vehicle continues, as the
 rider neither alights nor boards: the arriving trip reaches the stop then only to stay on board, with no arrival there
-to change or walk from, and the departing trip is boarded there only by staying on board.
+to change or walk from, and the departing trip is boarded there only by staying on board. Where the departing trip
+leaves from another stop than the arriving one ends at, staying on board is no walk either: the connection goes on with
+the ride of the departing trip from its stop.
 
 Rules that differ by trip do not fit the labels of a stop: a restrictive rule, which refuses the transfer or takes
 longer than the stop, would hide an arrival on another route that transfers as the stop allows. So the router keeps
@@ -309,7 +311,8 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-trave
   apply each rule to its trips, at a cost only at the stops and routes that have rules, and slots only where a rule
   is restrictive.
 - **Staying on board is a ride.** The vehicle continues as another trip, so it counts as a transfer, also towards the
-  maximum transfers of a query, but takes no time.
+  maximum transfers of a query, but takes no time. A connection shows it as the next ride, with no walk before it, also
+  between two stops.
 - **The same timetable gives the same answers, on every start.** Of equally good alternatives, RAPTOR keeps the one it
   meets first. The order it meets them in is set when the router is built, never by the order of its input or of a
   map, which can change from one JVM start to the next: stops are numbered by id, routes ordered by their first

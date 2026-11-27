@@ -621,6 +621,34 @@ class RaptorRouterTripTransferTest {
     }
 
     @Test
+    void anInSeatTransferBetweenTwoStops_isNoWalk() {
+        // the vehicle of trip a, reaching P4 at 09:05, continues as trip b, leaving P5 at 09:05; walking takes 240 s
+        RaptorRouterBuilder builder = builder("A", "P4", "P5", "T");
+        addRoute(builder, "Q", List.of("A", "P4"), new int[]{0, 5}, 9 * 60);
+        addRoute(builder, "R", List.of("P5", "T"), new int[]{0, 10}, 9 * 60 + 5);
+        builder.addTransfer("P4", "P5", 240);
+        builder.addTripTransfer(trips("P4", "Q-0", "P5", "R-0", TripTransfer.Type.IN_SEAT, 0));
+        RaptorAlgorithm raptor = builder.build();
+
+        List<Connection> connections = new ArrayList<>(
+                route(raptor, Map.of("A", at(9, 0)), "T", QueryConfig.defaults()));
+        connections.addAll(raptor.connectionQuery(Map.of("T", at(9, 15)), Map.of("A", 0), TimeType.ARRIVAL,
+                QueryConfig.defaults()));
+        connections.addAll(raptor.connectionRangeQuery(Map.of("A", at(9, 0)), Map.of("T", 0), TimeType.DEPARTURE,
+                Duration.ofMinutes(5), QueryConfig.defaults()));
+        connections.add(raptor.isolineQuery(Map.of("A", at(9, 0)), TimeType.DEPARTURE, QueryConfig.defaults())
+                .get("T"));
+        assertEquals(4, connections.size());
+        for (Connection connection : connections) {
+            assertEquals(List.of("A-P4", "P5-T"),
+                    connection.getLegs().stream().map(leg -> leg.getFromStopId() + "-" + leg.getToStopId()).toList());
+            assertEquals(List.of("Q-0", "R-0"), tripsOf(connection));
+            assertTrue(connection.getWalkTransfers().isEmpty());
+            assertEquals(at(9, 15), connection.getArrivalTime());
+        }
+    }
+
+    @Test
     void aWalkFromAnArrivalWithTripTransfers_boardsOtherRoutesAsTheWalkAllows() {
         // from trip a at P4, the trip transfer to R at P5 takes an hour, but the walk to P5 still boards R2 after 240 s
         RaptorRouterBuilder builder = builder("A", "P4", "P5", "T", "U");

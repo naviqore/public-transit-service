@@ -471,5 +471,20 @@ class RaptorServiceIT {
             assertEquals(List.of(), route("S", "P", timeType));
             assertEquals(List.of(), route("P", "Z", timeType));
         }
+
+        @ParameterizedTest
+        @EnumSource(TimeType.class)
+        void betweenTwoStops_isNoWalk(TimeType timeType) throws Exception {
+            start("P2", "", "");
+
+            List<Connection> connections = service.getConnections(service.getStopById("S"),
+                    service.getStopById("Z"), timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType,
+                    ConnectionQueryConfig.defaults());
+            assertEquals(1, connections.size());
+            List<Leg> legs = connections.getFirst().getLegs();
+            assertEquals(List.of("T1", "T2"), legs.stream().map(StayingOnBoard::describe).toList());
+            assertEquals("P", ((PublicTransitLeg) legs.getFirst()).getArrival().getStop().getId());
+            assertEquals("P2", ((PublicTransitLeg) legs.getLast()).getDeparture().getStop().getId());
+        }
     }
 }

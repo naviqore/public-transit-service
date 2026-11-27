@@ -137,7 +137,8 @@ class LabelPostprocessor {
     }
 
     /**
-     * Backtracks from a given label to the initial label to collect the sequence of labels.
+     * Backtracks from a given label to the initial label to collect the sequence of labels. Staying on board between
+     * two stops is no leg: the ride after it leaves from the stop of its label, and the ride before it ends at its own.
      *
      * @param label the starting label, the target stop.
      * @return an ordered list of labels from target to source.
@@ -146,7 +147,9 @@ class LabelPostprocessor {
         ArrayList<QueryState.Label> labels = new ArrayList<>();
         while (label.type() != QueryState.LabelType.INITIAL) {
             assert label.previous() != null;
-            labels.add(label);
+            if (label.type() != QueryState.LabelType.IN_SEAT) {
+                labels.add(label);
+            }
             label = label.previous();
         }
 
