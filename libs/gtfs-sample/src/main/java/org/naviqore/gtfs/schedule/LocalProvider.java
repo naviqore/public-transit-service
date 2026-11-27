@@ -1,6 +1,7 @@
 package org.naviqore.gtfs.schedule;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NullMarked;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+@NullMarked
 @Slf4j
 class LocalProvider implements DataProvider {
 

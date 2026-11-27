@@ -23,7 +23,7 @@ public class KDTreeBuilderTest {
         Assertions.assertEquals(y, node.getLocation().getCoordinate().getSecondComponent());
     }
 
-    private ArrayList<TestFacility> getTestLocations() {
+    private List<TestFacility> getTestLocations() {
         ArrayList<TestFacility> locations = new ArrayList<>();
         locations.add(new TestFacility("8,1", new CartesianCoordinate(8, 1)));
         locations.add(new TestFacility("5,4", new CartesianCoordinate(5, 4)));

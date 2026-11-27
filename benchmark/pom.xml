@@ -35,6 +35,12 @@
         </dependency>
         <dependency>
             <groupId>org.naviqore</groupId>
+            <artifactId>naviqore-utils</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.naviqore</groupId>
             <artifactId>naviqore-gtfs-sample</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>

@@ -20,8 +20,8 @@ contributing, you agree to the [License](LICENSE) and confirm you have the right
 Before submitting a PR:
 
 1. Create a new branch: `feature/xyz` or `bugfix/xyz`.
-2. Add your changes **with tests**.
-3. Run all tests and ensure they pass.
+2. Add your changes **with tests**, following the code conventions in [AGENTS.md](AGENTS.md).
+3. Run `./mvnw clean verify` and ensure it passes without warnings.
 4. Commit your changes using a clear, Conventional Commit message.
 5. Push your branch and open a PR to `main` in GitHub. The PR title and message should conform to Conventional Commit
    guidelines.

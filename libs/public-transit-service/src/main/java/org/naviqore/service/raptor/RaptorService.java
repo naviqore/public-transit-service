@@ -53,17 +53,17 @@ public class RaptorService implements PublicTransitService {
     }
 
     @Override
-    public boolean hasAccessibilityInformation() {
+    public boolean hasWheelchairAccessible() {
         return schedule.hasTripAccessibilityInformation();
     }
 
     @Override
-    public boolean hasBikeInformation() {
+    public boolean hasBikeAllowed() {
         return schedule.hasTripBikeInformation();
     }
 
     @Override
-    public boolean hasTravelModeInformation() {
+    public boolean hasTravelModes() {
         // timetable routes always have a travel mode, so this is always true
         return true;
     }
@@ -73,7 +73,7 @@ public class RaptorService implements PublicTransitService {
         log.info("Searching for stops matching '{}', with search type '{}' and sort strategy '{}'", like, searchType,
                 stopSortStrategy);
 
-        return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
+        return stopSearchIndex.search(like.toLowerCase(Locale.ROOT), TypeMapper.map(searchType))
                 .stream()
                 .sorted(stopSortStrategy.getComparator(like))
                 .map(TypeMapper::map)
@@ -92,7 +92,7 @@ public class RaptorService implements PublicTransitService {
             stop = stop.getParent().get();
         }
 
-        return Optional.ofNullable(TypeMapper.map(stop));
+        return Optional.ofNullable(stop).map(TypeMapper::map);
     }
 
     @Override
@@ -100,21 +100,22 @@ public class RaptorService implements PublicTransitService {
         log.info("Searching for nearest stops to location '({}, {})', within radius '{} m'",
                 location.getFirstComponent(), location.getSecondComponent(), radius);
 
-        List<org.naviqore.timetable.model.Stop> stops = new ArrayList<>();
-
+        // a set holds each parent stop once
+        Set<org.naviqore.timetable.model.Stop> stops = new LinkedHashSet<>();
         for (org.naviqore.timetable.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
             // if nearest stop is a child stop, return parent stop
             if (stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
                 stop = stop.getParent().get();
             }
-            // avoid adding same parent stop multiple times
-            if (!stops.contains(stop)) {
-                stops.add(stop);
-            }
-
+            stops.add(stop);
         }
 
-        return stops.stream().map(TypeMapper::map).toList();
+        return stops.stream()
+                .sorted(Comparator.<org.naviqore.timetable.model.Stop>comparingDouble(
+                                stop -> stop.getCoordinate().distanceTo(location))
+                        .thenComparing(org.naviqore.timetable.model.Stop::getId))
+                .map(TypeMapper::map)
+                .toList();
     }
 
     @Override

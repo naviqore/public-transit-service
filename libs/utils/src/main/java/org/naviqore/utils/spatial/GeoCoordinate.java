@@ -2,6 +2,7 @@ package org.naviqore.utils.spatial;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public record GeoCoordinate(double latitude, double longitude) implements Coordinate, Comparable<GeoCoordinate> {
 
@@ -26,7 +27,7 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
         }
     }
 
-    private void isOfSameType(Coordinate other) {
+    private void isOfSameType(@Nullable Coordinate other) {
         if (other == null) {
             throw new IllegalArgumentException("Other coordinate must not be null");
         }
@@ -76,18 +77,19 @@ public record GeoCoordinate(double latitude, double longitude) implements Coordi
         return EARTH_RADIUS * c;
     }
 
+    // the differences are compared to a tolerance on purpose, Double.compare decides only beyond it
+    @SuppressWarnings("java:S9148")
     @Override
     public int compareTo(GeoCoordinate other) {
+        // coordinates closer than the tolerance on both axes are equal
         double epsilon = 1e-5;
 
-        double diffLatitude = this.latitude - other.latitude();
-        if (Math.abs(diffLatitude) > epsilon) {
-            return diffLatitude > 0 ? 1 : -1;
+        if (Math.abs(this.latitude - other.latitude()) > epsilon) {
+            return Double.compare(this.latitude, other.latitude());
         }
 
-        double diffLongitude = this.longitude - other.longitude();
-        if (Math.abs(diffLongitude) > epsilon) {
-            return diffLongitude > 0 ? 1 : -1;
+        if (Math.abs(this.longitude - other.longitude()) > epsilon) {
+            return Double.compare(this.longitude, other.longitude());
         }
 
         return 0;

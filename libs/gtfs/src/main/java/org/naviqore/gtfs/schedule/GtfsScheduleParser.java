@@ -2,13 +2,12 @@ package org.naviqore.gtfs.schedule;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVRecord;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.LocationType;
 import org.naviqore.gtfs.schedule.type.RouteType;
-import org.naviqore.timetable.type.AccessibilityInformation;
-import org.naviqore.timetable.type.BikeInformation;
-import org.naviqore.timetable.type.ServiceDayTime;
-import org.naviqore.timetable.type.TransferType;
+import org.naviqore.timetable.type.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -16,18 +15,18 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * GTFS CSV records parser, in two steps: a record is read into the values the schedule builder takes, which any thread
  * may do, and they are added to the builder, which the thread building the schedule does, in the order of the records.
  * A record that fails to be read fails, or is skipped with a warning, only when it is added, so that the schedule, its
- * warnings and its failures are those of reading and adding each record in turn.
- * <p>
- * A transfer of the schedule applies to all trips between its stops, so a row of transfers.txt for particular routes or
- * trips is left out: taken for all trips, it would set their transfer time to that of a particular connection.
+ * warnings and its failures are those of reading and adding each record in turn. An invalid calendar date, trip, stop
+ * time or transfer is skipped, as is a transfer that names a call the schedule does not have, such as one at a stop
+ * time skipped for lacking its times.
  *
  * @author munterfi
  */
@@ -45,14 +44,8 @@ class GtfsScheduleParser {
                     GtfsScheduleFile.ROUTES, GtfsScheduleParser::readRoute, GtfsScheduleFile.TRIPS,
                     GtfsScheduleParser::readTrip, GtfsScheduleFile.STOP_TIMES, GtfsScheduleParser::readStopTime,
                     GtfsScheduleFile.TRANSFERS, GtfsScheduleParser::readTransfer));
-    private static final List<String> TRANSFER_ROUTE_AND_TRIP_FIELDS = List.of("from_route_id", "to_route_id",
-            "from_trip_id", "to_trip_id");
-    // the values of a row of transfers.txt for particular routes or trips, which is left out
-    private static final ParsedRecord TRANSFER_FOR_PARTICULAR_TRIPS = _ -> {
-    };
 
     private final GtfsScheduleBuilder builder;
-    private long transfersForParticularTrips;
 
     public GtfsScheduleParser(GtfsScheduleBuilder builder) {
         this.builder = builder;
@@ -87,7 +80,7 @@ class GtfsScheduleParser {
         String url = record.get("agency_url");
         ZoneId timezone = ZoneId.of(record.get("agency_timezone"));
 
-        return builder -> builder.addAgency(id, name, url, timezone);
+        return added(builder -> builder.addAgency(id, name, url, timezone));
     }
 
     private static ParsedRecord readCalendar(CSVRecord record) {
@@ -101,7 +94,7 @@ class GtfsScheduleParser {
         LocalDate startDate = LocalDate.parse(record.get("start_date"), DATE_FORMATTER);
         LocalDate endDate = LocalDate.parse(record.get("end_date"), DATE_FORMATTER);
 
-        return builder -> builder.addCalendar(id, serviceDays, startDate, endDate);
+        return added(builder -> builder.addCalendar(id, serviceDays, startDate, endDate));
     }
 
     private static ParsedRecord readCalendarDate(CSVRecord record) {
@@ -113,8 +106,9 @@ class GtfsScheduleParser {
             return builder -> {
                 try {
                     builder.addCalendarDate(serviceId, day, type);
+                    return true;
                 } catch (IllegalArgumentException e) {
-                    warnCalendarDate(date, e);
+                    return warnCalendarDate(date, e);
                 }
             };
         } catch (IllegalArgumentException e) {
@@ -122,8 +116,9 @@ class GtfsScheduleParser {
         }
     }
 
-    private static void warnCalendarDate(String date, IllegalArgumentException e) {
+    private static boolean warnCalendarDate(String date, IllegalArgumentException e) {
         log.warn("Skipping invalid calendar date {}: {}", date, e.getMessage());
+        return false;
     }
 
     private static ParsedRecord readStop(CSVRecord record) {
@@ -134,8 +129,10 @@ class GtfsScheduleParser {
         String parent = Utils.getStringFieldOrDefault(record, "parent_station", "");
         AccessibilityInformation wheelchairBoarding = AccessibilityInformation.parse(
                 Utils.getIntFieldOrDefault(record, "wheelchair_boarding", 0));
+        LocationType locationType = LocationType.parse(Utils.getStringFieldOrDefault(record, "location_type", ""));
 
-        return builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding);
+        return added(
+                builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding, locationType));
     }
 
     private static ParsedRecord readRoute(CSVRecord record) {
@@ -145,7 +142,7 @@ class GtfsScheduleParser {
         String longName = record.get("route_long_name");
         RouteType type = RouteType.parse(record.get("route_type"));
 
-        return builder -> builder.addRoute(id, agency, shortName, longName, type);
+        return added(builder -> builder.addRoute(id, agency, shortName, longName, type));
     }
 
     private static ParsedRecord readTrip(CSVRecord record) {
@@ -161,8 +158,9 @@ class GtfsScheduleParser {
             return builder -> {
                 try {
                     builder.addTrip(id, route, service, headSign, wheelchairAccessible, bikesAllowed);
+                    return true;
                 } catch (IllegalArgumentException e) {
-                    warnTrip(id, e);
+                    return warnTrip(id, e);
                 }
             };
         } catch (IllegalArgumentException e) {
@@ -170,8 +168,9 @@ class GtfsScheduleParser {
         }
     }
 
-    private static void warnTrip(String id, IllegalArgumentException e) {
+    private static boolean warnTrip(String id, IllegalArgumentException e) {
         log.warn("Skipping invalid trip {}: {}", id, e.getMessage());
+        return false;
     }
 
     private static ParsedRecord readStopTime(CSVRecord record) {
@@ -180,11 +179,16 @@ class GtfsScheduleParser {
             String stop = record.get("stop_id");
             ServiceDayTime arrival = ServiceDayTime.parse(record.get("arrival_time"));
             ServiceDayTime departure = ServiceDayTime.parse(record.get("departure_time"));
+            PickupDropOffType pickupType = PickupDropOffType.parse(
+                    Utils.getStringFieldOrDefault(record, "pickup_type", ""));
+            PickupDropOffType dropOffType = PickupDropOffType.parse(
+                    Utils.getStringFieldOrDefault(record, "drop_off_type", ""));
             return builder -> {
                 try {
-                    builder.addStopTime(trip, stop, arrival, departure);
+                    builder.addStopTime(trip, stop, arrival, departure, pickupType, dropOffType);
+                    return true;
                 } catch (IllegalArgumentException e) {
-                    warnStopTime(trip, stop, e);
+                    return warnStopTime(trip, stop, e);
                 }
             };
         } catch (IllegalArgumentException e) {
@@ -192,41 +196,62 @@ class GtfsScheduleParser {
         }
     }
 
-    private static void warnStopTime(String trip, String stop, IllegalArgumentException e) {
+    private static boolean warnStopTime(String trip, String stop, IllegalArgumentException e) {
         log.warn("Skipping invalid stop time {}-{}: {}", trip, stop, e.getMessage());
+        return false;
     }
 
     private static ParsedRecord readTransfer(CSVRecord record) {
-        // a row for particular routes or trips applies to them alone, a transfer between stops to all trips
-        if (TRANSFER_ROUTE_AND_TRIP_FIELDS.stream()
-                .anyMatch(field -> !Utils.getStringFieldOrDefault(record, field, "").isEmpty())) {
-            return TRANSFER_FOR_PARTICULAR_TRIPS;
+        TransferRow row = new TransferRow(getIdOrNull(record, "from_stop_id"), getIdOrNull(record, "to_stop_id"),
+                getIdOrNull(record, "from_route_id"), getIdOrNull(record, "to_route_id"),
+                getIdOrNull(record, "from_trip_id"), getIdOrNull(record, "to_trip_id"));
+        try {
+            // an empty transfer type is a recommended transfer point
+            String transferType = record.get("transfer_type");
+            TransferType type = transferType.isEmpty() ? TransferType.RECOMMENDED : TransferType.parse(transferType);
+            String minTransferTime = Utils.getStringFieldOrDefault(record, "min_transfer_time", "");
+            Integer minimum = minTransferTime.isEmpty() ? null : Integer.parseInt(minTransferTime);
+            return builder -> {
+                try {
+                    builder.addTransfer(row.fromStopId(), row.toStopId(), row.fromRouteId(), row.toRouteId(),
+                            row.fromTripId(), row.toTripId(), type, minimum);
+                    return true;
+                } catch (IllegalArgumentException e) {
+                    return warnTransfer(row, e);
+                }
+            };
+        } catch (IllegalArgumentException e) {
+            return _ -> warnTransfer(row, e);
         }
-        String minTransferTime = record.get("min_transfer_time");
-        String from = record.get("from_stop_id");
-        String to = record.get("to_stop_id");
-        TransferType type = TransferType.parse(record.get("transfer_type"));
-        Integer minimum = minTransferTime.isEmpty() ? null : Integer.parseInt(record.get("min_transfer_time"));
+    }
 
-        return builder -> builder.addTransfer(from, to, type, minimum);
+    private static boolean warnTransfer(TransferRow row, IllegalArgumentException e) {
+        log.warn("Skipping invalid transfer {}: {}", row, e.getMessage());
+        return false;
+    }
+
+    private static @Nullable String getIdOrNull(CSVRecord record, String fieldName) {
+        String id = Utils.getStringFieldOrDefault(record, fieldName, "");
+        return id.isEmpty() ? null : id;
+    }
+
+    /**
+     * The values of a record that are always added, or fail.
+     */
+    private static ParsedRecord added(Consumer<GtfsScheduleBuilder> adding) {
+        return builder -> {
+            adding.accept(builder);
+            return true;
+        };
     }
 
     /**
      * Adds the values of a record to the schedule builder.
+     *
+     * @return whether they were added, or skipped with a warning
      */
-    public void add(ParsedRecord record) {
-        if (record == TRANSFER_FOR_PARTICULAR_TRIPS) {
-            transfersForParticularTrips++;
-            return;
-        }
-        record.addTo(builder);
-    }
-
-    /**
-     * The number of rows of transfers.txt for particular routes or trips, which were left out.
-     */
-    long transfersForParticularTrips() {
-        return transfersForParticularTrips;
+    public boolean add(ParsedRecord record) {
+        return record.addTo(builder);
     }
 
     /**
@@ -235,17 +260,50 @@ class GtfsScheduleParser {
     @FunctionalInterface
     interface ParsedRecord {
 
-        void addTo(GtfsScheduleBuilder builder);
+        /**
+         * Adds the values to the builder, or skips them with a warning.
+         *
+         * @return whether the values were added
+         */
+        boolean addTo(GtfsScheduleBuilder builder);
     }
 
+    /**
+     * The fields that identify a row of transfers.txt, to name it in a warning.
+     */
+    private record TransferRow(@Nullable String fromStopId, @Nullable String toStopId, @Nullable String fromRouteId,
+                               @Nullable String toRouteId, @Nullable String fromTripId, @Nullable String toTripId) {
+
+        private static void add(StringJoiner fields, String name, @Nullable String value) {
+            if (value != null) {
+                fields.add(name + "=" + value);
+            }
+        }
+
+        @Override
+        public String toString() {
+            StringJoiner fields = new StringJoiner(", ", "[", "]");
+            add(fields, "from_stop_id", fromStopId);
+            add(fields, "to_stop_id", toStopId);
+            add(fields, "from_route_id", fromRouteId);
+            add(fields, "to_route_id", toRouteId);
+            add(fields, "from_trip_id", fromTripId);
+            add(fields, "to_trip_id", toTripId);
+            return fields.toString();
+        }
+    }
+
+    // general helpers, whatever default the fields read so far happen to share
+    @SuppressWarnings("SameParameterValue")
     private static class Utils {
 
+        // a field may be missing from the header, or from a record that leaves out its last, empty fields
         private static String getStringFieldOrDefault(CSVRecord record, String fieldName, String defaultValue) {
-            return record.isMapped(fieldName) ? record.get(fieldName).trim() : defaultValue;
+            return record.isSet(fieldName) ? record.get(fieldName).trim() : defaultValue;
         }
 
         private static int getIntFieldOrDefault(CSVRecord record, String fieldName, int defaultValue) {
-            return record.isMapped(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
+            return record.isSet(fieldName) ? Integer.parseInt(record.get(fieldName)) : defaultValue;
         }
 
     }

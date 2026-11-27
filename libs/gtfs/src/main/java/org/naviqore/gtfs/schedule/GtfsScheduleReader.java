@@ -39,8 +39,7 @@ import java.util.zip.ZipFile;
  * the first line of the file names the line the block starts at.
  * <p>
  * Note: The GTFS data has to strictly follow the standard GTFS file naming and format. Non-standard files will not be
- * read. Of transfers.txt, only the rows for all trips are read: a transfer of the schedule applies to all trips between
- * its stops, and a row for particular routes or trips to those alone.
+ * read.
  *
  * @author munterfi
  */
@@ -199,7 +198,7 @@ public class GtfsScheduleReader {
         InOrder inOrder = new InOrder(recordParser, fileType);
 
         List<String> header = List.of();
-        byte @Nullable [] block;
+        byte[] block;
         while (header.isEmpty() && (block = blocks.next()) != null) {
             try (CSVParser csvParser = FORMAT.parse(new StringReader(decode(block)))) {
                 header = csvParser.getHeaderNames();
@@ -224,6 +223,9 @@ public class GtfsScheduleReader {
         }
 
         validateCsvFileIsNotEmpty(fileType, inOrder.records());
+        if (inOrder.skipped() > 0) {
+            log.warn("Skipped {} of {} records of {}", inOrder.skipped(), inOrder.records(), fileType.getFileName());
+        }
     }
 
     public GtfsSchedule read(String path) throws IOException {
@@ -241,12 +243,6 @@ public class GtfsScheduleReader {
             throw new IllegalArgumentException("Path must be a directory or a .zip file");
         }
 
-        // a transfer of the schedule applies to all trips between its stops
-        long transfersLeftOut = parser.transfersForParticularTrips();
-        if (transfersLeftOut > 0) {
-            log.info("Left out rows of transfers.txt for particular routes or trips: {}", transfersLeftOut);
-        }
-
         return builder.build();
     }
 
@@ -259,7 +255,7 @@ public class GtfsScheduleReader {
 
     /**
      * Adds the values read from the blocks of a file to the schedule, block after block in the order of the file, and
-     * counts the records and the lines they were read from.
+     * counts the records, those skipped, and the lines they were read from.
      */
     @RequiredArgsConstructor
     private static final class InOrder {
@@ -267,6 +263,7 @@ public class GtfsScheduleReader {
         private final GtfsScheduleParser recordParser;
         private final GtfsScheduleFile fileType;
         private long records;
+        private long skipped;
         private long lines;
 
         /**
@@ -276,7 +273,9 @@ public class GtfsScheduleReader {
          */
         void add(ReadBlock block) {
             for (ParsedRecord record : block.records()) {
-                recordParser.add(record);
+                if (!recordParser.add(record)) {
+                    skipped++;
+                }
             }
             records += block.records().size();
 
@@ -294,6 +293,10 @@ public class GtfsScheduleReader {
 
         long records() {
             return records;
+        }
+
+        long skipped() {
+            return skipped;
         }
     }
 }

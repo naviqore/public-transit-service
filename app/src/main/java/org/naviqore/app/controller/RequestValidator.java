@@ -14,9 +14,11 @@ import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
+import java.util.Locale;
 
 /**
  * Validator for all REST API request parameters and business rules.
@@ -49,7 +51,12 @@ final class RequestValidator {
     static @Nullable GeoCoordinate getCoordinateIfAvailable(@Nullable String stopId, @Nullable Double latitude,
                                                             @Nullable Double longitude, StopType stopType) {
         validateStopParametersMutualExclusivity(stopId, latitude, longitude, stopType);
-        return stopId == null ? createCoordinate(latitude, longitude) : null;
+        if (stopId != null) {
+            return null;
+        }
+        // validated: without a stop ID, both coordinates are given
+        assert latitude != null && longitude != null;
+        return createCoordinate(latitude, longitude);
     }
 
     /**
@@ -72,7 +79,7 @@ final class RequestValidator {
      */
     static OffsetDateTime validateAndSetDefaultDateTime(@Nullable OffsetDateTime dateTime,
                                                         ScheduleInformationService service) {
-        dateTime = (dateTime == null) ? OffsetDateTime.now() : dateTime;
+        dateTime = (dateTime == null) ? OffsetDateTime.now(ZoneId.systemDefault()) : dateTime;
 
         if (service.getValidity().isWithin(dateTime.toLocalDate())) {
             return dateTime;
@@ -96,6 +103,17 @@ final class RequestValidator {
     static void validateTimeWindow(OffsetDateTime from, OffsetDateTime until) {
         if (until.isBefore(from)) {
             throw new InvalidParametersException("Until date time must be after from date time.");
+        }
+    }
+
+    /**
+     * Validates that the time window of a routing request is no longer than the application allows.
+     *
+     * @throws InvalidParametersException if the time window is longer than the maximum
+     */
+    static void validateTimeWindowDuration(int timeWindowDuration, int maximum) {
+        if (timeWindowDuration > maximum) {
+            throw new InvalidParametersException("Time window duration cannot be longer than " + maximum + " seconds.");
         }
     }
 
@@ -142,42 +160,41 @@ final class RequestValidator {
     }
 
     /**
-     * Validates routing query parameters against service capabilities.
+     * Validates routing query parameters against service capabilities, given as the values of the query configuration
+     * with the defaults set. A parameter that is not supported is named as in the request.
      *
      * @throws UnsupportedRoutingFeatureException if a requested feature is not supported
      */
-    static void validateRoutingFeatureSupport(int maxWalkDuration, int maxTransfers, int maxTravelDuration,
-                                              int minTransferDuration, boolean wheelchairAccessible,
+    static void validateRoutingFeatureSupport(int maximumWalkDuration, int maximumTransfers, int maximumTravelDuration,
+                                              int minimumTransferDuration, boolean wheelchairAccessible,
                                               boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                               RoutingFeatures features) {
-        if (maxWalkDuration != Integer.MAX_VALUE && !features.supportsMaxWalkDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum walk duration parameter is not supported by this service.");
+        if (maximumWalkDuration != Integer.MAX_VALUE && !features.supportsMaximumWalkDuration()) {
+            throw unsupportedParameter("maxWalkDuration");
         }
-        if (maxTransfers != Integer.MAX_VALUE && !features.supportsMaxTransfers()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum transfers parameter is not supported by this service.");
+        if (maximumTransfers != Integer.MAX_VALUE && !features.supportsMaximumTransfers()) {
+            throw unsupportedParameter("maxTransfers");
         }
-        if (maxTravelDuration != Integer.MAX_VALUE && !features.supportsMaxTravelDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum travel duration parameter is not supported by this service.");
+        if (maximumTravelDuration != Integer.MAX_VALUE && !features.supportsMaximumTravelDuration()) {
+            throw unsupportedParameter("maxTravelDuration");
         }
-        if (minTransferDuration != 0 && !features.supportsMinTransferDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Minimum transfer duration parameter is not supported by this service.");
+        if (minimumTransferDuration != 0 && !features.supportsMinimumTransferDuration()) {
+            throw unsupportedParameter("minTransferDuration");
         }
-        if (wheelchairAccessible && !features.supportsAccessibility()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Wheelchair accessibility parameter is not supported by this service.");
+        if (wheelchairAccessible && !features.supportsWheelchairAccessible()) {
+            throw unsupportedParameter("wheelchairAccessible");
         }
-        if (bikeAllowed && !features.supportsBikes()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Bike-friendly routing parameter is not supported by this service.");
+        if (bikeAllowed && !features.supportsBikeAllowed()) {
+            throw unsupportedParameter("bikeAllowed");
         }
         if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !features.supportsTravelModes()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Travel mode filtering parameter is not supported by this service.");
+            throw unsupportedParameter("travelModes");
         }
+    }
+
+    private static UnsupportedRoutingFeatureException unsupportedParameter(String name) {
+        return new UnsupportedRoutingFeatureException(
+                String.format("The parameter '%s' is not supported by this service.", name));
     }
 
     /**
@@ -187,7 +204,7 @@ final class RequestValidator {
      */
     private static void validateStopParametersMutualExclusivity(@Nullable String stopId, @Nullable Double latitude,
                                                                 @Nullable Double longitude, StopType stopType) {
-        String stopTypeLabel = stopType.name().toLowerCase();
+        String stopTypeLabel = stopType.name().toLowerCase(Locale.ROOT);
         if (stopId == null) {
             if (latitude == null || longitude == null) {
                 throw new InvalidParametersException(

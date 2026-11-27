@@ -19,6 +19,6 @@ public interface Trip {
 
     boolean isWheelchairAccessible();
 
-    boolean isBikesAllowed();
+    boolean isBikeAllowed();
 
 }

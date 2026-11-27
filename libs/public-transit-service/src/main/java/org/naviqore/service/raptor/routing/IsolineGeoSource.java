@@ -4,7 +4,6 @@ import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.service.Connection;
 import org.naviqore.service.Stop;
 import org.naviqore.service.TimeType;
-import org.naviqore.service.Walk;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -35,14 +34,16 @@ class IsolineGeoSource extends IsolineQueryTemplate<GeoCoordinate> {
     @Override
     protected Connection postprocessDepartureConnection(GeoCoordinate source,
                                                         org.naviqore.raptor.Connection connection) {
-        Walk firstMile = utils.createFirstWalk(source, connection.getFromStopId(), connection.getDepartureTime());
-        return utils.composeConnection(firstMile, connection, trips);
+        RoutingQueryUtils.Mile firstMile = utils.createFirstWalk(source, connection.getFromStopId(),
+                connection.getDepartureTime());
+        return utils.composeConnection(firstMile, connection, RoutingQueryUtils.Mile.NONE, trips);
     }
 
     @Override
     protected Connection postprocessArrivalConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection) {
-        Walk lastMile = utils.createLastWalk(source, connection.getToStopId(), connection.getArrivalTime());
-        return utils.composeConnection(connection, lastMile, trips);
+        RoutingQueryUtils.Mile lastMile = utils.createLastWalk(source, connection.getToStopId(),
+                connection.getArrivalTime());
+        return utils.composeConnection(RoutingQueryUtils.Mile.NONE, connection, lastMile, trips);
     }
 
 }

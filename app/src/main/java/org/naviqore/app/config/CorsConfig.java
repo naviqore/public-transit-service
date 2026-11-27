@@ -18,6 +18,8 @@ public class CorsConfig {
     // cache CORS preflight responses for 1 hour to reduce OPTIONS requests
     private static final long MAX_AGE = 3600L;
 
+    // all origins on purpose, see the class comment
+    @SuppressWarnings("java:S5122")
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();

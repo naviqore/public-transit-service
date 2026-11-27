@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.app.dto.StopType;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @Getter
@@ -20,7 +21,7 @@ public class StopNotFoundException extends ValidationException {
 
     private static String buildMessage(String stopId, @Nullable StopType stopType) {
         return stopType == null ? String.format("Stop with ID '%s' not found.", stopId) : String.format(
-                "The requested %s stop with ID '%s' was not found.", stopType.name().toLowerCase(), stopId);
+                "The requested %s stop with ID '%s' was not found.", stopType.name().toLowerCase(Locale.ROOT), stopId);
     }
 
     public Optional<StopType> getStopType() {

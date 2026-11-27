@@ -17,7 +17,7 @@ public class RaptorServiceTrip implements Trip {
     private final String headSign;
     private final Route route;
     private final List<StopTime> stopTimes;
-    private final boolean bikesAllowed;
+    private final boolean bikeAllowed;
     private final boolean wheelchairAccessible;
 
 }

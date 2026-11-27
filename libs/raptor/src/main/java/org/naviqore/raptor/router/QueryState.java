@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import java.util.function.IntUnaryOperator;
 
 /**
  * This object stores the current best labels and times of the RAPTOR routing algorithm for a query instance.
@@ -22,9 +23,11 @@ import java.util.List;
  * best times are kept per round, as in the RAPTOR paper: the best time of a round is the best of that round and the
  * rounds before it, over all passes so far, and each round starts from the best times of the round before it in the
  * same pass. A label is then only better if no connection with as many trips or fewer was as good, which a single best
- * time over all rounds would not tell: a later pass may have needed more trips for it. A query of one pass needs no
- * best times per round: its rounds only improve on the rounds before them, so the best times of its current round are
- * those of all its rounds, and all rounds share one array.
+ * time over all rounds would not tell: a later pass may have needed more trips for it. A round takes over the best
+ * times of the round before it only at the stops where these changed since it last did, so that a pass costs what it
+ * improves, not the number of stops. A query of one pass needs no best times per round: its rounds only improve on the
+ * rounds before them, so the best times of its current round are those of all its rounds, and all rounds share one
+ * array.
  * <p>
  * The marked stops are bit sets, which a round reads in the order of the stops by their set bits: a round marks few of
  * all stops, and a range query runs many rounds.
@@ -41,12 +44,14 @@ final class QueryState {
 
     // the labels per round and stop of the best arrival for boarding and of the best arrival on a trip, set in the
     // round that improved them
-    private final List<Label[]> bestLabelsPerRound = new ArrayList<>();
-    private final List<Label[]> bestTripLabelsPerRound = new ArrayList<>();
+    private final List<@Nullable Label[]> bestLabelsPerRound = new ArrayList<>();
+    private final List<@Nullable Label[]> bestTripLabelsPerRound = new ArrayList<>();
     // the best times per round and stop, of the round and the rounds before it: comparable for boarding, and of
     // arrivals on a trip
     private final List<int[]> bestTimes = new ArrayList<>();
     private final List<int[]> bestTripTimes = new ArrayList<>();
+    // with best times per round: per round, the stops whose best times changed since the next round took them over
+    private final List<BitSet> changedStopsPerRound = new ArrayList<>();
     // the stops whose best arrival on a trip the current round improved, to walk on from
     private final BitSet tripArrivalImprovedMask;
     // the best time at the target per round, of the round and the rounds before it
@@ -90,6 +95,8 @@ final class QueryState {
      * Adds a new round with empty labels and reset marked stop masks. With best times per round, the new round's best
      * times become the better of its own, of the passes before, and those of the round before it.
      */
+    // round starts at 0 and only grows, so the round before the new one exists
+    @SuppressWarnings("javabugs:S6466")
     void addNewRound() {
         // reset marked stop masks
         BitSet tmp = markedStopsMaskThisRound;
@@ -102,8 +109,7 @@ final class QueryState {
         ensureRoundExists();
 
         if (bestTimesPerRound) {
-            takeBetter(bestTimes.get(round), bestTimes.get(round - 1));
-            takeBetter(bestTripTimes.get(round), bestTripTimes.get(round - 1));
+            takeBetterOfRoundBefore();
         }
         bestTimesAtTarget[round] = better(bestTimesAtTarget[round], bestTimesAtTarget[round - 1]);
     }
@@ -115,13 +121,21 @@ final class QueryState {
 
         bestLabelsPerRound.add(new Label[stops.length]);
         bestTripLabelsPerRound.add(new Label[stops.length]);
-        if (bestTimesPerRound || round == 0) {
+        if (round == 0) {
             bestTimes.add(unreachedTimes());
             bestTripTimes.add(unreachedTimes());
+        } else if (bestTimesPerRound) {
+            // a new round starts from the best times of the round before it, at every stop
+            bestTimes.add(bestTimes.get(round - 1).clone());
+            bestTripTimes.add(bestTripTimes.get(round - 1).clone());
+            changedStopsPerRound.get(round - 1).clear();
         } else {
             // a query of one pass: the rounds share the best times, see the class comment
             bestTimes.add(bestTimes.getFirst());
             bestTripTimes.add(bestTripTimes.getFirst());
+        }
+        if (bestTimesPerRound) {
+            changedStopsPerRound.add(new BitSet(stops.length));
         }
         bestTimesAtTarget = Arrays.copyOf(bestTimesAtTarget, round + 1);
         bestTimesAtTarget[round] = unreached;
@@ -133,10 +147,29 @@ final class QueryState {
         return times;
     }
 
-    private void takeBetter(int[] times, int[] otherTimes) {
-        for (int stopIdx = 0; stopIdx < times.length; stopIdx++) {
-            times[stopIdx] = better(times[stopIdx], otherTimes[stopIdx]);
+    /**
+     * Takes over the best times of the round before the current one where they are better. They can only be better at
+     * the stops where they changed since the current round last took them over: at every other stop, the current round
+     * was as good then, and its best times only improve.
+     */
+    private void takeBetterOfRoundBefore() {
+        int[] times = bestTimes.get(round);
+        int[] timesBefore = bestTimes.get(round - 1);
+        int[] tripTimes = bestTripTimes.get(round);
+        int[] tripTimesBefore = bestTripTimes.get(round - 1);
+        BitSet changedStops = changedStopsPerRound.get(round);
+        BitSet changedStopsBefore = changedStopsPerRound.get(round - 1);
+        for (int stopIdx = changedStopsBefore.nextSetBit(0); stopIdx >= 0; stopIdx = changedStopsBefore.nextSetBit(
+                stopIdx + 1)) {
+            int time = better(times[stopIdx], timesBefore[stopIdx]);
+            int tripTime = better(tripTimes[stopIdx], tripTimesBefore[stopIdx]);
+            if (time != times[stopIdx] || tripTime != tripTimes[stopIdx]) {
+                times[stopIdx] = time;
+                tripTimes[stopIdx] = tripTime;
+                changedStops.set(stopIdx);
+            }
         }
+        changedStopsBefore.clear();
     }
 
     private int better(int time, int otherTime) {
@@ -150,7 +183,7 @@ final class QueryState {
      * @param stopIdx the index of the stop to retrieve the label for.
      * @return the label for the stop in the specified round, or null if not present.
      */
-    Label getLabel(int round, int stopIdx) {
+    @Nullable Label getLabel(int round, int stopIdx) {
         return bestLabelsPerRound.get(round)[stopIdx];
     }
 
@@ -183,6 +216,9 @@ final class QueryState {
         bestTripLabelsPerRound.get(round)[stopIdx] = label;
         bestTripTimes.get(round)[stopIdx] = label.targetTime();
         tripArrivalImprovedMask.set(stopIdx);
+        if (bestTimesPerRound) {
+            changedStopsPerRound.get(round).set(stopIdx);
+        }
     }
 
     /**
@@ -206,6 +242,9 @@ final class QueryState {
      */
     void setBestTime(int stopIdx, int time) {
         bestTimes.get(round)[stopIdx] = time;
+        if (bestTimesPerRound) {
+            changedStopsPerRound.get(round).set(stopIdx);
+        }
     }
 
     /**
@@ -258,19 +297,23 @@ final class QueryState {
 
     /**
      * Gets the label of the earliest arrival (latest departure) at each stop, on a trip, on foot or at the start, of
-     * all rounds. Of equally early arrivals, the one of the lowest round is kept, which takes the fewest trips, and in
-     * a round the one on a trip, which needs no walk at the end.
+     * all rounds, the arrivals in the slots of trip transfers included in their stops. Of equally early arrivals, the
+     * one of the lowest round is kept, which takes the fewest trips, and in a round the one on a trip, which needs no
+     * walk at the end.
      *
+     * @param numberOfStops the number of stops, which the slots follow.
+     * @param stopOf        the stop of a stop or slot.
      * @return the label per stop, null for a stop not reached.
      */
-    @Nullable Label[] getEarliestArrivalLabels() {
-        Label[] earliestArrivals = new Label[stops.length];
+    @Nullable Label[] getEarliestArrivalLabels(int numberOfStops, IntUnaryOperator stopOf) {
+        @Nullable Label[] earliestArrivals = new Label[numberOfStops];
         for (int i = 0; i < bestLabelsPerRound.size(); i++) {
-            Label[] tripLabels = bestTripLabelsPerRound.get(i);
-            Label[] labels = bestLabelsPerRound.get(i);
-            for (int stopIdx = 0; stopIdx < stops.length; stopIdx++) {
-                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[stopIdx]);
-                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], labels[stopIdx]);
+            @Nullable Label[] tripLabels = bestTripLabelsPerRound.get(i);
+            @Nullable Label[] labels = bestLabelsPerRound.get(i);
+            for (int idx = 0; idx < stops.length; idx++) {
+                int stopIdx = idx < numberOfStops ? idx : stopOf.applyAsInt(idx);
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], tripLabels[idx]);
+                earliestArrivals[stopIdx] = earlier(earliestArrivals[stopIdx], labels[idx]);
             }
         }
 
@@ -395,7 +438,12 @@ final class QueryState {
         /**
          * Uses a transfer between stops (not a same stop transfer).
          */
-        TRANSFER
+        TRANSFER,
+        /**
+         * Stays on board between two stops, as the vehicle continues as another trip from a stop of its own: no leg,
+         * but the stop the next trip leaves from.
+         */
+        IN_SEAT
 
     }
 
@@ -404,7 +452,7 @@ final class QueryState {
      *
      * @param sourceTime         the source time of the label in seconds after midnight.
      * @param targetTime         the target time of the label in seconds after midnight.
-     * @param type               the type of the label, can be INITIAL, ROUTE or TRANSFER.
+     * @param type               the type of the label, can be INITIAL, ROUTE, TRANSFER or IN_SEAT.
      * @param routeOrTransferIdx the index of the route or of the transfer, see arrival type (or NO_INDEX).
      * @param tripOffset         the trip offset on the current route (or NO_INDEX).
      * @param stopIdx            the target stop of the label.

@@ -33,12 +33,12 @@ public class DtoMapper {
                         stopTime.getDepartureTime()))
                 .toList();
 
-        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes, trip.isBikesAllowed(),
+        return new Trip(trip.getHeadSign(), map(trip.getRoute()), stopTimes, trip.isBikeAllowed(),
                 trip.isWheelchairAccessible());
     }
 
     public static Route map(org.naviqore.service.Route route) {
-        return new Route(route.getId(), route.getName(), route.getShortName(), map(route.getRouteType()),
+        return new Route(route.getId(), route.getName(), route.getShortName(), map(route.getTravelMode()),
                 route.getRouteTypeDescription());
     }
 
@@ -84,7 +84,7 @@ public class DtoMapper {
 
     public static Connection map(org.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(DtoMapper::map).toList();
-        return new Connection(legs);
+        return new Connection(legs, connection.getDepartureTime(), connection.getArrivalTime());
     }
 
     public static List<Connection> map(List<org.naviqore.service.Connection> connections) {
@@ -142,6 +142,7 @@ public class DtoMapper {
             return legDto;
         }
 
+        assert legDto.getToStop() != null; // a ride ends at a stop
         int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getToStop(), legDto.getArrivalTime(),
                 org.naviqore.service.TimeType.ARRIVAL);
 
@@ -164,6 +165,7 @@ public class DtoMapper {
             return legDto;
         }
 
+        assert legDto.getFromStop() != null; // a ride starts at a stop
         int stopTimeIndex = findStopTimeIndexInTrip(legDto.getTrip(), legDto.getFromStop(), legDto.getDepartureTime(),
                 org.naviqore.service.TimeType.DEPARTURE);
 
@@ -184,7 +186,7 @@ public class DtoMapper {
         }
 
         Trip trip = leg.getTrip();
-        Trip reducedTrip = new Trip(trip.getHeadSign(), trip.getRoute(), null, trip.isBikesAllowed(),
+        Trip reducedTrip = new Trip(trip.getHeadSign(), trip.getRoute(), null, trip.isBikeAllowed(),
                 trip.isWheelchairAccessible());
 
         return new Leg(leg.getType(), leg.getFrom(), leg.getTo(), leg.getFromStop(), leg.getToStop(),

@@ -3,6 +3,8 @@ package org.naviqore.raptor.router;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.TimeType;
 
+import java.util.function.IntUnaryOperator;
+
 /**
  * The label of the shortest travel time to each stop over the passes of an isoline range query, see {@link Query}. A
  * pass sets a label only where it improves on the passes before it, which started later in the window (earlier, routing
@@ -14,6 +16,8 @@ final class ShortestTravelTimes {
 
     private final QueryState queryState;
     private final boolean forward;
+    // the stop of a stop or slot of trip transfers, whose arrivals count for their stop
+    private final IntUnaryOperator stopOf;
 
     // the label of the earliest arrival at each stop the current pass improved, and those stops
     private final QueryState.@Nullable Label[] passLabels;
@@ -23,9 +27,10 @@ final class ShortestTravelTimes {
     private final int[] travelTimes;
     private int passStopCount;
 
-    ShortestTravelTimes(QueryState queryState, int numStops, TimeType timeType) {
+    ShortestTravelTimes(QueryState queryState, int numStops, TimeType timeType, IntUnaryOperator stopOf) {
         this.queryState = queryState;
         this.forward = timeType == TimeType.DEPARTURE;
+        this.stopOf = stopOf;
         passLabels = new QueryState.Label[numStops];
         passStops = new int[numStops];
         labels = new QueryState.Label[numStops];
@@ -50,11 +55,12 @@ final class ShortestTravelTimes {
         }
     }
 
-    private void collect(int stopIdx, QueryState.@Nullable Label label) {
+    private void collect(int idx, QueryState.@Nullable Label label) {
         // the initial label of a source stop counts too: it is the start, which no connection back to it beats
         if (label == null) {
             return;
         }
+        int stopIdx = stopOf.applyAsInt(idx);
         if (passLabels[stopIdx] == null) {
             passStops[passStopCount++] = stopIdx;
         }

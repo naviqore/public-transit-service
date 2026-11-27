@@ -45,8 +45,8 @@ class RaptorLeg implements Leg {
         var that = (Leg) obj;
         return Objects.equals(this.routeId, that.getRouteId()) && Objects.equals(this.tripId,
                 that.getTripId()) && Objects.equals(this.fromStopId, that.getFromStopId()) && Objects.equals(
-                this.toStopId,
-                that.getToStopId()) && this.getArrivalTime() == that.getArrivalTime() && this.getDepartureTime() == that.getDepartureTime() && Objects.equals(
+                this.toStopId, that.getToStopId()) && Objects.equals(this.arrivalTime,
+                that.getArrivalTime()) && Objects.equals(this.departureTime, that.getDepartureTime()) && Objects.equals(
                 this.type, that.getType());
     }
 

@@ -61,7 +61,7 @@ public final class Route implements Initializable, org.naviqore.timetable.model.
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hashCode(id);
     }
 
     @Override

@@ -22,10 +22,6 @@ public final class TypeMapper {
     private static final ServiceDayTime START_OF_SERVICE_DAY = new ServiceDayTime(0);
 
     public static Stop map(org.naviqore.timetable.model.Stop stop) {
-        if (stop == null) {
-            return null;
-        }
-
         return new RaptorServiceStop(stop.getId(), stop.getName(), stop.getCoordinate());
     }
 
@@ -76,16 +72,13 @@ public final class TypeMapper {
         };
     }
 
-    public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
-                                 @Nullable Leg lastMile, Timetable schedule) {
-        return map(connection, firstMile, lastMile, schedule, new Trips());
-    }
-
     /**
-     * Maps a connection whose rides take their trips from the given trips, which the connections of one query share.
+     * Maps a connection between its departure and arrival time, with a first and a last mile leg if any, whose rides
+     * take their trips from the given trips, which the connections of one query share.
      */
     public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
-                                 @Nullable Leg lastMile, Timetable schedule, Trips trips) {
+                                 @Nullable Leg lastMile, OffsetDateTime departureTime, OffsetDateTime arrivalTime,
+                                 Timetable schedule, Trips trips) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -100,7 +93,7 @@ public final class TypeMapper {
             legs.addLast(lastMile);
         }
 
-        return new RaptorServiceConnection(legs);
+        return new RaptorServiceConnection(legs, departureTime, arrivalTime);
     }
 
     public static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule) {
@@ -108,9 +101,24 @@ public final class TypeMapper {
     }
 
     private static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
+        // a ride the router reports in several connections, as in those of an isoline, is mapped once
+        if (leg.getType() != org.naviqore.raptor.Leg.Type.ROUTE) {
+            return mapLeg(leg, schedule, trips);
+        }
+
+        Leg ride = trips.rides.get(leg);
+        if (ride == null) {
+            ride = mapLeg(leg, schedule, trips);
+            trips.rides.put(leg, ride);
+        }
+
+        return ride;
+    }
+
+    private static Leg mapLeg(org.naviqore.raptor.Leg leg, Timetable schedule, Trips trips) {
         int duration = (int) Duration.between(leg.getDepartureTime(), leg.getArrivalTime()).toSeconds();
-        Stop sourceStop = map(schedule.getStops().get(leg.getFromStopId()));
-        Stop targetStop = map(schedule.getStops().get(leg.getToStopId()));
+        Stop sourceStop = map(Objects.requireNonNull(schedule.getStops().get(leg.getFromStopId())));
+        Stop targetStop = map(Objects.requireNonNull(schedule.getStops().get(leg.getToStopId())));
         int distance = (int) Math.round(sourceStop.getCoordinate().distanceTo(targetStop.getCoordinate()));
 
         return switch (leg.getType()) {
@@ -132,8 +140,8 @@ public final class TypeMapper {
                 // Set this explicitly so the service's unbounded RAPTOR cutoff does not depend on QueryConfig default.
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
-                .bikeAccessible(config.isBikeAllowed())
-                .allowedTravelModes(map(config.getTravelModes()))
+                .bikeAllowed(config.isBikeAllowed())
+                .travelModes(map(config.getTravelModes()))
                 .build();
     }
 
@@ -183,7 +191,8 @@ public final class TypeMapper {
 
     private static PublicTransitLeg createPublicTransitLeg(org.naviqore.raptor.Leg leg, Timetable schedule,
                                                            int distance, Trips trips) {
-        org.naviqore.timetable.model.Trip timetableTrip = schedule.getTrips().get(leg.getTripId());
+        org.naviqore.timetable.model.Trip timetableTrip = Objects.requireNonNull(
+                schedule.getTrips().get(leg.getTripId()));
         List<? extends org.naviqore.timetable.model.StopTime> stopTimes = timetableTrip.getStopTimes();
         ZoneId zoneId = timetableTrip.getRoute().getAgency().timezone();
         Instant departureTime = leg.getDepartureTime().toInstant();
@@ -232,11 +241,12 @@ public final class TypeMapper {
 
     /**
      * Trips mapped for one query, each once per service day, since the many rides of an isoline's connections run on
-     * few trips.
+     * few trips; and the rides mapped for it, each once, since the connections share most of them.
      */
     public static final class Trips {
 
         private final Map<TripOfServiceDay, Trip> trips = new HashMap<>();
+        private final IdentityHashMap<org.naviqore.raptor.Leg, Leg> rides = new IdentityHashMap<>();
 
         private Trip get(org.naviqore.timetable.model.Trip trip, LocalDate serviceDay) {
             return trips.computeIfAbsent(new TripOfServiceDay(trip.getId(), serviceDay), _ -> map(trip, serviceDay));

@@ -2,6 +2,7 @@ package org.naviqore.gtfs.schedule.model;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.timetable.model.Timetable;
 import org.naviqore.timetable.type.AccessibilityInformation;
 import org.naviqore.timetable.type.BikeInformation;
@@ -192,7 +193,7 @@ public class GtfsSchedule implements Timetable {
         return getMinOrMaxDate(Calendar::getEndDate, true);
     }
 
-    private LocalDate getMinOrMaxDate(Function<Calendar, LocalDate> dateExtractor, boolean isMax) {
+    private LocalDate getMinOrMaxDate(Function<Calendar, @Nullable LocalDate> dateExtractor, boolean isMax) {
         // get the min or max date from the calendars if present
         Optional<LocalDate> calendarDate = calendars.values()
                 .stream()

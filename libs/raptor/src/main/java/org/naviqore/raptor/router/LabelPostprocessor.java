@@ -21,6 +21,7 @@ class LabelPostprocessor {
     private final int[] stopTimes;
     private final Route[] routes;
     private final RouteStop[] routeStops;
+    private final TripTransfers tripTransfers;
 
     private final TimeType timeType;
     private final int timeDirection;
@@ -30,6 +31,9 @@ class LabelPostprocessor {
     // of a range query, the latest time a connection may leave each source stop at (the earliest it may arrive at it,
     // routing backward): the last of the time window, see Query
     private final Map<Integer, Integer> latestSourceTimes = new HashMap<>();
+
+    // the leg of each ride by its label: the connections of an isoline share most of their rides
+    private final IdentityHashMap<QueryState.Label, RaptorLeg> rideLegs = new IdentityHashMap<>();
 
     /**
      * Postprocessor to convert labels into connections
@@ -47,6 +51,7 @@ class LabelPostprocessor {
         this.stopTimes = raptorData.getRouteTraversal().stopTimes();
         this.routes = raptorData.getRouteTraversal().routes();
         this.routeStops = raptorData.getRouteTraversal().routeStops();
+        this.tripTransfers = raptorData.getTripTransfers();
         this.timeType = timeType;
         this.timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
         this.referenceDate = referenceDateTime.toLocalDate();
@@ -66,7 +71,7 @@ class LabelPostprocessor {
      */
     Map<String, Connection> reconstructIsolines(QueryState.@Nullable Label[] labelPerStop) {
         Map<String, Connection> isolines = new HashMap<>();
-        for (int i = 0; i < stops.length; i++) {
+        for (int i = 0; i < labelPerStop.length; i++) {
             QueryState.Label label = labelPerStop[i];
             if (label != null && label.type() != QueryState.LabelType.INITIAL) {
                 isolines.put(stops[i].id(), reconstructConnectionFromLabel(label));
@@ -102,7 +107,7 @@ class LabelPostprocessor {
      */
     private @Nullable Connection reconstructConnectionFromLabel(QueryState.Label finalLabel) {
         // collect labels by backtracking via linked labels from target to source
-        ArrayList<QueryState.Label> labels = collectLabels(finalLabel);
+        List<QueryState.Label> labels = collectLabels(finalLabel);
 
         // combine labels where possible to merge adjacent transfers and routes into optimized route legs
         maybeCombineFirstTwoLabels(labels);
@@ -132,16 +137,20 @@ class LabelPostprocessor {
     }
 
     /**
-     * Backtracks from a given label to the initial label to collect the sequence of labels.
+     * Backtracks from a given label to the initial label to collect the sequence of labels. Staying on board between
+     * two stops is no leg: the ride after it leaves from the stop of its label, and the ride before it ends at its
+     * own.
      *
      * @param label the starting label, the target stop.
      * @return an ordered list of labels from target to source.
      */
-    private ArrayList<QueryState.Label> collectLabels(QueryState.Label label) {
+    private List<QueryState.Label> collectLabels(QueryState.Label label) {
         ArrayList<QueryState.Label> labels = new ArrayList<>();
         while (label.type() != QueryState.LabelType.INITIAL) {
             assert label.previous() != null;
-            labels.add(label);
+            if (label.type() != QueryState.LabelType.IN_SEAT) {
+                labels.add(label);
+            }
             label = label.previous();
         }
 
@@ -150,13 +159,29 @@ class LabelPostprocessor {
 
     /**
      * Creates a single leg from the list of chronological labels at the given index. Handles timezone resolution logic
-     * by looking at adjacent route legs.
+     * by looking at adjacent route legs. The leg of a ride depends on its label alone, so the connections that share
+     * the label share the leg.
      *
      * @param chronologicalLabels the list of labels in chronological order.
      * @param index               the index of the current label to convert.
      * @return the constructed RaptorLeg.
      */
     private RaptorLeg createLeg(List<QueryState.Label> chronologicalLabels, int index) {
+        QueryState.Label currentLabel = chronologicalLabels.get(index);
+        if (currentLabel.type() != QueryState.LabelType.ROUTE) {
+            return createLegOfLabel(chronologicalLabels, index);
+        }
+
+        RaptorLeg leg = rideLegs.get(currentLabel);
+        if (leg == null) {
+            leg = createLegOfLabel(chronologicalLabels, index);
+            rideLegs.put(currentLabel, leg);
+        }
+
+        return leg;
+    }
+
+    private RaptorLeg createLegOfLabel(List<QueryState.Label> chronologicalLabels, int index) {
         QueryState.Label currentLabel = chronologicalLabels.get(index);
         LegContext context = extractLegContext(currentLabel);
 
@@ -269,7 +294,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineFirstTwoLabels(ArrayList<QueryState.Label> labels) {
+    private void maybeCombineFirstTwoLabels(List<QueryState.Label> labels) {
         maybeCombineLabels(labels, true);
     }
 
@@ -297,7 +322,7 @@ class LabelPostprocessor {
      *
      * @param labels the list of labels to check for combination.
      */
-    private void maybeCombineLastTwoLabels(ArrayList<QueryState.Label> labels) {
+    private void maybeCombineLastTwoLabels(List<QueryState.Label> labels) {
         maybeCombineLabels(labels, false);
     }
 
@@ -309,7 +334,7 @@ class LabelPostprocessor {
      * @param fromTarget if true, the first two labels are checked, if false, the last two labels (first two legs of
      *                   connection) are checked. Note the first two labels are the two labels closest to the target!
      */
-    private void maybeCombineLabels(ArrayList<QueryState.Label> labels, boolean fromTarget) {
+    private void maybeCombineLabels(List<QueryState.Label> labels, boolean fromTarget) {
         if (labels.size() < 2) {
             return;
         }
@@ -390,7 +415,7 @@ class LabelPostprocessor {
      * @param routeLabel         the following route label
      * @param transferLabelIndex the index of the transfer label in the list of labels (either last or first)
      */
-    private void maybeShiftSourceTransferCloserToFirstRoute(ArrayList<QueryState.Label> labels,
+    private void maybeShiftSourceTransferCloserToFirstRoute(List<QueryState.Label> labels,
                                                             QueryState.Label transferLabel, QueryState.Label routeLabel,
                                                             int transferLabelIndex) {
         // if there is idle time (a gap between the initial or final transfer and route) then the transfer label can
@@ -476,8 +501,12 @@ class LabelPostprocessor {
                                                             boolean fromTarget) {
         assert routeLabel.previous() != null;
         boolean isDeparture = timeType == TimeType.DEPARTURE;
-        int boardingStopIdx = isDeparture ? routeLabel.previous().stopIdx() : routeLabel.stopIdx();
-        int alightingStopIdx = isDeparture ? routeLabel.stopIdx() : routeLabel.previous().stopIdx();
+        // a label may be at a slot of trip transfers, which stands for its stop
+        stopIdx = tripTransfers.stopOf(stopIdx);
+        int boardingStopIdx = tripTransfers.stopOf(
+                isDeparture ? routeLabel.previous().stopIdx() : routeLabel.stopIdx());
+        int alightingStopIdx = tripTransfers.stopOf(
+                isDeparture ? routeLabel.stopIdx() : routeLabel.previous().stopIdx());
         int boardingTime = isDeparture ? routeLabel.sourceTime() : routeLabel.targetTime();
         int alightingTime = isDeparture ? routeLabel.targetTime() : routeLabel.sourceTime();
 
@@ -516,6 +545,13 @@ class LabelPostprocessor {
                     stopOffset = findStopOffset(route, stopIdx, alighting - 1, -1);
                 }
                 if (stopOffset == -1) {
+                    return null;
+                }
+
+                // the trip has to set down passengers at a stop that replaces the alighting stop, and to pick them up
+                // at one that replaces the boarding stop
+                RouteStop routeStop = routeStops[firstRouteStopIdx + stopOffset];
+                if (fromTarget == isDeparture ? !routeStop.alighting() : !routeStop.boarding()) {
                     return null;
                 }
 

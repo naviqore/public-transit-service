@@ -1,7 +1,6 @@
 package org.naviqore.raptor.router;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.TimeType;
 
 import java.util.ArrayList;
@@ -17,6 +16,7 @@ class FootpathRelaxer {
 
     private final Transfer[] transfers;
     private final Stop[] stops;
+    private final TripTransfers tripTransfers;
 
     private final int minTransferDuration;
     private final int maxWalkDuration;
@@ -26,6 +26,9 @@ class FootpathRelaxer {
     private final Set<Integer> targetStopIndices;
 
     private final QueryState queryState;
+
+    // the time beyond which a label is of no use, see setTimeLimit
+    private int timeLimit;
 
     /**
      * @param queryState              the query state with the best time per stop and label per stop and round.
@@ -46,6 +49,7 @@ class FootpathRelaxer {
         // constant data structures: the walks of the direction of the search
         this.transfers = raptorData.getStopContext().transfers(timeType);
         this.stops = raptorData.getStopContext().stops();
+        this.tripTransfers = raptorData.getTripTransfers();
         // constant configuration of relaxer
         this.minTransferDuration = minimumTransferDuration;
         this.maxWalkDuration = maximumWalkDuration;
@@ -55,33 +59,56 @@ class FootpathRelaxer {
         this.allowSourceTransfers = allowSourceTransfers;
         this.allowTargetTransfers = allowTargetTransfers;
         this.targetStopIndices = IntStream.of(targetStopIndices).boxed().collect(Collectors.toSet());
+        this.timeLimit = timeType == TimeType.DEPARTURE ? QueryState.INFINITY : -QueryState.INFINITY;
     }
 
     /**
-     * Relax all footpaths from all initial source stops.
+     * Sets the time beyond which a walk sets no label: later than it, or routing backward earlier. A label beyond the
+     * best time at the target or the cut-off time of the query is removed when its round ends, and nothing that follows
+     * from it is of use.
+     *
+     * @param timeLimit the time limit, or infinity (routing backward: minus infinity) for none.
      */
-    void relaxInitial() {
-        log.debug("Initial relaxing of footpaths for source stops");
-        relax(0);
+    void setTimeLimit(int timeLimit) {
+        this.timeLimit = timeLimit;
     }
 
     /**
-     * Relax all footpaths from the stops reached in a round that a connection may walk on from: in the first round (0),
-     * the source stops at the start of the query, if transfers from them are allowed; in later rounds, the stops whose
-     * best arrival on a trip the round improved. A walk never continues another walk, and walks from a stop reached on
-     * foot earlier still start at the stop's arrival on a trip, see {@link QueryState}.
+     * Relaxes the footpaths from the source stops at the start of a pass, if transfers from them are allowed: from each
+     * source stop's own label, also where a pass reached the stop earlier on foot from another source stop, since a
+     * stop reached on foot cannot be walked on from.
+     *
+     * @param sourceLabels the labels of the source stops at the start of the pass.
+     */
+    void relaxInitial(QueryState.Label[] sourceLabels) {
+        log.debug("Initial relaxing of footpaths for source stops");
+        if (!allowSourceTransfers) {
+            return;
+        }
+
+        for (QueryState.Label label : sourceLabels) {
+            if (stops[label.stopIdx()].numberOfTransfers(timeType) > 0) {
+                expandFootpathsFromStop(label, 0);
+            }
+        }
+    }
+
+    /**
+     * Relax all footpaths from the stops whose best arrival on a trip a round improved. A walk never continues another
+     * walk, and walks from a stop reached on foot earlier still start at the stop's arrival on a trip, see
+     * {@link QueryState}.
      * <p>
      * The labels to walk from are taken before any walk of the round sets a label, so that the walks do not depend on
      * the order of the stops.
      *
-     * @param round the current round.
+     * @param round the current round, after the first.
      */
     void relax(int round) {
         log.debug("Relaxing footpaths for round {}", round);
         List<QueryState.Label> labelsToWalkFrom = new ArrayList<>();
-        for (int stopIdx = nextStopToWalkFrom(0, round); stopIdx >= 0; stopIdx = nextStopToWalkFrom(stopIdx + 1,
-                round)) {
-            QueryState.Label label = getLabelToWalkFrom(stopIdx, round);
+        for (int stopIdx = queryState.nextStopWithTripArrivalImproved(
+                0); stopIdx >= 0; stopIdx = queryState.nextStopWithTripArrivalImproved(stopIdx + 1)) {
+            QueryState.Label label = queryState.getTripLabel(round, stopIdx);
             if (label != null && stops[stopIdx].numberOfTransfers(timeType) > 0) {
                 labelsToWalkFrom.add(label);
             }
@@ -90,30 +117,6 @@ class FootpathRelaxer {
         for (QueryState.Label label : labelsToWalkFrom) {
             expandFootpathsFromStop(label, round);
         }
-    }
-
-    /**
-     * Gets the next stop a round may walk on from, in the order of the stops: in later rounds a stop whose best arrival
-     * on a trip the round improved, in the first a source stop.
-     */
-    private int nextStopToWalkFrom(int fromStopIdx, int round) {
-        if (round > 0) {
-            return queryState.nextStopWithTripArrivalImproved(fromStopIdx);
-        }
-        return queryState.nextStopMarkedNextRound(fromStopIdx);
-    }
-
-    private QueryState.@Nullable Label getLabelToWalkFrom(int stopIdx, int round) {
-        if (round > 0) {
-            return queryState.isTripArrivalImproved(stopIdx) ? queryState.getTripLabel(round, stopIdx) : null;
-        }
-
-        // in round 0 all labels are those of the source stops at the start of the query
-        if (!allowSourceTransfers || !queryState.isMarkedNextRound(stopIdx)) {
-            return null;
-        }
-        QueryState.Label label = queryState.getLabel(0, stopIdx);
-        return label != null && label.type() == QueryState.LabelType.INITIAL ? label : null;
     }
 
     /**
@@ -126,12 +129,21 @@ class FootpathRelaxer {
      * @param round         the current round to relax footpaths for.
      */
     private void expandFootpathsFromStop(QueryState.Label previousLabel, int round) {
-        Stop sourceStop = stops[previousLabel.stopIdx()];
+        int sourceIdx = previousLabel.stopIdx();
+        Stop sourceStop = stops[sourceIdx];
         int sourceTime = previousLabel.targetTime();
         int timeDirection = timeType == TimeType.DEPARTURE ? 1 : -1;
 
-        int transferEndIdx = sourceStop.transferIdx(timeType) + sourceStop.numberOfTransfers(timeType);
-        for (int i = sourceStop.transferIdx(timeType); i < transferEndIdx; i++) {
+        // a slot of trip transfers has the walks of its stop: if the stop was reached on a trip as early, it has walked
+        // them, and the slot only walks to the stops its rules end at, where the walks land in slots of its own
+        int sourceStopIdx = tripTransfers.stopOf(sourceIdx);
+        int[] walks = sourceStopIdx != sourceIdx && sourceTime * timeDirection >= queryState.getBestTripTime(
+                sourceStopIdx) * timeDirection ? tripTransfers.walksToOwnSlots(sourceIdx) : null;
+
+        int numberOfWalks = walks == null ? sourceStop.numberOfTransfers(timeType) : walks.length;
+        for (int w = 0; w < numberOfWalks; w++) {
+            int walk = walks == null ? w : walks[w];
+            int i = sourceStop.transferIdx(timeType) + walk;
             Transfer transfer = transfers[i];
             if (!allowTargetTransfers && targetStopIndices.contains(transfer.targetStopIdx())) {
                 continue;
@@ -141,27 +153,33 @@ class FootpathRelaxer {
                 continue;
             }
 
+            // a walk from an arrival whose route changes to routes at the target stop along trip transfers lands in a
+            // slot, see TripTransfers
+            int targetIdx = tripTransfers.walkTarget(sourceIdx, walk, transfer.targetStopIdx());
+
             // calculate the target time for the transfer in the given time direction
             int targetTime = sourceTime + timeDirection * (transfer.duration() + minTransferDuration);
+            if (targetTime * timeDirection > timeLimit * timeDirection) {
+                continue;
+            }
 
             // compare the walk as it allows to board a trip: right away, without the same stop transfer time a route
             // target time does not yet include
-            int comparableTargetTime = queryState.getComparableTime(transfer.targetStopIdx(), targetTime,
+            int comparableTargetTime = queryState.getComparableTime(targetIdx, targetTime,
                     QueryState.LabelType.TRANSFER);
 
             // if label is not improved, continue
-            if (comparableTargetTime * timeDirection >= queryState.getComparableBestTime(
-                    transfer.targetStopIdx()) * timeDirection) {
+            if (comparableTargetTime * timeDirection >= queryState.getComparableBestTime(targetIdx) * timeDirection) {
                 continue;
             }
 
             // update best times with comparable target time
-            queryState.setBestTime(transfer.targetStopIdx(), comparableTargetTime);
+            queryState.setBestTime(targetIdx, comparableTargetTime);
             // add real target time to label
             QueryState.Label label = new QueryState.Label(sourceTime, targetTime, QueryState.LabelType.TRANSFER, i,
-                    NO_INDEX, transfer.targetStopIdx(), previousLabel);
-            queryState.setLabel(round, transfer.targetStopIdx(), label);
-            queryState.mark(transfer.targetStopIdx());
+                    NO_INDEX, targetIdx, previousLabel);
+            queryState.setLabel(round, targetIdx, label);
+            queryState.mark(targetIdx);
         }
     }
 }

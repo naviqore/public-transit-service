@@ -41,8 +41,8 @@ import static org.assertj.core.api.Assertions.within;
 class RoutingQueryFacadeIT {
 
     public static final double EPSILON = 1e-6;
-    // Walking legs below the default threshold (120 seconds) would be excluded from the results.
-    // Set this to 0 to ensure that no walking legs are filtered out based on duration.
+    // Walks no longer than the default minimum (60 seconds) would be no legs of their own.
+    // Set this to 0 to ensure that no walk legs are left out based on duration.
     private static final int WALK_DURATION_MINIMUM = 0;
     // Offset for creating walkable test coordinates
     private static final double LONGITUDE_OFFSET = 0.001;
@@ -81,7 +81,7 @@ class RoutingQueryFacadeIT {
     private GeoCoordinate targetCoordinate;
 
     private static int toSecondsInt(Duration duration) {
-        return Math.toIntExact(duration.getSeconds());
+        return Math.toIntExact(duration.toSeconds());
     }
 
     @BeforeEach
@@ -125,15 +125,15 @@ class RoutingQueryFacadeIT {
 
         // setup cache and trip mask provider
         EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(
-                serviceConfig.getCacheEvictionStrategy().name());
+                serviceConfig.getRaptorStopTimeCacheStrategy().name());
         TimetableTripMaskProvider tripMaskProvider = new TimetableTripMaskProvider(gtfsSchedule,
-                serviceConfig.getCacheServiceDaySize(), cacheStrategy);
+                serviceConfig.getRaptorStopTimeCacheSize(), cacheStrategy);
 
         // configure and setup raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(serviceConfig.getRaptorDaysToScan())
-                .sameStopTransferDurationDefault(serviceConfig.getTransferDurationSameStopDefault())
-                .stopTimeCacheSize(serviceConfig.getCacheServiceDaySize())
+                .sameStopTransferDurationDefault(serviceConfig.getRaptorSameStopTransferDurationDefault())
+                .stopTimeCacheSize(serviceConfig.getRaptorStopTimeCacheSize())
                 .stopTimeCacheStrategy(cacheStrategy)
                 .maskProvider(tripMaskProvider)
                 .build();
@@ -253,8 +253,8 @@ class RoutingQueryFacadeIT {
 
         private static final int WINDOW_DURATION = 1800;
 
-        // headway is 60 seconds and the second trip runs at 6/7 of the regular travel time, so it departs at A 42
-        // seconds after the first trip but still arrives at D2 at the very same time
+        // headway is 60 seconds and the second trip runs at 6/7 of the regular travel time, so it departs from A
+        // 42 seconds after the first trip but still arrives at D2 at the very same time
         private static final int HEADWAY = 60;
         private static final double EXPRESS_SPEED_FACTOR = 6.0 / 7.0;
         private static final OffsetDateTime DOMINATED_DEPARTURE = DATE_TIME.plusSeconds(120);
@@ -649,7 +649,9 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
                             TimeType.DEPARTURE, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getFirst();
+                    // the fallback leaves from the location of A, which takes the access time too
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getFirst()
+                            .minusSeconds(SERVICE_CONFIG.getTransferDurationAccessEgress());
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getFirst()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
@@ -664,7 +666,9 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME,
                             TimeType.ARRIVAL, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getLast();
+                    // the fallback leaves from the location of A, which takes the access time too
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getLast()
+                            .minusSeconds(SERVICE_CONFIG.getTransferDurationAccessEgress());
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getLast()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 

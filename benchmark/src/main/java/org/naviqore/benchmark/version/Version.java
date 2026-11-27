@@ -57,7 +57,9 @@ public record Version(String name, Subject subject) {
      * @param classPath the class path of the version: the benchmark module and all it depends on
      */
     static Version load(String name, URL... classPath) throws ReflectiveOperationException {
-        URLClassLoader classLoader = new URLClassLoader(name, classPath, ClassLoader.getPlatformClassLoader());
+        // stays open: the version's classes load from it as they are used
+        @SuppressWarnings("resource") URLClassLoader classLoader = new URLClassLoader(name, classPath,
+                ClassLoader.getPlatformClassLoader());
         Object target = classLoader.loadClass(ServiceSubject.class.getName()).getConstructor().newInstance();
 
         // the methods of the version's subject by those of the interface, each looked up once

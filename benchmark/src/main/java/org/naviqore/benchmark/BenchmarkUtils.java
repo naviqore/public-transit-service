@@ -24,7 +24,6 @@ public class BenchmarkUtils {
             Locale.ROOT);
 
     private static final double NANOS_PER_MILLI = 1e6;
-    private static final double NANOS_PER_SECOND = 1e9;
     private static final long BYTES_PER_MEGABYTE = 1024 * 1024;
 
     /**
@@ -51,10 +50,6 @@ public class BenchmarkUtils {
 
     public static double millis(long nanos) {
         return Math.round(nanos / NANOS_PER_MILLI * 10) / 10.0;
-    }
-
-    public static double seconds(long nanos) {
-        return Math.round(nanos / NANOS_PER_SECOND * 10) / 10.0;
     }
 
     public static double megabytes(long bytes) {

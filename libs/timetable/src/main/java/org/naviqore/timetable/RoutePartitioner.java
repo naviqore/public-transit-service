@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.timetable.model.*;
 
 import java.util.*;
@@ -63,7 +64,7 @@ public class RoutePartitioner {
         return new ArrayList<>(currentSubRoutes.values());
     }
 
-    public SubRoute getSubRoute(Trip trip) {
+    public @Nullable SubRoute getSubRoute(Trip trip) {
         Map<String, SubRoute> currentSubRoutes = subRoutes.get(trip.getRoute());
         if (currentSubRoutes == null) {
             throw new IllegalArgumentException("Trip " + trip.getId() + " not found in schedule");
@@ -100,8 +101,10 @@ public class RoutePartitioner {
 
         @Override
         public int hashCode() {
-            return Objects.hash(id);
+            return Objects.hashCode(id);
         }
+
+        @Override
 
         public String toString() {
             return "SubRoute[" + "id=" + id + ", " + "route=" + route + ", " + "stopSequence=" + stopSequenceKey + ']';

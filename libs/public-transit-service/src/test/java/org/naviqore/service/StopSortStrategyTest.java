@@ -7,10 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.naviqore.timetable.model.Stop;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -54,7 +51,7 @@ class StopSortStrategyTest {
         List<String> expectedOrder = List.of("Gstaad", "Gstaad", "Gstaad, Bahnhof", "Grund b. Gstaad");
 
         List<String> actualOrder = testStops.stream()
-                .filter(s -> s.getName().toLowerCase().contains(query.toLowerCase()))
+                .filter(s -> s.getName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))
                 .sorted(comparator)
                 .map(Stop::getName)
                 .collect(Collectors.toList());
@@ -70,7 +67,7 @@ class StopSortStrategyTest {
         List<String> expectedOrder = List.of("Gstaad", "Gstaad", "Gstaad, Bahnhof", "Grund b. Gstaad");
 
         List<String> actualOrder = testStops.stream()
-                .filter(s -> s.getName().toLowerCase().contains(query.toLowerCase()))
+                .filter(s -> s.getName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))
                 .sorted(comparator)
                 .map(Stop::getName)
                 .collect(Collectors.toList());
@@ -86,7 +83,7 @@ class StopSortStrategyTest {
         List<String> expectedOrder = List.of("Gstaad", "Gstaad", "Gstaad, Bahnhof", "Grund b. Gstaad");
 
         List<String> actualOrder = testStops.stream()
-                .filter(s -> s.getName().toLowerCase().contains(query.toLowerCase()))
+                .filter(s -> s.getName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))
                 .sorted(comparator)
                 .map(Stop::getName)
                 .collect(Collectors.toList());

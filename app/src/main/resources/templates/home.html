@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="light dark" name="color-scheme">
     <title th:text="${productName} + ' | ' + ${serviceName}">Naviqore | Public Transit Service</title>
     <link rel="icon" th:href="@{/favicon.ico}" type="image/x-icon">
     <link rel="apple-touch-icon" th:href="@{/logo.png}">
@@ -19,77 +20,85 @@
         <div class="card">
             <header class="header">
                 <div class="logo-container">
-                    <img alt="Naviqore Logo" th:src="@{/logo.png}">
+                    <img alt="" height="56" th:src="@{/logo.png}" width="56">
                 </div>
 
                 <h1 class="brand-title">
                     <span class="product-name" th:text="${productName}">Naviqore</span>
                     <span class="service-name" th:text="${serviceName}">Public Transit Service</span>
                 </h1>
-                <p class="description" th:text="${appDescription}"></p>
+                <p class="description" th:text="${description}"></p>
             </header>
 
-            <section class="stats-bar">
+            <dl class="stats-bar">
                 <div class="stat-item">
-                    <div class="stat-label flex-align-center">
-                        <span aria-hidden="true" class="icon icon-cpu stat-icon"></span>
-                        <span>Engine</span>
-                    </div>
-                    <p class="stat-value" th:text="${appVersion}">N/A</p>
+                    <dt class="stat-label">
+                        <span aria-hidden="true" class="icon icon-tag stat-icon"></span>
+                        <span>Version</span>
+                    </dt>
+                    <dd class="stat-value" th:text="${version}">5.0.0</dd>
                 </div>
 
-                <div class="stat-item">
-                    <div class="stat-label flex-align-center">
+                <div class="stat-item" th:if="${health != null}">
+                    <dt class="stat-label">
                         <span aria-hidden="true" class="icon icon-activity stat-icon"></span>
                         <span>Status</span>
-                    </div>
-                    <div class="stat-value flex-align-center text-emerald">
-                        <span>Active</span>
+                    </dt>
+                    <dd class="stat-value" th:classappend="|tone-${health.tone}|">
                         <span aria-hidden="true" class="status-dot"></span>
-                    </div>
+                        <span th:text="${health.label}">Up</span>
+                    </dd>
                 </div>
 
                 <div class="stat-item">
-                    <div class="stat-label flex-align-center">
-                        <span aria-hidden="true" class="icon icon-server stat-icon"></span>
-                        <span>Runtime</span>
-                    </div>
-                    <p class="stat-value" th:text="${javaVersion}">N/A</p>
+                    <dt class="stat-label">
+                        <span aria-hidden="true" class="icon icon-calendar stat-icon"></span>
+                        <span>Schedule</span>
+                    </dt>
+                    <dd class="stat-value">
+                        <time th:datetime="${schedule.startDate}" th:text="${schedule.startDate}">2026-01-01</time>
+                        &ndash;
+                        <time th:datetime="${schedule.endDate}" th:text="${schedule.endDate}">2026-12-31</time>
+                    </dd>
+                    <dd class="stat-flag" th:unless="${schedule.validToday}">
+                        <span aria-hidden="true" class="status-dot"></span>
+                        <span>Not valid today</span>
+                    </dd>
                 </div>
-            </section>
+            </dl>
 
-            <section class="nav-section">
+            <nav class="nav-section" th:unless="${links.empty}">
                 <div class="grid">
-                    <a class="nav-card" th:href="@{/swagger-ui.html}">
-                        <div class="nav-content">
-                            <div class="nav-icon-bg"><span aria-hidden="true" class="icon icon-terminal"></span></div>
-                            <span>API Console</span>
-                        </div>
+                    <a class="nav-card" th:href="@{${links.apiConsole}}" th:if="${links.apiConsole != null}">
+                        <span class="nav-content">
+                            <span class="nav-icon-bg"><span aria-hidden="true" class="icon icon-terminal"></span></span>
+                            <span class="nav-label">API Console</span>
+                        </span>
                         <span aria-hidden="true" class="icon icon-chevron chevron"></span>
                     </a>
-                    <a class="nav-card" th:href="@{/v3/api-docs}">
-                        <div class="nav-content">
-                            <div class="nav-icon-bg"><span aria-hidden="true" class="icon icon-file"></span></div>
-                            <span>API Docs</span>
-                        </div>
+                    <a class="nav-card" th:href="@{${links.openApi}}" th:if="${links.openApi != null}">
+                        <span class="nav-content">
+                            <span class="nav-icon-bg"><span aria-hidden="true" class="icon icon-file"></span></span>
+                            <span class="nav-label">OpenAPI</span>
+                        </span>
                         <span aria-hidden="true" class="icon icon-chevron chevron"></span>
                     </a>
-                    <a class="nav-card" th:href="@{/actuator/health}">
-                        <div class="nav-content">
-                            <div class="nav-icon-bg"><span aria-hidden="true" class="icon icon-heart"></span></div>
-                            <span>Health</span>
-                        </div>
+                    <a class="nav-card" th:href="@{${links.health}}" th:if="${links.health != null}">
+                        <span class="nav-content">
+                            <span class="nav-icon-bg"><span aria-hidden="true" class="icon icon-heart"></span></span>
+                            <span class="nav-label">Health</span>
+                        </span>
                         <span aria-hidden="true" class="icon icon-chevron chevron"></span>
                     </a>
-                    <a class="nav-card" th:href="@{/actuator/metrics}">
-                        <div class="nav-content">
-                            <div class="nav-icon-bg"><span aria-hidden="true" class="icon icon-chart"></span></div>
-                            <span>Metrics</span>
-                        </div>
+                    <a class="nav-card" th:href="@{${links.metrics}}" th:if="${links.metrics != null}">
+                        <span class="nav-content">
+                            <span class="nav-icon-bg"><span aria-hidden="true" class="icon icon-chart"></span></span>
+                            <span class="nav-label">Metrics</span>
+                        </span>
                         <span aria-hidden="true" class="icon icon-chevron chevron"></span>
                     </a>
                 </div>
-            </section>
+            </nav>
 
             <footer>
                 <div>&copy; <span th:text="${#calendars.format(#calendars.createNow(), 'yyyy')}"></span> Naviqore</div>
@@ -101,14 +110,6 @@
             </footer>
         </div>
     </main>
-
-    <div class="node-info flex-align-center">
-        <span aria-hidden="true" class="icon icon-server stat-icon"></span>
-        <span>
-            <span th:text="${osName}"></span> (<span th:text="${osArch}"></span>) &bull; Built: <span
-                th:text="${buildTime}"></span>
-        </span>
-    </div>
 </div>
 
 </body>

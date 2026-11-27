@@ -230,6 +230,16 @@ public class InMemoryTimetable implements Timetable {
 
     private record InMemoryStopTime(Stop stop, Trip trip, ServiceDayTime arrival,
                                     ServiceDayTime departure) implements StopTime {
+
+        @Override
+        public PickupDropOffType pickupType() {
+            return PickupDropOffType.REGULAR;
+        }
+
+        @Override
+        public PickupDropOffType dropOffType() {
+            return PickupDropOffType.REGULAR;
+        }
     }
 
 }

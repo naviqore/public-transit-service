@@ -1,13 +1,15 @@
 package org.naviqore.app.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.naviqore.app.config.NaviqoreProperties;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.*;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,19 +22,29 @@ import java.util.Random;
 
 @Service
 @Slf4j
-public class PublicTransitSpringService implements PublicTransitService {
+public class PublicTransitSpringService implements PublicTransitService, SchedulingConfigurer {
 
     private final ServiceConfig config;
+    private final String updateCron;
     private PublicTransitService delegate;
 
     @Autowired
-    public PublicTransitSpringService(ServiceConfigParser parser) {
+    public PublicTransitSpringService(ServiceConfigParser parser, NaviqoreProperties properties) {
         log.info("Initializing public transit spring service");
         this.config = parser.getServiceConfig();
+        this.updateCron = properties.getGtfs().getStaticFeed().getUpdateCron();
         this.delegate = createDelegate();
     }
 
-    @Scheduled(cron = "${app.gtfs.static.update-cron}")
+    /**
+     * Schedules the updates of the static GTFS feed by the cron expression of the bound properties, which also hold its
+     * default.
+     */
+    @Override
+    public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+        taskRegistrar.addCronTask(this::updateStaticScheduleTask, updateCron);
+    }
+
     public void updateStaticScheduleTask() {
         log.info("Updating public transit service with static GTFS");
         try {
@@ -47,8 +59,11 @@ public class PublicTransitSpringService implements PublicTransitService {
     private PublicTransitService createDelegate() {
         try {
             return new PublicTransitServiceFactory(config).create();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new IllegalStateException("Failed to create public transit service", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while creating public transit service", e);
         }
     }
 
@@ -58,18 +73,18 @@ public class PublicTransitSpringService implements PublicTransitService {
     }
 
     @Override
-    public boolean hasAccessibilityInformation() {
-        return delegate.hasAccessibilityInformation();
+    public boolean hasWheelchairAccessible() {
+        return delegate.hasWheelchairAccessible();
     }
 
     @Override
-    public boolean hasBikeInformation() {
-        return delegate.hasBikeInformation();
+    public boolean hasBikeAllowed() {
+        return delegate.hasBikeAllowed();
     }
 
     @Override
-    public boolean hasTravelModeInformation() {
-        return delegate.hasTravelModeInformation();
+    public boolean hasTravelModes() {
+        return delegate.hasTravelModes();
     }
 
     @Override

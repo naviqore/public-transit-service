@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HotMethodsTest {
 
+    // a blackhole: writing the result keeps the JIT from eliminating the loop
+    @SuppressWarnings("unused")
     private static volatile double sink;
 
     private static void spin(Duration duration) {

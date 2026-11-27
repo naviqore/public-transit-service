@@ -42,7 +42,8 @@ class RaptorRouterRunningTripsTest {
     private final RaptorAlgorithm raptor = build();
 
     private static RaptorAlgorithm build() {
-        RaptorConfig config = RaptorConfig.builder().maskProvider(new RunningTripsMasker()).build();
+        // the day of a query only, so that no trip of another day is found where none of the day is
+        RaptorConfig config = RaptorConfig.builder().maskProvider(new RunningTripsMasker()).daysToScan(1).build();
         RaptorRouterBuilder builder = RaptorRouter.builder(config);
         STOPS.values().stream().flatMap(List::stream).sorted().forEach(builder::addStop);
         STOPS.forEach((routeId, stops) -> {

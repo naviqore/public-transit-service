@@ -84,7 +84,7 @@ class CompressedTrieTest {
     @Nested
     class LoremIpsum {
 
-        public static final String[] KEYS = new String[]{"lorem", "ipsum", "dolor", "sit", "amet", "consectetur",
+        private static final String[] KEYS = new String[]{"lorem", "ipsum", "dolor", "sit", "amet", "consectetur",
                 "adipiscing", "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
                 "magna", "aliqua", "ut", "enim", "ad", "minim", "veniam", "quis", "nostrud", "exercitation", "ullamco",
                 "laboris", "nisi", "ut", "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure",

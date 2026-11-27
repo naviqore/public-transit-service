@@ -2,6 +2,7 @@ package org.naviqore.utils.cache;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -127,6 +128,7 @@ public class EvictionCache<K, V> {
         }
     }
 
+    @SuppressWarnings("NullAway") // only called for keys in the cache
     private V retrieveFromCache(K key) {
         log.debug("Cache hit, retrieving cached instance for key {}", key);
         updateAccessOrder(key);
@@ -146,11 +148,11 @@ public class EvictionCache<K, V> {
         }
     }
 
-    private K findLRUKey() {
+    private @Nullable K findLRUKey() {
         return accessOrder.entrySet().stream().min(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
     }
 
-    private K findMRUKey() {
+    private @Nullable K findMRUKey() {
         return accessOrder.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
     }
 

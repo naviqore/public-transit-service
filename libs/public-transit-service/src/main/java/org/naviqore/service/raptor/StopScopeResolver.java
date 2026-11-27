@@ -40,7 +40,7 @@ class StopScopeResolver {
      * Finds the root ancestor of a stop by traversing upward through parent references with cycle detection.
      */
     private org.naviqore.timetable.model.Stop findRoot(String stopId) {
-        org.naviqore.timetable.model.Stop current = schedule.getStops().get(stopId);
+        org.naviqore.timetable.model.Stop current = Objects.requireNonNull(schedule.getStops().get(stopId));
         Set<String> visited = new HashSet<>();
         visited.add(current.getId());
 

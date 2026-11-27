@@ -3,6 +3,7 @@ package org.naviqore.raptor.router;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
@@ -31,14 +32,19 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
     @Getter
     private final StopTimeProvider stopTimeProvider;
 
+    @Getter
+    private final TripTransfers tripTransfers;
+
     private final RaptorConfig config;
 
     private final InputValidator validator;
 
-    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, RaptorConfig config) {
+    RaptorRouter(Lookup lookup, StopContext stopContext, RouteTraversal routeTraversal, TripTransfers tripTransfers,
+                 RaptorConfig config) {
         this.lookup = lookup;
         this.stopContext = stopContext;
         this.routeTraversal = routeTraversal;
+        this.tripTransfers = tripTransfers;
         this.config = config;
         config.getMaskProvider().setTripIds(lookup.routeTripIds());
         this.stopTimeProvider = new StopTimeProvider(this, config.getMaskProvider(), config.getStopTimeCacheSize(),
@@ -100,8 +106,8 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
 
         int[] sourceStopIndices = validatedSourceStopIdx.keySet().stream().mapToInt(Integer::intValue).toArray();
         int[] refStopTimes = validatedSourceStopIdx.values().stream().mapToInt(Integer::intValue).toArray();
-        QueryState.Label[] labels = new Query(this, sourceStopIndices, new int[]{}, refStopTimes, new int[]{}, config,
-                timeType, timeWindow, referenceDateTime, this.config).routeIsolines();
+        QueryState.@Nullable Label[] labels = new Query(this, sourceStopIndices, new int[]{}, refStopTimes, new int[]{},
+                config, timeType, timeWindow, referenceDateTime, this.config).routeIsolines();
 
         return new LabelPostprocessor(this, timeType, referenceDateTime, sourceStopIndices, refStopTimes,
                 timeWindow).reconstructIsolines(labels);
@@ -179,7 +185,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             return (int) timeWindow.toSeconds();
         }
 
-        private static void checkNonNullOrEmptyStops(Map<String, ?> stops, String labelSource) {
+        private static void checkNonNullOrEmptyStops(@Nullable Map<String, ?> stops, String labelSource) {
             if (stops == null) {
                 throw new InvalidStopException(String.format("%s stops must not be null.", labelSource));
             }
@@ -197,7 +203,7 @@ public class RaptorRouter implements RaptorAlgorithm, RaptorData {
             // get min and max values
             OffsetDateTime min = sourceStops.values().stream().min(OffsetDateTime::compareTo).orElseThrow();
             OffsetDateTime max = sourceStops.values().stream().max(OffsetDateTime::compareTo).orElseThrow();
-            if (Duration.between(min, max).getSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
+            if (Duration.between(min, max).toSeconds() > MAX_DIFFERENCE_IN_SOURCE_STOP_TIMES) {
                 throw new InvalidTimeException("Difference between source stop times must be less than 24 hours.");
             }
         }

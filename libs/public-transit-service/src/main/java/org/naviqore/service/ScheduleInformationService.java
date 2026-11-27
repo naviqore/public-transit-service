@@ -22,25 +22,26 @@ public interface ScheduleInformationService {
     Validity getValidity();
 
     /**
-     * Checks if the schedule has accessibility information.
+     * Checks if the schedule tells which of its trips are wheelchair accessible, see
+     * {@link Trip#isWheelchairAccessible()}.
      *
-     * @return true if the schedule has accessibility information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasAccessibilityInformation();
+    boolean hasWheelchairAccessible();
 
     /**
-     * Checks if the schedule has bike information.
+     * Checks if the schedule tells which of its trips allow bikes, see {@link Trip#isBikeAllowed()}.
      *
-     * @return true if the schedule has bike information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasBikeInformation();
+    boolean hasBikeAllowed();
 
     /**
-     * Checks if the schedule has travel mode information.
+     * Checks if the schedule tells the travel modes of its routes, see {@link Route#getTravelMode()}.
      *
-     * @return true if the schedule has travel mode information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasTravelModeInformation();
+    boolean hasTravelModes();
 
     /**
      * Searches for stops by name.
@@ -61,11 +62,12 @@ public interface ScheduleInformationService {
     Optional<Stop> getNearestStop(GeoCoordinate location);
 
     /**
-     * Retrieves the nearest stops to a given location within a specified radius.
+     * Retrieves the stops within a specified radius of a given location, nearest first. A child stop within the radius
+     * is given as its parent stop, once.
      *
      * @param location the location to search around
-     * @param radius   the radius to search within, in meters
-     * @return a list of the nearest stops to the specified location within the given radius
+     * @param radius   the radius to search within, in meters, greater than 0
+     * @return the stops within the radius, ordered by their distance to the location
      */
     List<Stop> getNearestStops(GeoCoordinate location, int radius);
 

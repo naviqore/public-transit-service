@@ -37,8 +37,10 @@ public class GtfsScheduleS3 implements TimetableRepository {
 
     private final String s3Uri;
 
+    // the temp directory is readable by its owner only and gets a random name
+    @SuppressWarnings("java:S5443")
     @Override
-    public GtfsSchedule get() throws IOException, InterruptedException {
+    public GtfsSchedule get() throws IOException {
         URI uri = URI.create(s3Uri);
         String bucket = uri.getHost();
         String key = uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();

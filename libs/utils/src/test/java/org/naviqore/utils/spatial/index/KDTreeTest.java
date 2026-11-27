@@ -45,6 +45,7 @@ class KDTreeTest {
     /**
      * Where the coordinates of a test lie: anywhere, near the poles, along the antimeridian or within a country.
      */
+    @SuppressWarnings("ImmutableEnumChecker") // the functions are stateless
     enum Region {
         EARTH(random -> new GeoCoordinate(random.nextDouble(-90, 90), random.nextDouble(-180, 180))),
         POLES(random -> new GeoCoordinate((random.nextBoolean() ? 1 : -1) * random.nextDouble(80, 90),

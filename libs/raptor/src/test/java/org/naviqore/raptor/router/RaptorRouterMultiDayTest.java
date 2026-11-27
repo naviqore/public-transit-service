@@ -6,11 +6,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.naviqore.raptor.Connection;
 import org.naviqore.raptor.QueryConfig;
 import org.naviqore.raptor.RaptorAlgorithm;
+import org.naviqore.raptor.TimeType;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -394,6 +399,188 @@ public class RaptorRouterMultiDayTest {
             assertEquals(1, connections.size());
             assertEquals(REFERENCE_DAY.plusMinutes(30).toInstant(),
                     connections.getFirst().getDepartureTime().toInstant());
+        }
+    }
+
+    /**
+     * A range query scans the days its time window reaches: a route from A to B runs daily at 08:00 and takes 30
+     * minutes, a fast one only on the third day after the reference day at 09:00 and takes 10 minutes, and a route from
+     * A to C runs daily at 00:30 and 23:30 and takes 10 minutes.
+     */
+    @Nested
+    class TimeWindowsOfSeveralDays {
+
+        private static final String STOP_B = "B";
+        private static final String STOP_C = "C";
+        private static final Duration WEEK = Duration.ofDays(7);
+        private static final LocalDate FAST_DAY = REFERENCE_DAY.toLocalDate().plusDays(3);
+
+        private final DateRecordingMasker masker = new DateRecordingMasker();
+
+        private static void addTrip(RaptorRouterBuilder builder, String routeId, String to, int minute, int minutes) {
+            builder.addRoute(routeId, RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(STOP_A, to));
+            builder.addTrip(routeId + "-0", routeId);
+            builder.addStopTime(routeId, routeId + "-0", 0, STOP_A, minute * 60, minute * 60);
+            builder.addStopTime(routeId, routeId + "-0", 1, to, (minute + minutes) * 60, (minute + minutes) * 60);
+        }
+
+        private static List<LocalDateTime> departures(List<Connection> connections) {
+            return connections.stream()
+                    .map(connection -> connection.getDepartureTime()
+                            .atZoneSameInstant(RaptorRouterTestBuilder.DEFAULT_ZONE_ID)
+                            .toLocalDateTime())
+                    .sorted()
+                    .toList();
+        }
+
+        /**
+         * The departures from A on each day of the week from the reference day: at 08:00, and on the day of the fast
+         * trip at 09:00 too.
+         */
+        private static List<LocalDateTime> departuresOfTheWeek() {
+            List<LocalDateTime> departures = new ArrayList<>();
+            for (int day = 0; day < 7; day++) {
+                LocalDate date = REFERENCE_DAY.toLocalDate().plusDays(day);
+                departures.add(date.atTime(8, 0));
+                if (date.equals(FAST_DAY)) {
+                    departures.add(date.atTime(9, 0));
+                }
+            }
+            return departures;
+        }
+
+        private RaptorAlgorithm build(int daysToScan) {
+            RaptorRouterBuilder builder = RaptorRouter.builder(
+                    RaptorConfig.builder().daysToScan(daysToScan).maskProvider(masker).stopTimeCacheSize(20).build());
+            builder.addStop(STOP_A).addStop(STOP_B).addStop(STOP_C);
+            addTrip(builder, "daily", STOP_B, 8 * 60, 30);
+            addTrip(builder, "fast", STOP_B, 9 * 60, 10);
+            addTrip(builder, "night", STOP_C, 30, 10);
+            builder.addTrip("night-1", "night");
+            builder.addStopTime("night", "night-1", 0, STOP_A, (23 * 60 + 30) * 60, (23 * 60 + 30) * 60);
+            builder.addStopTime("night", "night-1", 1, STOP_C, (23 * 60 + 40) * 60, (23 * 60 + 40) * 60);
+            return builder.build();
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {1, 3})
+        void connectionsDepartingOverAWeek(int daysToScan) {
+            List<Connection> connections = build(daysToScan).connectionRangeQuery(
+                    Map.of(STOP_A, REFERENCE_DAY.plusHours(7)), Map.of(STOP_B, 0), TimeType.DEPARTURE, WEEK,
+                    QueryConfig.defaults());
+
+            assertEquals(departuresOfTheWeek(), departures(connections));
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {1, 3})
+        void connectionsArrivingOverAWeek(int daysToScan) {
+            List<Connection> connections = build(daysToScan).connectionRangeQuery(
+                    Map.of(STOP_B, REFERENCE_DAY.plusDays(7).plusHours(7)), Map.of(STOP_A, 0), TimeType.ARRIVAL, WEEK,
+                    QueryConfig.defaults());
+
+            assertEquals(departuresOfTheWeek(), departures(connections));
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {1, 3})
+        void isolinesOverAWeek_takeTheFastTripOfALaterDay(int daysToScan) {
+            RaptorAlgorithm raptor = build(daysToScan);
+
+            Connection departing = raptor.isolineRangeQuery(Map.of(STOP_A, REFERENCE_DAY.plusHours(7)),
+                    TimeType.DEPARTURE, WEEK, QueryConfig.defaults()).get(STOP_B);
+            Connection arriving = raptor.isolineRangeQuery(Map.of(STOP_B, REFERENCE_DAY.plusDays(7).plusHours(7)),
+                    TimeType.ARRIVAL, WEEK, QueryConfig.defaults()).get(STOP_A);
+
+            for (Connection connection : List.of(departing, arriving)) {
+                assertEquals(List.of(FAST_DAY.atTime(9, 0)), departures(List.of(connection)));
+            }
+        }
+
+        @Test
+        void windowAcrossMidnight_withOneDayToScan() {
+            RaptorAlgorithm raptor = build(1);
+            LocalDate nextDay = REFERENCE_DAY.toLocalDate().plusDays(1);
+            List<LocalDateTime> expected = List.of(REFERENCE_DAY.toLocalDate().atTime(23, 30), nextDay.atTime(0, 30));
+
+            List<Connection> departing = raptor.connectionRangeQuery(Map.of(STOP_A, REFERENCE_DAY.plusHours(23)),
+                    Map.of(STOP_C, 0), TimeType.DEPARTURE, Duration.ofHours(3), QueryConfig.defaults());
+            List<Connection> arriving = raptor.connectionRangeQuery(Map.of(STOP_C, NEXT_DAY.plusHours(1)),
+                    Map.of(STOP_A, 0), TimeType.ARRIVAL, Duration.ofHours(3), QueryConfig.defaults());
+
+            assertEquals(expected, departures(departing));
+            assertEquals(expected, departures(arriving));
+        }
+
+        @Test
+        void consecutiveWindows_giveTheConnectionsOfTheWeek() {
+            RaptorAlgorithm raptor = build(3);
+            Duration halfAWeek = WEEK.dividedBy(2);
+
+            for (TimeType timeType : TimeType.values()) {
+                boolean departure = timeType == TimeType.DEPARTURE;
+                OffsetDateTime start = departure ? REFERENCE_DAY.plusHours(7) : REFERENCE_DAY.plusDays(7).plusHours(7);
+                OffsetDateTime middle = departure ? start.plus(halfAWeek) : start.minus(halfAWeek);
+                List<Connection> halves = new ArrayList<>();
+                for (OffsetDateTime time : List.of(start, middle)) {
+                    halves.addAll(
+                            departure ? raptor.connectionRangeQuery(Map.of(STOP_A, time), Map.of(STOP_B, 0), timeType,
+                                    halfAWeek, QueryConfig.defaults()) : raptor.connectionRangeQuery(
+                                    Map.of(STOP_B, time), Map.of(STOP_A, 0), timeType, halfAWeek,
+                                    QueryConfig.defaults()));
+                }
+
+                assertEquals(departuresOfTheWeek(), departures(halves), timeType.name());
+            }
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {1, 3})
+        void windowWithinTheDaysScanned_scansNoFurtherDay(int daysToScan) {
+            RaptorAlgorithm raptor = build(daysToScan);
+            Map<String, OffsetDateTime> source = Map.of(STOP_A, REFERENCE_DAY.plusHours(7));
+            Map<String, Integer> target = Map.of(STOP_B, 0);
+
+            raptor.connectionQuery(source, target, TimeType.DEPARTURE, QueryConfig.defaults());
+            Set<LocalDate> withoutWindow = masker.takeDates();
+            raptor.connectionRangeQuery(source, target, TimeType.DEPARTURE, Duration.ofHours(1),
+                    QueryConfig.defaults());
+            Set<LocalDate> withWindow = masker.takeDates();
+            raptor.connectionRangeQuery(source, target, TimeType.DEPARTURE, WEEK, QueryConfig.defaults());
+            Set<LocalDate> withWeek = masker.takeDates();
+
+            assertEquals(withoutWindow, withWindow);
+            assertTrue(withWeek.containsAll(withoutWindow));
+            assertEquals(withoutWindow.size() + 7, withWeek.size());
+        }
+
+        /**
+         * Runs the fast route only on its day and records the dates the router asks for.
+         */
+        private static class DateRecordingMasker extends RoutePerDayMasker {
+
+            private final Set<LocalDate> dates = new HashSet<>();
+
+            Set<LocalDate> takeDates() {
+                Set<LocalDate> taken = Set.copyOf(dates);
+                dates.clear();
+                return taken;
+            }
+
+            @Override
+            public String getServiceIdForDate(LocalDate date) {
+                dates.add(date);
+                return super.getServiceIdForDate(date);
+            }
+
+            @Override
+            public DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig) {
+                DayTripMask mask = super.getDayTripMask(date, queryConfig);
+                if (!date.equals(FAST_DAY)) {
+                    mask.tripMask().put("fast", new RouteTripMask(new boolean[1]));
+                }
+                return mask;
+            }
         }
     }
 

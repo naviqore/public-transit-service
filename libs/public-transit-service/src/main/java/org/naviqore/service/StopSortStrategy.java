@@ -3,6 +3,7 @@ package org.naviqore.service;
 import org.naviqore.timetable.model.Stop;
 
 import java.util.Comparator;
+import java.util.Locale;
 
 /**
  * Sorting strategies for stop search results.
@@ -31,11 +32,11 @@ public enum StopSortStrategy {
     RELEVANCE {
         @Override
         public Comparator<Stop> getComparator(String query) {
-            String lowerCaseQuery = query.toLowerCase();
+            String lowerCaseQuery = query.toLowerCase(Locale.ROOT);
 
             return (s1, s2) -> {
-                String name1 = s1.getName().toLowerCase();
-                String name2 = s2.getName().toLowerCase();
+                String name1 = s1.getName().toLowerCase(Locale.ROOT);
+                String name2 = s2.getName().toLowerCase(Locale.ROOT);
 
                 int score1 = calculateScore(name1, lowerCaseQuery);
                 int score2 = calculateScore(name2, lowerCaseQuery);

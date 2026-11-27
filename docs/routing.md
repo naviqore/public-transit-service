@@ -11,6 +11,8 @@ them, and the options of both. The router is `naviqore-raptor` (`RaptorAlgorithm
 | Connection                | A journey from an origin to a destination: rides on trips, walks between stops, and at the service also the walk from the origin and to the destination.                                    |
 | Trip, ride                | A trip is a run of a vehicle along a route; a connection rides a trip from one stop to another.                                                                                             |
 | Transfer                  | A change between rides: at the same stop, after its same stop transfer time, or on foot to another stop. A connection with _k_ rides has _k − 1_ transfers.                                 |
+| Transfer rule             | A rule of the timetable for the transfers at a stop or between two: for all trips, or for particular routes or trips, with a time of its own, staying on board or not possible.             |
+| Pickup, drop-off          | Whether a trip picks up and sets down passengers at a stop: it is boarded only where it picks them up, and left only where it sets them down.                                               |
 | Round                     | RAPTOR finds the connections with one ride more in each round: round _k_ those with _k_ rides, round 0 the walks from the source stops.                                                     |
 | Departure / arrival query | The time type: a departure query asks for connections leaving at or after a time, an arrival query for connections arriving at or before it. The router searches an arrival query backward. |
 | Source and target stops   | The stops the search starts from, with the time at each, and the stops it ends at, with the walk from each. For an arrival query, the source stops are where connections arrive.            |
@@ -82,13 +84,17 @@ RAPTOR works in rounds. Round 0 walks from the source stops. Each round _k_ then
 improved in round _k − 1_, rides their trips to the following stops, and walks from the stops it reached on a trip.
 For every stop and round it keeps a label: how the stop was reached, and when. A stop is improved if it is reached
 earlier (later, routing backward) than in any round before; only improved stops continue in the next round. Labels
-that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped.
+that cannot beat the best arrival at the target, or that exceed the maximum travel duration, are dropped: a round sets
+no label beyond the best arrival at the target as it is when the round starts, boards no trip that leaves after it,
+and drops the labels that its own arrival at the target beats when it ends.
 
 A trip boarded at a stop is ridden until a stop reached in the round before allows boarding a better trip there,
 which then replaces it. The trip boarded must be better: a label that comes in time for the trip ridden may, once the
 transfer time is added, only come in time for a later one, or none.
 
-The trips are those running on the days a query scans. The stop times of a day hold only the trips running on it,
+The trips are those running on the days a query scans: the days around its date that `daysToScan` gives, and for a
+range query also the days its window reaches, later ones departing and earlier ones arriving, so that a window of any
+length finds what consecutive shorter ones find together. The stop times of a day hold only the trips running on it,
 route by route, which the router caches per day. The trips of a route keep their order at every stop, since trips
 that overtake one another are held in separate routes, so the trip to take at a stop is the first one leaving at or
 after the label (routing backward, the last one arriving at or before it): read one after the other on a route that
@@ -114,6 +120,56 @@ reached on foot from the stops beyond it. A stop is reported at its earliest arr
 A walk between two stops takes the time the transfer gives for its direction, which may differ from the walk back:
 routing backward, the router follows the transfers to a stop, not those from it.
 
+### Transfer rules
+
+The transfers of a stop, its same stop transfer time and its walks, apply to all trips. A stop can refuse transfers:
+no trip reached there is then changed for another at the stop, though a walk from it is not refused, as it is no change
+at the stop. Two stops can refuse the walk between them, generated or not. A trip is boarded only where it picks up
+passengers and left only where it sets them down; the trips of a route that do so at different stops are held in
+separate routes, as are trips that overtake one another.
+
+A trip transfer is a rule for particular routes or trips: from the trips of a route, or a trip, arriving at a stop to
+the trips of a route, or a trip, departing from the same stop or another one. It allows the transfer in a time of its
+own, refuses it, or lets the rider stay on board while the vehicle continues as the departing trip. Of the rules for a
+pair of trips, the most specific applies, as GTFS ranks them: the one naming both trips, a trip and the other route, a
+trip, both routes, a route; where none applies, the transfers of the stops do. At one stop, the time of a rule is a
+same stop transfer time, at least the minimum transfer duration of the query; between two stops it is a walk, no
+longer than the longest walk of the query, to which that duration is added. Staying on board takes no time and no
+minimum, but is a ride of its own, so a transfer. It needs no pickup or drop-off where the vehicle continues, as the
+rider neither alights nor boards: the arriving trip reaches the stop then only to stay on board, with no arrival there
+to change or walk from, and the departing trip is boarded there only by staying on board. Where the departing trip
+leaves from another stop than the arriving one ends at, staying on board is no walk either: the connection goes on with
+the ride of the departing trip from its stop.
+
+Rules that differ by trip do not fit the labels of a stop: a restrictive rule, which refuses the transfer or takes
+longer than the stop, would hide an arrival on another route that transfers as the stop allows. So the router keeps
+the trips of such rules apart:
+
+- **Slots.** A trip of a route with restrictive rules at a stop reaches a slot of the stop, not the stop: an index
+  after the stops, with the id, routes and walks of the stop. The routes at the stop board from the stop and from its
+  slots, as the stop allows, except a route that a restrictive rule of the trip in the slot changes to; a walk from a
+  slot to a stop where such rules end lands in a slot there too.
+- **Boarding by rule.** Where a trip with rules passes the stop they start at (routing backward, end at), the router
+  finds the trips that each rule lets the rider board, at each call of their route at the stop, since a trip missed at
+  one call may be caught at a later one, and boards them in the next round, between two stops after the walk the rule
+  gives. As one trip may refuse a transfer that a later one allows, it also looks at the later trips of the route that
+  could be boarded where the trip was, on every day it scans; after a trip boarded by a rule, at those that rule allows
+  too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board depends on the
+  timetable and the options of the query alone, so a range query finds it once and keeps it for its passes.
+- **Which boardings are kept.** A trip boarded at a stop may change to every later trip of its route, a trip boarded
+  by a rule only to those the rule allows. So an earlier trip is only as good as a later one if it may change to every
+  trip the later one may: if it was boarded at a stop, or by the same rule from the same trip at the same stop. Else
+  the scan of the route rides both on, whether boarded by rule or at a stop, and finds the changes of each. A query of
+  one pass boards no trip by rule where the labels at the stop already board it or an earlier one.
+- **When a search ends.** A boarding by rule runs the next round, also if the arrival it follows improved no stop. A
+  pass makes each boarding by rule once: the same trip, boarded at the same stop by the same rule from the same trip
+  at the same time. Made again in a later round, it would only ride the same trip with more transfers. So a search
+  ends when no stop improves and no new boarding by rule waits, also where rules lead in a circle in no time.
+
+Any other rule, staying on board or taking no longer than the stop, hides nothing: its arrivals stay at the stop, and
+the rule only adds the faster change. A target stop or an isoline takes the best arrival at the stop or in its slots.
+The rules cost only where they apply: the routes and stops without rules are scanned as before.
+
 ### Range queries (rRAPTOR)
 
 A range query runs one pass of RAPTOR per time in the window at which leaving the source stops just catches a
@@ -123,7 +179,8 @@ continues from what it reaches earlier than the passes before. Only the first pa
 
 The best times are kept per round, as in the paper: the best time of a round is the best of that round and the rounds
 before it, over all passes so far. A single best time over all rounds would let a later departure with more rides prune
-an earlier one with fewer, which is a connection of its own.
+an earlier one with fewer, which is a connection of its own. A round takes over the best times of the round before it
+only at the stops where they changed since it last did, so a pass costs what it improves, not the number of stops.
 
 - For **connections**, a first pass leaves at the end of the window: it finds the best connections leaving after the
   window, which bound the passes in the window but are not reported. Each pass then records where it reaches the
@@ -134,6 +191,11 @@ an earlier one with fewer, which is a connection of its own.
   improved takes its arrival there less the start of the pass as travel time, if that is no longer than the stop's
   shortest so far.
 
+A source stop that a walk from another source stop reaches earlier, in its pass or in one before, keeps its own start
+next to the walk: it walks on from its start, since a walk does not continue a walk, and for isolines its first ride may
+leave until its own window ends, later than the walk's. Only source stops are concerned, and only where the source
+times differ by more than the walks between them.
+
 A query without a window is a range query of one pass: its best times need not be kept per round, since its rounds
 only improve on the ones before them.
 
@@ -142,7 +204,12 @@ only improve on the ones before them.
 The service answers connection and isoline queries between stops and locations, and adds to the router:
 
 - **First and last mile.** For a location, the stops within the walk search radius, each with the walk to it and the
-  access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections.
+  access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections,
+  except a walk that takes no longer than `walkDurationMinimum`, without the access or egress time. A walk leg takes
+  the access or egress time at its stop, so it meets its ride, as a walk between stops takes it at both ends.
+- **Times of a connection.** A connection leaves the origin and reaches the destination at the times its time window
+  and its maximum travel duration apply to: at a location, its first ride's departure less the walk and the access
+  time, and its last ride's arrival plus the egress time and the walk, also where the walk is no leg of its own.
 - **Direction.** An arrival query swaps the origin and the destination, so that the router searches backward from the
   destination.
 - **Maximum travel duration** of whole connections, first and last mile included. The service filters the connections
@@ -154,6 +221,34 @@ The time window chooses the query of the router:
 |---------------|----------------------------------------------------------------|------------------------|
 | Connections   | `connectionQuery`, then optimized travel times (on by default) | `connectionRangeQuery` |
 | Isolines      | `isolineQuery`                                                 | `isolineRangeQuery`    |
+
+The connections of an isoline share the rides they have in common: a ride is one leg, which the router reconstructs and
+the service maps once, for all the connections that take it.
+
+### Transfers of the timetable
+
+The service hands the transfers of the timetable (GTFS `transfers.txt`) to the router: a transfer for all trips as a
+walk between two stops or the same stop transfer time of one, and a transfer for particular routes or trips as a trip
+transfer, from and to the sub-routes of its routes that call at its stops. A transfer for a station applies to its
+stops, unless one for the stops themselves is given.
+
+| `transfer_type`     | For all trips                                      | For particular routes or trips                   |
+|---------------------|----------------------------------------------------|--------------------------------------------------|
+| 0 recommended       | the transfers of the stops                         | the time of the stops, even where they refuse it |
+| 1 timed             | a walk or a same stop transfer time of no time     | no time                                          |
+| 2 minimum time      | a walk or a same stop transfer time of its time    | its time                                         |
+| 3 not possible      | refused at the stop, or the walk between the stops | refused                                          |
+| 4 in-seat           | –                                                  | staying on board                                 |
+| 5 in-seat forbidden | –                                                  | the time of the stops, even where they refuse it |
+
+The query's minimum transfer duration applies to all but staying on board. A trip is boarded where its `pickup_type`
+is not 1 and left where its `drop_off_type` is not 1: a pickup or drop-off arranged by phone or with the driver is
+possible. Staying on board needs neither.
+
+The GTFS reader skips a row of `transfers.txt` it cannot apply with a warning, as it skips invalid rows of the other
+files, and logs how many it skipped: a row that is invalid as GTFS defines it, such as one of the in-seat types at a
+station (`location_type` 1) or one at a boarding area, and a row that names a call the schedule does not have, such as
+a trip at a stop whose stop time has no times and is skipped. The other rows still apply.
 
 ### Optimized travel time
 
@@ -167,39 +262,50 @@ the connection's travel time and only routes what can improve on it.
 The query in the other direction ends at the source stops, with the time at each turned into a walk relative to the
 earliest of them (the latest, for an arrival query), so that it ranks departures from the origin as the first query
 does. A query with a time window does not need it: the range query reports the latest departures in the window anyway.
-It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-travel-time` in the application.
+It is switched by `ServiceConfig.optimizeTravelTime`, `naviqore.service.optimize-travel-time` in the application.
 
 ## Options
 
 ### Query
 
-`ConnectionQueryConfig` of the service, mapped to `QueryConfig` of the router; the REST parameters of `/routing`.
+`ConnectionQueryConfig` of the service, mapped to `QueryConfig` of the router; the REST parameters of `/routing`. An
+option has the same name in each, with `maximum` and `minimum` spelled out in Java, and so has the feature that tells
+whether the service supports it: `supportsMaximumWalkDuration()` of `RoutingFeatures` is `supportsMaxWalkDuration` of
+`GET /routing`.
 
 | Service                   | Router                    | REST                   | Meaning                                                                                                                                                        |
 |---------------------------|---------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `timeWindowDuration`      | the range queries         | `timeWindowDuration`   | Time window in seconds; 0 for none.                                                                                                                            |
+| `timeWindowDuration`      | the range queries         | `timeWindowDuration`   | Time window in seconds; 0 for none. The application refuses one longer than `naviqore.routing.time-window-duration-maximum`.                                   |
 | `maximumWalkDuration`     | `maximumWalkDuration`     | `maxWalkDuration`      | Longest walk in seconds, between stops and to and from a location.                                                                                             |
 | `minimumTransferDuration` | `minimumTransferDuration` | `minTransferDuration`  | Time in seconds added to every walk between stops, e.g. to change platforms at ease.                                                                           |
 | `maximumTransfers`        | `maximumTransfers`        | `maxTransfers`         | Most transfers, so most rides less one.                                                                                                                        |
 | `maximumTravelDuration`   | –                         | `maxTravelDuration`    | Longest travel time in seconds, of whole connections; the service filters by it.                                                                               |
 | `wheelchairAccessible`    | `wheelchairAccessible`    | `wheelchairAccessible` | Only trips accessible by wheelchair.                                                                                                                           |
-| `bikeAllowed`             | `bikeAccessible`          | `bikeAllowed`          | Only trips that take bikes.                                                                                                                                    |
-| `travelModes`             | `allowedTravelModes`      | `travelModes`          | Only trips of these modes.                                                                                                                                     |
+| `bikeAllowed`             | `bikeAllowed`             | `bikeAllowed`          | Only trips that take bikes.                                                                                                                                    |
+| `travelModes`             | `travelModes`             | `travelModes`          | Only trips of these modes.                                                                                                                                     |
 | –                         | `maximumTravelDuration`   | –                      | Latest arrival (earliest departure) after (before) the earliest (latest) source time, which counts waiting before the first ride; the service does not set it. |
 | –                         | `allowSourceTransfer`     | –                      | Whether to walk from the source stops; the service allows it for a stop, not for a location, whose walks it has already made.                                  |
 | –                         | `allowTargetTransfer`     | –                      | Whether to walk to the target stops; likewise.                                                                                                                 |
 
 ### Router and service
 
-| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                   |
-|---------------------------------------|-----------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------|
-| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`. |
-| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips. Default 3.            |
-| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                       |
-| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                 |
-| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                         |
-| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.         |
-| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                     |
+The application, the service and the router have the same defaults; a setting of the service starting with `raptor`
+is passed to the router.
+
+| Property                                                   | Service (`ServiceConfig`)               | Router (`RaptorConfig`)           | Default             | Meaning                                                                                                      |
+|------------------------------------------------------------|-----------------------------------------|-----------------------------------|---------------------|--------------------------------------------------------------------------------------------------------------|
+| `naviqore.service.transfer.duration.between-stops-minimum` | `transferDurationBetweenStopsMinimum`   | –                                 | 180                 | Shortest generated walk between stops, in seconds; negative for none.                                        |
+| `naviqore.service.transfer.duration.access-egress`         | `transferDurationAccessEgress`          | –                                 | 15                  | Time to get on and off a vehicle, added to walks, in seconds.                                                |
+| `naviqore.service.walk.search-radius`                      | `walkSearchRadius`                      | –                                 | 500                 | Radius in meters for stops near a location and for generated walks between stops.                            |
+| `naviqore.service.walk.calculator-type`                    | `walkCalculatorType`                    | –                                 | `BEE_LINE_DISTANCE` | How walking durations are calculated.                                                                        |
+| `naviqore.service.walk.speed`                              | `walkSpeed`                             | –                                 | 1.4                 | Walking speed in meters per second.                                                                          |
+| `naviqore.service.walk.duration-minimum`                   | `walkDurationMinimum`                   | –                                 | 60                  | Longest walk to or from a location that is no leg of its own, in seconds, without the access or egress time. |
+| `naviqore.service.optimize-travel-time`                    | `optimizeTravelTime`                    | –                                 | `true`              | Optimize the travel time of connections without a time window, see above.                                    |
+| `naviqore.raptor.days-to-scan`                             | `raptorDaysToScan`                      | `daysToScan`                      | 3                   | Service days around the date of a query that are scanned for trips, and those its window reaches.            |
+| `naviqore.raptor.same-stop-transfer-duration-default`      | `raptorSameStopTransferDurationDefault` | `sameStopTransferDurationDefault` | 120                 | Same stop transfer time where the timetable gives none, in seconds.                                          |
+| `naviqore.raptor.stop-time-cache-size`                     | `raptorStopTimeCacheSize`               | `stopTimeCacheSize`               | 30                  | Service days whose stop times are cached.                                                                    |
+| `naviqore.raptor.stop-time-cache-strategy`                 | `raptorStopTimeCacheStrategy`           | `stopTimeCacheStrategy`           | `LRU`               | Which service day a full cache evicts: `LRU` or `MRU`.                                                       |
+| `naviqore.routing.time-window-duration-maximum`            | –                                       | –                                 | 86 400, a day       | Longest time window of a request to the application, in seconds; a longer one is refused.                    |
 
 ## Decisions
 
@@ -211,6 +317,14 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-trave
   connection as there is, and its cost does not grow with a range.
 - **Time windows of connections and isolines differ** in what they compare with: connections with every connection,
   isolines with the connections leaving in the window, see above.
+- **Transfer rules apply to the trips they name, exactly.** A rule for particular trips could be folded into the
+  transfer time of its stop, the longest of the trips or the shortest, but either is wrong for some connection: the
+  longest misses connections the stop allows, the shortest finds ones the rule refuses. Slots and boarding by rule
+  apply each rule to its trips, at a cost only at the stops and routes that have rules, and slots only where a rule
+  is restrictive.
+- **Staying on board is a ride.** The vehicle continues as another trip, so it counts as a transfer, also towards the
+  maximum transfers of a query, but takes no time. A connection shows it as the next ride, with no walk before it, also
+  between two stops.
 - **The same timetable gives the same answers, on every start.** Of equally good alternatives, RAPTOR keeps the one it
   meets first. The order it meets them in is set when the router is built, never by the order of its input or of a
   map, which can change from one JVM start to the next: stops are numbered by id, routes ordered by their first

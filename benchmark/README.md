@@ -67,8 +67,10 @@ The hubs are stations of the Swiss feed; on another feed, a name no stop has dra
 
 - **Versions.** The script builds a version with Maven into one jar of this module with all it depends on, once per
   commit, cached in `benchmark/versions/`. A commit from before the benchmark is built with the benchmark module of the
-  working tree. Each version runs in a class loader of its own and is called through `Subject`, whose parameters and
-  results are JDK types only. When the API of the libraries changes, adapt `ServiceSubject` in the same commit.
+  working tree, and one from before `naviqore-timetable` (4.x, e.g. `v4.2.1`) with `legacy/ServiceSubject.java` as
+  its subject, which reads the feed as a GTFS schedule. Each version runs in a class loader of its own and is called
+  through `Subject`, whose parameters and results are JDK types only. When the API of the libraries changes, adapt
+  `ServiceSubject` in the same commit; when `Subject` changes, adapt the legacy subject too.
 - **compare** sorts every query into: the same answer; the same answer in another order (equally good connections,
   which also differ between runs of one version); fixed, still failing, failing differently or a new failure; or
   different, and how: stops reached earlier, later, no longer, with fewer walks or on other legs (over a time window,

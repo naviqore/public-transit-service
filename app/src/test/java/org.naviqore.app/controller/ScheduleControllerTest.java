@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.naviqore.app.dto.DtoMapper.map;
 
@@ -43,18 +41,17 @@ public class ScheduleControllerTest {
     @Nested
     class ScheduleInfo {
         static Stream<Arguments> provideScheduleInfoTestCombinations() {
-            boolean[] supportsAccessibility = {true, false};
-            boolean[] supportsBikes = {true, false};
-            boolean[] supportsTravelModes = {true, false};
+            boolean[] hasWheelchairAccessible = {true, false};
+            boolean[] hasBikeAllowed = {true, false};
+            boolean[] hasTravelModes = {true, false};
 
             // create all permutations based on the boolean arrays (not hard coded)
             Stream<Arguments> stream = Stream.of();
-            for (boolean supportsAccessibilityValue : supportsAccessibility) {
-                for (boolean supportsBikesValue : supportsBikes) {
-                    for (boolean supportsTravelModesValue : supportsTravelModes) {
+            for (boolean hasWheelchairAccessibleValue : hasWheelchairAccessible) {
+                for (boolean hasBikeAllowedValue : hasBikeAllowed) {
+                    for (boolean hasTravelModesValue : hasTravelModes) {
                         stream = Stream.concat(stream, Stream.of(
-                                Arguments.of(supportsAccessibilityValue, supportsBikesValue,
-                                        supportsTravelModesValue)));
+                                Arguments.of(hasWheelchairAccessibleValue, hasBikeAllowedValue, hasTravelModesValue)));
                     }
                 }
             }
@@ -63,23 +60,23 @@ public class ScheduleControllerTest {
 
         @ParameterizedTest(name = "scheduleInfo_{index}")
         @MethodSource("provideScheduleInfoTestCombinations")
-        void testQueryConfigValues(boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
+        void testQueryConfigValues(boolean hasWheelchairAccessible, boolean hasBikeAllowed, boolean hasTravelModes) {
             FakePublicTransitService fakeService = new FakePublicTransitService();
-            fakeService.setHasAccessibilityInformation(supportsAccessibility);
-            fakeService.setHasBikeInformation(supportsBikes);
-            fakeService.setHasTravelModeInformation(supportsTravelModes);
+            fakeService.setHasWheelchairAccessible(hasWheelchairAccessible);
+            fakeService.setHasBikeAllowed(hasBikeAllowed);
+            fakeService.setHasTravelModes(hasTravelModes);
 
             LocalDate expStartDate = fakeService.getValidity().getStartDate();
             LocalDate expEndDate = fakeService.getValidity().getEndDate();
 
             ScheduleController scheduleController = new ScheduleController(fakeService);
 
-            org.naviqore.app.dto.ScheduleInfo routerInfo = scheduleController.getScheduleInfo();
-            assertEquals(supportsAccessibility, routerInfo.isHasAccessibility());
-            assertEquals(supportsBikes, routerInfo.isHasBikes());
-            assertEquals(supportsTravelModes, routerInfo.isHasTravelModes());
-            assertEquals(expStartDate, routerInfo.getScheduleValidity().getStartDate());
-            assertEquals(expEndDate, routerInfo.getScheduleValidity().getEndDate());
+            org.naviqore.app.dto.ScheduleInfo scheduleInfo = scheduleController.getScheduleInfo();
+            assertEquals(hasWheelchairAccessible, scheduleInfo.isHasWheelchairAccessible());
+            assertEquals(hasBikeAllowed, scheduleInfo.isHasBikeAllowed());
+            assertEquals(hasTravelModes, scheduleInfo.isHasTravelModes());
+            assertEquals(expStartDate, scheduleInfo.getScheduleValidity().getStartDate());
+            assertEquals(expEndDate, scheduleInfo.getScheduleValidity().getEndDate());
         }
     }
 
@@ -215,7 +212,7 @@ public class ScheduleControllerTest {
             org.naviqore.service.StopTime st1 = mock(org.naviqore.service.StopTime.class);
             org.naviqore.service.StopTime st2 = mock(org.naviqore.service.StopTime.class);
             org.naviqore.service.Trip trip1 = mock(org.naviqore.service.Trip.class, RETURNS_DEEP_STUBS);
-            when(trip1.getRoute().getRouteType()).thenReturn(org.naviqore.service.TravelMode.BUS);
+            when(trip1.getRoute().getTravelMode()).thenReturn(org.naviqore.service.TravelMode.BUS);
             when(st1.getStop()).thenReturn(serviceStop);
             when(st1.getTrip()).thenReturn(trip1);
             when(scheduleInformationService.getStopTimes(any(), any(), any(), any(), any())).thenReturn(

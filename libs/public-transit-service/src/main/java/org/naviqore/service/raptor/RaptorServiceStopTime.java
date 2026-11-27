@@ -18,7 +18,8 @@ public class RaptorServiceStopTime implements StopTime {
     private final OffsetDateTime arrivalTime;
     private final OffsetDateTime departureTime;
     @Setter(AccessLevel.PACKAGE)
-    // cyclical dependency, therefore avoid serialization and use in toString representation
+    // cyclical dependency, therefore avoid serialization and use in toString representation; set by the trip
+    @SuppressWarnings("NullAway.Init")
     private transient Trip trip;
 
 }

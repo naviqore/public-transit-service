@@ -28,7 +28,6 @@ final class TravelTimeOptimizer {
     private final RaptorAlgorithm raptor;
     private final Map<String, OffsetDateTime> sourceStops;
     private final Map<String, Integer> targetStops;
-    private final TimeType timeType;
     private final QueryConfig config;
     private final boolean forward;
 
@@ -49,7 +48,6 @@ final class TravelTimeOptimizer {
         this.raptor = raptor;
         this.sourceStops = sourceStops;
         this.targetStops = targetStops;
-        this.timeType = timeType;
         this.config = config;
         this.forward = timeType == TimeType.DEPARTURE;
 
@@ -146,9 +144,11 @@ final class TravelTimeOptimizer {
      */
     private long timeAtTarget(Connection connection) {
         if (forward) {
-            return epochSecond(connection.getArrivalTime()) + targetStops.get(connection.getToStopId());
+            return epochSecond(connection.getArrivalTime()) + Objects.requireNonNull(
+                    targetStops.get(connection.getToStopId()));
         }
-        return epochSecond(connection.getDepartureTime()) - targetStops.get(connection.getFromStopId());
+        return epochSecond(connection.getDepartureTime()) - Objects.requireNonNull(
+                targetStops.get(connection.getFromStopId()));
     }
 
     /**

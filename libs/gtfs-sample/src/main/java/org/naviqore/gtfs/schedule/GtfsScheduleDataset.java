@@ -1,15 +1,19 @@
 package org.naviqore.gtfs.schedule;
 
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NullMarked;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Locale;
 
 /**
  * GTFS datasets, local or remote.
  */
+@NullMarked
 @RequiredArgsConstructor
+@SuppressWarnings("ImmutableEnumChecker") // the providers hold only their final location
 public enum GtfsScheduleDataset {
 
     SAMPLE_FEED_1(new LocalProvider("org/naviqore/gtfs/schedule/sample-feed-1.zip")),
@@ -26,7 +30,7 @@ public enum GtfsScheduleDataset {
      * @param dir the directory where the ZIP file will be stored
      */
     public File getZip(Path dir) throws IOException {
-        return provider.getZip(dir, name().toLowerCase());
+        return provider.getZip(dir, name().toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -35,6 +39,6 @@ public enum GtfsScheduleDataset {
      * @param dir the directory into which the dataset will be extracted
      */
     public File getUnzipped(Path dir) throws IOException {
-        return provider.getUnzipped(dir, name().toLowerCase());
+        return provider.getUnzipped(dir, name().toLowerCase(Locale.ROOT));
     }
 }

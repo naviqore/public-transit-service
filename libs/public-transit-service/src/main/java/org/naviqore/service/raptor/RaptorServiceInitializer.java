@@ -22,6 +22,7 @@ import org.naviqore.utils.spatial.index.KDTreeBuilder;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -42,7 +43,7 @@ public class RaptorServiceInitializer {
         this.stopSearchIndex = createStopSearchIndex(schedule);
         this.spatialStopIndex = createSpatialStopIndex(schedule);
 
-        // generate transfers if minimum transfer time is not negative; usually -1 to deactivate generators
+        // generate walks between stops unless their minimum duration is negative
         List<TransferGenerator> transferGenerators = config.getTransferDurationBetweenStopsMinimum() >= 0 ? createTransferGenerators(
                 config, walkCalculator, spatialStopIndex) : Collections.emptyList();
         this.raptorRouter = createRaptorRouter(config, schedule, transferGenerators);
@@ -60,7 +61,7 @@ public class RaptorServiceInitializer {
         // only add parent stops and stops without a parent
         for (org.naviqore.timetable.model.Stop stop : schedule.getStops().values()) {
             if (stop.getParent().isEmpty()) {
-                builder.add(stop.getName().toLowerCase(), stop);
+                builder.add(stop.getName().toLowerCase(Locale.ROOT), stop);
             }
         }
 
@@ -80,15 +81,16 @@ public class RaptorServiceInitializer {
     private static RaptorRouter createRaptorRouter(ServiceConfig config, Timetable schedule,
                                                    List<TransferGenerator> transferGenerators) {
         // setup cache and trip mask provider
-        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
+        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(
+                config.getRaptorStopTimeCacheStrategy().name());
         TimetableTripMaskProvider tripMaskProvider = new TimetableTripMaskProvider(schedule,
-                config.getCacheServiceDaySize(), cacheStrategy);
+                config.getRaptorStopTimeCacheSize(), cacheStrategy);
 
         // configure raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(config.getRaptorDaysToScan())
-                .sameStopTransferDurationDefault(config.getTransferDurationSameStopDefault())
-                .stopTimeCacheSize(config.getCacheServiceDaySize())
+                .sameStopTransferDurationDefault(config.getRaptorSameStopTransferDurationDefault())
+                .stopTimeCacheSize(config.getRaptorStopTimeCacheSize())
                 .stopTimeCacheStrategy(cacheStrategy)
                 .maskProvider(tripMaskProvider)
                 .build();

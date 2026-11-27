@@ -4,10 +4,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.naviqore.utils.spatial.Coordinate;
 import org.naviqore.utils.spatial.Location;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A k-dimensional tree (k-d tree) for fast, efficient proximity searches. This implementation only supports
@@ -22,15 +24,15 @@ import java.util.ArrayList;
 public class KDTree<T extends Location<?>> {
 
     private static final int K_DIMENSIONS = 2;
-    Node<T> root;
+    @Nullable Node<T> root;
 
     static Coordinate.Axis getAxis(int depth) {
         return depth % K_DIMENSIONS == 0 ? Coordinate.Axis.FIRST : Coordinate.Axis.SECOND;
     }
 
-    private static <T extends Location<?>> Node<T> getNextNodeBasedOnAxisDirection(Node<T> node,
-                                                                                   InternalCoordinate coordinate,
-                                                                                   Coordinate.Axis axis) {
+    private static <T extends Location<?>> @Nullable Node<T> getNextNodeBasedOnAxisDirection(Node<T> node,
+                                                                                             InternalCoordinate coordinate,
+                                                                                             Coordinate.Axis axis) {
         Coordinate nodeCoordinate = node.location.getCoordinate();
 
         return coordinate.getComponent(axis) < nodeCoordinate.getComponent(axis) ? node.left : node.right;
@@ -42,6 +44,8 @@ public class KDTree<T extends Location<?>> {
                 coordinate.secondComponent());
     }
 
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     void insert(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location cannot be null");
@@ -50,7 +54,7 @@ public class KDTree<T extends Location<?>> {
         root = insert(root, location, startDepth);
     }
 
-    private Node<T> insert(Node<T> node, T location, int depth) {
+    private Node<T> insert(@Nullable Node<T> node, T location, int depth) {
         if (node == null) {
             return new Node<>(location);
         }
@@ -59,7 +63,7 @@ public class KDTree<T extends Location<?>> {
         // lon) component)
         Coordinate.Axis axis = getAxis(depth);
 
-        if ((location.getCoordinate().getComponent(axis)) < node.location.getCoordinate().getComponent(axis)) {
+        if (location.getCoordinate().getComponent(axis) < node.location.getCoordinate().getComponent(axis)) {
             // build KDTree left side
             node.left = insert(node.left, location, depth + 1);
         } else {
@@ -76,6 +80,8 @@ public class KDTree<T extends Location<?>> {
      * @param location The location to find the nearest neighbor for.
      * @return The nearest neighbor to the given location.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public T nearestNeighbor(T location) {
         if (location == null) {
             throw new IllegalArgumentException("Location cannot be null");
@@ -89,6 +95,8 @@ public class KDTree<T extends Location<?>> {
      * @param coordinate The coordinate to find the nearest neighbor for.
      * @return The nearest neighbor to the given coordinate.
      */
+    // guards callers that do not check nullness at compile time
+    @SuppressWarnings("java:S2583")
     public T nearestNeighbor(Coordinate coordinate) {
         if (coordinate == null) {
             throw new IllegalArgumentException("Coordinate cannot be null");
@@ -109,10 +117,13 @@ public class KDTree<T extends Location<?>> {
         }
         Nearest<T> nearest = new Nearest<>();
         nearestNeighbor(root, new InternalCoordinate(firstComponent, secondComponent), 0, nearest);
+        // the tree is not empty, so at least the root was found
+        assert nearest.location != null;
         return nearest.location;
     }
 
-    private void nearestNeighbor(Node<T> node, InternalCoordinate coordinate, int depth, Nearest<T> nearest) {
+    @SuppressWarnings("ReferenceEquality") // the side of the node descended to, by identity
+    private void nearestNeighbor(@Nullable Node<T> node, InternalCoordinate coordinate, int depth, Nearest<T> nearest) {
         if (node == null) {
             return;
         }
@@ -144,6 +155,9 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
+    // guards callers that do not check nullness at compile time; the return type is that of 4.x, which compiled callers
+    // link against
+    @SuppressWarnings({"java:S2583", "NonApiType"})
     public ArrayList<T> rangeSearch(T center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center location cannot be null");
@@ -158,6 +172,9 @@ public class KDTree<T extends Location<?>> {
      * @param radius The radius within which to search.
      * @return A list of all locations within the radius of the center.
      */
+    // guards callers that do not check nullness at compile time; the return type is that of 4.x, which compiled callers
+    // link against
+    @SuppressWarnings({"java:S2583", "NonApiType"})
     public ArrayList<T> rangeSearch(Coordinate center, double radius) {
         if (center == null) {
             throw new IllegalArgumentException("Center coordinate cannot be null");
@@ -174,6 +191,8 @@ public class KDTree<T extends Location<?>> {
      * @param radius          The radius within which to search.
      * @return A list of all locations within the radius of the specified center coordinate.
      */
+    // the return type is that of 4.x, which compiled callers link against
+    @SuppressWarnings("NonApiType")
     public ArrayList<T> rangeSearch(double firstComponent, double secondComponent, double radius) {
         if (root == null) {
             throw new IllegalStateException("Tree is empty");
@@ -186,8 +205,8 @@ public class KDTree<T extends Location<?>> {
         return result;
     }
 
-    private void rangeSearch(Node<T> node, InternalCoordinate coordinate, double radius, int depth,
-                             ArrayList<T> result) {
+    private void rangeSearch(@Nullable Node<T> node, InternalCoordinate coordinate, double radius, int depth,
+                             List<T> result) {
         if (node == null) {
             return;
         }
@@ -223,15 +242,15 @@ public class KDTree<T extends Location<?>> {
     @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
     static class Node<U> {
         private final U location;
-        private Node<U> left;
-        private Node<U> right;
+        private @Nullable Node<U> left;
+        private @Nullable Node<U> right;
     }
 
     /**
      * The nearest location found so far, and its distance.
      */
     private static class Nearest<U> {
-        private U location;
+        private @Nullable U location;
         private double distance = Double.POSITIVE_INFINITY;
     }
 
