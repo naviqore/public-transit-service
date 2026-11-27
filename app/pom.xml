@@ -11,7 +11,7 @@
     <artifactId>naviqore-app</artifactId>
     <name>Naviqore App</name>
     <description>
-        Spring REST application that exposes the public transit service library through HTTP endpoints.
+        Public transit schedule information and connection routing service based on GTFS data and the RAPTOR algorithm.
     </description>
 
     <properties>

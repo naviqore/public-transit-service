@@ -59,8 +59,11 @@ them under their new names.
 
 ### Home page
 
-The home page no longer shows the build time, and the build information, which `/actuator/info` shows, has none
-either: Maven fixes it at 1980-02-01 for reproducible builds.
+The home page at `/` shows the version of the service, its health status and the validity of the loaded schedule,
+flagged when it does not include today. It links to the API console, the OpenAPI document and the health and metrics
+endpoints only where these are enabled, at their configured paths. It no longer shows the operating system, the Java
+version or the build time. The build information, which `/actuator/info` shows, has no build time either: Maven fixes
+it at 1980-02-01 for reproducible builds.
 
 ## REST API
 
