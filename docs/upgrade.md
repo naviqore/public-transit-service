@@ -102,7 +102,9 @@ The detail of an `unsupported-routing-feature` error names the parameter that is
 - **Travel time.** Connections without a time window leave as late as their arrival allows, see above.
 - **Times at a location.** A connection from or to a location leaves at the time one sets out from it and arrives at
   the time one reaches it: its `departureTime` and `arrivalTime` include the walk and the access time, also where the
-  walk is too short to be a leg of its own. A time window and the maximum travel duration apply to these times.
+  walk is too short to be a leg of its own. A time window and the maximum travel duration apply to these times. A walk
+  leg at either end takes the access or egress time at its stop and meets its ride; in 4.x, the first mile from a
+  location left it out of its duration and ended before the ride left.
 - **Time windows.** A connection query over a time window reports the connections leaving in it that no other
   connection beats, not even one leaving after the window. A window shorter than the headway can therefore be empty. An
   isoline over a time window reports for each stop the shortest travel time among the connections leaving in the

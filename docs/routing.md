@@ -205,7 +205,8 @@ The service answers connection and isoline queries between stops and locations, 
 
 - **First and last mile.** For a location, the stops within the walk search radius, each with the walk to it and the
   access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections,
-  except a walk that takes no longer than `walkDurationMinimum`, without the access or egress time.
+  except a walk that takes no longer than `walkDurationMinimum`, without the access or egress time. A walk leg takes
+  the access or egress time at its stop, so it meets its ride, as a walk between stops takes it at both ends.
 - **Times of a connection.** A connection leaves the origin and reaches the destination at the times its time window
   and its maximum travel duration apply to: at a location, its first ride's departure less the walk and the access
   time, and its last ride's arrival plus the egress time and the walk, also where the walk is no leg of its own.
