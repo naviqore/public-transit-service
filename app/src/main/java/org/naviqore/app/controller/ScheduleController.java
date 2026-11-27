@@ -66,7 +66,7 @@ public class ScheduleController {
     @GetMapping("/stops/nearest")
     public List<DistanceToStop> getNearestStops(@RequestParam @Parameter(description = "Latitude of the location, in WGS84 degrees from -90 to 90.") double latitude,
                                                 @RequestParam @Parameter(description = "Longitude of the location, in WGS84 degrees from -180 to 180.") double longitude,
-                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters.") @Min(0) int maxDistance,
+                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters, at least 1.") @Min(1) int maxDistance,
                                                 @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
 
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);

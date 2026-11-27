@@ -44,6 +44,18 @@ class ApplicationIT {
         }
 
         @Test
+        void nearestStops_zeroMaxDistance_shouldReturn400() {
+            ResponseEntity<String> response = request.setPort(port)
+                    .setEndpoint("/schedule/stops/nearest")
+                    .addQueryParameter("latitude", "36")
+                    .addQueryParameter("longitude", "-116")
+                    .addQueryParameter("maxDistance", "0")
+                    .get(String.class);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
         void autocompleteStopName_shouldReturn200() {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/schedule/stops/autocomplete")

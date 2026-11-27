@@ -115,6 +115,7 @@ The detail of an `unsupported-routing-feature` error names the parameter that is
   continues from another stop.
 - **Walks** between stops take the time the feed gives for their direction, also when the router searches backward.
 - **Ties.** Of equally good connections, the same one is reported on every start of the service.
+- **Nearest stops.** A `maxDistance` below 1 is refused with 400, where 0 failed with 500.
 
 ## Libraries
 
