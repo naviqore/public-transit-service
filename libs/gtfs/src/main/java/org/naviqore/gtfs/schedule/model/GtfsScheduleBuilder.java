@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.LocationType;
 import org.naviqore.gtfs.schedule.type.RouteType;
 import org.naviqore.timetable.type.*;
 import org.naviqore.utils.cache.ValueObjectCache;
@@ -61,8 +62,9 @@ public class GtfsScheduleBuilder {
         }
     }
 
+    // a stop with children is not always a station: a platform may have boarding areas
     private static boolean isStation(Stop stop) {
-        return !stop.getChildren().isEmpty();
+        return stop.getLocationType() == LocationType.STATION;
     }
 
     private static void checkCallsAt(Trip trip, Stop stop, Transfer transfer) {
@@ -92,12 +94,17 @@ public class GtfsScheduleBuilder {
 
     public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId,
                                        AccessibilityInformation wheelchairBoarding) {
+        return addStop(id, name, lat, lon, parentStopId, wheelchairBoarding, LocationType.STOP);
+    }
+
+    public GtfsScheduleBuilder addStop(String id, String name, double lat, double lon, String parentStopId,
+                                       AccessibilityInformation wheelchairBoarding, LocationType locationType) {
         checkNotBuilt();
         if (stops.containsKey(id)) {
             throw new IllegalArgumentException("Stop " + id + " already exists");
         }
         log.debug("Adding stop {}", id);
-        Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon), wheelchairBoarding);
+        Stop stop = new Stop(id, name, new GeoCoordinate(lat, lon), wheelchairBoarding, locationType);
 
         // only add stop id if it is not a blank string
         if (!parentStopId.isEmpty()) {
@@ -218,7 +225,8 @@ public class GtfsScheduleBuilder {
      * departing one.
      * <p>
      * Once the stations have their stops, the schedule is built only if each trip a transfer names calls at the stop of
-     * its side, or at a stop of the station, and if no transfer of the in-seat types names a station.
+     * its side, or at a stop of the station, and if no transfer of the in-seat types names a station, a stop of
+     * {@link LocationType#STATION}.
      */
     public GtfsScheduleBuilder addTransfer(@Nullable String fromStopId, @Nullable String toStopId,
                                            @Nullable String fromRouteId, @Nullable String toRouteId,

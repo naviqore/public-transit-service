@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.jspecify.annotations.Nullable;
 import org.naviqore.gtfs.schedule.model.GtfsScheduleBuilder;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
+import org.naviqore.gtfs.schedule.type.LocationType;
 import org.naviqore.gtfs.schedule.type.RouteType;
 import org.naviqore.timetable.type.*;
 
@@ -122,8 +123,9 @@ class GtfsScheduleParser {
         String parent = Utils.getStringFieldOrDefault(record, "parent_station", "");
         AccessibilityInformation wheelchairBoarding = AccessibilityInformation.parse(
                 Utils.getIntFieldOrDefault(record, "wheelchair_boarding", 0));
+        LocationType locationType = LocationType.parse(Utils.getStringFieldOrDefault(record, "location_type", ""));
 
-        return builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding);
+        return builder -> builder.addStop(id, name, latitude, longitude, parent, wheelchairBoarding, locationType);
     }
 
     private static ParsedRecord readRoute(CSVRecord record) {

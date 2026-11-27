@@ -6,14 +6,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
 import org.naviqore.gtfs.schedule.model.Route;
+import org.naviqore.gtfs.schedule.model.Stop;
 import org.naviqore.gtfs.schedule.model.Transfer;
 import org.naviqore.gtfs.schedule.model.Trip;
+import org.naviqore.gtfs.schedule.type.LocationType;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,6 +59,26 @@ class GtfsScheduleReaderTransfersIT {
                 .stream()
                 .map(GtfsScheduleReaderTransfersIT::describe)
                 .toList();
+    }
+
+    /**
+     * Writes the stops of the sample feed, where BULLFROG, where the trips call, is a platform of the station
+     * BULLFROG_STATION, and the rows given after them.
+     */
+    private static void writeStopsOfBullfrogStation(Path directory, String rows) throws IOException {
+        Files.writeString(directory.resolve("stops.txt"), """
+                stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+                FUR_CREEK_RES,Furnace Creek Resort,36.425288,-117.133162,,
+                BEATTY_AIRPORT,Nye County Airport,36.868446,-116.784582,,
+                BULLFROG_STATION,Bullfrog,36.88108,-116.81797,1,
+                BULLFROG,Bullfrog,36.88108,-116.81797,0,BULLFROG_STATION
+                STAGECOACH,Stagecoach Hotel & Casino,36.915682,-116.751677,,
+                NADAV,North Ave / D Ave N,36.914893,-116.76821,,
+                NANAA,North Ave / N A Ave,36.914944,-116.761472,,
+                DADAN,Doing Ave / D Ave N,36.909489,-116.768242,,
+                EMSI,E Main St / S Irving St,36.905697,-116.76218,,
+                AMV,Amargosa Valley,36.641496,-116.40094,,
+                """ + rows);
     }
 
     @Test
@@ -116,20 +139,7 @@ class GtfsScheduleReaderTransfersIT {
     @Test
     void rowsOfTripsStayingOnBoard_nameStopsNotStations(@TempDir Path tempDir) throws IOException {
         Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
-        // BULLFROG is a stop of the station BULLFROG_STATION, where the trips call
-        Files.writeString(directory.resolve("stops.txt"), """
-                stop_id,stop_name,stop_lat,stop_lon,parent_station
-                FUR_CREEK_RES,Furnace Creek Resort,36.425288,-117.133162,
-                BEATTY_AIRPORT,Nye County Airport,36.868446,-116.784582,
-                BULLFROG_STATION,Bullfrog,36.88108,-116.81797,
-                BULLFROG,Bullfrog,36.88108,-116.81797,BULLFROG_STATION
-                STAGECOACH,Stagecoach Hotel & Casino,36.915682,-116.751677,
-                NADAV,North Ave / D Ave N,36.914893,-116.76821,
-                NANAA,North Ave / N A Ave,36.914944,-116.761472,
-                DADAN,Doing Ave / D Ave N,36.909489,-116.768242,
-                EMSI,E Main St / S Irving St,36.905697,-116.76218,
-                AMV,Amargosa Valley,36.641496,-116.40094,
-                """);
+        writeStopsOfBullfrogStation(directory, "");
 
         // a row of trips at a station applies at its stops, where they call
         Path transfers = directory.resolve("transfers.txt");
@@ -140,6 +150,23 @@ class GtfsScheduleReaderTransfersIT {
         Files.writeString(transfers, HEADER + "BULLFROG_STATION,BULLFROG_STATION,,,AB1,AB2,4,\n");
         assertThatThrownBy(() -> read(directory)).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("station");
+    }
+
+    @Test
+    void rowsOfTripsStayingOnBoard_atAPlatformWithABoardingArea_areApplied(@TempDir Path tempDir) throws IOException {
+        Path directory = GTFS_SCHEDULE_DATASET.getUnzipped(tempDir).toPath();
+        // the boarding area of the platform BULLFROG does not make it a station
+        writeStopsOfBullfrogStation(directory, "BULLFROG_FRONT,Bullfrog front,36.88108,-116.81797,4,BULLFROG\n");
+        Files.writeString(directory.resolve("transfers.txt"), HEADER + "BULLFROG,BULLFROG,,,AB1,AB2,4,\n");
+
+        GtfsSchedule schedule = read(directory);
+
+        assertThat(transfers(schedule, "BULLFROG")).containsExactly("BULLFROG:IN_SEAT:null trips AB1>AB2");
+        assertThat(schedule.getStops().get("BULLFROG").getChildren()).extracting(Stop::getId)
+                .containsExactly("BULLFROG_FRONT");
+        assertThat(Stream.of("BULLFROG_STATION", "BULLFROG", "BULLFROG_FRONT", "EMSI")
+                .map(id -> schedule.getStops().get(id).getLocationType())).containsExactly(LocationType.STATION,
+                LocationType.STOP, LocationType.BOARDING_AREA, LocationType.STOP);
     }
 
     @Test
