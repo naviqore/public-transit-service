@@ -3,6 +3,8 @@
 # benchmark module with all it depends on, and runs a command of org.naviqore.benchmark.Benchmark on them. The working
 # tree is a version too, and the default candidate. See README.md.
 set -euo pipefail
+# a version that fails to build, e.g. of a reference that does not exist, ends the script, not only its subshell
+shopt -s inherit_errexit
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 VERSIONS=$ROOT/benchmark/versions
