@@ -63,7 +63,7 @@ class RoutingQueryUtils {
 
         List<org.naviqore.raptor.Connection> connections = raptor.connectionQuery(sourceStops, targetStops,
                 raptorTimeType, config);
-        if (!serviceConfig.isRaptorOptimizeTravelTime()) {
+        if (!serviceConfig.isOptimizeTravelTime()) {
             return connections;
         }
 

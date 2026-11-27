@@ -6,16 +6,14 @@ import org.jspecify.annotations.Nullable;
 import org.naviqore.service.repo.TimetableRepository;
 
 /**
- * Configuration to create a public transit service.
+ * Configuration to create a public transit service. The settings starting with {@code raptor} are those of the router,
+ * see {@link org.naviqore.raptor.router.RaptorConfig}.
  */
 @Builder
 @Value
 public class ServiceConfig {
 
     // note: The defaults should match the default values in the application.properties file.
-    public static final String DEFAULT_GTFS_STATIC_UPDATE_CRON = "0 0 4 * * *";
-
-    public static final int DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT = 120;
     public static final int DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM = 180;
     public static final int DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS = 15;
 
@@ -24,19 +22,14 @@ public class ServiceConfig {
     public static final double DEFAULT_WALK_SPEED = 1.4;
     public static final int DEFAULT_WALK_DURATION_MINIMUM = 120;
 
-    public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
-    public static final boolean DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME = true;
+    public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
 
-    public static final int DEFAULT_CACHE_SERVICE_DAY_SIZE = 30;
-    public static final CacheEvictionStrategy DEFAULT_CACHE_EVICTION_STRATEGY = CacheEvictionStrategy.LRU;
+    public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = 3;
+    public static final int DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT = 120;
+    public static final int DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE = 30;
+    public static final CacheEvictionStrategy DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY = CacheEvictionStrategy.LRU;
 
     TimetableRepository timetableRepository;
-
-    @Builder.Default
-    String gtfsStaticUpdateCron = DEFAULT_GTFS_STATIC_UPDATE_CRON;
-
-    @Builder.Default
-    int transferDurationSameStopDefault = DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT;
 
     @Builder.Default
     int transferDurationBetweenStopsMinimum = DEFAULT_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM;
@@ -56,9 +49,6 @@ public class ServiceConfig {
     @Builder.Default
     int walkDurationMinimum = DEFAULT_WALK_DURATION_MINIMUM;
 
-    @Builder.Default
-    int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
-
     /**
      * Whether a connection query without a time window optimizes the travel time of its connections: of the connections
      * arriving as early with as many transfers, it reports the one departing latest (for an arrival query: of those
@@ -66,24 +56,30 @@ public class ServiceConfig {
      * time window reports those anyway.
      */
     @Builder.Default
-    boolean raptorOptimizeTravelTime = DEFAULT_RAPTOR_OPTIMIZE_TRAVEL_TIME;
+    boolean optimizeTravelTime = DEFAULT_OPTIMIZE_TRAVEL_TIME;
 
     @Builder.Default
-    int cacheServiceDaySize = DEFAULT_CACHE_SERVICE_DAY_SIZE;
+    int raptorDaysToScan = DEFAULT_RAPTOR_DAYS_TO_SCAN;
 
     @Builder.Default
-    CacheEvictionStrategy cacheEvictionStrategy = DEFAULT_CACHE_EVICTION_STRATEGY;
+    int raptorSameStopTransferDurationDefault = DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT;
 
-    public ServiceConfig(TimetableRepository timetableRepository, String gtfsStaticUpdateCron,
-                         int transferDurationSameStopDefault, int transferDurationBetweenStopsMinimum,
+    /**
+     * Service days whose stop times the router caches. The service caches which of the timetable's services run on
+     * twenty times as many dates, at most 365.
+     */
+    @Builder.Default
+    int raptorStopTimeCacheSize = DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE;
+
+    @Builder.Default
+    CacheEvictionStrategy raptorStopTimeCacheStrategy = DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY;
+
+    public ServiceConfig(TimetableRepository timetableRepository, int transferDurationBetweenStopsMinimum,
                          int transferDurationAccessEgress, int walkSearchRadius, WalkCalculatorType walkCalculatorType,
-                         double walkSpeed, int walkDurationMinimum, int raptorDaysToScan,
-                         boolean raptorOptimizeTravelTime, int cacheServiceDaySize,
-                         CacheEvictionStrategy cacheEvictionStrategy) {
+                         double walkSpeed, int walkDurationMinimum, boolean optimizeTravelTime, int raptorDaysToScan,
+                         int raptorSameStopTransferDurationDefault, int raptorStopTimeCacheSize,
+                         CacheEvictionStrategy raptorStopTimeCacheStrategy) {
         this.timetableRepository = validateNonNull(timetableRepository, "timetableRepository");
-        this.gtfsStaticUpdateCron = validateNonNull(gtfsStaticUpdateCron, "gtfsStaticUpdateCron");
-        this.transferDurationSameStopDefault = validateNonNegative(transferDurationSameStopDefault,
-                "transferDurationSameStopDefault");
         // negative values imply that transfers should not be generated
         this.transferDurationBetweenStopsMinimum = transferDurationBetweenStopsMinimum;
         this.transferDurationAccessEgress = validateNonNegative(transferDurationAccessEgress,
@@ -92,10 +88,12 @@ public class ServiceConfig {
         this.walkCalculatorType = validateNonNull(walkCalculatorType, "walkCalculatorType");
         this.walkSpeed = validatePositive(walkSpeed, "walkSpeed");
         this.walkDurationMinimum = validateNonNegative(walkDurationMinimum, "walkDurationMinimum");
+        this.optimizeTravelTime = optimizeTravelTime;
         this.raptorDaysToScan = validatePositive(raptorDaysToScan, "raptorDaysToScan");
-        this.raptorOptimizeTravelTime = raptorOptimizeTravelTime;
-        this.cacheServiceDaySize = validatePositive(cacheServiceDaySize, "cacheServiceDaySize");
-        this.cacheEvictionStrategy = validateNonNull(cacheEvictionStrategy, "cacheEvictionStrategy");
+        this.raptorSameStopTransferDurationDefault = validateNonNegative(raptorSameStopTransferDurationDefault,
+                "raptorSameStopTransferDurationDefault");
+        this.raptorStopTimeCacheSize = validatePositive(raptorStopTimeCacheSize, "raptorStopTimeCacheSize");
+        this.raptorStopTimeCacheStrategy = validateNonNull(raptorStopTimeCacheStrategy, "raptorStopTimeCacheStrategy");
     }
 
     private static <T> T validateNonNull(@Nullable T value, String name) {

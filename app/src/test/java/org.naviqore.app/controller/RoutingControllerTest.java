@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.naviqore.app.config.AppProperties;
+import org.naviqore.app.config.NaviqoreProperties;
 import org.naviqore.app.dto.*;
 import org.naviqore.app.exception.InvalidCoordinatesException;
 import org.naviqore.app.exception.InvalidParametersException;
@@ -27,7 +27,7 @@ public class RoutingControllerTest {
 
     private final FakePublicTransitService fakeService = new FakePublicTransitService();
 
-    private final RoutingController routingController = new RoutingController(fakeService, new AppProperties());
+    private final RoutingController routingController = new RoutingController(fakeService, new NaviqoreProperties());
 
     static Stream<Arguments> provideQueryConfigTestCombinations() {
         int validTimeWindowDuration = 0;
@@ -105,12 +105,12 @@ public class RoutingControllerTest {
                         validWheelChairAccessible, validBikeAllowed, null, hasAccessibilityInformation,
                         hasBikeInformation, hasTravelModeInformation, null),
                 Arguments.of("timeWindowDurationOfTheMaximum",
-                        AppProperties.Raptor.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM, validMaxWalkDuration,
+                        NaviqoreProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM, validMaxWalkDuration,
                         validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration,
                         validWheelChairAccessible, validBikeAllowed, validTravelModes, hasAccessibilityInformation,
                         hasBikeInformation, hasTravelModeInformation, null),
                 Arguments.of("timeWindowDurationLongerThanTheMaximum",
-                        AppProperties.Raptor.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM + 1, validMaxWalkDuration,
+                        NaviqoreProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM + 1, validMaxWalkDuration,
                         validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration,
                         validWheelChairAccessible, validBikeAllowed, validTravelModes, hasAccessibilityInformation,
                         hasBikeInformation, hasTravelModeInformation,

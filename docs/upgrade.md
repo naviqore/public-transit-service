@@ -9,43 +9,48 @@ or notice when they upgrade from 4.x. How the router and the service answer is d
 
 ### Properties
 
-The properties moved under `app`, in kebab case, and each is set from the environment variable named after it without
-`app`. The environment variables keep their names, so a deployment that sets only them needs no change, except for
-`APP_HOME_PAGE_ENABLED`, which is `HOME_PAGE_ENABLED`, and `RAPTOR_RANGE`, which no longer has an effect. A deployment
-that sets the properties themselves, in an `application.properties` of its own or as `-D` options, sets them under
-their new names.
+The properties moved under `naviqore`, in kebab case, and are grouped by the component that applies them: `gtfs` by
+the application, which reads the feed, `service` by the public transit service, `raptor` by its router, `routing` by
+the application to the requests of its REST API, and `home-page` by the application. Each property is set by the
+environment variable of its name in upper case, with `.` and `-` replaced by `_`, as Spring binds it:
+`naviqore.gtfs.static.uri` by `NAVIQORE_GTFS_STATIC_URI`. So every environment variable of the application is renamed,
+without a fallback to its 4.x name, which no longer has an effect. The variables of Spring's own properties keep their
+names, such as `LOGGING_LEVEL_ROOT`, `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE` and `SPRINGDOC_API_DOCS_ENABLED`. A
+deployment that sets the properties themselves, in an `application.properties` of its own or as `-D` options, sets
+them under their new names.
 
-| 4.x                                       | 5.0                                           | Environment variable                                |
-|-------------------------------------------|-----------------------------------------------|-----------------------------------------------------|
-| `gtfs.static.uri`                         | `app.gtfs.static.uri`                         | `GTFS_STATIC_URI`                                   |
-| `gtfs.static.update.cron`                 | `app.gtfs.static.update-cron`                 | `GTFS_STATIC_UPDATE_CRON`                           |
-| `transfer.duration.same.stop.default`     | `app.transfer.duration.same-stop-default`     | `TRANSFER_DURATION_SAME_STOP_DEFAULT`               |
-| `transfer.duration.between.stops.minimum` | `app.transfer.duration.between-stops-minimum` | `TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM`           |
-| `transfer.duration.access.egress`         | `app.transfer.duration.access-egress`         | `TRANSFER_DURATION_ACCESS_EGRESS`                   |
-| `walk.search.radius`                      | `app.walk.search-radius`                      | `WALK_SEARCH_RADIUS`                                |
-| `walk.calculator.type`                    | `app.walk.calculator-type`                    | `WALK_CALCULATOR_TYPE`                              |
-| `walk.speed`                              | `app.walk.speed`                              | `WALK_SPEED`                                        |
-| `walk.duration.minimum`                   | `app.walk.duration-minimum`                   | `WALK_DURATION_MINIMUM`                             |
-| `raptor.days.to.scan`                     | `app.raptor.days-to-scan`                     | `RAPTOR_DAYS_TO_SCAN`                               |
-| `raptor.range`                            | removed                                       | `RAPTOR_RANGE`, no effect                           |
-| –                                         | `app.raptor.optimize-travel-time`             | `RAPTOR_OPTIMIZE_TRAVEL_TIME`                       |
-| –                                         | `app.raptor.time-window-duration-maximum`     | `RAPTOR_TIME_WINDOW_DURATION_MAXIMUM`               |
-| `cache.service.day.size`                  | `app.cache.service-day-size`                  | `CACHE_SERVICE_DAY_SIZE`                            |
-| `cache.eviction.strategy`                 | `app.cache.eviction-strategy`                 | `CACHE_EVICTION_STRATEGY`                           |
-| `app.home-page.enabled`                   | `app.home-page.enabled`                       | `HOME_PAGE_ENABLED`, before `APP_HOME_PAGE_ENABLED` |
+| 4.x property                              | 4.x variable                              | 5.0 property                                               | 5.0 variable                                               |
+|-------------------------------------------|-------------------------------------------|------------------------------------------------------------|------------------------------------------------------------|
+| `gtfs.static.uri`                         | `GTFS_STATIC_URI`                         | `naviqore.gtfs.static.uri`                                 | `NAVIQORE_GTFS_STATIC_URI`                                 |
+| `gtfs.static.update.cron`                 | `GTFS_STATIC_UPDATE_CRON`                 | `naviqore.gtfs.static.update-cron`                         | `NAVIQORE_GTFS_STATIC_UPDATE_CRON`                         |
+| `transfer.duration.between.stops.minimum` | `TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM` | `naviqore.service.transfer.duration.between-stops-minimum` | `NAVIQORE_SERVICE_TRANSFER_DURATION_BETWEEN_STOPS_MINIMUM` |
+| `transfer.duration.access.egress`         | `TRANSFER_DURATION_ACCESS_EGRESS`         | `naviqore.service.transfer.duration.access-egress`         | `NAVIQORE_SERVICE_TRANSFER_DURATION_ACCESS_EGRESS`         |
+| `walk.search.radius`                      | `WALK_SEARCH_RADIUS`                      | `naviqore.service.walk.search-radius`                      | `NAVIQORE_SERVICE_WALK_SEARCH_RADIUS`                      |
+| `walk.calculator.type`                    | `WALK_CALCULATOR_TYPE`                    | `naviqore.service.walk.calculator-type`                    | `NAVIQORE_SERVICE_WALK_CALCULATOR_TYPE`                    |
+| `walk.speed`                              | `WALK_SPEED`                              | `naviqore.service.walk.speed`                              | `NAVIQORE_SERVICE_WALK_SPEED`                              |
+| `walk.duration.minimum`                   | `WALK_DURATION_MINIMUM`                   | `naviqore.service.walk.duration-minimum`                   | `NAVIQORE_SERVICE_WALK_DURATION_MINIMUM`                   |
+| –                                         | –                                         | `naviqore.service.optimize-travel-time`                    | `NAVIQORE_SERVICE_OPTIMIZE_TRAVEL_TIME`                    |
+| `raptor.days.to.scan`                     | `RAPTOR_DAYS_TO_SCAN`                     | `naviqore.raptor.days-to-scan`                             | `NAVIQORE_RAPTOR_DAYS_TO_SCAN`                             |
+| `raptor.range`                            | `RAPTOR_RANGE`                            | removed                                                    | –                                                          |
+| `transfer.duration.same.stop.default`     | `TRANSFER_DURATION_SAME_STOP_DEFAULT`     | `naviqore.raptor.same-stop-transfer-duration-default`      | `NAVIQORE_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT`      |
+| `cache.service.day.size`                  | `CACHE_SERVICE_DAY_SIZE`                  | `naviqore.raptor.stop-time-cache-size`                     | `NAVIQORE_RAPTOR_STOP_TIME_CACHE_SIZE`                     |
+| `cache.eviction.strategy`                 | `CACHE_EVICTION_STRATEGY`                 | `naviqore.raptor.stop-time-cache-strategy`                 | `NAVIQORE_RAPTOR_STOP_TIME_CACHE_STRATEGY`                 |
+| –                                         | –                                         | `naviqore.routing.time-window-duration-maximum`            | `NAVIQORE_ROUTING_TIME_WINDOW_DURATION_MAXIMUM`            |
+| `app.home-page.enabled`                   | `APP_HOME_PAGE_ENABLED`                   | `naviqore.home-page.enabled`                               | `NAVIQORE_HOME_PAGE_ENABLED`                               |
 
 ### Defaults and resources
 
 - **Travel time.** A connection without a time window leaves as late as its arrival allows: the service queries the
   router a second time for each connection, backward from its arrival, which takes about as long as the first query
-  (`app.raptor.optimize-travel-time`, on by default). `raptor.range` did this in 4.x for a range of its own, and was
-  off by default. Turned off, a connection takes the first trip it can catch, as in 4.x by default.
-- **Cache.** 30 service days are cached instead of 5 (`app.cache.service-day-size`). A day now holds the stop times of
-  the trips running on it only, 26 MB instead of 293 MB on the Swiss feed, so 30 days take less heap than 5 did.
+  (`naviqore.service.optimize-travel-time`, on by default). `raptor.range` did this in 4.x for a range of its own, and
+  was off by default. Turned off, a connection takes the first trip it can catch, as in 4.x by default.
+- **Cache.** 30 service days are cached instead of 5 (`naviqore.raptor.stop-time-cache-size`). A day now holds the
+  stop times of the trips running on it only, 26 MB instead of 293 MB on the Swiss feed, so 30 days take less heap
+  than 5 did.
 - **Time windows.** A request with a time window longer than a day is refused with status 400 (`invalid-parameters`).
   A query over a time window runs a search for each departure in it and reads the stop times of every day it reaches,
-  so a long window takes much time and memory. `app.raptor.time-window-duration-maximum` sets the limit in seconds;
-  4.x had none.
+  so a long window takes much time and memory. `naviqore.routing.time-window-duration-maximum` sets the limit in
+  seconds; 4.x had none.
 - **Startup.** The rows of `transfers.txt` for particular routes and trips are read and applied, 966 934 of them on the
   Swiss feed, which take about 160 MB of heap once the service is built. A row that cannot be applied, invalid or
   naming a stop a trip does not call at, is skipped with a warning instead of failing the reading of the feed, and the
@@ -84,17 +89,23 @@ the interfaces of `naviqore-timetable` instead.
 
 ### Service
 
-| 4.x                                                                         | 5.0                                                           |
-|-----------------------------------------------------------------------------|---------------------------------------------------------------|
-| `ServiceConfig.builder().gtfsScheduleRepository(...)`                       | `ServiceConfig.builder().timetableRepository(...)`            |
-| `org.naviqore.service.repo.GtfsScheduleRepository`                          | `org.naviqore.service.repo.TimetableRepository`               |
-| `ServiceConfig.raptorRange`                                                 | removed; a query with a time window is a range query          |
-| –                                                                           | `ServiceConfig.raptorOptimizeTravelTime`, `true` by default   |
-| `ServiceConfig.DEFAULT_CACHE_SIZE`                                          | `ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE`                |
-| package `org.naviqore.service.gtfs.raptor`                                  | package `org.naviqore.service.raptor`                         |
-| `GtfsRaptorService`, `GtfsRaptorServiceInitializer`, `GtfsRaptor…`          | `RaptorService`, `RaptorServiceInitializer`, `RaptorService…` |
-| `GtfsToRaptorConverter`, `GtfsTripMaskProvider`                             | `TimetableToRaptorConverter`, `TimetableTripMaskProvider`     |
-| `StopSortStrategy.getComparator` of `org.naviqore.gtfs.schedule.model.Stop` | of `org.naviqore.timetable.model.Stop`                        |
+| 4.x                                                                                            | 5.0                                                                                                         |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `ServiceConfig.builder().gtfsScheduleRepository(...)`                                          | `ServiceConfig.builder().timetableRepository(...)`                                                          |
+| `org.naviqore.service.repo.GtfsScheduleRepository`                                             | `org.naviqore.service.repo.TimetableRepository`                                                             |
+| `ServiceConfig.gtfsStaticUpdateCron`, `DEFAULT_GTFS_STATIC_UPDATE_CRON`                        | removed; the application updates its feed (`naviqore.gtfs.static.update-cron`)                              |
+| `ServiceConfig.transferDurationSameStopDefault`, `DEFAULT_TRANSFER_DURATION_SAME_STOP_DEFAULT` | `ServiceConfig.raptorSameStopTransferDurationDefault`, `DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT` |
+| `ServiceConfig.raptorRange`, `DEFAULT_RAPTOR_RANGE`                                            | removed; a query with a time window is a range query                                                        |
+| –                                                                                              | `ServiceConfig.optimizeTravelTime`, `DEFAULT_OPTIMIZE_TRAVEL_TIME`, `true`                                  |
+| `ServiceConfig.cacheServiceDaySize`, `DEFAULT_CACHE_SIZE`                                      | `ServiceConfig.raptorStopTimeCacheSize`, `DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE`                              |
+| `ServiceConfig.cacheEvictionStrategy`, `DEFAULT_CACHE_EVICTION_STRATEGY`                       | `ServiceConfig.raptorStopTimeCacheStrategy`, `DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY`                      |
+| package `org.naviqore.service.gtfs.raptor`                                                     | package `org.naviqore.service.raptor`                                                                       |
+| `GtfsRaptorService`, `GtfsRaptorServiceInitializer`, `GtfsRaptor…`                             | `RaptorService`, `RaptorServiceInitializer`, `RaptorService…`                                               |
+| `GtfsToRaptorConverter`, `GtfsTripMaskProvider`                                                | `TimetableToRaptorConverter`, `TimetableTripMaskProvider`                                                   |
+| `StopSortStrategy.getComparator` of `org.naviqore.gtfs.schedule.model.Stop`                    | of `org.naviqore.timetable.model.Stop`                                                                      |
+
+The settings of `ServiceConfig` are named after the properties of the application without `naviqore` and `service`,
+such as `walkSpeed` after `naviqore.service.walk.speed`; those starting with `raptor` configure the router.
 
 A repository of a GTFS feed is `() -> new GtfsScheduleReader().read(path)`, as in the [README](../README.md). The
 interfaces of `PublicTransitService` and the query configuration are those of 4.x. The departure and arrival time of a

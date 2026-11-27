@@ -34,10 +34,16 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     private RouteTrips @Nullable [] routes = null;
 
     public TimetableTripMaskProvider(Timetable schedule) {
-        this(schedule, ServiceConfig.DEFAULT_CACHE_SERVICE_DAY_SIZE,
-                EvictionCache.Strategy.valueOf(ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY.name()));
+        this(schedule, ServiceConfig.DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE,
+                EvictionCache.Strategy.valueOf(ServiceConfig.DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY.name()));
     }
 
+    /**
+     * @param schedule  the timetable.
+     * @param cacheSize the number of service days whose stop times the router caches: the active services of twenty
+     *                  times as many dates are cached, at most 365.
+     * @param strategy  the eviction strategy of the cache.
+     */
     public TimetableTripMaskProvider(Timetable schedule, int cacheSize, EvictionCache.Strategy strategy) {
         this.schedule = schedule;
         this.cache = new TimetableTripMaskProvider.MaskCache(cacheSize, strategy);
@@ -181,13 +187,13 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     /**
-     * Caches for active services (= timetable calendars) per date and raptor trip mask instances.
+     * Caches the active services (= timetable calendars) per date.
      */
     private class MaskCache {
         private final EvictionCache<LocalDate, String> activeServices;
 
         /**
-         * @param cacheSize the maximum number of trip mask instances to be cached.
+         * @param cacheSize the number of service days whose stop times the router caches.
          * @param strategy  the cache eviction strategy.
          */
         MaskCache(int cacheSize, EvictionCache.Strategy strategy) {

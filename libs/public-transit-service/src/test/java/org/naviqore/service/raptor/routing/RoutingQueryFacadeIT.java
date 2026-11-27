@@ -125,15 +125,15 @@ class RoutingQueryFacadeIT {
 
         // setup cache and trip mask provider
         EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(
-                serviceConfig.getCacheEvictionStrategy().name());
+                serviceConfig.getRaptorStopTimeCacheStrategy().name());
         TimetableTripMaskProvider tripMaskProvider = new TimetableTripMaskProvider(gtfsSchedule,
-                serviceConfig.getCacheServiceDaySize(), cacheStrategy);
+                serviceConfig.getRaptorStopTimeCacheSize(), cacheStrategy);
 
         // configure and setup raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(serviceConfig.getRaptorDaysToScan())
-                .sameStopTransferDurationDefault(serviceConfig.getTransferDurationSameStopDefault())
-                .stopTimeCacheSize(serviceConfig.getCacheServiceDaySize())
+                .sameStopTransferDurationDefault(serviceConfig.getRaptorSameStopTransferDurationDefault())
+                .stopTimeCacheSize(serviceConfig.getRaptorStopTimeCacheSize())
                 .stopTimeCacheStrategy(cacheStrategy)
                 .maskProvider(tripMaskProvider)
                 .build();
@@ -306,7 +306,7 @@ class RoutingQueryFacadeIT {
             ServiceConfig serviceConfig = ServiceConfig.builder()
                     .timetableRepository(new NoTimetableRepository())
                     .walkDurationMinimum(WALK_DURATION_MINIMUM)
-                    .raptorOptimizeTravelTime(false)
+                    .optimizeTravelTime(false)
                     .build();
             facade = buildFacade(schedule, serviceConfig);
 

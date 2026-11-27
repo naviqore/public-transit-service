@@ -1,8 +1,8 @@
 package org.naviqore.app.service;
 
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.naviqore.app.config.AppProperties;
+import org.jspecify.annotations.Nullable;
+import org.naviqore.app.config.NaviqoreProperties;
 import org.naviqore.app.infrastructure.GtfsScheduleFile;
 import org.naviqore.app.infrastructure.GtfsScheduleS3;
 import org.naviqore.app.infrastructure.GtfsScheduleUrl;
@@ -20,36 +20,35 @@ import java.util.Locale;
  */
 @Component
 @Getter
-@Slf4j
 public class ServiceConfigParser {
+
+    private static final String URI_PROPERTY = "naviqore.gtfs.static.uri";
 
     private final ServiceConfig serviceConfig;
 
-    public ServiceConfigParser(AppProperties properties) {
-        AppProperties.Gtfs.Static staticFeed = properties.getGtfs().getStaticFeed();
-        String gtfsStaticUri = staticFeed.getUri();
+    public ServiceConfigParser(NaviqoreProperties properties) {
+        String gtfsStaticUri = properties.getGtfs().getStaticFeed().getUri();
         if (gtfsStaticUri == null || gtfsStaticUri.isBlank()) {
-            throw new IllegalArgumentException("No static GTFS feed is set: app.gtfs.static.uri is empty.");
+            throw new IllegalArgumentException("No static GTFS feed is set: " + URI_PROPERTY + " is empty.");
         }
-        AppProperties.Transfer.Duration transferDuration = properties.getTransfer().getDuration();
-        AppProperties.Walk walk = properties.getWalk();
-        AppProperties.Raptor raptor = properties.getRaptor();
-        AppProperties.Cache cache = properties.getCache();
+        NaviqoreProperties.Service service = properties.getService();
+        NaviqoreProperties.Service.Transfer.Duration transferDuration = service.getTransfer().getDuration();
+        NaviqoreProperties.Service.Walk walk = service.getWalk();
+        NaviqoreProperties.Raptor raptor = properties.getRaptor();
 
         this.serviceConfig = ServiceConfig.builder()
                 .timetableRepository(getRepository(gtfsStaticUri))
-                .gtfsStaticUpdateCron(staticFeed.getUpdateCron())
-                .transferDurationSameStopDefault(transferDuration.getSameStopDefault())
                 .transferDurationBetweenStopsMinimum(transferDuration.getBetweenStopsMinimum())
                 .transferDurationAccessEgress(transferDuration.getAccessEgress())
                 .walkSearchRadius(walk.getSearchRadius())
                 .walkCalculatorType(walk.getCalculatorType())
                 .walkSpeed(walk.getSpeed())
                 .walkDurationMinimum(walk.getDurationMinimum())
+                .optimizeTravelTime(service.isOptimizeTravelTime())
                 .raptorDaysToScan(raptor.getDaysToScan())
-                .raptorOptimizeTravelTime(raptor.isOptimizeTravelTime())
-                .cacheServiceDaySize(cache.getServiceDaySize())
-                .cacheEvictionStrategy(cache.getEvictionStrategy())
+                .raptorSameStopTransferDurationDefault(raptor.getSameStopTransferDurationDefault())
+                .raptorStopTimeCacheSize(raptor.getStopTimeCacheSize())
+                .raptorStopTimeCacheStrategy(raptor.getStopTimeCacheStrategy())
                 .build();
     }
 
@@ -58,11 +57,17 @@ public class ServiceConfigParser {
             return new GtfsScheduleFile(gtfsStaticUri);
         }
 
-        UriScheme scheme = getUriScheme(gtfsStaticUri);
+        String scheme;
+        try {
+            scheme = new URI(gtfsStaticUri).getScheme();
+        } catch (URISyntaxException e) {
+            throw invalidUri(gtfsStaticUri, e);
+        }
 
-        return switch (scheme) {
-            case HTTP, HTTPS -> new GtfsScheduleUrl(gtfsStaticUri);
-            case S3 -> new GtfsScheduleS3(gtfsStaticUri);
+        return switch (scheme == null ? "" : scheme.toLowerCase(Locale.ROOT)) {
+            case "http", "https" -> new GtfsScheduleUrl(gtfsStaticUri);
+            case "s3" -> new GtfsScheduleS3(gtfsStaticUri);
+            default -> throw invalidUri(gtfsStaticUri, null);
         };
     }
 
@@ -71,23 +76,8 @@ public class ServiceConfigParser {
         return file.exists() && file.isFile();
     }
 
-    private static UriScheme getUriScheme(String uri) {
-        try {
-            URI parsedUri = new URI(uri);
-            String scheme = parsedUri.getScheme();
-            return UriScheme.valueOf(scheme.toUpperCase(Locale.ROOT));
-        } catch (URISyntaxException e) {
-            log.error("Error parsing URI: {}. Exception: {}", uri, e.getMessage(), e);
-            throw new IllegalArgumentException("Invalid URI format: " + uri, e);
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid URI scheme: {}. Exception: {}", uri, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    private enum UriScheme {
-        HTTP,
-        HTTPS,
-        S3
+    private static IllegalArgumentException invalidUri(String gtfsStaticUri, @Nullable URISyntaxException cause) {
+        return new IllegalArgumentException(URI_PROPERTY + " is neither an existing file nor a URI with scheme " +
+                "http, https or s3: " + gtfsStaticUri, cause);
     }
 }

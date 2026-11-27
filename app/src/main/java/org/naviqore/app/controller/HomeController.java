@@ -2,7 +2,7 @@ package org.naviqore.app.controller;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.time.format.DateTimeFormatter;
 
 @Controller
-@ConditionalOnProperty("app.home-page.enabled")
+@ConditionalOnBooleanProperty(name = "naviqore.home-page.enabled", matchIfMissing = true)
 public class HomeController {
 
     private final @Nullable String version;

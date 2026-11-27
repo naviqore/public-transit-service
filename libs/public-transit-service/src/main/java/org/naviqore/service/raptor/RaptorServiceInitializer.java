@@ -81,15 +81,16 @@ public class RaptorServiceInitializer {
     private static RaptorRouter createRaptorRouter(ServiceConfig config, Timetable schedule,
                                                    List<TransferGenerator> transferGenerators) {
         // setup cache and trip mask provider
-        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(config.getCacheEvictionStrategy().name());
+        EvictionCache.Strategy cacheStrategy = EvictionCache.Strategy.valueOf(
+                config.getRaptorStopTimeCacheStrategy().name());
         TimetableTripMaskProvider tripMaskProvider = new TimetableTripMaskProvider(schedule,
-                config.getCacheServiceDaySize(), cacheStrategy);
+                config.getRaptorStopTimeCacheSize(), cacheStrategy);
 
         // configure raptor
         RaptorConfig raptorConfig = RaptorConfig.builder()
                 .daysToScan(config.getRaptorDaysToScan())
-                .sameStopTransferDurationDefault(config.getTransferDurationSameStopDefault())
-                .stopTimeCacheSize(config.getCacheServiceDaySize())
+                .sameStopTransferDurationDefault(config.getRaptorSameStopTransferDurationDefault())
+                .stopTimeCacheSize(config.getRaptorStopTimeCacheSize())
                 .stopTimeCacheStrategy(cacheStrategy)
                 .maskProvider(tripMaskProvider)
                 .build();

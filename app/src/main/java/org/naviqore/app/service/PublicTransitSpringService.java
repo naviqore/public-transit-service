@@ -1,13 +1,15 @@
 package org.naviqore.app.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.naviqore.app.config.NaviqoreProperties;
 import org.naviqore.service.*;
 import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.*;
 import org.naviqore.utils.spatial.GeoCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,19 +22,29 @@ import java.util.Random;
 
 @Service
 @Slf4j
-public class PublicTransitSpringService implements PublicTransitService {
+public class PublicTransitSpringService implements PublicTransitService, SchedulingConfigurer {
 
     private final ServiceConfig config;
+    private final String updateCron;
     private PublicTransitService delegate;
 
     @Autowired
-    public PublicTransitSpringService(ServiceConfigParser parser) {
+    public PublicTransitSpringService(ServiceConfigParser parser, NaviqoreProperties properties) {
         log.info("Initializing public transit spring service");
         this.config = parser.getServiceConfig();
+        this.updateCron = properties.getGtfs().getStaticFeed().getUpdateCron();
         this.delegate = createDelegate();
     }
 
-    @Scheduled(cron = "${app.gtfs.static.update-cron}")
+    /**
+     * Schedules the updates of the static GTFS feed by the cron expression of the bound properties, which also hold
+     * its default.
+     */
+    @Override
+    public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+        taskRegistrar.addCronTask(this::updateStaticScheduleTask, updateCron);
+    }
+
     public void updateStaticScheduleTask() {
         log.info("Updating public transit service with static GTFS");
         try {

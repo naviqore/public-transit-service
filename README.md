@@ -46,7 +46,7 @@ Follow the steps below to build and run the project locally:
 3. Run the application module:
 
    ```bash
-   export GTFS_STATIC_URI=<URL or PATH>
+   export NAVIQORE_GTFS_STATIC_URI=<URL or PATH>
    ./mvnw spring-boot:run -pl app
    ```
 
@@ -109,12 +109,13 @@ public class PublicTransitServiceExample {
 To deploy `public-transit-service` using Docker, run the following command:
 
 ```bash
-docker run -p 8080:8080 -e GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public-transit-service:latest
+docker run -p 8080:8080 -e NAVIQORE_GTFS_STATIC_URI=<URL or PATH> ghcr.io/naviqore/public-transit-service:latest
 ```
 
 For more configuration options, refer to the [application.properties](app/src/main/resources/application.properties)
-file. Version 5.0 moved the properties under `app`; each is set from the environment variable named after it without
-`app`, and the variables of 4.x keep their names but one, see [docs/upgrade.md](docs/upgrade.md).
+file. Each property is set by the environment variable of its name in upper case, with `.` and `-` replaced by `_`, such
+as `NAVIQORE_GTFS_STATIC_URI` for `naviqore.gtfs.static.uri`. Version 5.0 moved the properties under `naviqore` and
+renamed their environment variables, see [docs/upgrade.md](docs/upgrade.md).
 
 Access the service at http://localhost:8080 to explore schedules and query transit connections.
 
