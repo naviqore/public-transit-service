@@ -135,7 +135,9 @@ pair of trips, the most specific applies, as GTFS ranks them: the one naming bot
 trip, both routes, a route; where none applies, the transfers of the stops do. At one stop, the time of a rule is a
 same stop transfer time, at least the minimum transfer duration of the query; between two stops it is a walk, no
 longer than the longest walk of the query, to which that duration is added. Staying on board takes no time and no
-minimum, but is a ride of its own, so a transfer.
+minimum, but is a ride of its own, so a transfer. It needs no pickup or drop-off where the vehicle continues, as the
+rider neither alights nor boards: the arriving trip reaches the stop then only to stay on board, with no arrival there
+to change or walk from, and the departing trip is boarded there only by staying on board.
 
 Rules that differ by trip do not fit the labels of a stop: a restrictive rule, which refuses the transfer or takes
 longer than the stop, would hide an arrival on another route that transfers as the stop allows. So the router keeps
@@ -238,7 +240,7 @@ stops, unless one for the stops themselves is given.
 
 The query's minimum transfer duration applies to all but staying on board. A trip is boarded where its `pickup_type`
 is not 1 and left where its `drop_off_type` is not 1: a pickup or drop-off arranged by phone or with the driver is
-possible.
+possible. Staying on board needs neither.
 
 The GTFS reader skips a row of `transfers.txt` it cannot apply with a warning, as it skips invalid rows of the other
 files, and logs how many it skipped: a row that is invalid as GTFS defines it, such as one of the in-seat types at a

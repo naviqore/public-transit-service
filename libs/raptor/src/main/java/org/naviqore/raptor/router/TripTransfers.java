@@ -55,6 +55,7 @@ final class TripTransfers {
     private static final Group[] NO_GROUPS = new Group[0];
     private static final int[] NO_SLOTS = new int[0];
     private static final int[] NO_OFFSETS = new int[0];
+    private static final boolean[] NO_CALLS = new boolean[0];
 
     private final int numberOfStops;
     private final int numberOfGroups;
@@ -229,9 +230,14 @@ final class TripTransfers {
         // the number of the group among the groups of the router
         int index = NO_INDEX;
         // where the search boards the route the group ends at (routing backward: starts from): at each of its calls at
-        // the stop, since a trip reached too late for one call may be reached in time for a later one
+        // the stop, since a trip reached too late for one call may be reached in time for a later one; and whether the
+        // call picks up passengers (sets them down), else only a trip continued in seat is boarded there
         int[] toOffsets = NO_OFFSETS;
         int[] fromOffsets = NO_OFFSETS;
+        boolean[] toBoarding = NO_CALLS;
+        boolean[] fromAlighting = NO_CALLS;
+        // whether a rule of the group lets the rider stay on board, which needs no pickup or drop-off at the stops
+        boolean inSeat;
         // whether a trip transfer of the group refuses a change, or takes longer than the stops, that the stops allow
         boolean restrictive;
         // the walk or same stop transfer time of the stops, respecting a refusal, and as if they did not refuse one
@@ -393,6 +399,9 @@ final class TripTransfers {
                 pairRules[i] = Objects.requireNonNull(pairMap.get(pairs[i]));
             }
             pairMap.clear();
+            inSeat = routeRule == IN_SEAT || Arrays.stream(pairRules).anyMatch(rule -> rule == IN_SEAT) || Stream.of(
+                            fromTripRules, toTripRules, fromTripAnyRules, toTripAnyRules)
+                    .anyMatch(rules -> rules.containsValue(IN_SEAT));
             fromPositions = IntStream.concat(Arrays.stream(pairs).mapToInt(pair -> (int) (pair >>> 32)),
                     IntStream.concat(keys(fromTripRules), keys(fromTripAnyRules))).distinct().sorted().toArray();
             toPositions = IntStream.concat(Arrays.stream(pairs).mapToInt(pair -> (int) pair),
@@ -534,20 +543,35 @@ final class TripTransfers {
 
         /**
          * Finds where a route calls at a stop: the positions it picks up passengers at, but not at its end, or for the
-         * route a group starts from, those it sets them down at, but not at its start.
+         * route a group starts from, those it sets them down at, but not at its start. A group that lets the rider
+         * stay on board takes every call but the end (start), as staying on board is neither.
          *
          * @param to whether the route is the one the group ends at.
          */
-        private int[] findOffsets(int routeIdx, int stopIdx, boolean to) {
-            Route route = routeTraversal.routes()[routeIdx];
+        private int[] findOffsets(Group group, boolean to) {
+            Route route = routeTraversal.routes()[to ? group.toRouteIdx : group.fromRouteIdx];
+            int stopIdx = to ? group.toStopIdx : group.fromStopIdx;
             int numberOfStops = route.numberOfStops();
-            return IntStream.range(0, numberOfStops).filter(offset -> {
+            return IntStream.range(to ? 0 : 1, to ? numberOfStops - 1 : numberOfStops).filter(offset -> {
                 RouteStop routeStop = routeTraversal.routeStops()[route.firstRouteStopIdx() + offset];
-                if (routeStop.stopIndex() != stopIdx) {
-                    return false;
-                }
-                return to ? offset < numberOfStops - 1 && routeStop.boarding() : offset > 0 && routeStop.alighting();
+                return routeStop.stopIndex() == stopIdx && (group.inSeat || isRegular(routeStop, to));
             }).toArray();
+        }
+
+        /**
+         * Whether a call of a route can be boarded at for a change, or for the route a group starts from, left.
+         */
+        private static boolean isRegular(RouteStop routeStop, boolean to) {
+            return to ? routeStop.boarding() : routeStop.alighting();
+        }
+
+        private boolean[] findRegularCalls(Group group, int[] offsets, boolean to) {
+            Route route = routeTraversal.routes()[to ? group.toRouteIdx : group.fromRouteIdx];
+            boolean[] regular = new boolean[offsets.length];
+            for (int i = 0; i < offsets.length; i++) {
+                regular[i] = isRegular(routeTraversal.routeStops()[route.firstRouteStopIdx() + offsets[i]], to);
+            }
+            return regular;
         }
 
         /**
@@ -575,8 +599,11 @@ final class TripTransfers {
             int numberOfGroups = 0;
             for (Group group : groups.values()) {
                 group.index = numberOfGroups++;
-                group.toOffsets = findOffsets(group.toRouteIdx, group.toStopIdx, true);
-                group.fromOffsets = findOffsets(group.fromRouteIdx, group.fromStopIdx, false);
+                group.complete();
+                group.toOffsets = findOffsets(group, true);
+                group.fromOffsets = findOffsets(group, false);
+                group.toBoarding = findRegularCalls(group, group.toOffsets, true);
+                group.fromAlighting = findRegularCalls(group, group.fromOffsets, false);
                 if (group.isAtOneStop()) {
                     int sameStopTime = stopContext.stops()[group.fromStopIdx].sameStopTransferTime();
                     group.stopTime = sameStopTime;
@@ -586,7 +613,6 @@ final class TripTransfers {
                     Integer refused = refusedWalks.get(walk(group.fromStopIdx, group.toStopIdx));
                     group.stopTime = refused == null ? group.defaultTime : refused;
                 }
-                group.complete();
                 group.restrictive = group.isRestrictive();
             }
 

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.naviqore.gtfs.schedule.GtfsScheduleDataset;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.service.*;
@@ -15,6 +17,7 @@ import org.naviqore.utils.spatial.GeoCoordinate;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -380,6 +383,93 @@ class RaptorServiceIT {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * A feed of its own, read from its files: trip T1 runs S 08:00 - P 08:10, where its vehicle continues as trip T2,
+     * leaving a stop at 08:10 for Z 08:20. P2 is a stop 60 m from P.
+     */
+    @Nested
+    class StayingOnBoard {
+
+        private static final ZoneId ZURICH = ZoneId.of("Europe/Zurich");
+        private static final OffsetDateTime DEPARTURE = LocalDateTime.of(2026, 6, 1, 7, 55)
+                .atZone(ZURICH)
+                .toOffsetDateTime();
+        private static final OffsetDateTime ARRIVAL = LocalDateTime.of(2026, 6, 1, 8, 25)
+                .atZone(ZURICH)
+                .toOffsetDateTime();
+
+        @TempDir
+        private Path directory;
+
+        private static String describe(Leg leg) {
+            return leg instanceof PublicTransitLeg ride ? ride.getTrip().getId() : leg.getLegType().name();
+        }
+
+        /**
+         * Starts the service on the feed, with T2 leaving from a stop, and the drop-off type of T1 and the pickup type
+         * of T2 there.
+         */
+        private void start(String toStop, String dropOffType, String pickupType)
+                throws IOException, InterruptedException {
+            Files.writeString(directory.resolve("agency.txt"),
+                    "agency_id,agency_name,agency_url,agency_timezone\nA,Agency,https://a.example,Europe/Zurich\n");
+            Files.writeString(directory.resolve("calendar.txt"), """
+                    service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+                    WK,1,1,1,1,1,1,1,20260101,20261231
+                    """);
+            Files.writeString(directory.resolve("routes.txt"), """
+                    route_id,agency_id,route_short_name,route_long_name,route_type
+                    R1,A,1,,3
+                    R2,A,2,,3
+                    """);
+            Files.writeString(directory.resolve("trips.txt"), "route_id,service_id,trip_id\nR1,WK,T1\nR2,WK,T2\n");
+            Files.writeString(directory.resolve("stops.txt"), """
+                    stop_id,stop_name,stop_lat,stop_lon
+                    S,S,47.0,8.0
+                    P,P,47.1,8.0
+                    P2,P2,47.1,8.0008
+                    Z,Z,47.2,8.0
+                    """);
+            Files.writeString(directory.resolve("stop_times.txt"), String.format("""
+                    trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+                    T1,08:00:00,08:00:00,S,1,,
+                    T1,08:10:00,08:10:00,P,2,,%s
+                    T2,08:10:00,08:10:00,%s,1,%s,
+                    T2,08:20:00,08:20:00,Z,2,,
+                    """, dropOffType, toStop, pickupType));
+            Files.writeString(directory.resolve("transfers.txt"), """
+                    from_stop_id,to_stop_id,from_route_id,to_route_id,from_trip_id,to_trip_id,transfer_type
+                    P,%s,,,T1,T2,4
+                    """.formatted(toStop));
+            TimetableRepository repo = () -> new GtfsScheduleReader().read(directory.toString());
+            service = new RaptorServiceInitializer(ServiceConfig.builder().timetableRepository(repo).build()).get();
+        }
+
+        /**
+         * The legs of each connection from a stop to another, departing at 07:55 or arriving by 08:25.
+         */
+        private List<List<String>> route(String from, String to, TimeType timeType)
+                throws StopNotFoundException, ConnectionRoutingException {
+            return service.getConnections(service.getStopById(from), service.getStopById(to),
+                            timeType == TimeType.DEPARTURE ? DEPARTURE : ARRIVAL, timeType,
+                            ConnectionQueryConfig.defaults())
+                    .stream()
+                    .map(connection -> connection.getLegs().stream().map(StayingOnBoard::describe).toList())
+                    .toList();
+        }
+
+        @ParameterizedTest
+        @EnumSource(TimeType.class)
+        void needsNoDropOffOrPickupWhereTheVehicleContinues(TimeType timeType) throws Exception {
+            start("P", "1", "1");
+
+            assertEquals(List.of(List.of("T1", "T2")), route("S", "Z", timeType));
+            // T1 sets down no one at P, and T2 picks up no one there
+            assertEquals(List.of(), route("S", "P", timeType));
+            assertEquals(List.of(), route("P", "Z", timeType));
         }
     }
 }
