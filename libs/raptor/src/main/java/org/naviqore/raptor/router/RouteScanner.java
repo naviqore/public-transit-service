@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static org.naviqore.raptor.router.QueryState.INFINITY;
@@ -76,11 +77,12 @@ class RouteScanner {
      * @param queryConfig       the query config.
      * @param timeType          the time type (arrival or departure).
      * @param referenceDateTime the reference date time for the query.
-     * @param maxDaysToScan     the maximum number of days to scan.
+     * @param maxDaysToScan     the maximum number of days to scan, without a time window.
+     * @param timeWindow        the time window of a range query in seconds, 0 for none.
      * @param severalPasses     whether the query runs several passes, which find the same trip transfers again.
      */
     RouteScanner(QueryState queryState, RaptorData raptorData, QueryConfig queryConfig, TimeType timeType,
-                 OffsetDateTime referenceDateTime, int maxDaysToScan, boolean severalPasses) {
+                 OffsetDateTime referenceDateTime, int maxDaysToScan, int timeWindow, boolean severalPasses) {
         // constant data structures
         this.stops = raptorData.getStopContext().stops();
         this.stopRoutes = raptorData.getStopContext().stopRoutes();
@@ -103,46 +105,47 @@ class RouteScanner {
             throw new IllegalArgumentException("maxDaysToScan must be greater than 0.");
         }
 
+        // a time window shifts the source times by up to its length: the days it reaches are scanned too, later ones
+        // departing, earlier ones arriving
         LocalDate referenceDate = referenceDateTime.toLocalDate();
+        OffsetDateTime windowEnd = referenceDateTime.plusSeconds((long) timeDirection * timeWindow);
+        int windowDays = (int) Math.abs(ChronoUnit.DAYS.between(referenceDate, windowEnd.toLocalDate()));
+        int actualDaysToScan;
         if (maxDaysToScan == 1) {
             // single-day scan
-            days = new DayStopTimes[1];
-            days[0] = raptorData.getStopTimeProvider().getStopTimesForDate(referenceDate, queryConfig);
+            actualDaysToScan = 1;
             startDayOffset = 0;
 
-        } else {
-            // multi-day scan: there is no need to scan the next day for arrival trips but previous day is maybe needed
-            // in departure trips
-            int actualDaysToScan;
-            if (forward) {
-                LocalDate previousDay = referenceDate.minusDays(1);
-                DayStopTimes previousDayStopTimes = raptorData.getStopTimeProvider()
-                        .getStopTimesForDate(previousDay, queryConfig);
+        } else if (forward) {
+            // multi-day scan: the previous day is maybe needed in departure trips
+            LocalDate previousDay = referenceDate.minusDays(1);
+            DayStopTimes previousDayStopTimes = raptorData.getStopTimeProvider()
+                    .getStopTimesForDate(previousDay, queryConfig);
 
-                int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(ZoneOffset.UTC),
-                        referenceDateTime).toSeconds();
+            int departureTimeInPreviousDaySeconds = (int) Duration.between(previousDay.atStartOfDay(ZoneOffset.UTC),
+                    referenceDateTime).toSeconds();
 
-                // if latest stop time of previous day is after / equal the departure time, we need to include the
-                // previous day to scanning
-                if (previousDayStopTimes.latest() >= departureTimeInPreviousDaySeconds) {
-                    startDayOffset = -1;
-                    actualDaysToScan = maxDaysToScan;
-                } else {
-                    startDayOffset = 0;
-                    actualDaysToScan = maxDaysToScan - 1;
-                }
-
+            // if latest stop time of previous day is after / equal the departure time, we need to include the
+            // previous day to scanning
+            if (previousDayStopTimes.latest() >= departureTimeInPreviousDaySeconds) {
+                startDayOffset = -1;
+                actualDaysToScan = maxDaysToScan;
             } else {
-                actualDaysToScan = maxDaysToScan - 1;
                 startDayOffset = 0;
+                actualDaysToScan = maxDaysToScan - 1;
             }
 
-            days = new DayStopTimes[actualDaysToScan];
-            for (int i = 0; i < actualDaysToScan; i++) {
-                int dayOffset = i + startDayOffset;
-                LocalDate date = forward ? referenceDate.plusDays(dayOffset) : referenceDate.minusDays(dayOffset);
-                days[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
-            }
+        } else {
+            // multi-day scan: there is no need to scan the next day for arrival trips
+            actualDaysToScan = maxDaysToScan - 1;
+            startDayOffset = 0;
+        }
+
+        days = new DayStopTimes[actualDaysToScan + windowDays];
+        for (int i = 0; i < days.length; i++) {
+            int dayOffset = i + startDayOffset;
+            LocalDate date = forward ? referenceDate.plusDays(dayOffset) : referenceDate.minusDays(dayOffset);
+            days[i] = raptorData.getStopTimeProvider().getStopTimesForDate(date, queryConfig);
         }
 
         furthestTripTimes = new int[routes.length];

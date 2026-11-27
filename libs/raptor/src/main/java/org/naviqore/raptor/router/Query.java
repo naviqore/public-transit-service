@@ -126,7 +126,7 @@ class Query {
                 config.getMaximumWalkDuration(), timeType, config.isAllowSourceTransfer(),
                 config.isAllowTargetTransfer(), targetStopIndices);
         routeScanner = new RouteScanner(queryState, raptorData, config, timeType, referenceDateTime,
-                raptorConfig.getDaysToScan(), isRangeQuery());
+                raptorConfig.getDaysToScan(), timeWindow, isRangeQuery());
     }
 
     private static boolean isOnATrip(QueryState.Label label) {

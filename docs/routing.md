@@ -92,7 +92,9 @@ A trip boarded at a stop is ridden until a stop reached in the round before allo
 which then replaces it. The trip boarded must be better: a label that comes in time for the trip ridden may, once the
 transfer time is added, only come in time for a later one, or none.
 
-The trips are those running on the days a query scans. The stop times of a day hold only the trips running on it,
+The trips are those running on the days a query scans: the days around its date that `daysToScan` gives, and for a
+range query also the days its window reaches, later ones departing and earlier ones arriving, so that a window of any
+length finds what consecutive shorter ones find together. The stop times of a day hold only the trips running on it,
 route by route, which the router caches per day. The trips of a route keep their order at every stop, since trips
 that overtake one another are held in separate routes, so the trip to take at a stop is the first one leaving at or
 after the label (routing backward, the last one arriving at or before it): read one after the other on a route that
@@ -265,15 +267,15 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-trave
 
 ### Router and service
 
-| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                   |
-|---------------------------------------|-----------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------|
-| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`. |
-| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips. Default 3.            |
-| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                       |
-| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                 |
-| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                         |
-| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.         |
-| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                     |
+| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                                      |
+|---------------------------------------|-----------------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`.                    |
+| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips, and those its window reaches. Default 3. |
+| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                                          |
+| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                                    |
+| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                                            |
+| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.                            |
+| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                                        |
 
 ## Decisions
 
