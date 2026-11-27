@@ -54,6 +54,7 @@ final class TripTransfers {
     private static final int BACKWARD = 1;
     private static final Group[] NO_GROUPS = new Group[0];
     private static final int[] NO_SLOTS = new int[0];
+    private static final int[] NO_OFFSETS = new int[0];
 
     private final int numberOfStops;
     private final int numberOfGroups;
@@ -227,9 +228,10 @@ final class TripTransfers {
         private final Map<Integer, Integer> toTripAnyRules = new HashMap<>();
         // the number of the group among the groups of the router
         int index = NO_INDEX;
-        // where the search boards the route the group ends at (routing backward: starts from), or NO_INDEX
-        int toOffset = NO_INDEX;
-        int fromOffset = NO_INDEX;
+        // where the search boards the route the group ends at (routing backward: starts from): at each of its calls at
+        // the stop, since a trip reached too late for one call may be reached in time for a later one
+        int[] toOffsets = NO_OFFSETS;
+        int[] fromOffsets = NO_OFFSETS;
         // whether a trip transfer of the group refuses a change, or takes longer than the stops, that the stops allow
         boolean restrictive;
         // the walk or same stop transfer time of the stops, respecting a refusal, and as if they did not refuse one
@@ -531,26 +533,21 @@ final class TripTransfers {
         }
 
         /**
-         * Finds where a route calls at a stop: the first position it picks up passengers at (routing backward: the last
-         * it sets them down at), but not at its end, or NO_INDEX.
+         * Finds where a route calls at a stop: the positions it picks up passengers at, but not at its end, or for the
+         * route a group starts from, those it sets them down at, but not at its start.
+         *
+         * @param to whether the route is the one the group ends at.
          */
-        private int findOffset(int routeIdx, int stopIdx, boolean first) {
+        private int[] findOffsets(int routeIdx, int stopIdx, boolean to) {
             Route route = routeTraversal.routes()[routeIdx];
             int numberOfStops = route.numberOfStops();
-            for (int i = 0; i < numberOfStops; i++) {
-                int offset = first ? i : numberOfStops - 1 - i;
+            return IntStream.range(0, numberOfStops).filter(offset -> {
                 RouteStop routeStop = routeTraversal.routeStops()[route.firstRouteStopIdx() + offset];
                 if (routeStop.stopIndex() != stopIdx) {
-                    continue;
+                    return false;
                 }
-                if (first && offset < numberOfStops - 1 && routeStop.boarding()) {
-                    return offset;
-                }
-                if (!first && offset > 0 && routeStop.alighting()) {
-                    return offset;
-                }
-            }
-            return NO_INDEX;
+                return to ? offset < numberOfStops - 1 && routeStop.boarding() : offset > 0 && routeStop.alighting();
+            }).toArray();
         }
 
         /**
@@ -578,8 +575,8 @@ final class TripTransfers {
             int numberOfGroups = 0;
             for (Group group : groups.values()) {
                 group.index = numberOfGroups++;
-                group.toOffset = findOffset(group.toRouteIdx, group.toStopIdx, true);
-                group.fromOffset = findOffset(group.fromRouteIdx, group.fromStopIdx, false);
+                group.toOffsets = findOffsets(group.toRouteIdx, group.toStopIdx, true);
+                group.fromOffsets = findOffsets(group.fromRouteIdx, group.fromStopIdx, false);
                 if (group.isAtOneStop()) {
                     int sameStopTime = stopContext.stops()[group.fromStopIdx].sameStopTransferTime();
                     group.stopTime = sameStopTime;

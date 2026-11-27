@@ -22,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Transfers between particular routes or trips: the most specific one applies to a pair of trips, the stops' walks and
  * same stop transfer times where none does, and a trip transfer that refuses a change or takes longer than the stop
  * never hides another arrival at the stop. A later trip that a trip transfer allows to change is found on another
- * service day too, and a trip boarded along a trip transfer leads to no later trip that transfer refuses. A search
- * ends where trip transfers lead in a circle.
+ * service day too, and a trip boarded along a trip transfer leads to no later trip that transfer refuses. A route
+ * calling twice at a stop is changed to at the call reached in time. A search ends where trip transfers lead in a
+ * circle.
  */
 class RaptorRouterTripTransferTest {
 
@@ -349,6 +350,80 @@ class RaptorRouterTripTransferTest {
                 Duration.ofMinutes(5), QueryConfig.defaults()).get("D");
         assertEquals(List.of("X-1", "Y-0"), tripsOf(isoline));
         assertEquals(at(8, 35), isoline.getArrivalTime());
+    }
+
+    /**
+     * F runs S - Q at 07:55, reaching Q at 08:05; L runs W - Q - R - Q - E at 07:50, calling at Q at 08:00 and again at
+     * 08:10, and reaching E at 08:20. From F to L at Q, a trip transfer takes 60 s; Q refuses transfers, or takes 600 s
+     * to change, longer than the trip transfer.
+     */
+    private static RaptorAlgorithm changesToARouteCallingTwice(boolean refusing) {
+        RaptorRouterBuilder builder = builder("S", "W", "Q", "R", "E");
+        addRoute(builder, "F", List.of("S", "Q"), new int[]{0, 10}, 7 * 60 + 55);
+        addRoute(builder, "L", List.of("W", "Q", "R", "Q", "E"), new int[]{0, 10, 15, 20, 30}, 7 * 60 + 50);
+        if (refusing) {
+            builder.refuseTransfers("Q", "Q");
+        } else {
+            builder.addTransfer("Q", "Q", 600);
+        }
+        builder.addTripTransfer(trips("Q", "F-0", "Q", "L-0", TripTransfer.Type.MINIMUM_TIME, 60));
+        return builder.build();
+    }
+
+    @Test
+    void aRouteCallingTwiceWhereItIsChangedTo_isBoardedAtTheCallReachedInTime() {
+        for (boolean refusing : new boolean[]{true, false}) {
+            RaptorAlgorithm raptor = changesToARouteCallingTwice(refusing);
+            String message = refusing ? "refusing" : "longer at the stop";
+
+            List<Connection> connections = route(raptor, Map.of("S", at(7, 55)), "E", QueryConfig.defaults());
+            assertEquals(1, connections.size(), message);
+            assertEquals(List.of("F-0", "L-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(8, 10), connections.getFirst().getRouteLegs().getLast().getDepartureTime(), message);
+            assertEquals(at(8, 20), connections.getFirst().getArrivalTime(), message);
+            connections = raptor.connectionRangeQuery(Map.of("S", at(7, 50)), Map.of("E", 0), TimeType.DEPARTURE,
+                    Duration.ofMinutes(10), QueryConfig.defaults());
+            assertEquals(List.of("F-0", "L-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(8, 20), raptor.isolineQuery(Map.of("S", at(7, 55)), TimeType.DEPARTURE,
+                    QueryConfig.defaults()).get("E").getArrivalTime(), message);
+
+            connections = raptor.connectionQuery(Map.of("E", at(8, 30)), Map.of("S", 0), TimeType.ARRIVAL,
+                    QueryConfig.defaults());
+            assertEquals(List.of("F-0", "L-0"), tripsOf(connections.getFirst()), message);
+        }
+    }
+
+    @Test
+    void aRouteCallingTwiceWhereItChangesToAnother_isLeftAtTheCallInTime_routingBackward() {
+        // L runs W - Q - R - Q - Z at 07:40, calling at Q at 07:50 and again at 08:10; G runs Q - E at 08:05, reaching
+        // E after 10. From L to G at Q, a trip transfer takes 60 s; Q refuses transfers, or takes 1200 s to change
+        for (boolean refusing : new boolean[]{true, false}) {
+            RaptorRouterBuilder builder = builder("W", "Q", "R", "Z", "E");
+            addRoute(builder, "L", List.of("W", "Q", "R", "Q", "Z"), new int[]{0, 10, 15, 30, 40}, 7 * 60 + 40);
+            addRoute(builder, "G", List.of("Q", "E"), new int[]{0, 10}, 8 * 60 + 5);
+            if (refusing) {
+                builder.refuseTransfers("Q", "Q");
+            } else {
+                builder.addTransfer("Q", "Q", 1200);
+            }
+            builder.addTripTransfer(trips("Q", "L-0", "Q", "G-0", TripTransfer.Type.MINIMUM_TIME, 60));
+            RaptorAlgorithm raptor = builder.build();
+            String message = refusing ? "refusing" : "longer at the stop";
+
+            List<Connection> connections = raptor.connectionQuery(Map.of("E", at(8, 30)), Map.of("W", 0),
+                    TimeType.ARRIVAL, QueryConfig.defaults());
+            assertEquals(1, connections.size(), message);
+            assertEquals(List.of("L-0", "G-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(7, 50), connections.getFirst().getRouteLegs().getFirst().getArrivalTime(), message);
+            connections = raptor.connectionRangeQuery(Map.of("E", at(8, 20)), Map.of("W", 0), TimeType.ARRIVAL,
+                    Duration.ofMinutes(10), QueryConfig.defaults());
+            assertEquals(List.of("L-0", "G-0"), tripsOf(connections.getFirst()), message);
+            assertEquals(at(7, 40), raptor.isolineQuery(Map.of("E", at(8, 30)), TimeType.ARRIVAL,
+                    QueryConfig.defaults()).get("W").getDepartureTime(), message);
+
+            connections = route(raptor, Map.of("W", at(7, 40)), "E", QueryConfig.defaults());
+            assertEquals(List.of("L-0", "G-0"), tripsOf(connections.getFirst()), message);
+        }
     }
 
     @Test

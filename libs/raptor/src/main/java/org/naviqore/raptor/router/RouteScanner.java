@@ -622,10 +622,11 @@ class RouteScanner {
     }
 
     /**
-     * Finds the boardings along the groups of trip transfers a route stop starts, for the next round: for each group,
-     * the best trip of the route it ends at (routing backward: starts from) that a trip of this route allows changing
-     * to. The trips of this route are those that can be boarded where the active trip was, the active trip and those
-     * after it (before it, routing backward) on every day to scan: one trip may refuse a change that a later one
+     * Finds the boardings along the groups of trip transfers a route stop starts, for the next round: for each group
+     * and each call of the route it ends at (routing backward: starts from) at its stop, the best trip of that route a
+     * trip of this route allows changing to there, since a trip reached too late at one call may be reached in time at
+     * another. The trips of this route are those that can be boarded where the active trip was, the active trip and
+     * those after it (before it, routing backward) on every day to scan: one trip may refuse a change that a later one
      * allows, also one of another service day. A trip boarded along a trip transfer is the first that transfer allows,
      * so a later trip counts only if the transfer allows it too. The trips of a day are read until one reaches the stop
      * no earlier than the best trip found leaves.
@@ -639,111 +640,124 @@ class RouteScanner {
      */
     private void addPendingBoardings(TripTransfers.Group[] groups, ActiveTrip activeTrip, int activeTime,
                                      int stopOffset, int arrivalIdx, int routeIdx, boolean boardsAfterArrival) {
+        for (TripTransfers.Group group : groups) {
+            int[] targetOffsets = forward ? group.toOffsets : group.fromOffsets;
+            for (int call = 0; call < targetOffsets.length; call++) {
+                addPendingBoarding(group, call, targetOffsets[call], activeTrip, activeTime, stopOffset, arrivalIdx,
+                        routeIdx, boardsAfterArrival);
+            }
+        }
+    }
+
+    /**
+     * Finds the boarding along a group of trip transfers at a call of the route it ends at (routing backward: starts
+     * from), see {@link #addPendingBoardings}.
+     *
+     * @param call         the number of the call among the calls of the route at the stop of the group.
+     * @param targetOffset the position of the call on the route.
+     */
+    private void addPendingBoarding(TripTransfers.Group group, int call, int targetOffset, ActiveTrip activeTrip,
+                                    int activeTime, int stopOffset, int arrivalIdx, int routeIdx,
+                                    boolean boardsAfterArrival) {
         int tripStopTimes = 2 * routes[routeIdx].numberOfStops();
         int activeTripNumber = (activeTrip.firstStopTimeIdx - days[activeTrip.dayIndex].routeStopTimes()[routeIdx]) / tripStopTimes;
         boolean limited = firstTripLimit != NO_LIMIT && isStartOfJourney(activeTrip.previousLabel);
         int limitTime = limited ? activeTrip.previousLabel.targetTime() + timeDirection * firstTripLimit : 0;
 
-        for (TripTransfers.Group group : groups) {
-            int targetOffset = forward ? group.toOffset : group.fromOffset;
-            if (targetOffset == QueryState.NO_INDEX) {
+        boolean activeHasRules = group.hasRules(activeTrip.tripOffset, forward);
+        boolean changesByStops = !group.restrictive || (boardsAfterArrival && !activeHasRules);
+        int stopTransferTime = changesByStops ? transferTime(group, TripTransfers.DEFAULT) : NOT_POSSIBLE;
+        int changedByStops = activeTime + timeDirection * stopTransferTime;
+
+        TransferTarget best = null;
+        int bestPosition = 0;
+        int bestTime = 0;
+        int bestEntryTime = 0;
+        for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
+            DayStopTimes day = days[dayIndex];
+            int numberOfTrips = day.numberOfTrips(routeIdx);
+            if (numberOfTrips == 0) {
                 continue;
             }
 
-            boolean activeHasRules = group.hasRules(activeTrip.tripOffset, forward);
-            boolean changesByStops = !group.restrictive || (boardsAfterArrival && !activeHasRules);
-            int stopTransferTime = changesByStops ? transferTime(group, TripTransfers.DEFAULT) : NOT_POSSIBLE;
-            int changedByStops = activeTime + timeDirection * stopTransferTime;
-
-            TransferTarget best = null;
-            int bestPosition = 0;
-            int bestTime = 0;
-            int bestEntryTime = 0;
-            for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
-                DayStopTimes day = days[dayIndex];
-                int numberOfTrips = day.numberOfTrips(routeIdx);
-                if (numberOfTrips == 0) {
+            int[] stopTimes = day.stopTimes();
+            int routeStopTimes = day.routeStopTimes()[routeIdx];
+            int timeOffset = timeDirection * (dayIndex + startDayOffset) * SECONDS_IN_DAY;
+            // the times the trips of the day are boarded at where the active trip was
+            int entryTimeIdx = routeStopTimes + 2 * activeTrip.entryOffset + (forward ? 1 : 0);
+            int firstTrip;
+            if (dayIndex == activeTrip.dayIndex) {
+                firstTrip = activeTripNumber;
+            } else {
+                // another day can do better only if its first trip (routing backward: its last) reaches the stop
+                // in time, and if one of its trips is boarded after the active trip (before it, routing backward)
+                int dayTime = stopTimes[routeStopTimes + (forward ? 0 : numberOfTrips - 1) * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
+                int furthestTime = (forward ? day.routeLatest()[routeIdx] : day.routeEarliest()[routeIdx]) + timeOffset;
+                if ((best != null && !isBetter(dayTime,
+                        best.entryTime())) || (stopTransferTime != NOT_POSSIBLE && !isBetter(dayTime,
+                        changedByStops)) || isBetter(furthestTime, activeTrip.entryTime)) {
                     continue;
                 }
+                firstTrip = findFirstPossibleTrip(stopTimes, entryTimeIdx, tripStopTimes, numberOfTrips,
+                        activeTrip.entryTime - timeOffset);
+            }
 
-                int[] stopTimes = day.stopTimes();
-                int routeStopTimes = day.routeStopTimes()[routeIdx];
-                int timeOffset = timeDirection * (dayIndex + startDayOffset) * SECONDS_IN_DAY;
-                // the times the trips of the day are boarded at where the active trip was
-                int entryTimeIdx = routeStopTimes + 2 * activeTrip.entryOffset + (forward ? 1 : 0);
-                int firstTrip;
-                if (dayIndex == activeTrip.dayIndex) {
-                    firstTrip = activeTripNumber;
-                } else {
-                    // another day can do better only if its first trip (routing backward: its last) reaches the stop
-                    // in time, and if one of its trips is boarded after the active trip (before it, routing backward)
-                    int dayTime = stopTimes[routeStopTimes + (forward ? 0 : numberOfTrips - 1) * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
-                    int furthestTime = (forward ? day.routeLatest()[routeIdx] : day.routeEarliest()[routeIdx]) + timeOffset;
-                    if ((best != null && !isBetter(dayTime,
-                            best.entryTime())) || (stopTransferTime != NOT_POSSIBLE && !isBetter(dayTime,
-                            changedByStops)) || isBetter(furthestTime, activeTrip.entryTime)) {
-                        continue;
-                    }
-                    firstTrip = findFirstPossibleTrip(stopTimes, entryTimeIdx, tripStopTimes, numberOfTrips,
-                            activeTrip.entryTime - timeOffset);
+            for (int trip = firstTrip; trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
+                // when the trip reaches the stop, and when it is boarded where the active trip was
+                int time = stopTimes[routeStopTimes + trip * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
+                if ((best != null && !isBetter(time, best.entryTime())) || isBeyondTimeLimit(time)) {
+                    break;
+                }
+                if (stopTransferTime != NOT_POSSIBLE && !isBetter(time, changedByStops)) {
+                    break;
+                }
+                int entryTime = stopTimes[entryTimeIdx + trip * tripStopTimes] + timeOffset;
+                if (limited && isBetter(limitTime, entryTime)) {
+                    break;
                 }
 
-                for (int trip = firstTrip; trip >= 0 && trip < numberOfTrips; trip += timeDirection) {
-                    // when the trip reaches the stop, and when it is boarded where the active trip was
-                    int time = stopTimes[routeStopTimes + trip * tripStopTimes + 2 * stopOffset + (forward ? 0 : 1)] + timeOffset;
-                    if ((best != null && !isBetter(time, best.entryTime())) || isBeyondTimeLimit(time)) {
-                        break;
-                    }
-                    if (stopTransferTime != NOT_POSSIBLE && !isBetter(time, changedByStops)) {
-                        break;
-                    }
-                    int entryTime = stopTimes[entryTimeIdx + trip * tripStopTimes] + timeOffset;
-                    if (limited && isBetter(limitTime, entryTime)) {
-                        break;
-                    }
-
-                    int position = day.tripPosition(routeIdx, trip);
-                    boolean active = dayIndex == activeTrip.dayIndex && trip == activeTripNumber;
-                    boolean hasRules = active ? activeHasRules : group.hasRules(position, forward);
-                    if (changesByStops && !hasRules) {
-                        continue;
-                    }
-                    if (!group.mayChange(position, forward)) {
-                        continue;
-                    }
-                    // whether a later trip can be boarded where the active trip was is asked of the few that do better
-                    TransferTarget target = findTripTransferTarget(group, position, time, dayIndex, trip);
-                    if (target != null && (best == null || isBetter(target.entryTime(),
-                            best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position,
-                            entryTime))) {
-                        best = target;
-                        bestPosition = position;
-                        bestTime = time;
-                        bestEntryTime = entryTime;
-                    }
+                int position = day.tripPosition(routeIdx, trip);
+                boolean active = dayIndex == activeTrip.dayIndex && trip == activeTripNumber;
+                boolean hasRules = active ? activeHasRules : group.hasRules(position, forward);
+                if (changesByStops && !hasRules) {
+                    continue;
+                }
+                if (!group.mayChange(position, forward)) {
+                    continue;
+                }
+                // whether a later trip can be boarded where the active trip was is asked of the few that do better
+                TransferTarget target = findTripTransferTarget(group, call, targetOffset, position, time, dayIndex,
+                        trip);
+                if (target != null && (best == null || isBetter(target.entryTime(),
+                        best.entryTime())) && (active || isBoardedLikeActiveTrip(activeTrip, position,
+                        entryTime))) {
+                    best = target;
+                    bestPosition = position;
+                    bestTime = time;
+                    bestEntryTime = entryTime;
                 }
             }
-            if (best == null || isBeyondTimeLimit(best.entryTime())) {
-                continue;
-            }
-            // the labels of a query of several passes may be of a pass before, which boarded after them
-            if (!severalPasses && boardsAtStop(forward ? group.toStopIdx : group.fromStopIdx, best.entryTime())) {
-                continue;
-            }
-
-            // the labels the boarding follows: the trip of this route, and between two stops, the transfer as a walk
-            QueryState.Label previousLabel = new QueryState.Label(bestEntryTime, bestTime, QueryState.LabelType.ROUTE,
-                    routeIdx, bestPosition, arrivalIdx, activeTrip.previousLabel);
-            if (!group.isAtOneStop()) {
-                previousLabel = new QueryState.Label(bestTime, bestTime + timeDirection * best.transferTime(),
-                        QueryState.LabelType.TRANSFER, QueryState.NO_INDEX, QueryState.NO_INDEX,
-                        forward ? group.toStopIdx : group.fromStopIdx, previousLabel);
-            }
-            addPendingBoarding(forward ? group.toRouteIdx : group.fromRouteIdx, targetOffset,
-                    new ActiveTrip(best.tripOffset(), best.entryTime(), best.dayTimeOffset(), previousLabel,
-                            best.stopTimes(), best.firstStopTimeIdx(), best.dayIndex(), best.entryOffset(),
-                            new BoardingByRule(group, bestPosition, bestTime)));
         }
+        if (best == null || isBeyondTimeLimit(best.entryTime())) {
+            return;
+        }
+        // the labels of a query of several passes may be of a pass before, which boarded after them
+        if (!severalPasses && boardsAtStop(forward ? group.toStopIdx : group.fromStopIdx, best.entryTime())) {
+            return;
+        }
+
+        // the labels the boarding follows: the trip of this route, and between two stops, the transfer as a walk
+        QueryState.Label previousLabel = new QueryState.Label(bestEntryTime, bestTime, QueryState.LabelType.ROUTE,
+                routeIdx, bestPosition, arrivalIdx, activeTrip.previousLabel);
+        if (!group.isAtOneStop()) {
+            previousLabel = new QueryState.Label(bestTime, bestTime + timeDirection * best.transferTime(),
+                    QueryState.LabelType.TRANSFER, QueryState.NO_INDEX, QueryState.NO_INDEX,
+                    forward ? group.toStopIdx : group.fromStopIdx, previousLabel);
+        }
+        addPendingBoarding(forward ? group.toRouteIdx : group.fromRouteIdx, targetOffset,
+                new ActiveTrip(best.tripOffset(), best.entryTime(), best.dayTimeOffset(), previousLabel,
+                        best.stopTimes(), best.firstStopTimeIdx(), best.dayIndex(), best.entryOffset(),
+                        new BoardingByRule(group, bestPosition, bestTime)));
     }
 
     /**
@@ -799,18 +813,20 @@ class RouteScanner {
     }
 
     /**
-     * Finds the trip a group of trip transfers allows changing to from a trip of a day to scan, see
-     * {@link #findTripTransferTarget(TripTransfers.Group, int, int)}. The trip found depends on the timetable and the
-     * configuration of the query alone, so a query of several passes, which finds the same changes pass after pass,
-     * keeps it.
+     * Finds the trip a group of trip transfers allows changing to at a call from a trip of a day to scan, see
+     * {@link #findTripTransferTarget(TripTransfers.Group, int, int, int)}. The trip found depends on the timetable and
+     * the configuration of the query alone, so a query of several passes, which finds the same changes pass after
+     * pass, keeps it for each call.
      *
+     * @param call          the number of the call among the calls of the route at the stop of the group.
      * @param knownDayIndex the index of the day of the known trip among the days to scan.
      * @param knownTrip     the number of the known trip among the trips of its route on that day.
      */
-    private @Nullable TransferTarget findTripTransferTarget(TripTransfers.Group group, int knownPosition, int time,
-                                                            int knownDayIndex, int knownTrip) {
+    private @Nullable TransferTarget findTripTransferTarget(TripTransfers.Group group, int call, int offset,
+                                                            int knownPosition, int time, int knownDayIndex,
+                                                            int knownTrip) {
         if (knownTargets == null) {
-            return findTripTransferTarget(group, knownPosition, time);
+            return findTripTransferTarget(group, offset, knownPosition, time);
         }
 
         int knownRouteIdx = forward ? group.fromRouteIdx : group.toRouteIdx;
@@ -820,18 +836,18 @@ class RouteScanner {
             for (DayStopTimes day : days) {
                 numberOfTrips += day.numberOfTrips(knownRouteIdx);
             }
-            known = new KnownTargets(numberOfTrips);
+            known = new KnownTargets(numberOfTrips, (forward ? group.toOffsets : group.fromOffsets).length);
             knownTargets[group.index] = known;
         }
 
-        int trip = knownTrip;
+        int trip = call * known.numberOfTrips + knownTrip;
         for (int dayIndex = 0; dayIndex < knownDayIndex; dayIndex++) {
             trip += days[dayIndex].numberOfTrips(knownRouteIdx);
         }
         // a route that calls at the stop of the group twice reaches it at two times
         if (known.times[trip] != time) {
             known.times[trip] = time;
-            known.targets[trip] = findTripTransferTarget(group, knownPosition, time);
+            known.targets[trip] = findTripTransferTarget(group, offset, knownPosition, time);
         }
 
         return known.targets[trip];
@@ -846,13 +862,14 @@ class RouteScanner {
      * a change in no time to a trip leaving much later.
      *
      * @param group         the group.
+     * @param offset        the position of the call of the route at the stop the trip is found at.
      * @param knownPosition the position of the known trip on its route.
      * @param time          the time the known trip reaches (routing backward: leaves) its stop.
      * @return the trip, or null if no trip of the route is possible.
      */
-    private @Nullable TransferTarget findTripTransferTarget(TripTransfers.Group group, int knownPosition, int time) {
+    private @Nullable TransferTarget findTripTransferTarget(TripTransfers.Group group, int offset, int knownPosition,
+                                                            int time) {
         int routeIdx = forward ? group.toRouteIdx : group.fromRouteIdx;
-        int offset = forward ? group.toOffset : group.fromOffset;
         int tripStopTimes = 2 * routes[routeIdx].numberOfStops();
 
         TransferTarget best = null;
@@ -1369,18 +1386,20 @@ class RouteScanner {
 
     /**
      * The trips a group of trip transfers allows changing to from the trips of the route it starts from (routing
-     * backward: ends at) on the days to scan, one day after the other: for each trip, the time it reaches its stop at
-     * that the trip was found for, and the trip found, null for none.
+     * backward: ends at) on the days to scan, one day after the other, at each call of the other route: for each trip
+     * and call, the time it reaches its stop at that the trip was found for, and the trip found, null for none.
      */
     private static final class KnownTargets {
 
+        private final int numberOfTrips;
         private final int[] times;
         private final @Nullable TransferTarget[] targets;
 
-        KnownTargets(int numberOfTrips) {
-            times = new int[numberOfTrips];
+        KnownTargets(int numberOfTrips, int numberOfCalls) {
+            this.numberOfTrips = numberOfTrips;
+            times = new int[numberOfTrips * numberOfCalls];
             Arrays.fill(times, NOT_READ);
-            targets = new TransferTarget[numberOfTrips];
+            targets = new TransferTarget[numberOfTrips * numberOfCalls];
         }
     }
 

@@ -144,12 +144,12 @@ the trips of such rules apart:
   slots, as the stop allows, except a route that a restrictive rule of the trip in the slot changes to; a walk from a
   slot to a stop where such rules end lands in a slot there too.
 - **Boarding by rule.** Where a trip with rules passes the stop they start at (routing backward, end at), the router
-  finds the trips that each rule lets the rider board, and boards them in the next round, between two stops after the
-  walk the rule gives. As one trip may refuse a transfer that a later one allows, it also looks at the later trips of
-  the route that could be boarded where the trip was, on every day it scans; after a trip boarded by a rule, at those
-  that rule allows too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board
-  depends on the timetable and the options of the query alone, so a range query finds it once and keeps it for its
-  passes.
+  finds the trips that each rule lets the rider board, at each call of their route at the stop, since a trip missed at
+  one call may be caught at a later one, and boards them in the next round, between two stops after the walk the rule
+  gives. As one trip may refuse a transfer that a later one allows, it also looks at the later trips of the route that
+  could be boarded where the trip was, on every day it scans; after a trip boarded by a rule, at those that rule allows
+  too. A trip no rule applies to changes as the stop allows. The trip a rule lets the rider board depends on the
+  timetable and the options of the query alone, so a range query finds it once and keeps it for its passes.
 - **Which boardings are kept.** A trip boarded at a stop may change to every later trip of its route, a trip boarded
   by a rule only to those the rule allows. So an earlier trip is only as good as a later one if it may change to every
   trip the later one may: if it was boarded at a stop, or by the same rule from the same trip at the same stop. Else
