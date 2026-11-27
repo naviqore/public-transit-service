@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.naviqore.app.config.AppProperties;
 import org.naviqore.app.dto.*;
 import org.naviqore.service.PublicTransitService;
 import org.naviqore.service.RoutingFeatures;
@@ -39,6 +40,7 @@ public class RoutingController {
     private static final String DEFAULT_TIME_TYPE = "DEPARTURE";
 
     private final PublicTransitService service;
+    private final AppProperties properties;
 
     @Operation(summary = "Get information about the routing", description = "Get all relevant information about the routing features supported by the service.")
     @ApiResponse(responseCode = "200", description = "A list of routing features supported by the service.")
@@ -85,7 +87,8 @@ public class RoutingController {
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
-                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
+                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service,
+                properties.getRouting());
 
         // determine routing case and get connections
         if (sourceStop != null && targetStop != null) {
@@ -133,7 +136,8 @@ public class RoutingController {
         // configure routing request
         dateTime = RequestValidator.validateAndSetDefaultDateTime(dateTime, service);
         ConnectionQueryConfig config = Utils.createConfig(timeWindowDuration, maxWalkDuration, maxTransfers,
-                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service);
+                maxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service,
+                properties.getRouting());
 
         // determine routing case and get isolines
         if (sourceStop != null) {
@@ -152,7 +156,9 @@ public class RoutingController {
                                                           Integer minTransferDuration, boolean wheelchairAccessible,
                                                           boolean bikeAllowed,
                                                           @Nullable EnumSet<TravelMode> travelModes,
-                                                          PublicTransitService service) {
+                                                          PublicTransitService service, AppProperties.Routing routing) {
+
+            RequestValidator.validateTimeWindowDuration(timeWindowDuration, routing.getTimeWindowDurationMaximum());
 
             // replace null values with default value
             int finalMaxWalkDuration = java.util.Optional.ofNullable(maxWalkDuration).orElse(Integer.MAX_VALUE);

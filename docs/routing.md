@@ -271,7 +271,7 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-trave
 
 | Service                   | Router                    | REST                   | Meaning                                                                                                                                                        |
 |---------------------------|---------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `timeWindowDuration`      | the range queries         | `timeWindowDuration`   | Time window in seconds; 0 for none.                                                                                                                            |
+| `timeWindowDuration`      | the range queries         | `timeWindowDuration`   | Time window in seconds; 0 for none. The application refuses one longer than `app.routing.time-window-duration-maximum`.                                        |
 | `maximumWalkDuration`     | `maximumWalkDuration`     | `maxWalkDuration`      | Longest walk in seconds, between stops and to and from a location.                                                                                             |
 | `minimumTransferDuration` | `minimumTransferDuration` | `minTransferDuration`  | Time in seconds added to every walk between stops, e.g. to change platforms at ease.                                                                           |
 | `maximumTransfers`        | `maximumTransfers`        | `maxTransfers`         | Most transfers, so most rides less one.                                                                                                                        |
@@ -285,15 +285,16 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `app.raptor.optimize-trave
 
 ### Router and service
 
-| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                                      |
-|---------------------------------------|-----------------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------|
-| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`.                    |
-| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips, and those its window reaches. Default 3. |
-| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                                          |
-| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                                    |
-| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                                            |
-| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.                            |
-| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                                        |
+| Service (`ServiceConfig`)             | Application                                   | Router (`RaptorConfig`)           | Meaning                                                                                                          |
+|---------------------------------------|-----------------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------|
+| `optimizeTravelTime`                  | `app.raptor.optimize-travel-time`             | –                                 | Optimize the travel time of connections without a time window, see above. Default `true`.                        |
+| `raptorDaysToScan`                    | `app.raptor.days-to-scan`                     | `daysToScan`                      | Service days around the date of a query that are scanned for trips, and those its window reaches. Default 3.     |
+| `transferDurationSameStopDefault`     | `app.transfer.duration.same-stop-default`     | `sameStopTransferDurationDefault` | Same stop transfer time where the timetable gives none, in seconds.                                              |
+| `transferDurationBetweenStopsMinimum` | `app.transfer.duration.between-stops-minimum` | –                                 | Shortest generated walk between stops; negative for none.                                                        |
+| `transferDurationAccessEgress`        | `app.transfer.duration.access-egress`         | –                                 | Time to get on and off a vehicle, added to walks.                                                                |
+| `walkSearchRadius`                    | `app.walk.search-radius`                      | –                                 | Radius in meters for stops near a location and for generated walks between stops.                                |
+| `cacheServiceDaySize`                 | `app.cache.service-day-size`                  | `stopTimeCacheSize`               | Service days whose stop times are cached. Default 30.                                                            |
+| –                                     | `app.routing.time-window-duration-maximum`    | –                                 | Longest time window of a request to the application, in seconds; a longer one is refused. Default 86 400, a day. |
 
 ## Decisions
 

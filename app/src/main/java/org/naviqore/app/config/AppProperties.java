@@ -10,10 +10,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Name;
 
 /**
- * The configuration of the public transit service, bound from the properties under {@code app}: the GTFS feed,
- * transfers, walks, the router and its cache, each a group of its own. A property that is not set takes the default of
- * {@link ServiceConfig}; {@code application.properties} sets each one from an environment variable, with the defaults
- * of the app.
+ * The configuration of the public transit service and of its routing requests, bound from the properties under
+ * {@code app}: the GTFS feed, transfers, walks, the router, its cache and the routing requests, each a group of its
+ * own. A property of the service that is not set takes the default of {@link ServiceConfig};
+ * {@code application.properties} sets each one from an environment variable, with the defaults of the app.
  */
 @ConfigurationProperties(prefix = "app")
 @Getter
@@ -24,6 +24,7 @@ public class AppProperties {
     private final Walk walk = new Walk();
     private final Raptor raptor = new Raptor();
     private final Cache cache = new Cache();
+    private final Routing routing = new Routing();
 
     /**
      * The GTFS feed.
@@ -150,5 +151,30 @@ public class AppProperties {
          * Which service day is evicted from a full cache.
          */
         private CacheEvictionStrategy evictionStrategy = ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY;
+    }
+
+    /**
+     * The routing requests of the REST API.
+     */
+    @Getter
+    public static class Routing {
+
+        /**
+         * One day, in seconds.
+         */
+        public static final int DEFAULT_TIME_WINDOW_DURATION_MAXIMUM = 24 * 60 * 60;
+
+        /**
+         * Longest time window of a request, in seconds. A query over a time window runs a search for each departure in
+         * it and reads the stop times of every service day it reaches, so a request with a longer one is refused.
+         */
+        private int timeWindowDurationMaximum = DEFAULT_TIME_WINDOW_DURATION_MAXIMUM;
+
+        public void setTimeWindowDurationMaximum(int timeWindowDurationMaximum) {
+            if (timeWindowDurationMaximum < 0) {
+                throw new IllegalArgumentException("The time window duration maximum must not be negative.");
+            }
+            this.timeWindowDurationMaximum = timeWindowDurationMaximum;
+        }
     }
 }

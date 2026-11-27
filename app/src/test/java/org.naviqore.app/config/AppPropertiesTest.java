@@ -54,6 +54,7 @@ class AppPropertiesTest {
                 appProperties.getGtfs().getStaticFeed().getUri());
         assertEquals(-1, appProperties.getTransfer().getDuration().getBetweenStopsMinimum());
         assertEquals(60, appProperties.getWalk().getDurationMinimum());
+        assertEquals(24 * 60 * 60, appProperties.getRouting().getTimeWindowDurationMaximum());
     }
 
     @Test
@@ -83,5 +84,13 @@ class AppPropertiesTest {
     @Test
     void invalidWalkCalculatorType_failsToBind() {
         assertThrows(BindException.class, () -> bind(Map.of("app.walk.calculator-type", "INVALID")));
+    }
+
+    @Test
+    void timeWindowDurationMaximum_mayBeZeroButNotNegative() {
+        AppProperties properties = bind(Map.of("app.routing.time-window-duration-maximum", "0"));
+
+        assertEquals(0, properties.getRouting().getTimeWindowDurationMaximum());
+        assertThrows(BindException.class, () -> bind(Map.of("app.routing.time-window-duration-maximum", "-1")));
     }
 }

@@ -107,6 +107,17 @@ final class RequestValidator {
     }
 
     /**
+     * Validates that the time window of a routing request is no longer than the application allows.
+     *
+     * @throws InvalidParametersException if the time window is longer than the maximum
+     */
+    static void validateTimeWindowDuration(int timeWindowDuration, int maximum) {
+        if (timeWindowDuration > maximum) {
+            throw new InvalidParametersException("Time window duration cannot be longer than " + maximum + " seconds.");
+        }
+    }
+
+    /**
      * Validates and retrieves a stop by ID if provided.
      *
      * @return Stop if stop ID is provided and exists, null if stop ID is null

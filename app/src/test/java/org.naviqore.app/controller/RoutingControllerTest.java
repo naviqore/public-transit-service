@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.naviqore.app.config.AppProperties;
 import org.naviqore.app.dto.*;
 import org.naviqore.app.exception.InvalidCoordinatesException;
 import org.naviqore.app.exception.InvalidParametersException;
@@ -26,7 +27,7 @@ public class RoutingControllerTest {
 
     private final FakePublicTransitService fakeService = new FakePublicTransitService();
 
-    private final RoutingController routingController = new RoutingController(fakeService);
+    private final RoutingController routingController = new RoutingController(fakeService, new AppProperties());
 
     static Stream<Arguments> provideQueryConfigTestCombinations() {
         int validTimeWindowDuration = 0;
@@ -102,7 +103,18 @@ public class RoutingControllerTest {
                 Arguments.of("nullTravelModesWhenNoSupport", validTimeWindowDuration, validMaxWalkDuration,
                         validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration,
                         validWheelChairAccessible, validBikeAllowed, null, hasAccessibilityInformation,
-                        hasBikeInformation, hasTravelModeInformation, null));
+                        hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("timeWindowDurationOfTheMaximum",
+                        AppProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM, validMaxWalkDuration,
+                        validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration,
+                        validWheelChairAccessible, validBikeAllowed, validTravelModes, hasAccessibilityInformation,
+                        hasBikeInformation, hasTravelModeInformation, null),
+                Arguments.of("timeWindowDurationLongerThanTheMaximum",
+                        AppProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM + 1, validMaxWalkDuration,
+                        validMaxTransferDuration, validMaxTravelDuration, validMinTransferDuration,
+                        validWheelChairAccessible, validBikeAllowed, validTravelModes, hasAccessibilityInformation,
+                        hasBikeInformation, hasTravelModeInformation,
+                        "Time window duration cannot be longer than 86400 seconds."));
     }
 
     List<Connection> getConnections(String sourceStopId, Double sourceLatitude, Double sourceLongitude,
