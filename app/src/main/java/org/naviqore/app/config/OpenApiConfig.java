@@ -18,8 +18,7 @@ public class OpenApiConfig {
     private static final String TITLE = "Naviqore Public Transit Service API";
 
     private static final Map<String, String> COORDINATE_DESCRIPTIONS = Map.of("latitude",
-            "Latitude in WGS84 degrees, from -90 to 90.", "longitude",
-            "Longitude in WGS84 degrees, from -180 to 180.");
+            "Latitude in WGS84 degrees, from -90 to 90.", "longitude", "Longitude in WGS84 degrees, from -180 to 180.");
 
     private final @Nullable String version;
     private final @Nullable String description;

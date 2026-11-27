@@ -52,10 +52,11 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "A list of stop names and IDs that match the query", content = @Content(schema = @Schema(implementation = Stop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/autocomplete")
-    public List<Stop> getAutoCompleteStops(@RequestParam @Parameter(description = "Text to search the names of the stops for, ignoring case. A stop of a station is found by the name of its station.") String query,
-                                           @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) @Parameter(description = "Where the text has to be in the name.") SearchType searchType,
-                                           @RequestParam(defaultValue = DEFAULT_SORT_BY) @Parameter(description = "Order of the stops: by RELEVANCE, the exact names first, then those starting with the text, the shorter first; or ALPHABETICAL.") StopSortStrategy sortBy,
-                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
+    public List<Stop> getAutoCompleteStops(
+            @RequestParam @Parameter(description = "Text to search the names of the stops for, ignoring case. A stop of a station is found by the name of its station.") String query,
+            @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) @Parameter(description = "Where the text has to be in the name.") SearchType searchType,
+            @RequestParam(defaultValue = DEFAULT_SORT_BY) @Parameter(description = "Order of the stops: by RELEVANCE, the exact names first, then those starting with the text, the shorter first; or ALPHABETICAL.") StopSortStrategy sortBy,
+            @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
 
         return service.getStops(query, map(searchType), map(sortBy)).stream().map(DtoMapper::map).limit(limit).toList();
     }
@@ -64,10 +65,11 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "A list of nearest stops", content = @Content(schema = @Schema(implementation = DistanceToStop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/nearest")
-    public List<DistanceToStop> getNearestStops(@RequestParam @Parameter(description = "Latitude of the location, in WGS84 degrees from -90 to 90.") double latitude,
-                                                @RequestParam @Parameter(description = "Longitude of the location, in WGS84 degrees from -180 to 180.") double longitude,
-                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters, at least 1.") @Min(1) int maxDistance,
-                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops, the nearest.") @Min(1) int limit) {
+    public List<DistanceToStop> getNearestStops(
+            @RequestParam @Parameter(description = "Latitude of the location, in WGS84 degrees from -90 to 90.") double latitude,
+            @RequestParam @Parameter(description = "Longitude of the location, in WGS84 degrees from -180 to 180.") double longitude,
+            @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters, at least 1.") @Min(1) int maxDistance,
+            @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops, the nearest.") @Min(1) int limit) {
 
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);
 

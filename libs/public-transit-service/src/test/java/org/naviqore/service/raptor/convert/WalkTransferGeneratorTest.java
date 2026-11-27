@@ -99,8 +99,8 @@ public class WalkTransferGeneratorTest {
         builder.addCalendar("ALWAYS", EnumSet.allOf(DayOfWeek.class), LocalDate.MIN, LocalDate.MAX);
         schedule = builder.build();
         spatialIndex = new KDTreeBuilder<Stop>().addLocations(schedule.getStops().values()).build();
-        generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
-                DEFAULT_ACCESS_EGRESS_TIME, DEFAULT_SEARCH_RADIUS, spatialIndex);
+        generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME,
+                DEFAULT_SEARCH_RADIUS, spatialIndex);
     }
 
     private record StopData(String id, String name, double lat, double lon) {
@@ -144,8 +144,9 @@ public class WalkTransferGeneratorTest {
 
         @Test
         void zeroAccessEgressTime_shouldNotThrowException() {
-            assertDoesNotThrow(() -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME, 0,
-                    DEFAULT_SEARCH_RADIUS, spatialIndex));
+            assertDoesNotThrow(
+                    () -> new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME, 0, DEFAULT_SEARCH_RADIUS,
+                            spatialIndex));
         }
 
         @Test
@@ -192,8 +193,8 @@ public class WalkTransferGeneratorTest {
 
         @Test
         void expectedBehavior_withIncreasedSearchRadius() {
-            WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR,
-                    MINIMUM_TRANSFER_TIME, DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
+            WalkTransferGenerator generator = new WalkTransferGenerator(DEFAULT_CALCULATOR, MINIMUM_TRANSFER_TIME,
+                    DEFAULT_ACCESS_EGRESS_TIME, 1000, spatialIndex);
             List<TransferGenerator.Transfer> transfers = generator.generateTransfers(stops);
             assertNoSameStopTransfers(transfers);
             assertTransfersGenerated(transfers, "stop1", "stop2");

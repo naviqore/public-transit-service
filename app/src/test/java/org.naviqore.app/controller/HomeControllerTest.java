@@ -133,8 +133,9 @@ class HomeControllerTest {
         SwaggerUiConfigProperties swaggerUiProperties = new SwaggerUiConfigProperties();
         swaggerUiProperties.setPath("/docs/console");
 
-        String page = render(controller(service, null, actuatorEndpoints("/manage/health", "/manage/metrics"),
-                springDocProperties, swaggerUiProperties));
+        String page = render(
+                controller(service, null, actuatorEndpoints("/manage/health", "/manage/metrics"), springDocProperties,
+                        swaggerUiProperties));
 
         assertThat(page).contains("href=\"/docs/console\"", "href=\"/docs/openapi\"", "href=\"/manage/health\"",
                 "href=\"/manage/metrics\"");
@@ -143,8 +144,9 @@ class HomeControllerTest {
     @Test
     void omitsTheLinksOfDisabledTargets() throws Exception {
         // the OpenAPI document but not the Swagger UI, and the health endpoint but not the metrics endpoint
-        String page = render(controller(service, null, actuatorEndpoints("/actuator/health", null),
-                new SpringDocConfigProperties(), null));
+        String page = render(
+                controller(service, null, actuatorEndpoints("/actuator/health", null), new SpringDocConfigProperties(),
+                        null));
 
         assertThat(page).contains("href=\"/v3/api-docs\"", "href=\"/actuator/health\"")
                 .doesNotContain("API Console", "Metrics");

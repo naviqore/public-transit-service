@@ -37,8 +37,8 @@ public class PublicTransitSpringService implements PublicTransitService, Schedul
     }
 
     /**
-     * Schedules the updates of the static GTFS feed by the cron expression of the bound properties, which also hold
-     * its default.
+     * Schedules the updates of the static GTFS feed by the cron expression of the bound properties, which also hold its
+     * default.
      */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {

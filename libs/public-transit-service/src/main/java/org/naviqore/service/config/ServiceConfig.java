@@ -25,8 +25,7 @@ public class ServiceConfig {
     public static final boolean DEFAULT_OPTIMIZE_TRAVEL_TIME = true;
 
     public static final int DEFAULT_RAPTOR_DAYS_TO_SCAN = RaptorConfig.DEFAULT_DAYS_TO_SCAN;
-    public static final int DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT =
-            RaptorConfig.DEFAULT_SAME_STOP_TRANSFER_DURATION_DEFAULT;
+    public static final int DEFAULT_RAPTOR_SAME_STOP_TRANSFER_DURATION_DEFAULT = RaptorConfig.DEFAULT_SAME_STOP_TRANSFER_DURATION_DEFAULT;
     public static final int DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE = RaptorConfig.DEFAULT_STOP_TIME_CACHE_SIZE;
     public static final CacheEvictionStrategy DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY = CacheEvictionStrategy.valueOf(
             RaptorConfig.DEFAULT_STOP_TIME_CACHE_STRATEGY.name());

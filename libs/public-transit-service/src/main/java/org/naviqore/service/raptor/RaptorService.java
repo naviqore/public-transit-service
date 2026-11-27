@@ -112,8 +112,8 @@ public class RaptorService implements PublicTransitService {
 
         return stops.stream()
                 .sorted(Comparator.<org.naviqore.timetable.model.Stop>comparingDouble(
-                        stop -> stop.getCoordinate().distanceTo(location)).thenComparing(
-                        org.naviqore.timetable.model.Stop::getId))
+                                stop -> stop.getCoordinate().distanceTo(location))
+                        .thenComparing(org.naviqore.timetable.model.Stop::getId))
                 .map(TypeMapper::map)
                 .toList();
     }

@@ -5,8 +5,8 @@ package org.naviqore.service;
  * {@link org.naviqore.service.config.ConnectionQueryConfig} it allows.
  *
  * @param supportsMaximumTransfers        whether the service supports routing with a maximum number of transfers
- * @param supportsMaximumTravelDuration   whether the service supports routing with a maximum travel duration
- *                                        (including waiting duration)
+ * @param supportsMaximumTravelDuration   whether the service supports routing with a maximum travel duration (including
+ *                                        waiting duration)
  * @param supportsMaximumWalkDuration     whether the service supports routing with a maximum walk duration
  * @param supportsMinimumTransferDuration whether the service supports routing with a minimum transfer duration
  * @param supportsWheelchairAccessible    whether the service supports routing on wheelchair accessible trips only

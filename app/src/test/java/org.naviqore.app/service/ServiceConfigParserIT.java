@@ -72,8 +72,9 @@ public class ServiceConfigParserIT {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> new ServiceConfigParser(properties));
-        assertEquals("naviqore.gtfs.static.uri is neither an existing file nor a URI with scheme http, https or s3: " +
-                uri, exception.getMessage());
+        assertEquals(
+                "naviqore.gtfs.static.uri is neither an existing file nor a URI with scheme http, https or s3: " + uri,
+                exception.getMessage());
     }
 
     @ParameterizedTest(name = "{1}")

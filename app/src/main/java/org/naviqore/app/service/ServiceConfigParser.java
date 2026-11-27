@@ -77,7 +77,8 @@ public class ServiceConfigParser {
     }
 
     private static IllegalArgumentException invalidUri(String gtfsStaticUri, @Nullable URISyntaxException cause) {
-        return new IllegalArgumentException(URI_PROPERTY + " is neither an existing file nor a URI with scheme " +
-                "http, https or s3: " + gtfsStaticUri, cause);
+        return new IllegalArgumentException(
+                URI_PROPERTY + " is neither an existing file nor a URI with scheme " + "http, https or s3: " + gtfsStaticUri,
+                cause);
     }
 }

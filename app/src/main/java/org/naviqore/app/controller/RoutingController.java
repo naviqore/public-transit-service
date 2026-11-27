@@ -60,22 +60,23 @@ public class RoutingController {
     @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema))
     @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema))
     @GetMapping("/connections")
-    public List<Connection> getConnections(@RequestParam(required = false) @Parameter(description = "ID of the stop to leave from. Give either it or sourceLatitude and sourceLongitude.") String sourceStopId,
-                                           @RequestParam(required = false) @Parameter(description = "Latitude of the location to leave from, in WGS84 degrees from -90 to 90.") Double sourceLatitude,
-                                           @RequestParam(required = false) @Parameter(description = "Longitude of the location to leave from, in WGS84 degrees from -180 to 180.") Double sourceLongitude,
-                                           @RequestParam(required = false) @Parameter(description = "ID of the stop to reach. Give either it or targetLatitude and targetLongitude.") String targetStopId,
-                                           @RequestParam(required = false) @Parameter(description = "Latitude of the location to reach, in WGS84 degrees from -90 to 90.") Double targetLatitude,
-                                           @RequestParam(required = false) @Parameter(description = "Longitude of the location to reach, in WGS84 degrees from -180 to 180.") Double targetLongitude,
-                                           @RequestParam(required = false) @Parameter(description = Descriptions.DATE_TIME) OffsetDateTime dateTime,
-                                           @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) @Parameter(description = Descriptions.TIME_TYPE) TimeType timeType,
-                                           @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.TIME_WINDOW_DURATION) @Min(0) Integer timeWindowDuration,
-                                           @RequestParam(required = false) @Parameter(description = Descriptions.MAX_WALK_DURATION) @Min(0) Integer maxWalkDuration,
-                                           @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRANSFERS) @Min(0) Integer maxTransfers,
-                                           @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRAVEL_DURATION) @Min(1) Integer maxTravelDuration,
-                                           @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.MIN_TRANSFER_DURATION) @Min(0) Integer minTransferDuration,
-                                           @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.WHEELCHAIR_ACCESSIBLE) boolean wheelchairAccessible,
-                                           @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.BIKE_ALLOWED) boolean bikeAllowed,
-                                           @RequestParam(required = false) @Parameter(description = Descriptions.TRAVEL_MODES) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
+    public List<Connection> getConnections(
+            @RequestParam(required = false) @Parameter(description = "ID of the stop to leave from. Give either it or sourceLatitude and sourceLongitude.") String sourceStopId,
+            @RequestParam(required = false) @Parameter(description = "Latitude of the location to leave from, in WGS84 degrees from -90 to 90.") Double sourceLatitude,
+            @RequestParam(required = false) @Parameter(description = "Longitude of the location to leave from, in WGS84 degrees from -180 to 180.") Double sourceLongitude,
+            @RequestParam(required = false) @Parameter(description = "ID of the stop to reach. Give either it or targetLatitude and targetLongitude.") String targetStopId,
+            @RequestParam(required = false) @Parameter(description = "Latitude of the location to reach, in WGS84 degrees from -90 to 90.") Double targetLatitude,
+            @RequestParam(required = false) @Parameter(description = "Longitude of the location to reach, in WGS84 degrees from -180 to 180.") Double targetLongitude,
+            @RequestParam(required = false) @Parameter(description = Descriptions.DATE_TIME) OffsetDateTime dateTime,
+            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) @Parameter(description = Descriptions.TIME_TYPE) TimeType timeType,
+            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.TIME_WINDOW_DURATION) @Min(0) Integer timeWindowDuration,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_WALK_DURATION) @Min(0) Integer maxWalkDuration,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRANSFERS) @Min(0) Integer maxTransfers,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRAVEL_DURATION) @Min(1) Integer maxTravelDuration,
+            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.MIN_TRANSFER_DURATION) @Min(0) Integer minTransferDuration,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.WHEELCHAIR_ACCESSIBLE) boolean wheelchairAccessible,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.BIKE_ALLOWED) boolean bikeAllowed,
+            @RequestParam(required = false) @Parameter(description = Descriptions.TRAVEL_MODES) EnumSet<TravelMode> travelModes) throws ConnectionRoutingException {
         // get coordinates if available
         GeoCoordinate sourceCoordinate = RequestValidator.getCoordinateIfAvailable(sourceStopId, sourceLatitude,
                 sourceLongitude, StopType.SOURCE);
@@ -115,20 +116,21 @@ public class RoutingController {
     @ApiResponse(responseCode = "404", description = "Stop not found (stop-not-found)", content = @Content(schema = @Schema))
     @ApiResponse(responseCode = "500", description = "Internal server error (routing-error, internal-server-error)", content = @Content(schema = @Schema))
     @GetMapping("/isolines")
-    public List<StopConnection> getIsolines(@RequestParam(required = false) @Parameter(description = "ID of the stop the connections leave from, or arrive at for timeType ARRIVAL. Give either it or sourceLatitude and sourceLongitude.") String sourceStopId,
-                                            @RequestParam(required = false) @Parameter(description = "Latitude of the location the connections leave from (arrive at), in WGS84 degrees from -90 to 90.") Double sourceLatitude,
-                                            @RequestParam(required = false) @Parameter(description = "Longitude of the location the connections leave from (arrive at), in WGS84 degrees from -180 to 180.") Double sourceLongitude,
-                                            @RequestParam(required = false) @Parameter(description = Descriptions.DATE_TIME) OffsetDateTime dateTime,
-                                            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) @Parameter(description = Descriptions.TIME_TYPE) TimeType timeType,
-                                            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.TIME_WINDOW_DURATION) @Min(0) Integer timeWindowDuration,
-                                            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_WALK_DURATION) @Min(0) Integer maxWalkDuration,
-                                            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRANSFERS) @Min(0) Integer maxTransfers,
-                                            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRAVEL_DURATION) @Min(1) Integer maxTravelDuration,
-                                            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.MIN_TRANSFER_DURATION) @Min(0) Integer minTransferDuration,
-                                            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.WHEELCHAIR_ACCESSIBLE) boolean wheelchairAccessible,
-                                            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.BIKE_ALLOWED) boolean bikeAllowed,
-                                            @RequestParam(required = false) @Parameter(description = Descriptions.TRAVEL_MODES) EnumSet<TravelMode> travelModes,
-                                            @RequestParam(required = false, defaultValue = "false") @Parameter(description = "Whether to add the whole connection to each stop, and the stop times to the trip of its connecting leg.") boolean detailed) throws ConnectionRoutingException {
+    public List<StopConnection> getIsolines(
+            @RequestParam(required = false) @Parameter(description = "ID of the stop the connections leave from, or arrive at for timeType ARRIVAL. Give either it or sourceLatitude and sourceLongitude.") String sourceStopId,
+            @RequestParam(required = false) @Parameter(description = "Latitude of the location the connections leave from (arrive at), in WGS84 degrees from -90 to 90.") Double sourceLatitude,
+            @RequestParam(required = false) @Parameter(description = "Longitude of the location the connections leave from (arrive at), in WGS84 degrees from -180 to 180.") Double sourceLongitude,
+            @RequestParam(required = false) @Parameter(description = Descriptions.DATE_TIME) OffsetDateTime dateTime,
+            @RequestParam(required = false, defaultValue = DEFAULT_TIME_TYPE) @Parameter(description = Descriptions.TIME_TYPE) TimeType timeType,
+            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.TIME_WINDOW_DURATION) @Min(0) Integer timeWindowDuration,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_WALK_DURATION) @Min(0) Integer maxWalkDuration,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRANSFERS) @Min(0) Integer maxTransfers,
+            @RequestParam(required = false) @Parameter(description = Descriptions.MAX_TRAVEL_DURATION) @Min(1) Integer maxTravelDuration,
+            @RequestParam(required = false, defaultValue = "0") @Parameter(description = Descriptions.MIN_TRANSFER_DURATION) @Min(0) Integer minTransferDuration,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.WHEELCHAIR_ACCESSIBLE) boolean wheelchairAccessible,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = Descriptions.BIKE_ALLOWED) boolean bikeAllowed,
+            @RequestParam(required = false) @Parameter(description = Descriptions.TRAVEL_MODES) EnumSet<TravelMode> travelModes,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = "Whether to add the whole connection to each stop, and the stop times to the trip of its connecting leg.") boolean detailed) throws ConnectionRoutingException {
 
         // get stops or coordinates if available
         GeoCoordinate sourceCoordinate = RequestValidator.getCoordinateIfAvailable(sourceStopId, sourceLatitude,

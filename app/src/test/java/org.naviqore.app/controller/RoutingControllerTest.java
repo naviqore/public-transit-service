@@ -43,8 +43,7 @@ public class RoutingControllerTest {
         boolean hasBikeAllowed = true;
         boolean hasTravelModes = true;
 
-        return Stream.of(
-                Arguments.of("validValues", validTimeWindowDuration, validMaxWalkDuration, validMaxTransfers,
+        return Stream.of(Arguments.of("validValues", validTimeWindowDuration, validMaxWalkDuration, validMaxTransfers,
                         validMaxTravelDuration, validMinTransferDuration, validWheelchairAccessible, validBikeAllowed,
                         validTravelModes, hasWheelchairAccessible, hasBikeAllowed, hasTravelModes, null),
                 Arguments.of("maxWalkDurationEqualsNull", validTimeWindowDuration, null, validMaxTransfers,
@@ -100,8 +99,7 @@ public class RoutingControllerTest {
                         NaviqoreProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM, validMaxWalkDuration,
                         validMaxTransfers, validMaxTravelDuration, validMinTransferDuration, validWheelchairAccessible,
                         validBikeAllowed, validTravelModes, hasWheelchairAccessible, hasBikeAllowed, hasTravelModes,
-                        null),
-                Arguments.of("timeWindowDurationLongerThanTheMaximum",
+                        null), Arguments.of("timeWindowDurationLongerThanTheMaximum",
                         NaviqoreProperties.Routing.DEFAULT_TIME_WINDOW_DURATION_MAXIMUM + 1, validMaxWalkDuration,
                         validMaxTransfers, validMaxTravelDuration, validMinTransferDuration, validWheelchairAccessible,
                         validBikeAllowed, validTravelModes, hasWheelchairAccessible, hasBikeAllowed, hasTravelModes,

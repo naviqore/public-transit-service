@@ -25,8 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The walks at either end of a connection, from or to a location or a stop without departures or arrivals: each takes
- * the access or egress time at its stop, and is a leg of its own only if it takes longer than the walk duration minimum,
- * which counts no access or egress time.
+ * the access or egress time at its stop, and is a leg of its own only if it takes longer than the walk duration
+ * minimum, which counts no access or egress time.
  */
 class FirstAndLastMileTest {
 
@@ -60,53 +60,6 @@ class FirstAndLastMileTest {
                 .build()).create();
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, 1})
-    void walk_isALegOfItsOwnOnlyIfLongerThanTheMinimum(int shorterMinimum) throws IOException, InterruptedException,
-            StopNotFoundException, ConnectionRoutingException {
-        PublicTransitService service = service(WALK - shorterMinimum);
-        OffsetDateTime departure = MONDAY.atTime(7, 50).atZone(ZONE_ID).toOffsetDateTime();
-        ConnectionQueryConfig config = ConnectionQueryConfig.defaults();
-
-        List<Connection> connections = new ArrayList<>(
-                service.getConnections(NEAR_A, NEAR_B, departure, TimeType.DEPARTURE, config));
-        connections.addAll(
-                service.getConnections(service.getStopById("X"), service.getStopById("Y"), departure,
-                        TimeType.DEPARTURE, config));
-
-        List<LegType> legs = shorterMinimum == 0 ? List.of(LegType.PUBLIC_TRANSIT) : List.of(LegType.WALK,
-                LegType.PUBLIC_TRANSIT, LegType.WALK);
-        assertThat(connections).hasSize(2)
-                .allSatisfy(connection -> assertThat(connection.getLegs()).extracting(Leg::getLegType)
-                        .containsExactlyElementsOf(legs));
-    }
-
-    @Test
-    void walk_meetsItsTripWithTheAccessOrEgressTime() throws IOException, InterruptedException, StopNotFoundException,
-            ConnectionRoutingException {
-        PublicTransitService service = service(0);
-        OffsetDateTime departure = MONDAY.atTime(7, 50).atZone(ZONE_ID).toOffsetDateTime();
-        ConnectionQueryConfig config = ConnectionQueryConfig.defaults();
-
-        List<Connection> connections = new ArrayList<>(
-                service.getConnections(NEAR_A, NEAR_B, departure, TimeType.DEPARTURE, config));
-        connections.addAll(
-                service.getConnections(service.getStopById("X"), service.getStopById("Y"), departure,
-                        TimeType.DEPARTURE, config));
-
-        int walk = WALK + ServiceConfig.DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS;
-        OffsetDateTime tripDeparture = MONDAY.atTime(8, 0).atZone(ZONE_ID).toOffsetDateTime();
-        OffsetDateTime tripArrival = MONDAY.atTime(8, 30).atZone(ZONE_ID).toOffsetDateTime();
-        assertThat(connections).hasSize(2).allSatisfy(connection -> {
-            List<Leg> legs = connection.getLegs();
-            assertThat(legs).hasSize(3).extracting(Leg::getDuration).containsExactly(walk, 30 * 60, walk);
-            assertThat(legs).extracting(FirstAndLastMileTest::departureTime)
-                    .containsExactly(tripDeparture.minusSeconds(walk), tripDeparture, tripArrival);
-            assertThat(legs).extracting(FirstAndLastMileTest::arrivalTime)
-                    .containsExactly(tripDeparture, tripArrival, tripArrival.plusSeconds(walk));
-        });
-    }
-
     private static OffsetDateTime departureTime(Leg leg) {
         return switch (leg) {
             case Walk walk -> walk.getDepartureTime();
@@ -123,5 +76,49 @@ class FirstAndLastMileTest {
             case PublicTransitLeg ride -> ride.getArrival().getArrivalTime();
             default -> throw new IllegalArgumentException("Unexpected leg: " + leg);
         };
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void walk_isALegOfItsOwnOnlyIfLongerThanTheMinimum(
+            int shorterMinimum) throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
+        PublicTransitService service = service(WALK - shorterMinimum);
+        OffsetDateTime departure = MONDAY.atTime(7, 50).atZone(ZONE_ID).toOffsetDateTime();
+        ConnectionQueryConfig config = ConnectionQueryConfig.defaults();
+
+        List<Connection> connections = new ArrayList<>(
+                service.getConnections(NEAR_A, NEAR_B, departure, TimeType.DEPARTURE, config));
+        connections.addAll(service.getConnections(service.getStopById("X"), service.getStopById("Y"), departure,
+                TimeType.DEPARTURE, config));
+
+        List<LegType> legs = shorterMinimum == 0 ? List.of(LegType.PUBLIC_TRANSIT) : List.of(LegType.WALK,
+                LegType.PUBLIC_TRANSIT, LegType.WALK);
+        assertThat(connections).hasSize(2)
+                .allSatisfy(connection -> assertThat(connection.getLegs()).extracting(Leg::getLegType)
+                        .containsExactlyElementsOf(legs));
+    }
+
+    @Test
+    void walk_meetsItsTripWithTheAccessOrEgressTime() throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
+        PublicTransitService service = service(0);
+        OffsetDateTime departure = MONDAY.atTime(7, 50).atZone(ZONE_ID).toOffsetDateTime();
+        ConnectionQueryConfig config = ConnectionQueryConfig.defaults();
+
+        List<Connection> connections = new ArrayList<>(
+                service.getConnections(NEAR_A, NEAR_B, departure, TimeType.DEPARTURE, config));
+        connections.addAll(service.getConnections(service.getStopById("X"), service.getStopById("Y"), departure,
+                TimeType.DEPARTURE, config));
+
+        int walk = WALK + ServiceConfig.DEFAULT_TRANSFER_DURATION_ACCESS_EGRESS;
+        OffsetDateTime tripDeparture = MONDAY.atTime(8, 0).atZone(ZONE_ID).toOffsetDateTime();
+        OffsetDateTime tripArrival = MONDAY.atTime(8, 30).atZone(ZONE_ID).toOffsetDateTime();
+        assertThat(connections).hasSize(2).allSatisfy(connection -> {
+            List<Leg> legs = connection.getLegs();
+            assertThat(legs).hasSize(3).extracting(Leg::getDuration).containsExactly(walk, 30 * 60, walk);
+            assertThat(legs).extracting(FirstAndLastMileTest::departureTime)
+                    .containsExactly(tripDeparture.minusSeconds(walk), tripDeparture, tripArrival);
+            assertThat(legs).extracting(FirstAndLastMileTest::arrivalTime)
+                    .containsExactly(tripDeparture, tripArrival, tripArrival.plusSeconds(walk));
+        });
     }
 }

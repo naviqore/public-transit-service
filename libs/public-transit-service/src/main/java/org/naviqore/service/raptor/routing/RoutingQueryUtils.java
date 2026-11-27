@@ -143,8 +143,8 @@ class RoutingQueryUtils {
     }
 
     /**
-     * The first mile from a location to the first stop of a connection, before it leaves the stop at the given time. Its
-     * walk takes the access time at the stop, as the other walks at either end of a connection do.
+     * The first mile from a location to the first stop of a connection, before it leaves the stop at the given time.
+     * Its walk takes the access time at the stop, as the other walks at either end of a connection do.
      */
     Mile createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));

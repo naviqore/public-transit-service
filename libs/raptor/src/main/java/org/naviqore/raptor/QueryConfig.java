@@ -31,8 +31,7 @@ public class QueryConfig {
 
     private QueryConfig(int maximumWalkDuration, int minimumTransferDuration, int maximumTransfers,
                         int maximumTravelDuration, boolean wheelchairAccessible, boolean bikeAllowed,
-                        boolean allowSourceTransfer, boolean allowTargetTransfer,
-                        EnumSet<TravelMode> travelModes) {
+                        boolean allowSourceTransfer, boolean allowTargetTransfer, EnumSet<TravelMode> travelModes) {
 
         if (maximumWalkDuration < 0) {
             throw new IllegalArgumentException("Maximum walk duration must be greater than or equal to 0.");
