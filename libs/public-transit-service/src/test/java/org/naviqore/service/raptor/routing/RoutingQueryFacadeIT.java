@@ -649,7 +649,9 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_DEPARTURE_TIME,
                             TimeType.DEPARTURE, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getFirst();
+                    // the fallback leaves from the location of A, which takes the access time too
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getFirst()
+                            .minusSeconds(SERVICE_CONFIG.getTransferDurationAccessEgress());
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getFirst()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 
@@ -664,7 +666,9 @@ class RoutingQueryFacadeIT {
                     List<org.naviqore.service.Connection> connections = facade.queryConnections(STANDARD_ARRIVAL_TIME,
                             TimeType.ARRIVAL, QUERY_CONFIG, source, target);
 
-                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getLast();
+                    // the fallback leaves from the location of A, which takes the access time too
+                    OffsetDateTime departureTime = DEPARTURE_TIMES_AT_SOURCE_STOP.getLast()
+                            .minusSeconds(SERVICE_CONFIG.getTransferDurationAccessEgress());
                     OffsetDateTime arrivalTime = ARRIVAL_TIMES_AT_TARGET_STOP.getLast()
                             .plus(WALKING_DURATION_FROM_TARGET_COORDINATE_TO_STOP);
 

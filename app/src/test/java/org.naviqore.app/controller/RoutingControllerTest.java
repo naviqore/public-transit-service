@@ -149,7 +149,11 @@ public class RoutingControllerTest {
             List<Connection> connections = getConnections(null, sourceLatitude, sourceLongitude, targetStopId, null,
                     null, departureDateTime);
 
-            assertNotNull(connections);
+            assertFalse(connections.isEmpty());
+            for (Connection connection : connections) {
+                assertEquals(connection.getLegs().getFirst().getDepartureTime(), connection.getDepartureTime());
+                assertEquals(connection.getLegs().getLast().getArrivalTime(), connection.getArrivalTime());
+            }
         }
 
         @Test

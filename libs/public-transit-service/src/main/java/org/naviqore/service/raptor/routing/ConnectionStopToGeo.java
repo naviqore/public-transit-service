@@ -39,17 +39,17 @@ class ConnectionStopToGeo extends ConnectionQueryTemplate<Stop, GeoCoordinate> {
     @Override
     protected Connection postprocessDepartureConnection(Stop source, org.naviqore.raptor.Connection connection,
                                                         GeoCoordinate target) {
-        OffsetDateTime arrivalTime = connection.getArrivalTime();
-        Walk lastMile = utils.createLastWalk(target, connection.getToStopId(), arrivalTime);
-        return utils.composeConnection(connection, lastMile);
+        RoutingQueryUtils.Mile lastMile = utils.createLastWalk(target, connection.getToStopId(),
+                connection.getArrivalTime());
+        return utils.composeConnection(RoutingQueryUtils.Mile.NONE, connection, lastMile);
     }
 
     @Override
     protected Connection postprocessArrivalConnection(Stop source, org.naviqore.raptor.Connection connection,
                                                       GeoCoordinate target) {
-        OffsetDateTime departureTime = connection.getDepartureTime();
-        Leg firstMile = utils.createFirstWalk(target, connection.getFromStopId(), departureTime);
-        return utils.composeConnection(firstMile, connection);
+        RoutingQueryUtils.Mile firstMile = utils.createFirstWalk(target, connection.getFromStopId(),
+                connection.getDepartureTime());
+        return utils.composeConnection(firstMile, connection, RoutingQueryUtils.Mile.NONE);
     }
 
     @Override

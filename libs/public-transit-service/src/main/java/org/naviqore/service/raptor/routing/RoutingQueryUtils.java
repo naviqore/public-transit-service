@@ -142,63 +142,79 @@ class RoutingQueryUtils {
         return stopsWithWalkTime;
     }
 
-    @Nullable Walk createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
+    /**
+     * The first mile from a location to the first stop of a connection, before it leaves the stop at the given time.
+     */
+    Mile createFirstWalk(GeoCoordinate source, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));
         WalkCalculator.Walk firstWalk = walkCalculator.calculateWalk(source, firstStop.getCoordinate());
         int duration = firstWalk.duration();
+        int durationWithAccess = duration + serviceConfig.getTransferDurationAccessEgress();
 
+        Walk walk = null;
         if (shouldCreateWalk(duration, firstWalk)) {
-            return TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
+            walk = TypeMapper.createWalk(firstWalk.distance(), duration, WalkType.FIRST_MILE,
                     // shift walk time backwards to account access and egress time at the stop
-                    departureTime.minusSeconds(duration + serviceConfig.getTransferDurationAccessEgress()),
+                    departureTime.minusSeconds(durationWithAccess),
                     departureTime.minusSeconds(serviceConfig.getTransferDurationAccessEgress()), source,
                     firstStop.getCoordinate(), TypeMapper.map(firstStop));
         }
 
-        return null;
+        return new Mile(walk, durationWithAccess);
     }
 
-    @Nullable
-    public Transfer createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
+    /**
+     * The first mile from a stop without departures to the first stop of a connection, before it leaves the stop at
+     * the given time.
+     */
+    Mile createFirstWalkTransfer(Stop sourceStop, String firstStopId, OffsetDateTime departureTime) {
         org.naviqore.timetable.model.Stop firstStop = Objects.requireNonNull(schedule.getStops().get(firstStopId));
         WalkCalculator.Walk firstWalkTransfer = walkCalculator.calculateWalk(sourceStop.getCoordinate(),
                 firstStop.getCoordinate());
         int duration = firstWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
+        Transfer transfer = null;
         if (shouldCreateWalk(duration, firstWalkTransfer)) {
-            return TypeMapper.createTransfer(firstWalkTransfer.distance(), duration,
+            transfer = TypeMapper.createTransfer(firstWalkTransfer.distance(), duration,
                     departureTime.minusSeconds(duration), departureTime, sourceStop, TypeMapper.map(firstStop));
         }
 
-        return null;
+        return new Mile(transfer, duration);
     }
 
-    @Nullable Walk createLastWalk(GeoCoordinate target, String lastStopId, OffsetDateTime arrivalTime) {
+    /**
+     * The last mile from the last stop of a connection, reached at the given time, to a location.
+     */
+    Mile createLastWalk(GeoCoordinate target, String lastStopId, OffsetDateTime arrivalTime) {
         org.naviqore.timetable.model.Stop lastStop = Objects.requireNonNull(schedule.getStops().get(lastStopId));
         WalkCalculator.Walk lastWalk = walkCalculator.calculateWalk(target, lastStop.getCoordinate());
         int duration = lastWalk.duration() + serviceConfig.getTransferDurationAccessEgress();
 
+        Walk walk = null;
         if (shouldCreateWalk(duration, lastWalk)) {
-            return TypeMapper.createWalk(lastWalk.distance(), duration, WalkType.LAST_MILE, arrivalTime,
+            walk = TypeMapper.createWalk(lastWalk.distance(), duration, WalkType.LAST_MILE, arrivalTime,
                     arrivalTime.plusSeconds(duration), lastStop.getCoordinate(), target, TypeMapper.map(lastStop));
         }
 
-        return null;
+        return new Mile(walk, duration);
     }
 
-    @Nullable
-    public Transfer createLastWalkTransfer(Stop target, String lastStopId, OffsetDateTime arrivalTime) {
+    /**
+     * The last mile from the last stop of a connection, reached at the given time, to a stop without arrivals.
+     */
+    Mile createLastWalkTransfer(Stop target, String lastStopId, OffsetDateTime arrivalTime) {
         org.naviqore.timetable.model.Stop lastStop = Objects.requireNonNull(schedule.getStops().get(lastStopId));
         WalkCalculator.Walk lastWalkTransfer = walkCalculator.calculateWalk(target.getCoordinate(),
                 lastStop.getCoordinate());
         int duration = lastWalkTransfer.duration() + serviceConfig.getTransferDurationAccessEgress();
 
+        Transfer transfer = null;
         if (shouldCreateWalk(duration, lastWalkTransfer)) {
-            return TypeMapper.createTransfer(lastWalkTransfer.distance(), duration, arrivalTime,
+            transfer = TypeMapper.createTransfer(lastWalkTransfer.distance(), duration, arrivalTime,
                     arrivalTime.plusSeconds(duration), TypeMapper.map(lastStop), target);
         }
 
-        return null;
+        return new Mile(transfer, duration);
     }
 
     // Only map the walk to the service level if it is longer than the walking duration minimum defined in the service,
@@ -209,40 +225,39 @@ class RoutingQueryUtils {
     }
 
     Connection composeConnection(org.naviqore.raptor.Connection connection) {
-        return TypeMapper.map(connection, null, null, schedule);
+        return composeConnection(Mile.NONE, connection, Mile.NONE, new TypeMapper.Trips());
     }
 
-    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection) {
-        return TypeMapper.map(connection, firstMile, null, schedule);
+    Connection composeConnection(Mile firstMile, org.naviqore.raptor.Connection connection, Mile lastMile) {
+        return composeConnection(firstMile, connection, lastMile, new TypeMapper.Trips());
     }
 
-    Connection composeConnection(org.naviqore.raptor.Connection connection, @Nullable Leg lastMile) {
-        return TypeMapper.map(connection, null, lastMile, schedule);
-    }
-
-    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection,
-                                 @Nullable Leg lastMile) {
-        return TypeMapper.map(connection, firstMile, lastMile, schedule);
-    }
-
-    Connection composeConnection(org.naviqore.raptor.Connection connection, TypeMapper.Trips trips) {
-        return TypeMapper.map(connection, null, null, schedule, trips);
-    }
-
-    Connection composeConnection(@Nullable Leg firstMile, org.naviqore.raptor.Connection connection,
+    /**
+     * Composes a connection that leaves the origin before its first mile and reaches the destination after its last
+     * mile, whether or not they are legs of their own, so that its times are those its window applies to.
+     */
+    Connection composeConnection(Mile firstMile, org.naviqore.raptor.Connection connection, Mile lastMile,
                                  TypeMapper.Trips trips) {
-        return TypeMapper.map(connection, firstMile, null, schedule, trips);
+        return TypeMapper.map(connection, firstMile.leg(), lastMile.leg(),
+                connection.getDepartureTime().minusSeconds(firstMile.duration()),
+                connection.getArrivalTime().plusSeconds(lastMile.duration()), schedule, trips);
     }
 
-    Connection composeConnection(org.naviqore.raptor.Connection connection, @Nullable Leg lastMile,
-                                 TypeMapper.Trips trips) {
-        return TypeMapper.map(connection, null, lastMile, schedule, trips);
-    }
-
-    // The raptor algorithm does not consider the first mile walk time, so we need to filter out connections
-    // that exceed the maximum travel time
+    // the router does not count the first and last mile, so the connections are filtered by their whole travel time
     boolean isBelowMaximumTravelTime(Connection serviceConnection, ConnectionQueryConfig queryConfig) {
         return Duration.between(serviceConnection.getDepartureTime(), serviceConnection.getArrivalTime())
                 .toSeconds() <= queryConfig.getMaximumTravelDuration();
+    }
+
+    /**
+     * The way between a location and the first or last stop of a connection: its leg, unless too short to be one, and
+     * its duration with the access or egress time, which the connection takes either way.
+     *
+     * @param leg      the walk or transfer, or null if left out.
+     * @param duration the duration in seconds.
+     */
+    record Mile(@Nullable Leg leg, int duration) {
+
+        static final Mile NONE = new Mile(null, 0);
     }
 }

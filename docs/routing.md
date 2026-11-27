@@ -195,7 +195,11 @@ only improve on the ones before them.
 The service answers connection and isoline queries between stops and locations, and adds to the router:
 
 - **First and last mile.** For a location, the stops within the walk search radius, each with the walk to it and the
-  access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections.
+  access and egress time; for a stop, the stop and its children. The walks become the walk legs of the connections,
+  except a walk no longer than the shortest walk leg (`walkDurationMinimum`).
+- **Times of a connection.** A connection leaves the origin and reaches the destination at the times its time window
+  and its maximum travel duration apply to: at a location, its first ride's departure less the walk and the access
+  time, and its last ride's arrival plus the egress time and the walk, also where the walk is no leg of its own.
 - **Direction.** An arrival query swaps the origin and the destination, so that the router searches backward from the
   destination.
 - **Maximum travel duration** of whole connections, first and last mile included. The service filters the connections

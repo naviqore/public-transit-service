@@ -84,7 +84,7 @@ public class DtoMapper {
 
     public static Connection map(org.naviqore.service.Connection connection) {
         List<Leg> legs = connection.getLegs().stream().map(DtoMapper::map).toList();
-        return new Connection(legs);
+        return new Connection(legs, connection.getDepartureTime(), connection.getArrivalTime());
     }
 
     public static List<Connection> map(List<org.naviqore.service.Connection> connections) {

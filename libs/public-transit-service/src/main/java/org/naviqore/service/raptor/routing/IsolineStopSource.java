@@ -33,12 +33,12 @@ class IsolineStopSource extends IsolineQueryTemplate<Stop> {
 
     @Override
     protected Connection postprocessDepartureConnection(Stop source, org.naviqore.raptor.Connection connection) {
-        return utils.composeConnection(connection, trips);
+        return utils.composeConnection(RoutingQueryUtils.Mile.NONE, connection, RoutingQueryUtils.Mile.NONE, trips);
     }
 
     @Override
     protected Connection postprocessArrivalConnection(Stop source, org.naviqore.raptor.Connection connection) {
-        return utils.composeConnection(connection, trips);
+        return utils.composeConnection(RoutingQueryUtils.Mile.NONE, connection, RoutingQueryUtils.Mile.NONE, trips);
     }
 
 }
