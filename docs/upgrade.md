@@ -29,6 +29,7 @@ properties themselves, in an `application.properties` of its own or as `-D` opti
 | –                                         | `app.raptor.optimize-travel-time`             | `RAPTOR_OPTIMIZE_TRAVEL_TIME`             |
 | `cache.service.day.size`                  | `app.cache.service-day-size`                  | `CACHE_SERVICE_DAY_SIZE`                  |
 | `cache.eviction.strategy`                 | `app.cache.eviction-strategy`                 | `CACHE_EVICTION_STRATEGY`                 |
+| –                                         | `app.routing.time-window-duration-maximum`    | `ROUTING_TIME_WINDOW_DURATION_MAXIMUM`    |
 
 ### Defaults and resources
 
@@ -38,21 +39,35 @@ properties themselves, in an `application.properties` of its own or as `-D` opti
   off by default. Turned off, a connection takes the first trip it can catch, as in 4.x by default.
 - **Cache.** 30 service days are cached instead of 5 (`app.cache.service-day-size`). A day now holds the stop times of
   the trips running on it only, 26 MB instead of 293 MB on the Swiss feed, so 30 days take less heap than 5 did.
+- **Time windows.** A request with a time window longer than a day is refused with status 400 (`invalid-parameters`).
+  A query over a time window runs a search for each departure in it and reads the stop times of every day it reaches,
+  so a long window takes much time and memory. `app.routing.time-window-duration-maximum` sets the limit in seconds;
+  4.x had none.
 - **Startup.** The rows of `transfers.txt` for particular routes and trips are read and applied, 966 934 of them on the
-  Swiss feed, which take about 160 MB of heap once the service is built.
+  Swiss feed, which take about 160 MB of heap once the service is built. A row that cannot be applied, invalid or
+  naming a stop a trip does not call at, is skipped with a warning instead of failing the reading of the feed, and the
+  reader logs how many records of each file it skipped. A station is a stop of `location_type` 1, so a platform with
+  boarding areas stays a stop.
 
 ## REST API
 
-The endpoints, their parameters and the form of their answers are those of 4.x. The answers change:
+The endpoints and their parameters are those of 4.x. A connection also has its `departureTime` and `arrivalTime`, as
+the connection of an isoline already had. The answers change:
 
 - **Travel time.** Connections without a time window leave as late as their arrival allows, see above.
+- **Times at a location.** A connection from or to a location leaves at the time one sets out from it and arrives at
+  the time one reaches it: its `departureTime` and `arrivalTime` include the walk and the access time, also where the
+  walk is too short to be a leg of its own. A time window and the maximum travel duration apply to these times.
 - **Time windows.** A connection query over a time window reports the connections leaving in it that no other
   connection beats, not even one leaving after the window. A window shorter than the headway can therefore be empty. An
   isoline over a time window reports for each stop the shortest travel time among the connections leaving in the
-  window. See [time windows](routing.md#connections-over-a-time-window).
+  window. See [time windows](routing.md#connections-over-a-time-window). A window longer than a day is refused, see
+  above.
 - **Transfers.** The rows of `transfers.txt` for particular routes or trips apply to their trips, of every type: a
   minimum time of their own, a transfer refused, or staying on board while the vehicle continues as another trip, which
   is a ride of its own. A trip is boarded only where it picks up passengers and left only where it sets them down.
+  Staying on board needs neither, and a connection shows it as the next ride without a walk, also where the vehicle
+  continues from another stop.
 - **Walks** between stops take the time the feed gives for their direction, also when the router searches backward.
 - **Ties.** Of equally good connections, the same one is reported on every start of the service.
 
@@ -78,7 +93,9 @@ the interfaces of `naviqore-timetable` instead.
 | `StopSortStrategy.getComparator` of `org.naviqore.gtfs.schedule.model.Stop` | of `org.naviqore.timetable.model.Stop`                        |
 
 A repository of a GTFS feed is `() -> new GtfsScheduleReader().read(path)`, as in the [README](../README.md). The
-interfaces of `PublicTransitService` and the query configuration are those of 4.x.
+interfaces of `PublicTransitService` and the query configuration are those of 4.x. The departure and arrival time of a
+`Connection` include the first and the last mile, also where a walk is too short to be a leg, see
+[times at a location](#rest-api).
 
 ### GTFS and timetable
 
@@ -88,6 +105,8 @@ interfaces of `PublicTransitService` and the query configuration are those of 4.
   `GtfsRoutePartitioner` is `org.naviqore.timetable.RoutePartitioner`.
 - A stop time has its pickup and drop-off types (`pickupType()`, `dropOffType()`), and a transfer the routes and trips
   it applies to (`getFromRoute()`, `getToRoute()`, `getFromTrip()`, `getToTrip()`).
+- A GTFS stop has its `LocationType`. `GtfsScheduleBuilder.addTransfer` refuses a transfer it cannot apply when it is
+  added, with an `IllegalArgumentException`, which the reader logs before it skips the row.
 
 ### Router
 
