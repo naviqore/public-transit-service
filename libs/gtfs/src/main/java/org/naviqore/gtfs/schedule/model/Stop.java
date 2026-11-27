@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.jspecify.annotations.Nullable;
+import org.naviqore.gtfs.schedule.type.LocationType;
 import org.naviqore.timetable.type.AccessibilityInformation;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -19,6 +20,7 @@ public final class Stop implements Initializable, org.naviqore.timetable.model.S
     private final GeoCoordinate coordinate;
     @Getter(AccessLevel.NONE)
     private final AccessibilityInformation wheelchairBoarding;
+    private final LocationType locationType;
     @Nullable
     @Setter(AccessLevel.PACKAGE)
     @Getter(AccessLevel.NONE)

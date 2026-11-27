@@ -20,7 +20,9 @@ class RaptorConnection implements Connection {
     private List<Leg> legs = new ArrayList<>();
 
     private static void validateLegOrder(Leg current, Leg next) {
-        if (!current.getToStopId().equals(next.getFromStopId())) {
+        // a ride may end at another stop than the next leaves from: where its vehicle continues as the next trip
+        boolean staysOnBoard = current.getType() == Leg.Type.ROUTE && next.getType() == Leg.Type.ROUTE;
+        if (!staysOnBoard && !current.getToStopId().equals(next.getFromStopId())) {
             throw new IllegalStateException("Legs are not connected: " + current + " -> " + next);
         }
         if (current.getArrivalTime().isBefore(current.getDepartureTime())) {

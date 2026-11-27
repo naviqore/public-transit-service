@@ -1,11 +1,16 @@
 package org.naviqore.service.raptor;
 
 import lombok.*;
-import org.naviqore.service.*;
+import org.naviqore.service.Connection;
+import org.naviqore.service.Leg;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
+/**
+ * A connection with the time it leaves the origin and reaches the destination, which include the access and egress time
+ * and a first or last walk too short to be a leg of its own.
+ */
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
 @ToString
@@ -13,44 +18,7 @@ import java.util.List;
 public class RaptorServiceConnection implements Connection {
 
     private final List<Leg> legs;
+    private final OffsetDateTime departureTime;
+    private final OffsetDateTime arrivalTime;
 
-    @Override
-    public OffsetDateTime getDepartureTime() {
-        return legs.getFirst().accept(new LegVisitor<>() {
-            @Override
-            public OffsetDateTime visit(PublicTransitLeg publicTransitLeg) {
-                return publicTransitLeg.getDeparture().getDepartureTime();
-            }
-
-            @Override
-            public OffsetDateTime visit(Transfer transfer) {
-                return transfer.getDepartureTime();
-            }
-
-            @Override
-            public OffsetDateTime visit(Walk walk) {
-                return walk.getDepartureTime();
-            }
-        });
-    }
-
-    @Override
-    public OffsetDateTime getArrivalTime() {
-        return legs.getLast().accept(new LegVisitor<>() {
-            @Override
-            public OffsetDateTime visit(PublicTransitLeg publicTransitLeg) {
-                return publicTransitLeg.getArrival().getArrivalTime();
-            }
-
-            @Override
-            public OffsetDateTime visit(Transfer transfer) {
-                return transfer.getArrivalTime();
-            }
-
-            @Override
-            public OffsetDateTime visit(Walk walk) {
-                return walk.getArrivalTime();
-            }
-        });
-    }
 }

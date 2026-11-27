@@ -76,7 +76,7 @@ class StopTimeProvider {
                 .orElse("");
 
         // compose key
-        return serviceId + "|" + dstFingerprint + "|" + queryConfig.isWheelchairAccessible() + "|" + queryConfig.isBikeAccessible() + "|" + queryConfig.getAllowedTravelModes();
+        return serviceId + "|" + dstFingerprint + "|" + queryConfig.isWheelchairAccessible() + "|" + queryConfig.isBikeAllowed() + "|" + queryConfig.getTravelModes();
     }
 
     /**

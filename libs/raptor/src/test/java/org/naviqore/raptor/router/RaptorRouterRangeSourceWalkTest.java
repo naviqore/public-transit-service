@@ -1,5 +1,6 @@
 package org.naviqore.raptor.router;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.naviqore.raptor.*;
 
@@ -131,5 +132,138 @@ class RaptorRouterRangeSourceWalkTest {
                 QueryConfig.defaults()).isEmpty());
         assertTrue(arriving().connectionRangeQuery(Map.of("S", at(9, 0)), Map.of("X", 0), TimeType.ARRIVAL, HOUR,
                 QueryConfig.defaults()).isEmpty());
+    }
+
+    /**
+     * Source stops at different times: A at 08:00 and B at 08:05, two minutes' walk apart, so that the walk from A
+     * reaches B earlier than B's own time (routing backward: B at 07:55 and A at 08:00, the walk from A reaching B
+     * later). B keeps its own label next to the walk: to walk on from, since a walk does not continue a walk, and to
+     * board within its own window.
+     */
+    @Nested
+    class SourceStopReachedOnFootFromAnother {
+
+        private static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
+        private static final Map<String, OffsetDateTime> DEPARTING_FROM_B = Map.of("B", at(8, 5));
+        private static final Map<String, OffsetDateTime> DEPARTING_FROM_A_AND_B = Map.of("A", at(8, 0), "B", at(8, 5));
+        private static final Map<String, OffsetDateTime> ARRIVING_AT_B = Map.of("B", at(7, 55));
+        private static final Map<String, OffsetDateTime> ARRIVING_AT_A_AND_B = Map.of("A", at(8, 0), "B", at(7, 55));
+
+        /**
+         * A, B and C two minutes' walk apart in a row, a trip from C at 08:10 to T at 08:20, one from T at 07:40 to C
+         * at 07:50, and with a faster route, one from C at 08:08 to T at 08:12. T is reached from B by walking to C and
+         * riding, not from A, which would walk twice.
+         */
+        private static RaptorAlgorithm walkingOn(boolean withFasterRoute) {
+            RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
+            List.of("A", "B", "C", "T").forEach(builder::addStop);
+            for (String[] walk : new String[][]{{"A", "B"}, {"B", "A"}, {"B", "C"}, {"C", "B"}}) {
+                builder.addTransfer(walk[0], walk[1], 120);
+            }
+            addTrip(builder, "R", "C", 8 * 60 + 10, "T", 8 * 60 + 20);
+            addTrip(builder, "Q", "T", 7 * 60 + 40, "C", 7 * 60 + 50);
+            if (withFasterRoute) {
+                addTrip(builder, "F", "C", 8 * 60 + 8, "T", 8 * 60 + 12);
+            }
+            return builder.build();
+        }
+
+        /**
+         * A walk of two minutes from A to B, and a trip from B at 08:09 to T at 08:20.
+         */
+        private static RaptorAlgorithm ridingLate() {
+            RaptorRouterBuilder builder = RaptorRouter.builder(RaptorConfig.defaults());
+            List.of("A", "B", "T").forEach(builder::addStop);
+            builder.addTransfer("A", "B", 120);
+            addTrip(builder, "R", "B", 8 * 60 + 9, "T", 8 * 60 + 20);
+            return builder.build();
+        }
+
+        private static void addTrip(RaptorRouterBuilder builder, String routeId, String from, int departure, String to,
+                                    int arrival) {
+            builder.addRoute(routeId, RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(from, to));
+            builder.addTrip(routeId + "-0", routeId);
+            builder.addStopTime(routeId, routeId + "-0", 0, from, departure * 60, departure * 60);
+            builder.addStopTime(routeId, routeId + "-0", 1, to, arrival * 60, arrival * 60);
+        }
+
+        @Test
+        void connectionsDeparting_walkOnFromTheSourceStop() {
+            RaptorAlgorithm raptor = walkingOn(false);
+
+            for (Map<String, OffsetDateTime> sources : List.of(DEPARTING_FROM_B, DEPARTING_FROM_A_AND_B)) {
+                List<Connection> connections = raptor.connectionRangeQuery(sources, Map.of("T", 0), TimeType.DEPARTURE,
+                        FIVE_MINUTES, QueryConfig.defaults());
+
+                assertEquals(1, connections.size());
+                List<Leg> legs = connections.getFirst().getLegs();
+                assertEquals(2, legs.size());
+                assertLeg(legs.get(0), Leg.Type.WALK_TRANSFER, "B", at(8, 8), "C", at(8, 10));
+                assertLeg(legs.get(1), Leg.Type.ROUTE, "C", at(8, 10), "T", at(8, 20));
+            }
+        }
+
+        @Test
+        void connectionsArriving_walkOnFromTheSourceStop() {
+            RaptorAlgorithm raptor = walkingOn(false);
+
+            for (Map<String, OffsetDateTime> sources : List.of(ARRIVING_AT_B, ARRIVING_AT_A_AND_B)) {
+                List<Connection> connections = raptor.connectionRangeQuery(sources, Map.of("T", 0), TimeType.ARRIVAL,
+                        FIVE_MINUTES, QueryConfig.defaults());
+
+                assertEquals(1, connections.size());
+                List<Leg> legs = connections.getFirst().getLegs();
+                assertEquals(2, legs.size());
+                assertLeg(legs.get(0), Leg.Type.ROUTE, "T", at(7, 40), "C", at(7, 50));
+                assertLeg(legs.get(1), Leg.Type.WALK_TRANSFER, "C", at(7, 50), "B", at(7, 52));
+            }
+        }
+
+        @Test
+        void isolines_walkOnFromTheSourceStop() {
+            // routed from B leaving at 08:06, the faster trip from C at 08:08 is the shortest
+            RaptorAlgorithm raptor = walkingOn(true);
+
+            for (Map<String, OffsetDateTime> sources : List.of(DEPARTING_FROM_B, DEPARTING_FROM_A_AND_B)) {
+                Connection toT = raptor.isolineRangeQuery(sources, TimeType.DEPARTURE, FIVE_MINUTES,
+                        QueryConfig.defaults()).get("T");
+
+                assertNotNull(toT);
+                assertEquals(2, toT.getLegs().size());
+                assertLeg(toT.getLegs().get(0), Leg.Type.WALK_TRANSFER, "B", at(8, 6), "C", at(8, 8));
+                assertLeg(toT.getLegs().get(1), Leg.Type.ROUTE, "C", at(8, 8), "T", at(8, 12));
+            }
+        }
+
+        @Test
+        void isolines_rideFromTheSourceStopInItsOwnWindow() {
+            // the trip from B at 08:09 leaves in B's window, which ends at 08:10, but not two minutes after A's
+            RaptorAlgorithm raptor = ridingLate();
+
+            for (Map<String, OffsetDateTime> sources : List.of(DEPARTING_FROM_B, DEPARTING_FROM_A_AND_B)) {
+                Connection toT = raptor.isolineRangeQuery(sources, TimeType.DEPARTURE, FIVE_MINUTES,
+                        QueryConfig.defaults()).get("T");
+
+                assertNotNull(toT);
+                assertEquals(1, toT.getLegs().size());
+                assertLeg(toT.getLegs().getFirst(), Leg.Type.ROUTE, "B", at(8, 9), "T", at(8, 20));
+            }
+        }
+
+        @Test
+        void connections_beatenByAWalkFromAnotherSourceStopAfterTheWindow() {
+            // leaving A after the window, from 08:05 to 08:07, the walk catches the trip from B at 08:09 too, so no
+            // connection leaving in the window is reported; a window of eight minutes holds the latest of them
+            RaptorAlgorithm raptor = ridingLate();
+
+            assertTrue(raptor.connectionRangeQuery(DEPARTING_FROM_A_AND_B, Map.of("T", 0), TimeType.DEPARTURE,
+                    FIVE_MINUTES, QueryConfig.defaults()).isEmpty());
+            List<Connection> connections = raptor.connectionRangeQuery(DEPARTING_FROM_A_AND_B, Map.of("T", 0),
+                    TimeType.DEPARTURE, Duration.ofMinutes(8), QueryConfig.defaults());
+
+            assertEquals(1, connections.size());
+            assertLeg(connections.getFirst().getLegs().getFirst(), Leg.Type.WALK_TRANSFER, "A", at(8, 7), "B",
+                    at(8, 9));
+        }
     }
 }

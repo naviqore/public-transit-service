@@ -11,7 +11,7 @@ public interface Route {
 
     String getShortName();
 
-    TravelMode getRouteType();
+    TravelMode getTravelMode();
 
     String getRouteTypeDescription();
 

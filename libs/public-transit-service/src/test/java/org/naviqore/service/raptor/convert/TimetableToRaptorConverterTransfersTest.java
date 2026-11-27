@@ -67,8 +67,12 @@ class TimetableToRaptorConverterTransfersTest {
         builder.addStopTime(tripId, to, time(arrival), time(arrival));
     }
 
+    /**
+     * Converts the timetable to a router that scans the day of a query only, so that no trip of another day is found
+     * where none of the day is.
+     */
     private RaptorAlgorithm convert(TransferGenerator... transferGenerators) {
-        return new TimetableToRaptorConverter(RaptorConfig.defaults(), builder.build(),
+        return new TimetableToRaptorConverter(RaptorConfig.builder().daysToScan(1).build(), builder.build(),
                 List.of(transferGenerators)).run();
     }
 

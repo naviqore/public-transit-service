@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
 
     private static final byte WHEELCHAIR_ACCESSIBLE = 1;
-    private static final byte BIKES_ALLOWED = 2;
+    private static final byte BIKE_ALLOWED = 2;
 
     private final Timetable schedule;
     private final TimetableTripMaskProvider.MaskCache cache;
@@ -34,10 +34,16 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     private RouteTrips @Nullable [] routes = null;
 
     public TimetableTripMaskProvider(Timetable schedule) {
-        this(schedule, ServiceConfig.DEFAULT_CACHE_SIZE,
-                EvictionCache.Strategy.valueOf(ServiceConfig.DEFAULT_CACHE_EVICTION_STRATEGY.name()));
+        this(schedule, ServiceConfig.DEFAULT_RAPTOR_STOP_TIME_CACHE_SIZE,
+                EvictionCache.Strategy.valueOf(ServiceConfig.DEFAULT_RAPTOR_STOP_TIME_CACHE_STRATEGY.name()));
     }
 
+    /**
+     * @param schedule  the timetable.
+     * @param cacheSize the number of service days whose stop times the router caches: the active services of twenty
+     *                  times as many dates are cached, at most 365.
+     * @param strategy  the eviction strategy of the cache.
+     */
     public TimetableTripMaskProvider(Timetable schedule, int cacheSize, EvictionCache.Strategy strategy) {
         this.schedule = schedule;
         this.cache = new TimetableTripMaskProvider.MaskCache(cacheSize, strategy);
@@ -60,7 +66,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
             flags |= WHEELCHAIR_ACCESSIBLE;
         }
         if (trip.getBikesAllowed() == BikeInformation.ALLOWED) {
-            flags |= BIKES_ALLOWED;
+            flags |= BIKE_ALLOWED;
         }
         return flags;
     }
@@ -127,13 +133,13 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
         validateQueryConfig(queryConfig);
 
         boolean hasTravelModeFilter = queryConfig.needsTravelModeFiltering();
-        EnumSet<TravelMode> allowedTravelModes = mapToTravelModes(queryConfig.getAllowedTravelModes());
+        EnumSet<TravelMode> travelModes = mapToTravelModes(queryConfig.getTravelModes());
         int requiredFlags = 0;
         if (queryConfig.isWheelchairAccessible()) {
             requiredFlags |= WHEELCHAIR_ACCESSIBLE;
         }
-        if (queryConfig.isBikeAccessible()) {
-            requiredFlags |= BIKES_ALLOWED;
+        if (queryConfig.isBikeAllowed()) {
+            requiredFlags |= BIKE_ALLOWED;
         }
 
         // ask each calendar once, then each trip reads the answer of its calendar
@@ -148,7 +154,7 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
             boolean[] tripMask = new boolean[tripCalendars.length];
 
             // no need for further checks if travel mode is not allowed
-            if (!hasTravelModeFilter || allowedTravelModes.contains(route.travelMode())) {
+            if (!hasTravelModeFilter || travelModes.contains(route.travelMode())) {
                 for (int i = 0; i < tripMask.length; i++) {
                     tripMask[i] = running[tripCalendars[i]] && route.hasFlags(i, requiredFlags);
                 }
@@ -164,8 +170,8 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
         if (queryConfig.isWheelchairAccessible() && !schedule.hasTripAccessibilityInformation()) {
             throw new IllegalArgumentException("Timetable does not contain wheelchair accessibility information");
         }
-        if (queryConfig.isBikeAccessible() && !schedule.hasTripBikeInformation()) {
-            throw new IllegalArgumentException("Timetable does not contain bike accessibility information");
+        if (queryConfig.isBikeAllowed() && !schedule.hasTripBikeInformation()) {
+            throw new IllegalArgumentException("Timetable does not contain bike information");
         }
     }
 
@@ -181,13 +187,13 @@ public class TimetableTripMaskProvider implements RaptorTripMaskProvider {
     }
 
     /**
-     * Caches for active services (= timetable calendars) per date and raptor trip mask instances.
+     * Caches the active services (= timetable calendars) per date.
      */
     private class MaskCache {
         private final EvictionCache<LocalDate, String> activeServices;
 
         /**
-         * @param cacheSize the maximum number of trip mask instances to be cached.
+         * @param cacheSize the number of service days whose stop times the router caches.
          * @param strategy  the cache eviction strategy.
          */
         MaskCache(int cacheSize, EvictionCache.Strategy strategy) {

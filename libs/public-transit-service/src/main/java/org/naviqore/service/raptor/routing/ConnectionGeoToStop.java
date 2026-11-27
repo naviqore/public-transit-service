@@ -2,7 +2,6 @@ package org.naviqore.service.raptor.routing;
 
 import org.naviqore.raptor.RaptorAlgorithm;
 import org.naviqore.service.Connection;
-import org.naviqore.service.Leg;
 import org.naviqore.service.Stop;
 import org.naviqore.service.TimeType;
 import org.naviqore.service.config.ConnectionQueryConfig;
@@ -43,17 +42,17 @@ class ConnectionGeoToStop extends ConnectionQueryTemplate<GeoCoordinate, Stop> {
     @Override
     protected Connection postprocessDepartureConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
                                                         Stop target) {
-        OffsetDateTime departureTime = connection.getDepartureTime();
-        Leg firstMile = utils.createFirstWalk(source, connection.getFromStopId(), departureTime);
-        return utils.composeConnection(firstMile, connection);
+        RoutingQueryUtils.Mile firstMile = utils.createFirstWalk(source, connection.getFromStopId(),
+                connection.getDepartureTime());
+        return utils.composeConnection(firstMile, connection, RoutingQueryUtils.Mile.NONE);
     }
 
     @Override
     protected Connection postprocessArrivalConnection(GeoCoordinate source, org.naviqore.raptor.Connection connection,
                                                       Stop target) {
-        OffsetDateTime arrivalTime = connection.getArrivalTime();
-        Leg lastMile = utils.createLastWalk(source, connection.getToStopId(), arrivalTime);
-        return utils.composeConnection(connection, lastMile);
+        RoutingQueryUtils.Mile lastMile = utils.createLastWalk(source, connection.getToStopId(),
+                connection.getArrivalTime());
+        return utils.composeConnection(RoutingQueryUtils.Mile.NONE, connection, lastMile);
     }
 
     @Override

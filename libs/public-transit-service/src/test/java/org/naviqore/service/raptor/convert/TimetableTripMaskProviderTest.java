@@ -38,18 +38,18 @@ public class TimetableTripMaskProviderTest {
         argumentsList.add(Arguments.of("Exception, all travel modes, all accessibility, all bike", EXCEPTION,
                 QueryConfig.defaults()));
         argumentsList.add(Arguments.of("Weekday, bus only, all accessibility, all bike", WEEKDAY,
-                QueryConfig.builder().allowedTravelModes(EnumSet.of(TravelMode.BUS)).build()));
+                QueryConfig.builder().travelModes(EnumSet.of(TravelMode.BUS)).build()));
         argumentsList.add(Arguments.of("Weekday, bus and tram, all accessibility, all bike", WEEKDAY,
-                QueryConfig.builder().allowedTravelModes(EnumSet.of(TravelMode.BUS, TravelMode.TRAM)).build()));
+                QueryConfig.builder().travelModes(EnumSet.of(TravelMode.BUS, TravelMode.TRAM)).build()));
         argumentsList.add(Arguments.of("Weekday, all travel modes, accessible only, all bike", WEEKDAY,
                 QueryConfig.builder().wheelchairAccessible(true).build()));
         argumentsList.add(Arguments.of("Weekday, all travel modes, all accessibility, bike allowed", WEEKDAY,
-                QueryConfig.builder().bikeAccessible(true).build()));
+                QueryConfig.builder().bikeAllowed(true).build()));
         argumentsList.add(Arguments.of("Weekday, bus only, accessible only, bike allowed", WEEKDAY,
                 QueryConfig.builder()
-                        .allowedTravelModes(EnumSet.of(TravelMode.BUS))
+                        .travelModes(EnumSet.of(TravelMode.BUS))
                         .wheelchairAccessible(true)
-                        .bikeAccessible(true)
+                        .bikeAllowed(true)
                         .build()));
 
         return argumentsList.stream();
@@ -61,7 +61,7 @@ public class TimetableTripMaskProviderTest {
         TimetableTripMaskProvider provider = new TimetableTripMaskProvider(Utilities.prepareSchedule());
         provider.setTripIds(Utilities.getTripIds());
 
-        List<String> expectedRoutes = queryConfig.getAllowedTravelModes()
+        List<String> expectedRoutes = queryConfig.getTravelModes()
                 .stream()
                 .map(Utilities.TRAVEL_MODE_MAP::get)
                 .filter(Objects::nonNull)
@@ -73,7 +73,7 @@ public class TimetableTripMaskProviderTest {
         AccessibilityInformation[] expectedAccessibilityValues = queryConfig.isWheelchairAccessible() ? new AccessibilityInformation[]{
                 AccessibilityInformation.ACCESSIBLE} : Utilities.ACCESSIBILITY_VALUES;
 
-        BikeInformation[] expectedBikeValues = queryConfig.isBikeAccessible() ? new BikeInformation[]{
+        BikeInformation[] expectedBikeValues = queryConfig.isBikeAllowed() ? new BikeInformation[]{
                 BikeInformation.ALLOWED} : Utilities.BIKE_VALUES;
 
         boolean[] expectedTripMask = Utilities.getExpectedTripMask(expectedServiceIds, expectedAccessibilityValues,

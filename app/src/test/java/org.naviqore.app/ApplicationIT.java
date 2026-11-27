@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "app.gtfs.static.uri=../libs/gtfs-sample/src/main/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip"})
+        "naviqore.gtfs.static.uri=../libs/gtfs-sample/src/main/resources/org/naviqore/gtfs/schedule/sample-feed-1.zip"})
 @Import(TestRestClientConfig.class)
 class ApplicationIT {
 
@@ -41,6 +41,18 @@ class ApplicationIT {
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        void nearestStops_zeroMaxDistance_shouldReturn400() {
+            ResponseEntity<String> response = request.setPort(port)
+                    .setEndpoint("/schedule/stops/nearest")
+                    .addQueryParameter("latitude", "36")
+                    .addQueryParameter("longitude", "-116")
+                    .addQueryParameter("maxDistance", "0")
+                    .get(String.class);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
         @Test
@@ -81,12 +93,14 @@ class ApplicationIT {
         @Test
         void departureAtStop_invalidStopId_shouldReturn404() {
             ResponseEntity<String> response = request.setPort(port)
-                    .setEndpoint("/schedule/stops/NOT_EXISTING/departures")
-                    .addQueryParameter("departureDateTime", "2010-01-01T01:10:01Z")
+                    .setEndpoint("/schedule/stops/NOT_EXISTING/times")
+                    .addQueryParameter("from", "2010-01-01T01:10:01Z")
                     .addQueryParameter("limit", "3")
                     .get(String.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            // the stop is unknown, not the endpoint
+            assertThat(response.getBody()).contains("stop-not-found");
         }
 
         @Test
@@ -158,8 +172,8 @@ class ApplicationIT {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/routing/isolines")
                     .addQueryParameter("sourceStopId", "STAGECOACH")
-                    .addQueryParameter("maxTransferNumber", "3")
-                    .addQueryParameter("maxTravelTime", "7200")
+                    .addQueryParameter("maxTransfers", "3")
+                    .addQueryParameter("maxTravelDuration", "7200")
                     .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
@@ -171,8 +185,8 @@ class ApplicationIT {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/routing/isolines")
                     .addQueryParameter("sourceStopId", "NOT_EXISTING")
-                    .addQueryParameter("maxTransferNumber", "3")
-                    .addQueryParameter("maxTravelTime", "7200")
+                    .addQueryParameter("maxTransfers", "3")
+                    .addQueryParameter("maxTravelDuration", "7200")
                     .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 

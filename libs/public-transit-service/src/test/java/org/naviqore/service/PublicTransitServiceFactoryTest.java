@@ -59,7 +59,7 @@ class PublicTransitServiceFactoryTest {
         assertThat(connection.getArrivalTime()).isEqualTo(at(8, 20));
         assertThat(connection.getLegs()).singleElement().isInstanceOfSatisfying(PublicTransitLeg.class, leg -> {
             assertThat(leg.getTrip().getId()).isEqualTo("T1");
-            assertThat(leg.getTrip().getRoute().getRouteType()).isEqualTo(TravelMode.TRAM);
+            assertThat(leg.getTrip().getRoute().getTravelMode()).isEqualTo(TravelMode.TRAM);
         });
     }
 

@@ -44,14 +44,14 @@ class FakePublicTransitService implements PublicTransitService {
             List.of(STOP_D, STOP_E, STOP_F, STOP_G, STOP_H));
     private static final List<RouteData> ROUTES = List.of(ROUTE_1, ROUTE_2, ROUTE_3);
 
-    private boolean supportsMaxWalkDuration = true;
-    private boolean supportsMinTransferDuration = true;
-    private boolean supportsMaxTransfers = true;
-    private boolean supportsMaxTravelDuration = true;
+    private boolean supportsMaximumWalkDuration = true;
+    private boolean supportsMinimumTransferDuration = true;
+    private boolean supportsMaximumTransfers = true;
+    private boolean supportsMaximumTravelDuration = true;
 
-    private boolean hasAccessibilityInformation = false;
-    private boolean hasBikeInformation = false;
-    private boolean hasTravelModeInformation = false;
+    private boolean hasWheelchairAccessible = false;
+    private boolean hasBikeAllowed = false;
+    private boolean hasTravelModes = false;
 
     @Override
     public Validity getValidity() {
@@ -80,23 +80,23 @@ class FakePublicTransitService implements PublicTransitService {
 
     @Override
     public RoutingFeatures getRoutingFeatures() {
-        return new RoutingFeatures(supportsMaxTransfers, supportsMaxTravelDuration, supportsMaxWalkDuration,
-                supportsMinTransferDuration, hasAccessibilityInformation, hasBikeInformation, hasTravelModeInformation);
+        return new RoutingFeatures(supportsMaximumTransfers, supportsMaximumTravelDuration, supportsMaximumWalkDuration,
+                supportsMinimumTransferDuration, hasWheelchairAccessible, hasBikeAllowed, hasTravelModes);
     }
 
     @Override
-    public boolean hasAccessibilityInformation() {
-        return hasAccessibilityInformation;
+    public boolean hasWheelchairAccessible() {
+        return hasWheelchairAccessible;
     }
 
     @Override
-    public boolean hasBikeInformation() {
-        return hasBikeInformation;
+    public boolean hasBikeAllowed() {
+        return hasBikeAllowed;
     }
 
     @Override
-    public boolean hasTravelModeInformation() {
-        return hasTravelModeInformation;
+    public boolean hasTravelModes() {
+        return hasTravelModes;
     }
 
     @Override
@@ -524,7 +524,7 @@ class FakePublicTransitService implements PublicTransitService {
             private final String id;
             private final String name;
             private final String shortName;
-            private final TravelMode routeType;
+            private final TravelMode travelMode;
             private final String routeTypeDescription;
             private final String Agency;
 
@@ -536,7 +536,7 @@ class FakePublicTransitService implements PublicTransitService {
             private final String id;
             private final String headSign;
             private final Route route;
-            private final boolean bikesAllowed;
+            private final boolean bikeAllowed;
             private final boolean wheelchairAccessible;
             @Setter
             private List<org.naviqore.service.StopTime> stopTimes;

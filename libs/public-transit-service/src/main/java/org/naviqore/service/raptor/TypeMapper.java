@@ -72,16 +72,13 @@ public final class TypeMapper {
         };
     }
 
-    public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
-                                 @Nullable Leg lastMile, Timetable schedule) {
-        return map(connection, firstMile, lastMile, schedule, new Trips());
-    }
-
     /**
-     * Maps a connection whose rides take their trips from the given trips, which the connections of one query share.
+     * Maps a connection between its departure and arrival time, with a first and a last mile leg if any, whose rides
+     * take their trips from the given trips, which the connections of one query share.
      */
     public static Connection map(org.naviqore.raptor.Connection connection, @Nullable Leg firstMile,
-                                 @Nullable Leg lastMile, Timetable schedule, Trips trips) {
+                                 @Nullable Leg lastMile, OffsetDateTime departureTime, OffsetDateTime arrivalTime,
+                                 Timetable schedule, Trips trips) {
         List<Leg> legs = new ArrayList<>();
 
         if (firstMile != null) {
@@ -96,7 +93,7 @@ public final class TypeMapper {
             legs.addLast(lastMile);
         }
 
-        return new RaptorServiceConnection(legs);
+        return new RaptorServiceConnection(legs, departureTime, arrivalTime);
     }
 
     public static Leg map(org.naviqore.raptor.Leg leg, Timetable schedule) {
@@ -143,8 +140,8 @@ public final class TypeMapper {
                 // Set this explicitly so the service's unbounded RAPTOR cutoff does not depend on QueryConfig default.
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
-                .bikeAccessible(config.isBikeAllowed())
-                .allowedTravelModes(map(config.getTravelModes()))
+                .bikeAllowed(config.isBikeAllowed())
+                .travelModes(map(config.getTravelModes()))
                 .build();
     }
 
