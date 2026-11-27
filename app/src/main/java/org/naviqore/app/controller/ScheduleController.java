@@ -1,6 +1,7 @@
 package org.naviqore.app.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,10 +52,10 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "A list of stop names and IDs that match the query", content = @Content(schema = @Schema(implementation = Stop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/autocomplete")
-    public List<Stop> getAutoCompleteStops(@RequestParam String query,
-                                           @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) SearchType searchType,
-                                           @RequestParam(defaultValue = DEFAULT_SORT_BY) StopSortStrategy sortBy,
-                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
+    public List<Stop> getAutoCompleteStops(@RequestParam @Parameter(description = "Text to search the names of the stops for, ignoring case. A stop of a station is found by the name of its station.") String query,
+                                           @RequestParam(defaultValue = DEFAULT_SEARCH_TYPE) @Parameter(description = "Where the text has to be in the name.") SearchType searchType,
+                                           @RequestParam(defaultValue = DEFAULT_SORT_BY) @Parameter(description = "Order of the stops: by RELEVANCE, the exact names first, then those starting with the text, the shorter first; or ALPHABETICAL.") StopSortStrategy sortBy,
+                                           @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
 
         return service.getStops(query, map(searchType), map(sortBy)).stream().map(DtoMapper::map).limit(limit).toList();
     }
@@ -63,9 +64,10 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "A list of nearest stops", content = @Content(schema = @Schema(implementation = DistanceToStop.class, type = "array")))
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @GetMapping("/stops/nearest")
-    public List<DistanceToStop> getNearestStops(@RequestParam double latitude, @RequestParam double longitude,
-                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Min(0) int maxDistance,
-                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
+    public List<DistanceToStop> getNearestStops(@RequestParam @Parameter(description = "Latitude of the location, in WGS84 degrees from -90 to 90.") double latitude,
+                                                @RequestParam @Parameter(description = "Longitude of the location, in WGS84 degrees from -180 to 180.") double longitude,
+                                                @RequestParam(defaultValue = DEFAULT_MAX_DISTANCE) @Parameter(description = "Radius around the location to search for stops in, in meters.") @Min(0) int maxDistance,
+                                                @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stops.") @Min(1) int limit) {
 
         GeoCoordinate location = RequestValidator.createCoordinate(latitude, longitude);
 
@@ -87,7 +89,7 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "Information about the specified stop.", content = @Content(schema = @Schema(implementation = Stop.class)))
     @ApiResponse(responseCode = "404", description = "Stop not found")
     @GetMapping("/stops/{stopId}")
-    public Stop getStop(@PathVariable String stopId) {
+    public Stop getStop(@PathVariable @Parameter(description = "ID of the stop.") String stopId) {
         return map(RequestValidator.getStopById(stopId, service));
     }
 
@@ -96,12 +98,12 @@ public class ScheduleController {
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @ApiResponse(responseCode = "404", description = "Stop not found")
     @GetMapping("/stops/{stopId}/times")
-    public List<StopEvent> getStopTimes(@PathVariable String stopId,
-                                        @RequestParam(required = false) OffsetDateTime from,
-                                        @RequestParam(required = false) OffsetDateTime to,
-                                        @RequestParam(defaultValue = DEFAULT_TIME_TYPE) TimeType timeType,
-                                        @RequestParam(defaultValue = DEFAULT_STOP_SCOPE) StopScope stopScope,
-                                        @RequestParam(defaultValue = DEFAULT_LIMIT) @Min(1) int limit) {
+    public List<StopEvent> getStopTimes(@PathVariable @Parameter(description = "ID of the stop.") String stopId,
+                                        @RequestParam(required = false) @Parameter(description = "Start of the time window, included, as an ISO-8601 date-time with offset, e.g. 2026-03-01T08:00:00+01:00 (+ as %2B in a URL). Now if omitted; its date must lie within the validity of the schedule.") OffsetDateTime from,
+                                        @RequestParam(required = false) @Parameter(description = "End of the time window, excluded, as an ISO-8601 date-time with offset. 6 hours after from if omitted; must not be before from.") OffsetDateTime to,
+                                        @RequestParam(defaultValue = DEFAULT_TIME_TYPE) @Parameter(description = "Whether to list the departures (DEPARTURE) or the arrivals (ARRIVAL) in the time window.") TimeType timeType,
+                                        @RequestParam(defaultValue = DEFAULT_STOP_SCOPE) @Parameter(description = "The stops to list the times of: the stop alone (STRICT), with its children (CHILDREN), its whole station (RELATED), or all stops within the walk search radius (NEARBY).") StopScope stopScope,
+                                        @RequestParam(defaultValue = DEFAULT_LIMIT) @Parameter(description = "Maximum number of stop times, the earliest first.") @Min(1) int limit) {
         OffsetDateTime effectiveFrom = RequestValidator.validateAndSetDefaultDateTime(from, service);
         OffsetDateTime effectiveTo = Optional.ofNullable(to).orElseGet(() -> effectiveFrom.plus(DEFAULT_WINDOW));
         RequestValidator.validateTimeWindow(effectiveFrom, effectiveTo);
