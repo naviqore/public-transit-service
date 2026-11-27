@@ -33,9 +33,9 @@ class RaptorServiceInitializerIT {
         RaptorService service = initializer.get();
 
         assertNotNull(service);
-        assertTrue(service.hasTravelModeInformation());
-        assertFalse(service.hasAccessibilityInformation());
-        assertFalse(service.hasBikeInformation());
+        assertTrue(service.hasTravelModes());
+        assertFalse(service.hasWheelchairAccessible());
+        assertFalse(service.hasBikeAllowed());
     }
 
     @Test

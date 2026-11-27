@@ -13,8 +13,8 @@ public class RoutingInfo {
     final boolean supportsMaxTravelDuration;
     final boolean supportsMaxWalkDuration;
     final boolean supportsMinTransferDuration;
-    final boolean supportsAccessibility;
-    final boolean supportsBikes;
+    final boolean supportsWheelchairAccessible;
+    final boolean supportsBikeAllowed;
     final boolean supportsTravelModes;
 
 }

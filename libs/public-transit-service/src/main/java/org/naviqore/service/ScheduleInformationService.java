@@ -22,25 +22,26 @@ public interface ScheduleInformationService {
     Validity getValidity();
 
     /**
-     * Checks if the schedule has accessibility information.
+     * Checks if the schedule tells which of its trips are wheelchair accessible, see
+     * {@link Trip#isWheelchairAccessible()}.
      *
-     * @return true if the schedule has accessibility information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasAccessibilityInformation();
+    boolean hasWheelchairAccessible();
 
     /**
-     * Checks if the schedule has bike information.
+     * Checks if the schedule tells which of its trips allow bikes, see {@link Trip#isBikeAllowed()}.
      *
-     * @return true if the schedule has bike information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasBikeInformation();
+    boolean hasBikeAllowed();
 
     /**
-     * Checks if the schedule has travel mode information.
+     * Checks if the schedule tells the travel modes of its routes, see {@link Route#getTravelMode()}.
      *
-     * @return true if the schedule has travel mode information, false otherwise
+     * @return true if the schedule has this information, false otherwise
      */
-    boolean hasTravelModeInformation();
+    boolean hasTravelModes();
 
     /**
      * Searches for stops by name.

@@ -9,8 +9,8 @@ import lombok.ToString;
 @Getter
 public class ScheduleInfo {
 
-    final boolean hasAccessibility;
-    final boolean hasBikes;
+    final boolean hasWheelchairAccessible;
+    final boolean hasBikeAllowed;
     final boolean hasTravelModes;
     final ScheduleValidity scheduleValidity;
 

@@ -20,19 +20,19 @@ public class QueryConfig {
     @Builder.Default
     private final boolean wheelchairAccessible = false;
     @Builder.Default
-    private final boolean bikeAccessible = false;
+    private final boolean bikeAllowed = false;
     @Builder.Default
     private final boolean allowSourceTransfer = true;
     @Builder.Default
     private final boolean allowTargetTransfer = true;
 
     @Builder.Default
-    private final EnumSet<TravelMode> allowedTravelModes = EnumSet.allOf(TravelMode.class);
+    private final EnumSet<TravelMode> travelModes = EnumSet.allOf(TravelMode.class);
 
     private QueryConfig(int maximumWalkDuration, int minimumTransferDuration, int maximumTransfers,
-                        int maximumTravelDuration, boolean wheelchairAccessible, boolean bikeAccessible,
+                        int maximumTravelDuration, boolean wheelchairAccessible, boolean bikeAllowed,
                         boolean allowSourceTransfer, boolean allowTargetTransfer,
-                        EnumSet<TravelMode> allowedTravelModes) {
+                        EnumSet<TravelMode> travelModes) {
 
         if (maximumWalkDuration < 0) {
             throw new IllegalArgumentException("Maximum walk duration must be greater than or equal to 0.");
@@ -52,10 +52,10 @@ public class QueryConfig {
         this.maximumTransfers = maximumTransfers;
         this.maximumTravelDuration = maximumTravelDuration;
         this.wheelchairAccessible = wheelchairAccessible;
-        this.bikeAccessible = bikeAccessible;
+        this.bikeAllowed = bikeAllowed;
         this.allowSourceTransfer = allowSourceTransfer;
         this.allowTargetTransfer = allowTargetTransfer;
-        this.allowedTravelModes = allowedTravelModes;
+        this.travelModes = travelModes;
     }
 
     public static QueryConfig defaults() {
@@ -63,6 +63,6 @@ public class QueryConfig {
     }
 
     public boolean needsTravelModeFiltering() {
-        return allowedTravelModes.size() < TravelMode.values().length && !allowedTravelModes.isEmpty();
+        return travelModes.size() < TravelMode.values().length && !travelModes.isEmpty();
     }
 }

@@ -158,8 +158,8 @@ class ApplicationIT {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/routing/isolines")
                     .addQueryParameter("sourceStopId", "STAGECOACH")
-                    .addQueryParameter("maxTransferNumber", "3")
-                    .addQueryParameter("maxTravelTime", "7200")
+                    .addQueryParameter("maxTransfers", "3")
+                    .addQueryParameter("maxTravelDuration", "7200")
                     .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 
@@ -171,8 +171,8 @@ class ApplicationIT {
             ResponseEntity<String> response = request.setPort(port)
                     .setEndpoint("/routing/isolines")
                     .addQueryParameter("sourceStopId", "NOT_EXISTING")
-                    .addQueryParameter("maxTransferNumber", "3")
-                    .addQueryParameter("maxTravelTime", "7200")
+                    .addQueryParameter("maxTransfers", "3")
+                    .addQueryParameter("maxTravelDuration", "7200")
                     .addQueryParameter("dateTime", "2010-01-01T01:10:01Z")
                     .get(String.class);
 

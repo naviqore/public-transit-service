@@ -43,8 +43,8 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "A list of details supported or not supported by the schedule and it's validity.")
     @GetMapping("")
     public ScheduleInfo getScheduleInfo() {
-        return new ScheduleInfo(service.hasAccessibilityInformation(), service.hasBikeInformation(),
-                service.hasTravelModeInformation(), map(service.getValidity()));
+        return new ScheduleInfo(service.hasWheelchairAccessible(), service.hasBikeAllowed(), service.hasTravelModes(),
+                map(service.getValidity()));
     }
 
     @Operation(summary = "Autocomplete stop names", description = "Provides stop names and their corresponding stop IDs based on a partial input query.")

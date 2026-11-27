@@ -267,7 +267,10 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `naviqore.service.optimize
 
 ### Query
 
-`ConnectionQueryConfig` of the service, mapped to `QueryConfig` of the router; the REST parameters of `/routing`.
+`ConnectionQueryConfig` of the service, mapped to `QueryConfig` of the router; the REST parameters of `/routing`. An
+option has the same name in each, with `maximum` and `minimum` spelled out in Java, and so has the feature that tells
+whether the service supports it: `supportsMaximumWalkDuration()` of `RoutingFeatures` is `supportsMaxWalkDuration` of
+`GET /routing`.
 
 | Service                   | Router                    | REST                   | Meaning                                                                                                                                                        |
 |---------------------------|---------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -277,8 +280,8 @@ It is switched by `ServiceConfig.optimizeTravelTime`, `naviqore.service.optimize
 | `maximumTransfers`        | `maximumTransfers`        | `maxTransfers`         | Most transfers, so most rides less one.                                                                                                                        |
 | `maximumTravelDuration`   | –                         | `maxTravelDuration`    | Longest travel time in seconds, of whole connections; the service filters by it.                                                                               |
 | `wheelchairAccessible`    | `wheelchairAccessible`    | `wheelchairAccessible` | Only trips accessible by wheelchair.                                                                                                                           |
-| `bikeAllowed`             | `bikeAccessible`          | `bikeAllowed`          | Only trips that take bikes.                                                                                                                                    |
-| `travelModes`             | `allowedTravelModes`      | `travelModes`          | Only trips of these modes.                                                                                                                                     |
+| `bikeAllowed`             | `bikeAllowed`             | `bikeAllowed`          | Only trips that take bikes.                                                                                                                                    |
+| `travelModes`             | `travelModes`             | `travelModes`          | Only trips of these modes.                                                                                                                                     |
 | –                         | `maximumTravelDuration`   | –                      | Latest arrival (earliest departure) after (before) the earliest (latest) source time, which counts waiting before the first ride; the service does not set it. |
 | –                         | `allowSourceTransfer`     | –                      | Whether to walk from the source stops; the service allows it for a stop, not for a location, whose walks it has already made.                                  |
 | –                         | `allowTargetTransfer`     | –                      | Whether to walk to the target stops; likewise.                                                                                                                 |

@@ -60,7 +60,20 @@ them under their new names.
 ## REST API
 
 The endpoints and their parameters are those of 4.x. A connection also has its `departureTime` and `arrivalTime`, as
-the connection of an isoline already had. The answers change:
+the connection of an isoline already had. A field of an answer that stands for an option of a query is named after its
+parameter, so that each option has one name, and the description of the route type is named as in the service:
+
+| Answer                          | 4.x                        | 5.0                            |
+|---------------------------------|----------------------------|--------------------------------|
+| `GET /routing`                  | `supportsAccessibility`    | `supportsWheelchairAccessible` |
+| `GET /routing`                  | `supportsBikes`            | `supportsBikeAllowed`          |
+| `GET /schedule`                 | `hasAccessibility`         | `hasWheelchairAccessible`      |
+| `GET /schedule`                 | `hasBikes`                 | `hasBikeAllowed`               |
+| Trip of a leg or of a stop time | `bikesAllowed`             | `bikeAllowed`                  |
+| Route of a trip                 | `transportMode`            | `travelMode`                   |
+| Route of a trip                 | `transportModeDescription` | `routeTypeDescription`         |
+
+The detail of an `unsupported-routing-feature` error names the parameter that is not supported. The answers change:
 
 - **Travel time.** Connections without a time window leave as late as their arrival allows, see above.
 - **Times at a location.** A connection from or to a location leaves at the time one sets out from it and arrives at
@@ -108,9 +121,9 @@ The settings of `ServiceConfig` are named after the properties of the applicatio
 such as `walkSpeed` after `naviqore.service.walk.speed`; those starting with `raptor` configure the router.
 
 A repository of a GTFS feed is `() -> new GtfsScheduleReader().read(path)`, as in the [README](../README.md). The
-interfaces of `PublicTransitService` and the query configuration are those of 4.x. The departure and arrival time of a
-`Connection` include the first and the last mile, also where a walk is too short to be a leg, see
-[times at a location](#rest-api).
+interfaces of `PublicTransitService` and the query configuration are those of 4.x, but for the names of the
+[query options](#query-options). The departure and arrival time of a `Connection` include the first and the last mile,
+also where a walk is too short to be a leg, see [times at a location](#rest-api).
 
 ### GTFS and timetable
 
@@ -134,3 +147,26 @@ interfaces of `PublicTransitService` and the query configuration are those of 4.
 
 `RaptorRouterBuilder` takes stop times with boarding and alighting, the transfers refused at a stop or between two
 (`refuseTransfers`) and the transfers of particular routes or trips (`addTripTransfer`).
+
+### Query options
+
+An option of a query has the name of its REST parameter in the router and the service too, with `maximum` and
+`minimum` spelled out, and so have the features of the service and the data of its trips and routes that stand for it.
+`ConnectionQueryConfig` keeps its names; the timetable and the GTFS model keep the names of the GTFS fields, such as
+`getBikesAllowed()`.
+
+| 4.x                                                        | 5.0                                                    |
+|------------------------------------------------------------|--------------------------------------------------------|
+| `QueryConfig.bikeAccessible`                               | `QueryConfig.bikeAllowed`                              |
+| `QueryConfig.allowedTravelModes`                           | `QueryConfig.travelModes`                              |
+| `RoutingFeatures.supportsMaxTransfers()`                   | `RoutingFeatures.supportsMaximumTransfers()`           |
+| `RoutingFeatures.supportsMaxTravelDuration()`              | `RoutingFeatures.supportsMaximumTravelDuration()`      |
+| `RoutingFeatures.supportsMaxWalkDuration()`                | `RoutingFeatures.supportsMaximumWalkDuration()`        |
+| `RoutingFeatures.supportsMinTransferDuration()`            | `RoutingFeatures.supportsMinimumTransferDuration()`    |
+| `RoutingFeatures.supportsAccessibility()`                  | `RoutingFeatures.supportsWheelchairAccessible()`       |
+| `RoutingFeatures.supportsBikes()`                          | `RoutingFeatures.supportsBikeAllowed()`                |
+| `ScheduleInformationService.hasAccessibilityInformation()` | `ScheduleInformationService.hasWheelchairAccessible()` |
+| `ScheduleInformationService.hasBikeInformation()`          | `ScheduleInformationService.hasBikeAllowed()`          |
+| `ScheduleInformationService.hasTravelModeInformation()`    | `ScheduleInformationService.hasTravelModes()`          |
+| `Trip.isBikesAllowed()`                                    | `Trip.isBikeAllowed()`                                 |
+| `Route.getRouteType()`                                     | `Route.getTravelMode()`                                |

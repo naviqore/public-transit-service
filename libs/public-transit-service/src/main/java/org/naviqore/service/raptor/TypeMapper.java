@@ -140,8 +140,8 @@ public final class TypeMapper {
                 // Set this explicitly so the service's unbounded RAPTOR cutoff does not depend on QueryConfig default.
                 .maximumTravelDuration(Integer.MAX_VALUE)
                 .wheelchairAccessible(config.isWheelchairAccessible())
-                .bikeAccessible(config.isBikeAllowed())
-                .allowedTravelModes(map(config.getTravelModes()))
+                .bikeAllowed(config.isBikeAllowed())
+                .travelModes(map(config.getTravelModes()))
                 .build();
     }
 

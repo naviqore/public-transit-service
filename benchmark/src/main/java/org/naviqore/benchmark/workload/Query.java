@@ -15,7 +15,7 @@ import java.util.Locale;
  *     <li>{@code default}: no option set;</li>
  *     <li>travel modes in lower case: {@code bus}, {@code tram}, {@code rail}, {@code ship}, {@code subway},
  *     {@code aerial} and {@code funicular};</li>
- *     <li>{@code wheelchair} and {@code bike}: accessible trips only;</li>
+ *     <li>{@code wheelchair}: wheelchair accessible trips only; {@code bike}: trips that allow bikes only;</li>
  *     <li>{@code transfers0} and {@code transfers1}: at most no or one transfer;</li>
  *     <li>{@code walk5}: walks of at most 5 minutes; {@code mintransfer5}: transfers of at least 5 minutes;</li>
  *     <li>{@code travel60}: a travel time of at most 60 minutes; {@code window60}: a time window of 60 minutes.</li>

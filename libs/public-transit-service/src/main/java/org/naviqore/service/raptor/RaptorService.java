@@ -53,17 +53,17 @@ public class RaptorService implements PublicTransitService {
     }
 
     @Override
-    public boolean hasAccessibilityInformation() {
+    public boolean hasWheelchairAccessible() {
         return schedule.hasTripAccessibilityInformation();
     }
 
     @Override
-    public boolean hasBikeInformation() {
+    public boolean hasBikeAllowed() {
         return schedule.hasTripBikeInformation();
     }
 
     @Override
-    public boolean hasTravelModeInformation() {
+    public boolean hasTravelModes() {
         // timetable routes always have a travel mode, so this is always true
         return true;
     }

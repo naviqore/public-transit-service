@@ -17,7 +17,7 @@ public class Trip {
     private final Route route;
     @Nullable
     private final List<StopTime> stopTimes;
-    private final boolean bikesAllowed;
+    private final boolean bikeAllowed;
     private final boolean wheelchairAccessible;
 
 }

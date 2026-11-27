@@ -11,8 +11,8 @@ public class Route {
     private final String id;
     private final String name;
     private final String shortName;
-    private final TravelMode transportMode;
-    private final String transportModeDescription;
+    private final TravelMode travelMode;
+    private final String routeTypeDescription;
 
 }
 

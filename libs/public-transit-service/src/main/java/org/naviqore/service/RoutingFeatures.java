@@ -1,18 +1,20 @@
 package org.naviqore.service;
 
 /**
- * Supported routing features of the service.
+ * Supported routing features of the service, each named after the option of
+ * {@link org.naviqore.service.config.ConnectionQueryConfig} it allows.
  *
- * @param supportsMaxTransfers        whether the service supports routing with a defined max number of transfers
- * @param supportsMaxTravelDuration   whether the service supports routing with a defined max travel duration (including
- *                                    waiting duration)
- * @param supportsMaxWalkDuration     whether the service supports routing with a defined max walk duration
- * @param supportsMinTransferDuration whether the service supports routing with a defined min transfer duration
- * @param supportsAccessibility       whether the service supports routing for wheelchair users
- * @param supportsBikes               whether the service supports routing for bike users
- * @param supportsTravelModes         whether the service supports routing for different travel modes
+ * @param supportsMaximumTransfers        whether the service supports routing with a maximum number of transfers
+ * @param supportsMaximumTravelDuration   whether the service supports routing with a maximum travel duration
+ *                                        (including waiting duration)
+ * @param supportsMaximumWalkDuration     whether the service supports routing with a maximum walk duration
+ * @param supportsMinimumTransferDuration whether the service supports routing with a minimum transfer duration
+ * @param supportsWheelchairAccessible    whether the service supports routing on wheelchair accessible trips only
+ * @param supportsBikeAllowed             whether the service supports routing on trips that allow bikes only
+ * @param supportsTravelModes             whether the service supports routing on trips of given travel modes only
  */
-public record RoutingFeatures(boolean supportsMaxTransfers, boolean supportsMaxTravelDuration,
-                              boolean supportsMaxWalkDuration, boolean supportsMinTransferDuration,
-                              boolean supportsAccessibility, boolean supportsBikes, boolean supportsTravelModes) {
+public record RoutingFeatures(boolean supportsMaximumTransfers, boolean supportsMaximumTravelDuration,
+                              boolean supportsMaximumWalkDuration, boolean supportsMinimumTransferDuration,
+                              boolean supportsWheelchairAccessible, boolean supportsBikeAllowed,
+                              boolean supportsTravelModes) {
 }

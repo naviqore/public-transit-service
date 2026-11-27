@@ -73,18 +73,18 @@ public class PublicTransitSpringService implements PublicTransitService, Schedul
     }
 
     @Override
-    public boolean hasAccessibilityInformation() {
-        return delegate.hasAccessibilityInformation();
+    public boolean hasWheelchairAccessible() {
+        return delegate.hasWheelchairAccessible();
     }
 
     @Override
-    public boolean hasBikeInformation() {
-        return delegate.hasBikeInformation();
+    public boolean hasBikeAllowed() {
+        return delegate.hasBikeAllowed();
     }
 
     @Override
-    public boolean hasTravelModeInformation() {
-        return delegate.hasTravelModeInformation();
+    public boolean hasTravelModes() {
+        return delegate.hasTravelModes();
     }
 
     @Override

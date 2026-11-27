@@ -160,42 +160,41 @@ final class RequestValidator {
     }
 
     /**
-     * Validates routing query parameters against service capabilities.
+     * Validates routing query parameters against service capabilities, given as the values of the query configuration
+     * with the defaults set. A parameter that is not supported is named as in the request.
      *
      * @throws UnsupportedRoutingFeatureException if a requested feature is not supported
      */
-    static void validateRoutingFeatureSupport(int maxWalkDuration, int maxTransfers, int maxTravelDuration,
-                                              int minTransferDuration, boolean wheelchairAccessible,
+    static void validateRoutingFeatureSupport(int maximumWalkDuration, int maximumTransfers, int maximumTravelDuration,
+                                              int minimumTransferDuration, boolean wheelchairAccessible,
                                               boolean bikeAllowed, EnumSet<TravelMode> travelModes,
                                               RoutingFeatures features) {
-        if (maxWalkDuration != Integer.MAX_VALUE && !features.supportsMaxWalkDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum walk duration parameter is not supported by this service.");
+        if (maximumWalkDuration != Integer.MAX_VALUE && !features.supportsMaximumWalkDuration()) {
+            throw unsupportedParameter("maxWalkDuration");
         }
-        if (maxTransfers != Integer.MAX_VALUE && !features.supportsMaxTransfers()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum transfers parameter is not supported by this service.");
+        if (maximumTransfers != Integer.MAX_VALUE && !features.supportsMaximumTransfers()) {
+            throw unsupportedParameter("maxTransfers");
         }
-        if (maxTravelDuration != Integer.MAX_VALUE && !features.supportsMaxTravelDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Maximum travel duration parameter is not supported by this service.");
+        if (maximumTravelDuration != Integer.MAX_VALUE && !features.supportsMaximumTravelDuration()) {
+            throw unsupportedParameter("maxTravelDuration");
         }
-        if (minTransferDuration != 0 && !features.supportsMinTransferDuration()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Minimum transfer duration parameter is not supported by this service.");
+        if (minimumTransferDuration != 0 && !features.supportsMinimumTransferDuration()) {
+            throw unsupportedParameter("minTransferDuration");
         }
-        if (wheelchairAccessible && !features.supportsAccessibility()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Wheelchair accessibility parameter is not supported by this service.");
+        if (wheelchairAccessible && !features.supportsWheelchairAccessible()) {
+            throw unsupportedParameter("wheelchairAccessible");
         }
-        if (bikeAllowed && !features.supportsBikes()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Bike-friendly routing parameter is not supported by this service.");
+        if (bikeAllowed && !features.supportsBikeAllowed()) {
+            throw unsupportedParameter("bikeAllowed");
         }
         if (!travelModes.containsAll(EnumSet.allOf(TravelMode.class)) && !features.supportsTravelModes()) {
-            throw new UnsupportedRoutingFeatureException(
-                    "Travel mode filtering parameter is not supported by this service.");
+            throw unsupportedParameter("travelModes");
         }
+    }
+
+    private static UnsupportedRoutingFeatureException unsupportedParameter(String name) {
+        return new UnsupportedRoutingFeatureException(
+                String.format("The parameter '%s' is not supported by this service.", name));
     }
 
     /**

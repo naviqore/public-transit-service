@@ -47,9 +47,10 @@ public class RoutingController {
     @GetMapping("")
     public RoutingInfo getRoutingInfo() {
         RoutingFeatures features = service.getRoutingFeatures();
-        return new RoutingInfo(features.supportsMaxTransfers(), features.supportsMaxTravelDuration(),
-                features.supportsMaxWalkDuration(), features.supportsMinTransferDuration(),
-                features.supportsAccessibility(), features.supportsBikes(), features.supportsTravelModes());
+        return new RoutingInfo(features.supportsMaximumTransfers(), features.supportsMaximumTravelDuration(),
+                features.supportsMaximumWalkDuration(), features.supportsMinimumTransferDuration(),
+                features.supportsWheelchairAccessible(), features.supportsBikeAllowed(),
+                features.supportsTravelModes());
     }
 
     @Operation(summary = "Request connections between two stops or locations", description = "Requests connections between two stops or locations at a given departure / arrival datetime.")
@@ -162,25 +163,24 @@ public class RoutingController {
             RequestValidator.validateTimeWindowDuration(timeWindowDuration, routing.getTimeWindowDurationMaximum());
 
             // replace null values with default value
-            int finalMaxWalkDuration = java.util.Optional.ofNullable(maxWalkDuration).orElse(Integer.MAX_VALUE);
-            int finalMaxTransfers = java.util.Optional.ofNullable(maxTransfers).orElse(Integer.MAX_VALUE);
-            int finalMaxTravelDuration = java.util.Optional.ofNullable(maxTravelDuration).orElse(Integer.MAX_VALUE);
+            int maximumWalkDuration = java.util.Optional.ofNullable(maxWalkDuration).orElse(Integer.MAX_VALUE);
+            int maximumTransfers = java.util.Optional.ofNullable(maxTransfers).orElse(Integer.MAX_VALUE);
+            int maximumTravelDuration = java.util.Optional.ofNullable(maxTravelDuration).orElse(Integer.MAX_VALUE);
 
             if (travelModes == null || travelModes.isEmpty()) {
                 travelModes = EnumSet.allOf(TravelMode.class);
             }
 
             // validate feature support
-            RequestValidator.validateRoutingFeatureSupport(finalMaxWalkDuration, finalMaxTransfers,
-                    finalMaxTravelDuration, minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes,
-                    service.getRoutingFeatures());
+            RequestValidator.validateRoutingFeatureSupport(maximumWalkDuration, maximumTransfers, maximumTravelDuration,
+                    minTransferDuration, wheelchairAccessible, bikeAllowed, travelModes, service.getRoutingFeatures());
 
             return ConnectionQueryConfig.builder()
                     .timeWindowDuration(timeWindowDuration)
-                    .maximumWalkDuration(finalMaxWalkDuration)
+                    .maximumWalkDuration(maximumWalkDuration)
                     .minimumTransferDuration(minTransferDuration)
-                    .maximumTransfers(finalMaxTransfers)
-                    .maximumTravelDuration(finalMaxTravelDuration)
+                    .maximumTransfers(maximumTransfers)
+                    .maximumTravelDuration(maximumTravelDuration)
                     .wheelchairAccessible(wheelchairAccessible)
                     .bikeAllowed(bikeAllowed)
                     .travelModes(map(travelModes))
