@@ -2,7 +2,7 @@ package org.naviqore.service;
 
 import lombok.RequiredArgsConstructor;
 import org.naviqore.service.config.ServiceConfig;
-import org.naviqore.service.gtfs.raptor.GtfsRaptorServiceInitializer;
+import org.naviqore.service.raptor.RaptorServiceInitializer;
 
 import java.io.IOException;
 
@@ -12,7 +12,7 @@ public class PublicTransitServiceFactory {
     private final ServiceConfig config;
 
     public PublicTransitService create() throws IOException, InterruptedException {
-        return new GtfsRaptorServiceInitializer(config).get();
+        return new RaptorServiceInitializer(config).get();
     }
 
 }

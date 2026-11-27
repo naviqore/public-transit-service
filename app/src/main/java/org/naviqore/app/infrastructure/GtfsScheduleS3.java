@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
-import org.naviqore.service.repo.GtfsScheduleRepository;
+import org.naviqore.service.repo.TimetableRepository;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.regions.Region;
@@ -26,7 +26,7 @@ import java.nio.file.Path;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class GtfsScheduleS3 implements GtfsScheduleRepository {
+public class GtfsScheduleS3 implements TimetableRepository {
 
     private static final String AWS_REGION = "AWS_REGION";
     private static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";

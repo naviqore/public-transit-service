@@ -1,0 +1,240 @@
+package org.naviqore.service.raptor;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.naviqore.raptor.router.RaptorRouter;
+import org.naviqore.service.*;
+import org.naviqore.service.config.ConnectionQueryConfig;
+import org.naviqore.service.config.ServiceConfig;
+import org.naviqore.service.exception.*;
+import org.naviqore.service.raptor.routing.RoutingQueryFacade;
+import org.naviqore.service.walk.WalkCalculator;
+import org.naviqore.timetable.model.Timetable;
+import org.naviqore.utils.search.SearchIndex;
+import org.naviqore.utils.spatial.GeoCoordinate;
+import org.naviqore.utils.spatial.index.KDTree;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.*;
+
+@Slf4j
+public class RaptorService implements PublicTransitService {
+
+    private final Timetable schedule;
+    @Getter
+    private final Validity validity;
+    private final KDTree<org.naviqore.timetable.model.Stop> spatialStopIndex;
+    private final SearchIndex<org.naviqore.timetable.model.Stop> stopSearchIndex;
+    private final List<? extends org.naviqore.timetable.model.Stop> stops;
+
+    private final StopScopeResolver resolver;
+    private final RoutingQueryFacade routing;
+
+    RaptorService(ServiceConfig serviceConfig, Timetable schedule,
+                  KDTree<org.naviqore.timetable.model.Stop> spatialStopIndex,
+                  SearchIndex<org.naviqore.timetable.model.Stop> stopSearchIndex, WalkCalculator walkCalculator,
+                  RaptorRouter raptorRouter) {
+        this.schedule = schedule;
+        this.spatialStopIndex = spatialStopIndex;
+        this.stopSearchIndex = stopSearchIndex;
+        // the schedule is immutable after initialization, so the candidates for random selection can be derived once;
+        // they are sorted by id since the iteration order of the immutable schedule map varies between JVM runs, which
+        // would otherwise make the selection non-reproducible even for a seeded random instance
+        this.stops = schedule.getStops()
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(org.naviqore.timetable.model.Stop::getId))
+                .toList();
+
+        this.validity = new RaptorServiceValidity(schedule);
+        this.resolver = new StopScopeResolver(schedule, spatialStopIndex, serviceConfig.getWalkSearchRadius());
+        this.routing = new RoutingQueryFacade(serviceConfig, schedule, spatialStopIndex, walkCalculator, raptorRouter);
+    }
+
+    @Override
+    public boolean hasAccessibilityInformation() {
+        return schedule.hasTripAccessibilityInformation();
+    }
+
+    @Override
+    public boolean hasBikeInformation() {
+        return schedule.hasTripBikeInformation();
+    }
+
+    @Override
+    public boolean hasTravelModeInformation() {
+        // timetable routes always have a travel mode, so this is always true
+        return true;
+    }
+
+    @Override
+    public List<Stop> getStops(String like, SearchType searchType, StopSortStrategy stopSortStrategy) {
+        log.info("Searching for stops matching '{}', with search type '{}' and sort strategy '{}'", like, searchType,
+                stopSortStrategy);
+
+        return stopSearchIndex.search(like.toLowerCase(), TypeMapper.map(searchType))
+                .stream()
+                .sorted(stopSortStrategy.getComparator(like))
+                .map(TypeMapper::map)
+                .toList();
+    }
+
+    @Override
+    public Optional<Stop> getNearestStop(GeoCoordinate location) {
+        log.info("Searching for nearest stop to location '({}, {})'", location.getFirstComponent(),
+                location.getSecondComponent());
+
+        org.naviqore.timetable.model.Stop stop = spatialStopIndex.nearestNeighbor(location);
+
+        // if nearest stop, which could be null, is a child stop, return parent stop
+        if (stop != null && stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
+            stop = stop.getParent().get();
+        }
+
+        return Optional.ofNullable(TypeMapper.map(stop));
+    }
+
+    @Override
+    public List<Stop> getNearestStops(GeoCoordinate location, int radius) {
+        log.info("Searching for nearest stops to location '({}, {})', within radius '{} m'",
+                location.getFirstComponent(), location.getSecondComponent(), radius);
+
+        List<org.naviqore.timetable.model.Stop> stops = new ArrayList<>();
+
+        for (org.naviqore.timetable.model.Stop stop : spatialStopIndex.rangeSearch(location, radius)) {
+            // if nearest stop is a child stop, return parent stop
+            if (stop.getParent().isPresent() && !stop.getParent().get().equals(stop)) {
+                stop = stop.getParent().get();
+            }
+            // avoid adding same parent stop multiple times
+            if (!stops.contains(stop)) {
+                stops.add(stop);
+            }
+
+        }
+
+        return stops.stream().map(TypeMapper::map).toList();
+    }
+
+    @Override
+    public List<StopTime> getStopTimes(Stop stop, OffsetDateTime from, OffsetDateTime until, TimeType timeType,
+                                       StopScope scope) {
+        log.info("Querying {} for stop '{}' with scope '{}', from '{}', until '{}'",
+                timeType == TimeType.DEPARTURE ? "departures" : "arrivals", stop.getId(), scope, from, until);
+
+        return resolver.resolve(stop, scope)
+                .stream()
+                .flatMap(id -> schedule.getStopTimes(id, from, until, TypeMapper.mapToTimetable(timeType)).stream())
+                .map(stopTime -> TypeMapper.map(stopTime, from.toLocalDate()))
+                .sorted(switch (timeType) {
+                    case DEPARTURE -> Comparator.comparing(StopTime::getDepartureTime);
+                    case ARRIVAL -> Comparator.comparing(StopTime::getArrivalTime);
+                })
+                .toList();
+    }
+
+    @Override
+    public Stop getRandomStop(Random random) {
+        return TypeMapper.map(stops.get(random.nextInt(stops.size())));
+    }
+
+    @Override
+    public Stop getStopById(String stopId) throws StopNotFoundException {
+        org.naviqore.timetable.model.Stop stop = schedule.getStops().get(stopId);
+
+        if (stop == null) {
+            throw new StopNotFoundException(stopId);
+        }
+
+        return TypeMapper.map(stop);
+    }
+
+    @Override
+    public Trip getTripById(String tripId, LocalDate date) throws TripNotFoundException, TripNotActiveException {
+        org.naviqore.timetable.model.Trip trip = schedule.getTrips().get(tripId);
+
+        if (trip == null) {
+            throw new TripNotFoundException(tripId);
+        }
+
+        if (!trip.getCalendar().isServiceAvailable(date)) {
+            throw new TripNotActiveException(tripId, date);
+        }
+
+        return TypeMapper.map(trip, date);
+    }
+
+    @Override
+    public Route getRouteById(String routeId) throws RouteNotFoundException {
+        org.naviqore.timetable.model.Route route = schedule.getRoutes().get(routeId);
+
+        if (route == null) {
+            throw new RouteNotFoundException(routeId);
+        }
+
+        return TypeMapper.map(route);
+    }
+
+    @Override
+    public RoutingFeatures getRoutingFeatures() {
+        return new RoutingFeatures(true, true, true, true, schedule.hasTripAccessibilityInformation(),
+                schedule.hasTripBikeInformation(), true);
+    }
+
+    @Override
+    public List<Connection> getConnections(Stop source, Stop target, OffsetDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from stop '{}' to stop '{}', time '{}', time type '{}'", source.getId(),
+                target.getId(), time, timeType);
+
+        return routing.queryConnections(time, timeType, config, source, target);
+    }
+
+    @Override
+    public List<Connection> getConnections(GeoCoordinate source, GeoCoordinate target, OffsetDateTime time,
+                                           TimeType timeType,
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from location '({}, {})' to location '({}, {})', time '{}', time type '{}'",
+                source.getFirstComponent(), source.getSecondComponent(), target.getFirstComponent(),
+                target.getSecondComponent(), time, timeType);
+
+        return routing.queryConnections(time, timeType, config, source, target);
+    }
+
+    @Override
+    public List<Connection> getConnections(Stop source, GeoCoordinate target, OffsetDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from stop '{}' to location '({}, {})', time '{}', time type '{}'", source.getId(),
+                target.getFirstComponent(), target.getSecondComponent(), time, timeType);
+
+        return routing.queryConnections(time, timeType, config, source, target);
+    }
+
+    @Override
+    public List<Connection> getConnections(GeoCoordinate source, Stop target, OffsetDateTime time, TimeType timeType,
+                                           ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing connections from location '({}, {})' to stop '{}', time '{}', time type '{}'",
+                source.getFirstComponent(), source.getSecondComponent(), target.getId(), time, timeType);
+
+        return routing.queryConnections(time, timeType, config, source, target);
+    }
+
+    @Override
+    public Map<Stop, Connection> getIsolines(GeoCoordinate source, OffsetDateTime time, TimeType timeType,
+                                             ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing isolines from location '({}, {})', time '{}', time type '{}'", source.getFirstComponent(),
+                source.getSecondComponent(), time, timeType);
+
+        return routing.queryIsolines(time, timeType, config, source);
+    }
+
+    @Override
+    public Map<Stop, Connection> getIsolines(Stop source, OffsetDateTime time, TimeType timeType,
+                                             ConnectionQueryConfig config) throws ConnectionRoutingException {
+        log.info("Routing isolines from stop '{}', time '{}', time type '{}'", source.getId(), time, timeType);
+
+        return routing.queryIsolines(time, timeType, config, source);
+    }
+
+}

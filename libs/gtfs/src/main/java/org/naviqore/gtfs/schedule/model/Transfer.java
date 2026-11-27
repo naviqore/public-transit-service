@@ -4,14 +4,14 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.gtfs.schedule.type.TransferType;
+import org.naviqore.timetable.type.TransferType;
 
 import java.util.Objects;
 import java.util.Optional;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-public class Transfer {
+public class Transfer implements org.naviqore.timetable.model.Transfer {
 
     private final Stop fromStop;
     private final Stop toStop;
@@ -19,6 +19,7 @@ public class Transfer {
     @Nullable
     private final Integer minTransferTime;
 
+    @Override
     public Optional<Integer> getMinTransferTime() {
         return Optional.ofNullable(minTransferTime);
     }

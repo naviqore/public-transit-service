@@ -5,7 +5,7 @@ import org.naviqore.service.config.ConnectionQueryConfig;
 import org.naviqore.service.config.ServiceConfig;
 import org.naviqore.service.exception.ConnectionRoutingException;
 import org.naviqore.service.exception.StopNotFoundException;
-import org.naviqore.service.repo.GtfsScheduleRepository;
+import org.naviqore.service.repo.TimetableRepository;
 import org.naviqore.utils.network.FileDownloader;
 import org.naviqore.utils.spatial.GeoCoordinate;
 
@@ -28,12 +28,12 @@ public class PublicTransitServiceExample {
 
     static void main() throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
 
-        GtfsScheduleRepository repo = () -> {
+        TimetableRepository repo = () -> {
             new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
             return new GtfsScheduleReader().read("gtfs.zip");
         };
 
-        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsScheduleRepository(repo).build();
+        ServiceConfig serviceConfig = ServiceConfig.builder().timetableRepository(repo).build();
         PublicTransitService service = new PublicTransitServiceFactory(serviceConfig).create();
 
         Stop orig = service.getStopById(ORIG_STOP_ID);

@@ -60,9 +60,9 @@ public interface RaptorTripMaskProvider {
     /**
      * Represents a route trip mask for a given day and route.
      *
-     * @param routeTripMask the route trip mask for the day, where each index represents trip (sorted by departure
-     *                      times) and the boolean value at that index indicates if the trip is taking place on the
-     *                      given day.
+     * @param routeTripMask the route trip mask for the day, where each index represents the trip at the same index of
+     *                      the trip ids set for the route and the boolean value at that index indicates if the trip is
+     *                      taking place on the given day.
      */
     record RouteTripMask(boolean[] routeTripMask) {
         public static final int NO_TRIP = Integer.MIN_VALUE;

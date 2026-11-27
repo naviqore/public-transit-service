@@ -5,15 +5,14 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.jspecify.annotations.Nullable;
-import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
+import org.naviqore.timetable.type.AccessibilityInformation;
 import org.naviqore.utils.spatial.GeoCoordinate;
-import org.naviqore.utils.spatial.Location;
 
 import java.util.*;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-public final class Stop implements Initializable, Location<GeoCoordinate> {
+public final class Stop implements Initializable, org.naviqore.timetable.model.Stop {
 
     private final String id;
     private final String name;
@@ -37,6 +36,7 @@ public final class Stop implements Initializable, Location<GeoCoordinate> {
         transfers.add(transfer);
     }
 
+    @Override
     public Optional<Stop> getParent() {
         return Optional.ofNullable(parent);
     }

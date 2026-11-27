@@ -8,6 +8,18 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Routes connections and isolines between stops and locations, departing at or arriving by a time.
+ * <ul>
+ *     <li>Connections: without a time window, those no other connection beats in arrival (departure, for an arrival
+ *     query) and number of transfers, each leaving as late as its arrival allows (arriving as early as its departure
+ *     allows) unless the service is configured not to optimize travel times; with a time window, those leaving
+ *     (arriving) in the window that no other connection beats in departure, arrival and number of transfers.</li>
+ *     <li>Isolines: without a time window, the earliest arrival (latest departure) at each stop; with a time window,
+ *     the shortest travel time to each stop among the connections leaving (arriving) in the window.</li>
+ * </ul>
+ * See {@code docs/routing.md} for the definitions and how they are routed.
+ */
 public interface ConnectionRoutingService {
 
     /**

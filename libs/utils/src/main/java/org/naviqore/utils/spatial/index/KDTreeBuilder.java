@@ -27,7 +27,7 @@ public class KDTreeBuilder<T extends Location<?>> {
         return this;
     }
 
-    public KDTreeBuilder<T> addLocations(Collection<T> locations) {
+    public KDTreeBuilder<T> addLocations(Collection<? extends T> locations) {
         if (locations == null) {
             throw new IllegalArgumentException("locations must not be null");
         }

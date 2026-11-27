@@ -1,9 +1,9 @@
 package org.naviqore.gtfs.schedule.model;
 
-import org.naviqore.gtfs.schedule.type.ServiceDayTime;
+import org.naviqore.timetable.type.ServiceDayTime;
 
 public record StopTime(Stop stop, Trip trip, ServiceDayTime arrival,
-                       ServiceDayTime departure) implements Comparable<StopTime> {
+                       ServiceDayTime departure) implements Comparable<StopTime>, org.naviqore.timetable.model.StopTime {
 
     public StopTime {
         if (arrival.compareTo(departure) > 0) {

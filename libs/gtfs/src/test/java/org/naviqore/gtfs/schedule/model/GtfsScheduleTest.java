@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.naviqore.gtfs.schedule.type.ExceptionType;
-import org.naviqore.gtfs.schedule.type.ServiceDayTime;
-import org.naviqore.gtfs.schedule.type.TimeType;
+import org.naviqore.timetable.type.ServiceDayTime;
+import org.naviqore.timetable.type.TimeType;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -335,6 +335,30 @@ class GtfsScheduleTest {
                             GtfsScheduleTestBuilder.Moments.NO_SERVICE_8_AM.toLocalDate())).isEmpty();
                 }
             }
+        }
+    }
+
+    @Nested
+    class ValidityPeriod {
+
+        @Test
+        void shouldSpanCalendars() {
+            GtfsSchedule schedule = builder.build();
+
+            assertThat(schedule.getStartDate()).isEqualTo(GtfsScheduleTestBuilder.Validity.PERIOD_START);
+            assertThat(schedule.getEndDate()).isEqualTo(GtfsScheduleTestBuilder.Validity.PERIOD_END);
+        }
+
+        @Test
+        void shouldIncludeCalendarDatesOutsideCalendars() {
+            LocalDate before = GtfsScheduleTestBuilder.Validity.PERIOD_START.minusDays(3);
+            LocalDate after = GtfsScheduleTestBuilder.Validity.PERIOD_END.plusDays(5);
+            GtfsSchedule schedule = builder.addCalendarDate("weekends", before, ExceptionType.ADDED)
+                    .addCalendarDate("weekdays", after, ExceptionType.ADDED)
+                    .build();
+
+            assertThat(schedule.getStartDate()).isEqualTo(before);
+            assertThat(schedule.getEndDate()).isEqualTo(after);
         }
     }
 }

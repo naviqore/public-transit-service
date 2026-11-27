@@ -25,3 +25,4 @@
 *.DS_Store
 benchmark/input
 benchmark/output
+benchmark/versions

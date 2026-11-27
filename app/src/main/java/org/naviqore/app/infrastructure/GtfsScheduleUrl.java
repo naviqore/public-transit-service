@@ -3,7 +3,7 @@ package org.naviqore.app.infrastructure;
 import lombok.RequiredArgsConstructor;
 import org.naviqore.gtfs.schedule.GtfsScheduleReader;
 import org.naviqore.gtfs.schedule.model.GtfsSchedule;
-import org.naviqore.service.repo.GtfsScheduleRepository;
+import org.naviqore.service.repo.TimetableRepository;
 import org.naviqore.utils.network.FileDownloader;
 
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @RequiredArgsConstructor
-public class GtfsScheduleUrl implements GtfsScheduleRepository {
+public class GtfsScheduleUrl implements TimetableRepository {
 
     private static final String TMP_DIRECTORY_PREFIX = "tmp_gtfs_";
     private static final String FILE_NAME = "gtfs.zip";

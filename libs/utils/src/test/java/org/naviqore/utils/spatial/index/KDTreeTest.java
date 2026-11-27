@@ -4,9 +4,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.naviqore.utils.spatial.CartesianCoordinate;
+import org.naviqore.utils.spatial.GeoCoordinate;
+import org.naviqore.utils.spatial.Location;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class KDTreeTest {
@@ -33,6 +40,48 @@ class KDTreeTest {
         kdTree.insert(militarkantine);
         kdTree.insert(sportsFacilityKreuzbleiche);
         return kdTree;
+    }
+
+    /**
+     * Where the coordinates of a test lie: anywhere, near the poles, along the antimeridian or within a country.
+     */
+    enum Region {
+        EARTH(random -> new GeoCoordinate(random.nextDouble(-90, 90), random.nextDouble(-180, 180))),
+        POLES(random -> new GeoCoordinate((random.nextBoolean() ? 1 : -1) * random.nextDouble(80, 90),
+                random.nextDouble(-180, 180))),
+        ANTIMERIDIAN(random -> new GeoCoordinate(random.nextDouble(-60, 60),
+                (random.nextBoolean() ? 1 : -1) * random.nextDouble(170, 180))),
+        SWITZERLAND(random -> new GeoCoordinate(random.nextDouble(45.8, 47.8), random.nextDouble(5.9, 10.5)));
+
+        private final Function<Random, GeoCoordinate> draw;
+
+        Region(Function<Random, GeoCoordinate> draw) {
+            this.draw = draw;
+        }
+
+        GeoCoordinate draw(Random random) {
+            return draw.apply(random);
+        }
+    }
+
+    record Place(int id, GeoCoordinate coordinate) implements Location<GeoCoordinate> {
+
+        @Override
+        public GeoCoordinate getCoordinate() {
+            return coordinate;
+        }
+    }
+
+    /**
+     * A place that counts how often its coordinate is read: a few times for every place a search visits.
+     */
+    record CountedPlace(GeoCoordinate coordinate, AtomicInteger reads) implements Location<GeoCoordinate> {
+
+        @Override
+        public GeoCoordinate getCoordinate() {
+            reads.incrementAndGet();
+            return coordinate;
+        }
     }
 
     @Nested
@@ -172,6 +221,98 @@ class KDTreeTest {
         void rangeSearch_withEmptyTree() {
             KDTree<TestFacility> kdTree = new KDTree<>();
             Assertions.assertThrows(IllegalStateException.class, () -> kdTree.rangeSearch(munich, 500));
+        }
+    }
+
+    @Nested
+    class GeographicCoordinates {
+
+        private static final int PLACES = 2_000;
+        private static final int QUERIES = 100;
+        private static final double[] RADII = {100, 500, 5_000, 50_000, 500_000, 5_000_000};
+        // the poles and the antimeridian, and places a few meters apart across them, as places and as queries
+        private static final List<GeoCoordinate> EDGES = List.of(new GeoCoordinate(90, 0), new GeoCoordinate(-90, 0),
+                new GeoCoordinate(89.9999, 0), new GeoCoordinate(89.9999, 170), new GeoCoordinate(0, 180),
+                new GeoCoordinate(0, -180), new GeoCoordinate(45, 179.99995), new GeoCoordinate(45, -179.99995));
+
+        private static List<Place> places(Region region, Random random) {
+            List<Place> places = new ArrayList<>();
+            for (GeoCoordinate edge : EDGES) {
+                places.add(new Place(places.size(), edge));
+            }
+            while (places.size() < PLACES) {
+                places.add(new Place(places.size(), region.draw(random)));
+            }
+
+            return places;
+        }
+
+        private static List<GeoCoordinate> queries(Region region, Random random) {
+            List<GeoCoordinate> queries = new ArrayList<>(EDGES);
+            while (queries.size() < QUERIES) {
+                queries.add(region.draw(random));
+            }
+
+            return queries;
+        }
+
+        @ParameterizedTest
+        @EnumSource(Region.class)
+        void rangeSearch_findsWhatAFullScanFinds(Region region) {
+            Random random = new Random(42);
+            List<Place> places = places(region, random);
+            KDTree<Place> kdTree = new KDTreeBuilder<Place>().addLocations(places).build();
+
+            for (GeoCoordinate query : queries(region, random)) {
+                for (double radius : RADII) {
+                    Set<Place> expected = places.stream()
+                            .filter(place -> place.getCoordinate()
+                                    .distanceTo(query.latitude(), query.longitude()) <= radius)
+                            .collect(Collectors.toSet());
+                    Assertions.assertEquals(expected, new HashSet<>(kdTree.rangeSearch(query, radius)),
+                            query + ", radius " + radius);
+                }
+            }
+        }
+
+        @ParameterizedTest
+        @EnumSource(Region.class)
+        void nearestNeighbor_findsWhatAFullScanFinds(Region region) {
+            Random random = new Random(42);
+            List<Place> places = places(region, random);
+            KDTree<Place> kdTree = new KDTreeBuilder<Place>().addLocations(places).build();
+
+            for (GeoCoordinate query : queries(region, random)) {
+                Place expected = places.stream()
+                        .min(Comparator.comparingDouble(
+                                place -> place.getCoordinate().distanceTo(query.latitude(), query.longitude())))
+                        .orElseThrow();
+                Assertions.assertEquals(expected, kdTree.nearestNeighbor(query), query.toString());
+            }
+        }
+
+        @Test
+        void searches_visitAFewPlacesInsteadOfAll() {
+            Random random = new Random(42);
+            AtomicInteger reads = new AtomicInteger();
+            List<CountedPlace> places = new ArrayList<>();
+            for (int i = 0; i < 10_000; i++) {
+                places.add(new CountedPlace(Region.SWITZERLAND.draw(random), reads));
+            }
+            KDTree<CountedPlace> kdTree = new KDTreeBuilder<CountedPlace>().addLocations(places).build();
+
+            reads.set(0);
+            int searches = 0;
+            for (int i = 0; i < QUERIES; i++) {
+                GeoCoordinate query = Region.SWITZERLAND.draw(random);
+                kdTree.rangeSearch(query.latitude(), query.longitude(), 500);
+                kdTree.nearestNeighbor(query.latitude(), query.longitude());
+                searches += 2;
+            }
+
+            // a search that cannot skip a side visits every place, 10 000 per search
+            int readsPerSearch = reads.get() / searches;
+            Assertions.assertTrue(readsPerSearch < 300, readsPerSearch + " reads of a coordinate per search");
         }
     }
 

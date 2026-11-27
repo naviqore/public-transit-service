@@ -2,6 +2,7 @@ package org.naviqore.raptor.router;
 
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,6 +80,43 @@ public class RaptorRouterMultiDayTest {
                     tripMasks.put(routeId, new RouteTripMask(tripMask));
                 }
             }
+
+            return new DayTripMask(getServiceIdForDate(date), date, tripMasks);
+        }
+    }
+
+    /**
+     * Runs each trip on one service day only.
+     */
+    static class TripPerDayMasker implements RaptorTripMaskProvider {
+
+        private final Map<String, LocalDate> serviceDayOfTrip;
+        private Map<String, String[]> tripIds = Map.of();
+
+        TripPerDayMasker(Map<String, LocalDate> serviceDayOfTrip) {
+            this.serviceDayOfTrip = serviceDayOfTrip;
+        }
+
+        @Override
+        public void setTripIds(Map<String, String[]> routeTripIds) {
+            this.tripIds = routeTripIds;
+        }
+
+        @Override
+        public String getServiceIdForDate(LocalDate date) {
+            return date.toString();
+        }
+
+        @Override
+        public DayTripMask getDayTripMask(LocalDate date, QueryConfig queryConfig) {
+            Map<String, RouteTripMask> tripMasks = new HashMap<>();
+            tripIds.forEach((routeId, trips) -> {
+                boolean[] tripMask = new boolean[trips.length];
+                for (int i = 0; i < trips.length; i++) {
+                    tripMask[i] = date.equals(serviceDayOfTrip.get(trips[i]));
+                }
+                tripMasks.put(routeId, new RouteTripMask(tripMask));
+            });
 
             return new DayTripMask(getServiceIdForDate(date), date, tripMasks);
         }
@@ -178,6 +216,36 @@ public class RaptorRouterMultiDayTest {
             assertEquals(0, connectionsWithLessDays.size());
         }
 
+        @Test
+        void foldInitialWalkIntoTripOfNextDayService(RaptorRouterTestBuilder builder) {
+            int startOfDay = 5;
+            int endOfDay = 22;
+
+            // route 1 runs on the next day only, and A and B are a walk apart
+            RoutePerDayMasker tripMaskProvider = new RoutePerDayMasker();
+            tripMaskProvider.deactivateRouteOnDate("R1", PREVIOUS_DAY.toLocalDate());
+            tripMaskProvider.deactivateRouteOnDate("R1", REFERENCE_DAY.toLocalDate());
+
+            RaptorAlgorithm raptor = builder.withAddRoute1_AG()
+                    .withAddTransfer(STOP_A, "B", 1)
+                    .withMaxDaysToScan(3)
+                    .withTripMaskProvider(tripMaskProvider)
+                    .withServiceDayRange(startOfDay, endOfDay)
+                    .build();
+
+            // the router walks from A to B and boards the first trip of the next day there; folding the walk into the
+            // ride must board that trip at A on the next day as well, not at its time of day on the reference day
+            OffsetDateTime departureTime = REFERENCE_DAY.plusHours(4);
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_G,
+                    departureTime);
+
+            assertEquals(1, connections.size());
+            Connection connection = connections.getFirst();
+            RaptorRouterTestHelpers.assertEarliestArrivalConnection(connection, STOP_A, STOP_G, departureTime, 0, 0, 1,
+                    raptor);
+            assertEquals(NEXT_DAY.plusHours(startOfDay).toInstant(), connection.getDepartureTime().toInstant());
+        }
+
     }
 
     @Nested
@@ -266,6 +334,67 @@ public class RaptorRouterMultiDayTest {
 
         }
 
+    }
+
+    /**
+     * A route from A to B whose trips of two service days overlap: the trip of the previous day leaves A at 25:30,
+     * which is 01:30 on the reference day, and the trip of the reference day leaves A at 00:30. Both take 15 minutes.
+     */
+    @Nested
+    class OverlappingServiceDays {
+
+        private static final String STOP_B = "B";
+
+        private RaptorAlgorithm raptor;
+
+        @BeforeEach
+        void setUp() {
+            TripPerDayMasker tripMaskProvider = new TripPerDayMasker(
+                    Map.of("previous-day", PREVIOUS_DAY.toLocalDate(), "reference-day", REFERENCE_DAY.toLocalDate()));
+            RaptorRouterBuilder builder = RaptorRouter.builder(
+                    RaptorConfig.builder().daysToScan(3).maskProvider(tripMaskProvider).build());
+            builder.addStop(STOP_A).addStop(STOP_B);
+            builder.addRoute("R", RaptorRouterTestBuilder.DEFAULT_ZONE_ID, List.of(STOP_A, STOP_B));
+            builder.addTrip("previous-day", "R").addTrip("reference-day", "R");
+            builder.addStopTime("R", "previous-day", 0, STOP_A, (25 * 60 + 30) * 60, (25 * 60 + 30) * 60);
+            builder.addStopTime("R", "previous-day", 1, STOP_B, (25 * 60 + 45) * 60, (25 * 60 + 45) * 60);
+            builder.addStopTime("R", "reference-day", 0, STOP_A, 30 * 60, 30 * 60);
+            builder.addStopTime("R", "reference-day", 1, STOP_B, 45 * 60, 45 * 60);
+            raptor = builder.build();
+        }
+
+        @Test
+        void findEarliestTripOfBothServiceDays() {
+            // the trip of the previous day is scanned first, but leaves an hour after the trip of the reference day
+            List<Connection> connections = RaptorRouterTestHelpers.routeEarliestArrival(raptor, STOP_A, STOP_B,
+                    REFERENCE_DAY.plusMinutes(15));
+
+            assertEquals(1, connections.size());
+            assertEquals(REFERENCE_DAY.plusMinutes(30).toInstant(),
+                    connections.getFirst().getDepartureTime().toInstant());
+        }
+
+        @Test
+        void findLatestTripOfBothServiceDays() {
+            // the trip of the reference day is scanned first, but arrives an hour before the trip of the previous day
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_B,
+                    REFERENCE_DAY.plusHours(1).plusMinutes(50));
+
+            assertEquals(1, connections.size());
+            assertEquals(REFERENCE_DAY.plusHours(1).plusMinutes(30).toInstant(),
+                    connections.getFirst().getDepartureTime().toInstant());
+        }
+
+        @Test
+        void findTripOfReferenceDayAlthoughTripOfPreviousDayArrivesLater() {
+            // only the trip of the reference day arrives in time, the earliest trip of the previous day arrives later
+            List<Connection> connections = RaptorRouterTestHelpers.routeLatestDeparture(raptor, STOP_A, STOP_B,
+                    REFERENCE_DAY.plusMinutes(50));
+
+            assertEquals(1, connections.size());
+            assertEquals(REFERENCE_DAY.plusMinutes(30).toInstant(),
+                    connections.getFirst().getDepartureTime().toInstant());
+        }
     }
 
 }

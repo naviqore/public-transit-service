@@ -1,0 +1,20 @@
+package org.naviqore.service.raptor;
+
+import lombok.*;
+import org.naviqore.service.Route;
+import org.naviqore.service.TravelMode;
+
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@Getter
+@ToString
+@EqualsAndHashCode
+public class RaptorServiceRoute implements Route {
+
+    private final String id;
+    private final String name;
+    private final String shortName;
+    private final TravelMode routeType;
+    private final String routeTypeDescription;
+    private final String Agency;
+
+}

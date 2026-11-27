@@ -12,6 +12,9 @@ import java.util.ArrayList;
 /**
  * A k-dimensional tree (k-d tree) for fast, efficient proximity searches. This implementation only supports
  * 2-dimensional spatial data.
+ * <p>
+ * A search skips the other side of a split when no location there can be near enough, by a lower bound of their
+ * distance in the geometry of the coordinates.
  *
  * @param <T> The type of location stored in the tree.
  */
@@ -33,15 +36,10 @@ public class KDTree<T extends Location<?>> {
         return coordinate.getComponent(axis) < nodeCoordinate.getComponent(axis) ? node.left : node.right;
     }
 
-    private static <T extends Location<?>> boolean isDistanceGreaterThanCoordinateDifference(Node<T> node,
-                                                                                             InternalCoordinate coordinate,
-                                                                                             Coordinate.Axis axis) {
-        Coordinate nodeCoordinate = node.location.getCoordinate();
-
-        double distance = nodeCoordinate.distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
-        double coordinateDifference = Math.abs(coordinate.getComponent(axis) - nodeCoordinate.getComponent(axis));
-
-        return distance > coordinateDifference;
+    private static <T extends Location<?>> double distanceToOtherSide(Node<T> node, InternalCoordinate coordinate,
+                                                                      Coordinate.Axis axis) {
+        return SplitDistance.toOtherSide(node.location.getCoordinate(), axis, coordinate.firstComponent(),
+                coordinate.secondComponent());
     }
 
     void insert(T location) {
@@ -109,40 +107,34 @@ public class KDTree<T extends Location<?>> {
         if (root == null) {
             throw new IllegalStateException("Tree is empty");
         }
-        return nearestNeighbor(root, new InternalCoordinate(firstComponent, secondComponent), 0).location;
+        Nearest<T> nearest = new Nearest<>();
+        nearestNeighbor(root, new InternalCoordinate(firstComponent, secondComponent), 0, nearest);
+        return nearest.location;
     }
 
-    private Node<T> nearestNeighbor(Node<T> node, InternalCoordinate coordinate, int depth) {
+    private void nearestNeighbor(Node<T> node, InternalCoordinate coordinate, int depth, Nearest<T> nearest) {
         if (node == null) {
-            return null;
+            return;
+        }
+
+        double distance = node.location.getCoordinate()
+                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
+        // of equally near locations, the one found last
+        if (distance <= nearest.distance) {
+            nearest.location = node.location;
+            nearest.distance = distance;
         }
 
         Coordinate.Axis axis = getAxis(depth);
         Node<T> next = getNextNodeBasedOnAxisDirection(node, coordinate, axis);
         // get the other side (node) of the tree
         Node<T> other = next == node.left ? node.right : node.left;
-        Node<T> best = getNodeWithClosestDistance(node, nearestNeighbor(next, coordinate, depth + 1), coordinate);
+        nearestNeighbor(next, coordinate, depth + 1, nearest);
 
-        if (isDistanceGreaterThanCoordinateDifference(node, coordinate, axis)) {
-            best = getNodeWithClosestDistance(best, nearestNeighbor(other, coordinate, depth + 1), coordinate);
+        // the other side can only hold a location as near as the nearest found so far if it is no farther away
+        if (distanceToOtherSide(node, coordinate, axis) <= nearest.distance) {
+            nearestNeighbor(other, coordinate, depth + 1, nearest);
         }
-
-        return best;
-    }
-
-    private Node<T> getNodeWithClosestDistance(Node<T> node1, Node<T> node2, InternalCoordinate coordinate) {
-        if (node1 == null) {
-            return node2;
-        }
-        if (node2 == null) {
-            return node1;
-        }
-
-        double dist1 = node1.location.getCoordinate()
-                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
-        double dist2 = node2.location.getCoordinate()
-                .distanceTo(coordinate.firstComponent(), coordinate.secondComponent());
-        return dist1 < dist2 ? node1 : node2;
     }
 
     /**
@@ -209,17 +201,17 @@ public class KDTree<T extends Location<?>> {
         }
 
         Coordinate.Axis axis = getAxis(depth);
-
-        double centerCoordinateOfInterest = coordinate.getComponent(axis);
-        double nodeCoordinateOfInterest = node.location.getCoordinate().getComponent(axis);
+        // the side of the center can hold locations at any distance, the other side none nearer than its distance
+        boolean centerOnLeft = coordinate.getComponent(axis) < node.location.getCoordinate().getComponent(axis);
+        boolean otherSideInRange = distanceToOtherSide(node, coordinate, axis) <= radius;
 
         // Recursively search left subtree if necessary
-        if (centerCoordinateOfInterest - radius < nodeCoordinateOfInterest) {
+        if (centerOnLeft || otherSideInRange) {
             rangeSearch(node.left, coordinate, radius, depth + 1, result);
         }
 
         // Recursively search right subtree if necessary
-        if (centerCoordinateOfInterest + radius >= nodeCoordinateOfInterest) {
+        if (!centerOnLeft || otherSideInRange) {
             rangeSearch(node.right, coordinate, radius, depth + 1, result);
         }
     }
@@ -233,6 +225,14 @@ public class KDTree<T extends Location<?>> {
         private final U location;
         private Node<U> left;
         private Node<U> right;
+    }
+
+    /**
+     * The nearest location found so far, and its distance.
+     */
+    private static class Nearest<U> {
+        private U location;
+        private double distance = Double.POSITIVE_INFINITY;
     }
 
     /**

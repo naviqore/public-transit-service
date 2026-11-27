@@ -2,30 +2,32 @@ package org.naviqore.gtfs.schedule.model;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import org.naviqore.gtfs.schedule.type.AccessibilityInformation;
-import org.naviqore.gtfs.schedule.type.BikeInformation;
-import org.naviqore.gtfs.schedule.type.ServiceDayTime;
-import org.naviqore.gtfs.schedule.type.TimeType;
+import org.naviqore.timetable.model.Timetable;
+import org.naviqore.timetable.type.AccessibilityInformation;
+import org.naviqore.timetable.type.BikeInformation;
+import org.naviqore.timetable.type.ServiceDayTime;
+import org.naviqore.timetable.type.TimeType;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * General Transit Feed Specification (GTFS) schedule
  * <p>
  * This is an immutable class, meaning that once an instance is created, it cannot be modified. Use the
  * {@link GtfsScheduleBuilder} to construct a GTFS schedule instance.
+ * <p>
+ * The schedule and its model classes implement the {@link Timetable} interfaces, so a GTFS schedule is a timetable
+ * without copying any of its data.
  *
  * @author munterfi
  */
 @Getter
-public class GtfsSchedule {
+public class GtfsSchedule implements Timetable {
 
     private final Map<String, Agency> agencies;
     private final Map<String, Calendar> calendars;
@@ -90,6 +92,7 @@ public class GtfsSchedule {
      * @param timeType whether to evaluate departure or arrival times
      * @return chronologically sorted list of matching stop times
      */
+    @Override
     public List<StopTime> getStopTimes(String stopId, OffsetDateTime from, OffsetDateTime to, TimeType timeType) {
         if (to.isBefore(from)) {
             throw new IllegalArgumentException("to must be after from");
@@ -152,6 +155,7 @@ public class GtfsSchedule {
      * @param stopId the identifier of the stop.
      * @return A list of stops including the stop itself and its children.
      */
+    @Override
     public List<Stop> getStopWithChildren(String stopId) {
         Stop stop = getStop(stopId);
 
@@ -166,6 +170,60 @@ public class GtfsSchedule {
 
             return stops;
         }
+    }
+
+    /**
+     * Retrieves the first date covered by the calendars, including their date exceptions.
+     *
+     * @return the start date of the schedule
+     */
+    @Override
+    public LocalDate getStartDate() {
+        return getMinOrMaxDate(Calendar::getStartDate, false);
+    }
+
+    /**
+     * Retrieves the last date covered by the calendars, including their date exceptions.
+     *
+     * @return the end date of the schedule
+     */
+    @Override
+    public LocalDate getEndDate() {
+        return getMinOrMaxDate(Calendar::getEndDate, true);
+    }
+
+    private LocalDate getMinOrMaxDate(Function<Calendar, LocalDate> dateExtractor, boolean isMax) {
+        // get the min or max date from the calendars if present
+        Optional<LocalDate> calendarDate = calendars.values()
+                .stream()
+                .map(dateExtractor)
+                .filter(Objects::nonNull)
+                .reduce((date1, date2) -> isMax ? date1.isAfter(date2) ? date1 : date2 : date1.isBefore(
+                        date2) ? date1 : date2);
+
+        // get the min or max date for all date exceptions if present
+        Optional<LocalDate> calendarExceptionDate = calendars.values()
+                .stream()
+                .flatMap(calendar -> calendar.getCalendarDates().keySet().stream())
+                .reduce((date1, date2) -> isMax ? date1.isAfter(date2) ? date1 : date2 : date1.isBefore(
+                        date2) ? date1 : date2);
+
+        // get overall max or min value
+        if (calendarDate.isEmpty() && calendarExceptionDate.isEmpty()) {
+            // should never happen
+            throw new IllegalStateException("No calendar start and end date found, if gtfs input is invalid.");
+        } else if (calendarExceptionDate.isPresent() && calendarDate.isEmpty()) {
+            return calendarExceptionDate.get();
+        } else if (calendarExceptionDate.isEmpty()) {
+            return calendarDate.get();
+        } else if (isMax) { // both calendar and calendar date are present, get min or max
+            return calendarDate.get()
+                    .isAfter(calendarExceptionDate.get()) ? calendarDate.get() : calendarExceptionDate.get();
+        } else {
+            return calendarDate.get()
+                    .isBefore(calendarExceptionDate.get()) ? calendarDate.get() : calendarExceptionDate.get();
+        }
+
     }
 
     private Stop getStop(String stopId) {

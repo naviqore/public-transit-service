@@ -5,7 +5,10 @@ import org.jspecify.annotations.NonNull;
 
 public record GeoCoordinate(double latitude, double longitude) implements Coordinate, Comparable<GeoCoordinate> {
 
-    private static final int EARTH_RADIUS = 6371000;
+    /**
+     * The mean radius of the earth in meters, of the sphere on which the distances are calculated.
+     */
+    public static final int EARTH_RADIUS = 6371000;
 
     public GeoCoordinate {
         validateCoordinate(latitude, longitude);

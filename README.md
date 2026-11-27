@@ -10,6 +10,9 @@ Public transit schedule information and connection routing service based on GTFS
   routes [2].
 - **RESTful API:** Provides an API for querying transit schedule information and connections.
 
+How connections and isolines are routed, with and without a time window, and the options of the router and the
+service: [docs/routing.md](docs/routing.md).
+
 ## Installation
 
 This project is structured as a Maven multi-module project under `org.naviqore`:
@@ -18,10 +21,11 @@ This project is structured as a Maven multi-module project under `org.naviqore`:
 - **naviqore-libs**: Parent POM for Naviqore public transit libraries.
     - **naviqore-public-transit-service**: Public transit schedule queries and connection routing service.
     - **naviqore-raptor**: Implementation of the RAPTOR algorithm.
+    - **naviqore-timetable**: Format-neutral timetable model, which the service is built from.
     - **naviqore-gtfs**: Implementation of the General Transit Feed Specification.
     - **naviqore-gtfs-sample**: Access to GTFS sample datasets for testing purposes.
     - **naviqore-utils**: Common utility classes shared across the Naviqore libraries.
-- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries.
+- **naviqore-benchmark**: Benchmarking the performance of the Naviqore libraries, see [its README](benchmark/README.md).
 
 ### Build Locally
 
@@ -50,16 +54,26 @@ Follow the steps below to build and run the project locally:
 
 The project's library modules are available in
 the [Maven Central Repository](https://central.sonatype.com/namespace/org.naviqore) and can be added to Maven projects
-as needed. For example, to use the public transit service, include the following dependency:
+as needed. For example, to use the public transit service on a GTFS feed, include the following dependencies:
 
 ```xml
 
-<dependency>
-    <groupId>org.naviqore</groupId>
-    <artifactId>naviqore-public-transit-service</artifactId>
-    <version>x.x.x</version> <!-- replace with latest version -->
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>org.naviqore</groupId>
+        <artifactId>naviqore-public-transit-service</artifactId>
+        <version>x.x.x</version> <!-- replace with latest version -->
+    </dependency>
+    <dependency>
+        <groupId>org.naviqore</groupId>
+        <artifactId>naviqore-gtfs</artifactId>
+        <version>x.x.x</version> <!-- replace with latest version -->
+    </dependency>
+</dependencies>
 ```
+
+The service is built from a timetable: a GTFS schedule is one, and any other schedule source can be used by
+implementing the interfaces of `naviqore-timetable`.
 
 A simple working example of how to use the public transit service in your Java application:
 
@@ -74,12 +88,12 @@ public class PublicTransitServiceExample {
 
     static void main() throws IOException, InterruptedException, StopNotFoundException, ConnectionRoutingException {
 
-        GtfsScheduleRepository repo = () -> {
+        TimetableRepository repo = () -> {
             new FileDownloader(GTFS_STATIC_URI).downloadTo(Path.of("."), "gtfs.zip", true);
             return new GtfsScheduleReader().read("gtfs.zip");
         };
 
-        ServiceConfig serviceConfig = ServiceConfig.builder().gtfsScheduleRepository(repo).build();
+        ServiceConfig serviceConfig = ServiceConfig.builder().timetableRepository(repo).build();
         PublicTransitService service = new PublicTransitServiceFactory(serviceConfig).create();
 
         Stop orig = service.getStopById(ORIG_STOP_ID);
